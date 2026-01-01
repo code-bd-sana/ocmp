@@ -29,7 +29,25 @@ app.use(fileUpload(config.EXPRESS_FILE_UPLOAD_CONFIG));
 // Security middleware initialization
 app.use(cors());
 app.use(helmet());
-app.use(mongoSanitize());
+app.use((req: any, res: any, next: any) => {
+  const sanitizer = (mongoSanitize as any).sanitize || ((obj: any) => obj);
+  ['body', 'params', 'headers', 'query'].forEach((key) => {
+    if (req[key]) {
+      const target = sanitizer(req[key]);
+      try {
+        req[key] = target;
+      } catch (err) {
+        if (typeof req[key] === 'object' && req[key] && typeof target === 'object' && target) {
+          Object.keys(req[key]).forEach((k) => delete req[key][k]);
+          Object.keys(target).forEach((k) => {
+            req[key][k] = target[k];
+          });
+        }
+      }
+    }
+  });
+  next();
+});
 app.use(hpp());
 app.use(morgan('dev'));
 

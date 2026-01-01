@@ -10,6 +10,7 @@ export default [
       'no-unused-expressions': 'error',
       'no-console': 'warn',
       'prefer-const': 'error',
+      'typescript-eslint/no-require-imports': 'error',
     },
     ignores: ['.dist/,**/node_modules/'],
     languageOptions: { globals: globals.browser },
