@@ -12,6 +12,7 @@ import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
 import hpp from 'hpp';
 import morgan from 'morgan';
+import PathNotFound from './helpers/responses/path-not-found';
 import { loggerStream } from './utils/logger/logger';
 
 // Express app initialization
@@ -124,7 +125,6 @@ app.get('/', (req: Request, res: Response) => {
 });
 
 // Path not found handler
-import PathNotFound from './helpers/responses/path-not-found';
 app.use(PathNotFound);
 
 export default app;

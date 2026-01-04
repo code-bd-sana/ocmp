@@ -21,6 +21,9 @@ interface Config {
   REQUEST_LIMIT_NUMBER: number;
   WEB_CACHE: boolean;
   EXPRESS_FILE_UPLOAD_CONFIG: object;
+  REDIS_URL: string;
+  REDIS_HOST: string;
+  REDIS_PORT: string;
 }
 
 const config: Config = {
@@ -48,6 +51,9 @@ const config: Config = {
       fileSize: parseInt(process.env.MAX_FILE_SIZE as string, 10),
     },
   },
+  REDIS_URL: process.env.REDIS_URL as string,
+  REDIS_HOST: process.env.REDIS_HOST as string,
+  REDIS_PORT: process.env.REDIS_PORT as string,
 };
 
 export default config;

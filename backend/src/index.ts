@@ -2,6 +2,7 @@ import { Server } from 'http';
 import mongoose from 'mongoose';
 import app, { routes } from './app';
 import config from './config/config';
+import { connect as connectRedis, disconnect as disconnectRedis } from './utils/redis';
 
 // Initialize server variable
 let server: Server;
@@ -40,6 +41,31 @@ async function main() {
         );
       }
     });
+
+    // Automatically connect to Redis when the app module is loaded
+    (async () => {
+      try {
+        await connectRedis();
+        if (config.NODE_ENV !== 'production') {
+          console.log('[Redis] Connected');
+        }
+      } catch (err) {
+        console.error('[Redis] Connection error:', (err as Error).message || err);
+      }
+    })();
+
+    // Graceful shutdown handlers to disconnect Redis
+    const handleRedisShutdown = async () => {
+      try {
+        await disconnectRedis();
+        if (config.NODE_ENV !== 'production') console.log(`${GREEN}[Redis] Disconnected${RESET}`);
+      } catch (err) {
+        // ignore
+      }
+    };
+
+    process.on('SIGINT', handleRedisShutdown);
+    process.on('SIGTERM', handleRedisShutdown);
 
     // Connect to the database
     await mongoose.connect(config.DB_CONNECTION_URI);
