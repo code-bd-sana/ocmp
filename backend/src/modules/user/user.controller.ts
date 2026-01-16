@@ -46,7 +46,7 @@ export const createManyUser = catchAsync(async (req: Request, res: Response) => 
 export const updateUser = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params;
   // Call the service method to update the user by ID and get the result
-  const result = await userServices.updateUser(id, req.body);
+  const result = await userServices.updateUser(id as string, req.body);
   if (!result) throw new Error('Failed to update user');
   // Send a success response with the updated user data
   ServerResponse(res, true, 200, 'User updated successfully', result);
@@ -79,7 +79,7 @@ export const updateManyUser = catchAsync(async (req: Request, res: Response) => 
 export const deleteUser = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params;
   // Call the service method to delete the user by ID
-  const result = await userServices.deleteUser(id);
+  const result = await userServices.deleteUser(id as string);
   if (!result) throw new Error('Failed to delete user');
   // Send a success response confirming the deletion
   ServerResponse(res, true, 200, 'User deleted successfully');
@@ -112,7 +112,7 @@ export const deleteManyUser = catchAsync(async (req: Request, res: Response) => 
 export const getUserById = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params;
   // Call the service method to get the user by ID and get the result
-  const result = await userServices.getUserById(id);
+  const result = await userServices.getUserById(id as string);
   if (!result) throw new Error('User not found');
   // Send a success response with the retrieved resource data
   ServerResponse(res, true, 200, 'User retrieved successfully', result);
@@ -127,8 +127,8 @@ export const getUserById = catchAsync(async (req: Request, res: Response) => {
  * @throws {Error} - Throws an error if the users retrieval fails.
  */
 export const getManyUser = catchAsync(async (req: Request, res: Response) => {
-  // Type assertion for query parameters 
-  const query = req.query as unknown as { searchKey?: string, showPerPage: number, pageNo: number };
+  // Type assertion for query parameters
+  const query = req.query as unknown as { searchKey?: string; showPerPage: number; pageNo: number };
   // Call the service method to get multiple users based on query parameters and get the result
   const { users, totalData, totalPages } = await userServices.getManyUser(query);
   if (!users) throw new Error('Failed to retrieve users');
