@@ -22,11 +22,11 @@ export default function Layout({
   children: React.ReactNode;
 }>) {
   return (
-    <>
-      <div
+    <html lang='en'>
+      <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <main className='min-h-[60vh]'>{children}</main>
-      </div>
-    </>
+      </body>
+    </html>
   );
 }

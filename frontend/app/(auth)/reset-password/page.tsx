@@ -1,4 +1,5 @@
 "use client";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -10,35 +11,14 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
-import { Check, Eye, EyeOff, Loader2, Lock, Mail, User } from "lucide-react";
+import { Check, Eye, EyeOff, Loader2, Lock } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-export default function SignUpPage() {
-  /**
-   * State Variables
-   *
-   * formData: Stores the user's input for name, email, password, and confirm password.
-   * showPassword: Toggles the visibility of the password input.
-   * showConfirmPassword: Toggles the visibility of the confirm password input.
-   * isLoading: Indicates if the form submission is in progress.
-   * errors: Holds validation error messages for the form fields.
-   *
-   * Functions
-   *
-   * checkPasswordStrength: Evaluates the strength of the password and updates the strength state.
-   * validateForm: Validates the form inputs, setting error messages as needed.
-   * handleChange: Updates formData state and clears errors on input change.
-   * handleSubmit: Handles form submission, including validation and simulating an API call.
-   *
-   * Return JSX
-   *
-   * Renders the sign-up form with fields for name, email, password, and confirm password, a password strength meter, a terms agreement checkbox, and a submit button.
-   */
+export default function ResetPasswordPage() {
+  const router = useRouter();
   const [formData, setFormData] = useState({
-    name: "",
-    email: "",
     password: "",
     confirmPassword: "",
   });
@@ -47,8 +27,8 @@ export default function SignUpPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [strength, setStrength] = useState(0);
+  const [isSuccess, setIsSuccess] = useState(false);
 
-  // Check password strength
   const checkPasswordStrength = (password: string) => {
     let score = 0;
     if (password.length >= 8) score++;
@@ -58,21 +38,8 @@ export default function SignUpPage() {
     setStrength(score);
   };
 
-  // Validate form inputs
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
-
-    if (!formData.name.trim()) {
-      newErrors.name = "Name is required";
-    } else if (formData.name.trim().length < 2) {
-      newErrors.name = "Name must be at least 2 characters";
-    }
-
-    if (!formData.email) {
-      newErrors.email = "Email is required";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = "Please enter a valid email address";
-    }
 
     if (!formData.password) {
       newErrors.password = "Password is required";
@@ -90,7 +57,6 @@ export default function SignUpPage() {
     return Object.keys(newErrors).length === 0;
   };
 
-  // Handle form input changes
   const handleChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
 
@@ -103,7 +69,6 @@ export default function SignUpPage() {
     }
   };
 
-  // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -114,21 +79,26 @@ export default function SignUpPage() {
     setIsLoading(true);
 
     try {
+      // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1500));
-      console.log("Signing up with:", formData);
-      alert(
-        "Account created successfully! Please check your email to verify your account."
-      );
-      // In real app: router.push("/verify-email");
+
+      // In real app, reset password with token from URL
+      console.log("Resetting password for token");
+
+      setIsSuccess(true);
+
+      // Redirect to sign in after 3 seconds
+      setTimeout(() => {
+        router.push("/signin");
+      }, 3000);
     } catch (error) {
-      console.error("Sign up failed:", error);
-      alert("Sign up failed. Please try again.");
+      console.error("Password reset failed:", error);
+      setErrors({ password: "Failed to reset password. Please try again." });
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Get color for password strength meter
   const getStrengthColor = () => {
     if (strength === 0) return "bg-gray-200";
     if (strength === 1) return "bg-red-500";
@@ -137,76 +107,60 @@ export default function SignUpPage() {
     return "bg-green-500";
   };
 
+  if (isSuccess) {
+    return (
+      <div className='min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-4'>
+        <Card className='w-full max-w-md shadow-xl'>
+          <CardHeader className='space-y-1'>
+            <div className='mx-auto w-12 h-12 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center mb-4'>
+              <Check className='h-6 w-6 text-green-600 dark:text-green-400' />
+            </div>
+            <CardTitle className='text-2xl font-bold text-center'>
+              Password Reset
+            </CardTitle>
+            <CardDescription className='text-center'>
+              Your password has been successfully reset
+            </CardDescription>
+          </CardHeader>
+
+          <CardContent className='space-y-6'>
+            <Alert className='bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800'>
+              <AlertDescription className='text-green-800 dark:text-green-200 text-center'>
+                You will be redirected to the sign in page in a few seconds...
+              </AlertDescription>
+            </Alert>
+
+            <div className='text-center'>
+              <Button asChild className='w-full'>
+                <Link href='/signin'>Sign In Now</Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className='min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-4'>
       <Card className='w-full max-w-md shadow-xl'>
         <CardHeader className='space-y-1'>
           <CardTitle className='text-2xl font-bold text-center'>
-            Create Account
+            Create New Password
           </CardTitle>
-          <CardDescription className='text-center text-foreground'>
-            Fill in your details to get started
+          <CardDescription className='text-center'>
+            Enter your new password below
           </CardDescription>
         </CardHeader>
 
         <CardContent>
           <form onSubmit={handleSubmit} className='space-y-6'>
             <div className='space-y-4'>
-              {/* Name Field */}
-              <div className='space-y-2'>
-                <Label htmlFor='name' className='flex items-center gap-2'>
-                  <User className='h-4 w-4' />
-                  Full Name
-                </Label>
-                <Input
-                  id='name'
-                  type='text'
-                  placeholder='John Doe'
-                  value={formData.name}
-                  onChange={(e) => handleChange("name", e.target.value)}
-                  className={`h-11 bg-input ${
-                    errors.name
-                      ? "border-destructive focus-visible:ring-destructive"
-                      : "border-input-foreground"
-                  }`}
-                  disabled={isLoading}
-                  autoComplete='name'
-                />
-                {errors.name && (
-                  <p className='text-sm text-destructive'>{errors.name}</p>
-                )}
-              </div>
-
-              {/* Email Field */}
-              <div className='space-y-2'>
-                <Label htmlFor='email' className='flex items-center gap-2'>
-                  <Mail className='h-4 w-4' />
-                  Email Address
-                </Label>
-                <Input
-                  id='email'
-                  type='email'
-                  placeholder='name@example.com'
-                  value={formData.email}
-                  onChange={(e) => handleChange("email", e.target.value)}
-                  className={`h-11 bg-input ${
-                    errors.email
-                      ? "border-destructive focus-visible:ring-destructive"
-                      : "border-input-foreground"
-                  }`}
-                  disabled={isLoading}
-                  autoComplete='email'
-                />
-                {errors.email && (
-                  <p className='text-sm text-destructive'>{errors.email}</p>
-                )}
-              </div>
-
               {/* Password Field */}
               <div className='space-y-2'>
                 <Label htmlFor='password' className='flex items-center gap-2'>
                   <Lock className='h-4 w-4' />
-                  Password
+                  New Password
                 </Label>
                 <div className='relative'>
                   <Input
@@ -215,7 +169,7 @@ export default function SignUpPage() {
                     placeholder='••••••••'
                     value={formData.password}
                     onChange={(e) => handleChange("password", e.target.value)}
-                    className={`h-11 pr-10 bg-input ${
+                    className={`h-11 pr-10 ${
                       errors.password
                         ? "border-destructive focus-visible:ring-destructive"
                         : "border-input-foreground"
@@ -250,7 +204,7 @@ export default function SignUpPage() {
                         />
                       ))}
                     </div>
-                    <div className='grid grid-cols-2 gap-2 text-xs text-foreground'>
+                    <div className='grid grid-cols-2 gap-2 text-xs text-muted-foreground'>
                       <div className='flex items-center gap-1'>
                         <Check
                           className={`h-3 w-3 ${
@@ -306,7 +260,7 @@ export default function SignUpPage() {
                   htmlFor='confirmPassword'
                   className='flex items-center gap-2'>
                   <Lock className='h-4 w-4' />
-                  Confirm Password
+                  Confirm New Password
                 </Label>
                 <div className='relative'>
                   <Input
@@ -317,7 +271,7 @@ export default function SignUpPage() {
                     onChange={(e) =>
                       handleChange("confirmPassword", e.target.value)
                     }
-                    className={`h-11 pr-10 bg-input ${
+                    className={`h-11 pr-10 ${
                       errors.confirmPassword
                         ? "border-destructive focus-visible:ring-destructive"
                         : "border-input-foreground"
@@ -346,31 +300,6 @@ export default function SignUpPage() {
               </div>
             </div>
 
-            {/* Terms Agreement */}
-            <div className='flex items-start space-x-2 w-full font-light'>
-              <input
-                type='checkbox'
-                id='terms'
-                className='mt-0.5 h-4 w-4 rounded border-gray-300'
-                required
-                disabled={isLoading}
-              />
-              <Label htmlFor='terms' className='text-sm font-normal!'>
-                I agree to the{" "}
-                <Link
-                  href='/terms'
-                  className='text-primary hover:underline font-medium'>
-                  Terms of Service
-                </Link>{" "}
-                and{" "}
-                <Link
-                  href='/privacy'
-                  className='text-primary hover:underline font-medium'>
-                  Privacy Policy
-                </Link>
-              </Label>
-            </div>
-
             <Button
               type='submit'
               className='w-full h-11 text-base'
@@ -378,25 +307,22 @@ export default function SignUpPage() {
               {isLoading ? (
                 <>
                   <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-                  Creating Account...
+                  Resetting Password...
                 </>
               ) : (
-                "Create Account"
+                "Reset Password"
               )}
             </Button>
           </form>
         </CardContent>
 
         <CardFooter className='flex flex-col space-y-4'>
-          <Separator />
-
           <div className='text-center text-sm'>
-            Already have an account?{" "}
             <Link
               href='/signin'
-              className='font-semibold text-primary hover:underline'
+              className='text-primary hover:underline'
               tabIndex={isLoading ? -1 : 0}>
-              Sign in
+              Back to Sign In
             </Link>
           </div>
         </CardFooter>
