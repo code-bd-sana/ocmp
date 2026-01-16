@@ -126,7 +126,7 @@ export default function ForgotPasswordPage() {
                     className={`h-11 ${
                       error
                         ? "border-destructive focus-visible:ring-destructive"
-                        : ""
+                        : "border-input-foreground"
                     }`}
                     disabled={isLoading}
                     autoComplete='email'
@@ -137,7 +137,7 @@ export default function ForgotPasswordPage() {
 
               <Button
                 type='submit'
-                className='w-full h-11 text-base'
+                className='w-full h-11 text-base bg-primary cursor-pointer'
                 disabled={isLoading}>
                 {isLoading ? (
                   <>
@@ -163,7 +163,7 @@ export default function ForgotPasswordPage() {
           <div className='text-center text-sm'>
             <Link
               href='/signin'
-              className='inline-flex items-center text-primary hover:underline'
+              className='inline-flex items-center text-foreground hover:underline'
               tabIndex={isLoading ? -1 : 0}>
               <ArrowLeft className='mr-2 h-4 w-4' />
               Back to Sign In

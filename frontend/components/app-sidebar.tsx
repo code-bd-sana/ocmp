@@ -32,11 +32,8 @@ const clients = [
 
 export function AppSidebar() {
   return (
-    <div className='h-full' style={{ position: "relative", zIndex: 10 }}>
-      <Sidebar
-        collapsible='icon'
-        className='static h-full min-h-screen flex flex-col'
-        style={{ top: 0 }}>
+    <div className='h-full sticky top-0 z-20'>
+      <Sidebar collapsible='icon' className='h-screen flex flex-col'>
         <SmartToggle />
         <SidebarContent className='flex-1'>
           <SidebarGroup>

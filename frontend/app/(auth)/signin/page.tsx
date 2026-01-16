@@ -141,7 +141,7 @@ export default function SignInPage() {
                   </Label>
                   <Link
                     href='/forgot-password'
-                    className='text-sm text-primary hover:underline'
+                    className='text-sm text-primary! hover:underline'
                     tabIndex={-1}>
                     Forgot password?
                   </Link>
@@ -187,7 +187,7 @@ export default function SignInPage() {
 
             <Button
               type='submit'
-              className='w-full h-11 text-base'
+              className='w-full h-11 text-base bg-primary cursor-pointer'
               disabled={isLoading}>
               {isLoading ? (
                 <>

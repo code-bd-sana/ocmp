@@ -39,9 +39,9 @@ export default async function RootLayout({
     <html lang='en'>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <div className='flex flex-col min-h-screen'>
-          {/* Header */}
-          <header className='bg-primary-bg text-primary-foreground px-20 py-10.75 flex items-center justify-between'>
+        <div className='flex flex-col min-h-screen relative'>
+          {/* Sticky Header */}
+          <header className='bg-primary text-primary-foreground px-20 py-10.75 flex items-center justify-between sticky top-0 z-30'>
             <div className='flex items-center gap-3'>
               <Image src='/logo.png' alt='OCMP Logo' width={150} height={37} />
             </div>
@@ -73,11 +73,15 @@ export default async function RootLayout({
               </DropdownMenu>
             </div>
           </header>
-          {/* Sidebar and main content */}
-          <div className='flex flex-1'>
+          {/* Sticky Sidebar and scrollable main content */}
+          <div className='flex flex-1 min-h-0'>
             <SidebarProvider defaultOpen={defaultOpen}>
-              <AppSidebar />
-              <main className='flex-1'>{children}</main>
+              <div className='sticky left-0 top-0 h-[70vh] z-50'>
+                <AppSidebar />
+              </div>
+              <main className='flex-1 h-full px-8 py-10 overflow-y-auto min-h-0'>
+                {children}
+              </main>
             </SidebarProvider>
           </div>
         </div>

@@ -373,7 +373,7 @@ export default function SignUpPage() {
 
             <Button
               type='submit'
-              className='w-full h-11 text-base'
+              className='w-full h-11 text-base bg-primary cursor-pointer'
               disabled={isLoading}>
               {isLoading ? (
                 <>

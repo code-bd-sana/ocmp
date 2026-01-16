@@ -16,7 +16,7 @@ export function SmartToggle({
       variant='outline'
       size='icon'
       className={cn(
-        "h-8 w-8 bg-white! border-[#F9F9FA] absolute -right-4 top-7.5",
+        "h-8 w-8 bg-white! border-[#F9F9FA] absolute -right-4 top-7.5 z-50",
         className
       )}
       onClick={toggleSidebar}

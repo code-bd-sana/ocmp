@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Check, Eye, EyeOff, Loader2, Lock } from "lucide-react";
+import { ArrowLeft, Check, Eye, EyeOff, Loader2, Lock } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -302,7 +302,7 @@ export default function ResetPasswordPage() {
 
             <Button
               type='submit'
-              className='w-full h-11 text-base'
+              className='w-full h-11 text-base bg-primary cursor-pointer'
               disabled={isLoading}>
               {isLoading ? (
                 <>
@@ -320,8 +320,9 @@ export default function ResetPasswordPage() {
           <div className='text-center text-sm'>
             <Link
               href='/signin'
-              className='text-primary hover:underline'
+              className='inline-flex items-center text-foreground hover:underline'
               tabIndex={isLoading ? -1 : 0}>
+              <ArrowLeft className='mr-2 h-4 w-4' />
               Back to Sign In
             </Link>
           </div>
