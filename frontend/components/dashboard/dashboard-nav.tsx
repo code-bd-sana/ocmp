@@ -14,7 +14,11 @@ import {
 
 const items = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { name: "Repository", href: "/dashboard/repository", icon: FolderOpen },
+  {
+    name: "Repository",
+    href: "/dashboard/repository-settings",
+    icon: FolderOpen,
+  },
   { name: "Vehicles", href: "/dashboard/vehicles", icon: Truck },
   { name: "All Users", href: "/dashboard/users", icon: Users },
   { name: "Planner", href: "/dashboard/planner", icon: Calendar },

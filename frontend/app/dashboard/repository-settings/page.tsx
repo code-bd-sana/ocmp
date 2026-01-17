@@ -1,4 +1,4 @@
-export default function Repository() {
+export default function RepositorySettings() {
   return (
     <div>
       <p className='text-2xl'>Repository</p>
