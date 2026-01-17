@@ -26,17 +26,17 @@ export function DashboardNav() {
 
   return (
     <nav className='w-full border-b bg-background shadow-sm'>
-      <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
-        <div className='relative h-20 md:h-24'>
-          {/* Scrollable container */}
+      <div className='w-full '>
+        <div className=' h-20 md:h-24'>
+          {/* Scrollable navbar */}
           <div
             className='
               absolute inset-0
-              flex items-end gap-6 sm:gap-8 lg:gap-10
+              flex items-center justify-between lg:justify-center md:px-20 gap-2 sm:gap-6 lg:gap-16 
               overflow-x-auto pb-3
               snap-x snap-mandatory
               scrollbar-hide
-              scroll-smooth
+              scroll-smooth z-0
             '>
             {items.map((item) => {
               const isActive =
@@ -48,21 +48,21 @@ export function DashboardNav() {
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    "group relative flex flex-col items-center min-w-18 sm:min-w-21 transition-colors snap-center",
+                    "group relative flex flex-col items-center min-w-24 sm:min-w-21 transition-colors snap-center",
                     isActive
                       ? "text-primary"
-                      : "text-muted-foreground hover:text-primary"
+                      : "text-[#00000066] hover:text-primary"
                   )}>
                   <item.icon
-                    className='h-8 w-8 sm:h-9 sm:w-9 md:h-10 md:w-10 mb-1 md:mb-1.5 transition-transform group-hover:scale-110'
+                    className='h-8 w-8 sm:h-9 sm:w-9 md:h-10 md:w-14 mb-1 md:mb-1.5 transition-transform group-hover:scale-110'
                     strokeWidth={1.7}
                   />
-                  <span className='text-[11px] sm:text-xs md:text-sm font-bold whitespace-nowrap'>
+                  <span className='text-[11px] sm:text-base md:text-sm font-bold whitespace-nowrap'>
                     {item.name}
                   </span>
 
                   {isActive && (
-                    <span className='absolute -bottom-1 left-1/2 -translate-x-1/2 w-8 sm:w-10 h-0.5 bg-primary rounded-full transition-all duration-300' />
+                    <span className='absolute -bottom-1 left-1/2 -translate-x-1/2 w-14  sm:w-16 md:w-20 lg:w-24 h-1 bg-primary rounded-full transition-all duration-300' />
                   )}
                 </Link>
               );

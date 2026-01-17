@@ -6,6 +6,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { MobileSidebarToggle } from "../smart-toggle";
 
 export default function Header() {
   return (
@@ -19,6 +20,7 @@ export default function Header() {
   '>
       {/* Logo */}
       <div className='flex items-center gap-3'>
+        <MobileSidebarToggle />
         <Image
           src='/logo.png'
           alt='OCMP'

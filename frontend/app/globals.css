@@ -105,6 +105,9 @@
   --sidebar-accent-foreground: #2b3674;
   --sidebar-border: #e0e0e0;
   --sidebar-ring: #9e9e9e1a;
+
+  /* Dashboard Navbar */
+  --dashboard-navbar: #00000066;
 }
 
 .dark {

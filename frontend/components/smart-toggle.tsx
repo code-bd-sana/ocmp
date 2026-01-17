@@ -3,21 +3,51 @@
 import { Button } from "@/components/ui/button";
 import { useSidebar } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Menu } from "lucide-react";
 
 interface SmartToggleProps extends React.ComponentProps<typeof Button> {
   className?: string;
 }
 
-export function SmartToggle({ className, ...props }: SmartToggleProps) {
-  const { state, toggleSidebar } = useSidebar();
+// Mobile toggle button (for use in Header)
+export function MobileSidebarToggle({ className, ...props }: SmartToggleProps) {
+  const { setOpenMobile, isMobile } = useSidebar();
+
+  if (!isMobile) return null;
+
+  return (
+    <Button
+      variant='ghost'
+      size='icon'
+      className={cn(
+        "h-10 w-10 text-white hover:bg-primary/80 text-center",
+        className
+      )}
+      onClick={() => setOpenMobile(true)}
+      {...props}>
+      <Menu className='h-10 w-10' />
+      <span className='sr-only'>Open sidebar</span>
+    </Button>
+  );
+}
+
+// Desktop toggle button (for use in Sidebar)
+export function DesktopSidebarToggle({
+  className,
+  ...props
+}: SmartToggleProps) {
+  const { state, toggleSidebar, isMobile } = useSidebar();
+
+  if (isMobile) return null;
 
   return (
     <Button
       variant='outline'
       size='icon'
       className={cn(
-        "h-8 w-8 bg-background border absolute -right-4 top-6 z-50",
+        "h-6 w-6 bg-background border shadow-sm",
+        "absolute -right-4 top-12 -translate-y-1/2 z-50",
+        "hover:bg-background hover:scale-105 transition-transform",
         className
       )}
       onClick={toggleSidebar}
@@ -30,4 +60,9 @@ export function SmartToggle({ className, ...props }: SmartToggleProps) {
       <span className='sr-only'>Toggle sidebar</span>
     </Button>
   );
+}
+
+// Original SmartToggle (for backward compatibility)
+export function SmartToggle({ className, ...props }: SmartToggleProps) {
+  return <DesktopSidebarToggle className={className} {...props} />;
 }
