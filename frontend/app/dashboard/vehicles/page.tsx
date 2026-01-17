@@ -1,7 +1,7 @@
 export default function Repository() {
   return (
     <div>
-      <p>Vehicles</p>
+      <p className='text-2xl'>Vehicles</p>
     </div>
   );
 }

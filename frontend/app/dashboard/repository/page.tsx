@@ -1,7 +1,7 @@
 export default function Repository() {
   return (
     <div>
-      <p>repository</p>
+      <p className='text-2xl'>Repository</p>
       <p>
         Lorem ipsum dolor sit amet consectetur adipisicing elit. Asperiores
         incidunt aliquid nobis. Dolorum commodi quaerat, enim quibusdam animi

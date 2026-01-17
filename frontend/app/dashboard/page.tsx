@@ -1,7 +1,7 @@
 export default function page() {
   return (
-    <div className='pt-5'>
-      <p>Main Dashboard</p>
+    <div className='pt-5 bg-white'>
+      <p className='text-2xl'>Main Dashboard</p>
       <p>
         Lorem ipsum dolor sit amet consectetur, adipisicing elit. Eos voluptate
         sapiente id incidunt, aperiam a obcaecati temporibus, in porro tempora

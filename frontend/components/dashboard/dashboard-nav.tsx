@@ -25,7 +25,7 @@ export function DashboardNav() {
   const pathname = usePathname();
 
   return (
-    <nav className='w-full border-b bg-background shadow-sm'>
+    <nav className='w-full border-b bg-muted shadow-sm'>
       <div className='w-full '>
         <div className=' h-20 md:h-24'>
           {/* Scrollable navbar */}
@@ -51,10 +51,10 @@ export function DashboardNav() {
                     "group relative flex flex-col items-center min-w-24 sm:min-w-21 transition-colors snap-center",
                     isActive
                       ? "text-primary"
-                      : "text-[#00000066] hover:text-primary"
+                      : "text-(--dashboard-navbar) hover:text-primary"
                   )}>
                   <item.icon
-                    className='h-8 w-8 sm:h-9 sm:w-9 md:h-10 md:w-14 mb-1 md:mb-1.5 transition-transform group-hover:scale-110'
+                    className='h-7 w-8 sm:h-7 sm:w-9 md:h-10 md:w-10 mb-1 md:mb-1.5 transition-transform group-hover:scale-110'
                     strokeWidth={1.7}
                   />
                   <span className='text-[11px] sm:text-base md:text-sm font-bold whitespace-nowrap'>

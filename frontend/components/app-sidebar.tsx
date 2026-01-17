@@ -17,7 +17,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 
-import { Building2, ChevronDown, LogOut } from "lucide-react";
+import { ChevronDown, LogOut, UserRoundCog } from "lucide-react";
 import Link from "next/link";
 import { DesktopSidebarToggle } from "./smart-toggle";
 
@@ -33,27 +33,17 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible='icon' className='border-r bg-sidebar'>
-      {/* Toggle button using Shadcn's toggle */}
-      {/* <button
-        onClick={toggleSidebar}
-        className='h-6 w-6 bg-background border shadow-sm absolute -right-3 top-6 z-50
-          hover:bg-background hover:scale-105 transition-transform rounded-md flex items-center justify-center'>
-        {state === "expanded" ? (
-          <ChevronLeft className='h-4 w-4' />
-        ) : (
-          <ChevronRight className='h-4 w-4' />
-        )}
-      </button> */}
+      {/* Toggle */}
       <DesktopSidebarToggle />
 
-      <SidebarContent className='flex-1'>
+      <SidebarContent className='flex-1 bg-muted '>
         <SidebarGroup>
           <SidebarMenu>
             <Collapsible defaultOpen className='group/collapsible'>
               <SidebarMenuItem>
                 <CollapsibleTrigger asChild>
                   <SidebarMenuButton tooltip='Company Management'>
-                    <Building2 className='h-4 w-4' />
+                    <UserRoundCog className='h-8 w-8' />
                     <span>Company Management</span>
                     <ChevronDown className='ml-auto h-4 w-4 transition-transform group-data-[state=open]/collapsible:rotate-180' />
                   </SidebarMenuButton>
@@ -78,11 +68,11 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className='border-t p-3'>
+      <SidebarFooter className='bg-muted p-3'>
         <SidebarMenuButton
           asChild
           className='w-full justify-start text-destructive hover:bg-destructive/10 hover:text-destructive'>
-          <div className='flex items-center gap-2'>
+          <div className='flex items-center gap-2 text-[16px]'>
             <LogOut className='h-4 w-4' />
             <span>Logout Account</span>
           </div>
