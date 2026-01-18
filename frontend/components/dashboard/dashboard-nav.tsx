@@ -61,12 +61,12 @@ export function DashboardNav() {
                     className='h-7 w-8 sm:h-7 sm:w-9 md:h-10 md:w-10 mb-1 md:mb-1.5 transition-transform group-hover:scale-110'
                     strokeWidth={1.5}
                   />
-                  <span className='text-[11px] sm:text-base md:text-sm font-bold whitespace-nowrap'>
+                  <span className='text-[11px] sm:text-base md:text-sm font-bold whitespace-nowrap md:mb-2'>
                     {item.name}
                   </span>
 
                   {isActive && (
-                    <span className='absolute -bottom-1 left-1/2 -translate-x-1/2 w-14  sm:w-16 md:w-20 lg:w-24 h-1 bg-primary rounded-full transition-all duration-300' />
+                    <span className='absolute -bottom-1 left-1/2 -translate-x-1/2 w-16  sm:w-16 md:w-20 lg:w-24 h-1 bg-primary rounded-full transition-all duration-300' />
                   )}
                 </Link>
               );

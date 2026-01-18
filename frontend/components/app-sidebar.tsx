@@ -63,7 +63,7 @@ export function AppSidebar() {
                     tooltip='Company Management'
                     className='bg-primary text-white hover:bg-primary/90 hover:text-white h-14 px-4 font-medium rounded-none'>
                     <UserRoundCog className='h-5 w-5' />
-                    <span className='text-lg'>Company Management</span>
+                    <span className='text-[14px]'>Company Management</span>
                     <ChevronDown className='ml-auto h-5 w-5 transition-transform group-data-[state=open]/collapsible:rotate-180' />
                   </SidebarMenuButton>
                 </CollapsibleTrigger>
