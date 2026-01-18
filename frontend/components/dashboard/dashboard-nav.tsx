@@ -36,7 +36,7 @@ export function DashboardNav() {
           <div
             className='
               absolute inset-0
-              flex items-center justify-between lg:justify-center md:px-20 gap-2 sm:gap-6 lg:gap-16 
+              flex items-center justify-between lg:justify-center md:px-20 gap-2 sm:gap-6 lg:gap-24 
               overflow-x-auto pb-3
               snap-x snap-mandatory
               scrollbar-hide
@@ -55,11 +55,11 @@ export function DashboardNav() {
                     "group relative flex flex-col items-center min-w-24 sm:min-w-21 transition-colors snap-center",
                     isActive
                       ? "text-primary"
-                      : "text-(--dashboard-navbar) hover:text-primary"
+                      : "text-(--dashboard-navbar) hover:text-primary",
                   )}>
                   <item.icon
                     className='h-7 w-8 sm:h-7 sm:w-9 md:h-10 md:w-10 mb-1 md:mb-1.5 transition-transform group-hover:scale-110'
-                    strokeWidth={1.7}
+                    strokeWidth={1.5}
                   />
                   <span className='text-[11px] sm:text-base md:text-sm font-bold whitespace-nowrap'>
                     {item.name}
