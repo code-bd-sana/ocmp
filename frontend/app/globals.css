@@ -111,6 +111,10 @@
 
   /* Body text */
   --body-text: #1a1a1a;
+
+  /* Dashboard Summary Card */
+  --dashboard-vehicle-driver-bg: #edeefc;
+  --dashboard-job-alert-card-bg: #e6f1fd;
 }
 
 .dark {

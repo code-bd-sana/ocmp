@@ -39,7 +39,11 @@ export default function Header() {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Avatar className='h-9 w-9 md:h-10 md:w-10 cursor-pointer'>
-              <AvatarImage src='/images/user-avatar.png' alt='Admin' />
+              <AvatarImage
+                src='/images/user-avatar.png'
+                alt='Admin'
+                suppressHydrationWarning
+              />
               <AvatarFallback className='bg-primary-foreground text-primary font-bold'>
                 AD
               </AvatarFallback>
