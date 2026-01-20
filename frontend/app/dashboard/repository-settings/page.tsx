@@ -182,7 +182,7 @@ export default function RepositorySettings() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Apply Repository Settings?</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogDescription className='text-(--body-text)'>
               Are you sure you want to save these changes to the footer
               navigation? Click Save Changes to apply or Cancel to keep the
               current settings.
