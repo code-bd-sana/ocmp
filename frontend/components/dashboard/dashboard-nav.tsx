@@ -12,6 +12,24 @@ import {
   Settings,
 } from "lucide-react";
 
+/**
+ * Array of navigation items for the dashboard sidebar/header
+ *
+ * Each item represents a navigation link in the dashboard navigation bar.
+ * The items are displayed as clickable icons with labels that provide
+ * access to different sections of the dashboard.
+ *
+ * @type {Array<{
+ *   name: string;        // Display name shown to the user
+ *   href: string;        // URL path for navigation (Next.js route)
+ *   icon: LucideIcon;    // Icon component from lucide-react library
+ * }>}
+ *
+ * @property {string} name - The display name shown to the user (e.g., "Dashboard", "Repository")
+ * @property {string} href - The URL path for Next.js navigation. Should follow the app router structure.
+ * @property {LucideIcon} icon - Icon component from lucide-react library that visually represents the navigation item.
+ */
+
 const items = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   {
