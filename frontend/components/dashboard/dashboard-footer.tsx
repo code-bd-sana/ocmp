@@ -64,10 +64,10 @@ export default function DashboardFooter() {
   const isAtStart = scrollPosition === 0;
   const isAtEnd = scrollPosition >= maxScroll - 1;
 
-  // Don't render footer if no links
-  // if (footerItems.length === 0) {
-  //   return null;
-  // }
+  // In no links then no footer
+  if (footerItems.length === 0) {
+    return null;
+  }
 
   return (
     <footer

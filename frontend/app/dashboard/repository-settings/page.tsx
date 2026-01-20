@@ -10,9 +10,23 @@ import { Card, CardContent } from "@/components/ui/card";
 import { NavigationLink } from "@/lib/repository/repository.types";
 import { NavigationCookies } from "@/lib/repository/repository.cookies";
 
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogFooter,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from "@/components/ui/alert-dialog";
+
 export default function RepositorySettings() {
   const [links, setLinks] = useState<NavigationLink[]>([]);
+  const [originalLinks, setOriginalLinks] = useState<NavigationLink[]>([]); // Store original state
   const [searchQuery, setSearchQuery] = useState("");
+  const [showAlert, setShowAlert] = useState(false);
+  const [pendingChanges, setPendingChanges] = useState<NavigationLink[]>([]); // Store changes before saving
 
   // Load settings on mount
   useEffect(() => {
@@ -20,6 +34,7 @@ export default function RepositorySettings() {
       // Get merged links (ALL_NAVIGATION_LINKS + saved enabled states)
       const mergedLinks = NavigationCookies.getMergedLinks();
       setLinks(mergedLinks);
+      setOriginalLinks(mergedLinks); // Save original state
     }, 0);
 
     return () => clearTimeout(timer);
@@ -34,13 +49,26 @@ export default function RepositorySettings() {
   };
 
   const handleApply = () => {
-    // Save only the enabled states
-    NavigationCookies.saveEnabledStates(links);
+    // Store the current changes before showing alert
+    setPendingChanges([...links]);
+    setShowAlert(true);
+  };
+
+  const handleConfirmSave = () => {
+    // Actually save to cookies
+    NavigationCookies.saveEnabledStates(pendingChanges);
     console.log(
       "Saved enabled states for links:",
-      links.filter((l) => l.enabled).map((l) => l.id),
+      pendingChanges.filter((l) => l.enabled).map((l) => l.id),
     );
-    alert("Settings applied! Changes will appear in the footer.");
+    setOriginalLinks(pendingChanges); // Update original state
+    setShowAlert(false);
+  };
+
+  const handleCancelSave = () => {
+    // Revert to original state
+    setLinks(originalLinks);
+    setShowAlert(false);
   };
 
   // Get all links to display
@@ -67,7 +95,7 @@ export default function RepositorySettings() {
   }
 
   return (
-    <div className=' mx-auto py-4 lg:mr-10'>
+    <div className='mx-auto py-4 lg:mr-10'>
       <div className='mb-8'>
         <div className='flex flex-col md:flex-row gap-y-3 md:gap-x-3 justify-between'>
           <h1 className='text-3xl font-bold mb-2'>Repository</h1>
@@ -148,6 +176,28 @@ export default function RepositorySettings() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Alert Dialog */}
+      <AlertDialog open={showAlert} onOpenChange={setShowAlert}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Apply Repository Settings?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to save these changes to the footer
+              navigation? Click Save Changes to apply or Cancel to keep the
+              current settings.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleCancelSave}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmSave}>
+              Save Changes
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
