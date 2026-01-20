@@ -2,8 +2,7 @@
 
 import DashboardHome from "@/components/dashboard/dashboard-home";
 import { UniversalTable } from "@/components/universal-table/UniversalTable";
-import { TableAction } from "@/components/universal-table/table.types";
-import { Column } from "@/components/universal-table/table.types";
+import { Column, TableAction } from "@/components/universal-table/table.types";
 
 // -------------------- TYPES --------------------
 type User = {
@@ -40,9 +39,9 @@ const actions: TableAction<User>[] = [
   },
 ];
 
-export default function Page() {
+export default function page() {
   return (
-    <div className="pt-5 bg-white">
+    <div className='pt-5 bg-white'>
       <DashboardHome />
       <UniversalTable<User>
         data={users}
