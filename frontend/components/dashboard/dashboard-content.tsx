@@ -19,7 +19,7 @@ export default function DashboardContent({
     <>
       {/* Dashboard Nav */}
       <div
-        className='fixed top-14 md:top-16 z-1 bg-muted border-b shadow-sm right-0 transition-all duration-200'
+        className='fixed top-14 md:top-16 z-1 bg-muted border-b shadow-sm right-0 transition-all duration-200 '
         style={{ left: sidebarWidth }}>
         <DashboardNav />
       </div>

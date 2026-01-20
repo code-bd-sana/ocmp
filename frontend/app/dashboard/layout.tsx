@@ -29,30 +29,3 @@ export default function DashboardLayout({
     </>
   );
 }
-
-// working one
-
-// "use client";
-
-// import { SidebarProvider } from "@/components/ui/sidebar";
-// import { AppSidebar } from "@/components/app-sidebar";
-// import Header from "@/components/dashboard/header";
-// import DashboardContent from "@/components/dashboard/dashboard-content";
-
-// export default function DashboardLayout({
-//   children,
-// }: {
-//   children: React.ReactNode;
-// }) {
-//   return (
-//     <div className='flex min-h-screen flex-col'>
-//       <Header />
-//       <div className='flex flex-1 relative'>
-//         <SidebarProvider>
-//           <AppSidebar />
-//           <DashboardContent>{children}</DashboardContent>
-//         </SidebarProvider>
-//       </div>
-//     </div>
-//   );
-// }

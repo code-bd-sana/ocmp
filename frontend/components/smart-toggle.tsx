@@ -21,7 +21,7 @@ export function MobileSidebarToggle({ className, ...props }: SmartToggleProps) {
       size='icon'
       className={cn(
         "h-10 w-10 text-white hover:bg-primary/80 text-center",
-        className
+        className,
       )}
       onClick={() => setOpenMobile(true)}
       {...props}>
@@ -48,14 +48,14 @@ export function DesktopSidebarToggle({
         "h-6 w-6 bg-background border shadow-sm",
         "absolute -right-4 top-12 -translate-y-1/2 z-50",
         "hover:bg-background hover:scale-105 transition-transform",
-        className
+        className,
       )}
       onClick={toggleSidebar}
       {...props}>
       {state === "expanded" ? (
-        <ChevronLeft className='h-4 w-4' />
+        <ChevronLeft className='h-4 w-4 text-primary' />
       ) : (
-        <ChevronRight className='h-4 w-4' />
+        <ChevronRight className='h-4 w-4 text-primary' />
       )}
       <span className='sr-only'>Toggle sidebar</span>
     </Button>
