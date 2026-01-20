@@ -46,7 +46,7 @@ export function DesktopSidebarToggle({
       size='icon'
       className={cn(
         "h-6 w-6 bg-background border shadow-sm",
-        "absolute -right-4 top-12 -translate-y-1/2 z-50",
+        "absolute -right-3.25 top-12 -translate-y-1/2 z-50",
         "hover:bg-background hover:scale-105 transition-transform",
         className,
       )}
