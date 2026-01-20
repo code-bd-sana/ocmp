@@ -20,12 +20,6 @@ const FleetUtilizationChart = dynamic(
 export default function DashboardSummary() {
   const summaryData = getSummaryData();
   const fleetData = getFleetUtilizationData();
-  // const [isClient, setIsClient] = useState(false);
-
-  // useEffect(() => {
-  //   setIsClient(true);
-  // }, []);
-
   // images
   const iconImages: Record<string, string> = {
     "Total Vehicles": "/dashboard/truck.png",
