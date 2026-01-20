@@ -75,15 +75,15 @@ export function AppSidebar() {
                     <SidebarMenuSubItem key={client.id} className='relative'>
                       {/* Vertical line */}
                       {index < clients.length - 1 && (
-                        <div className='absolute left-6 -top-1 bottom-0 w-0.5 bg-(--dashboard-navbar) ' />
+                        <div className='absolute left-6 -top-1 bottom-0 w-0.5 bg-(--muted-foreground) ' />
                       )}
 
                       {/* Horizontal branch line */}
-                      <div className='absolute left-6 top-1/2 w-5 h-0.5 bg-(--dashboard-navbar)' />
+                      <div className='absolute left-6 top-1/2 w-5 h-0.5 bg-(--muted-foreground)' />
 
                       {/* Corner for last item */}
                       {index === clients.length - 1 && (
-                        <div className='absolute left-6 -top-1 w-0.5 h-7 bg-(--dashboard-navbar)' />
+                        <div className='absolute left-6 -top-1 w-0.5 h-7 bg-(--muted-foreground)' />
                       )}
                       <SidebarMenuSubButton
                         asChild

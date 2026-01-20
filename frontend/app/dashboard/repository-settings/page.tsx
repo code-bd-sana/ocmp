@@ -98,7 +98,7 @@ export default function RepositorySettings() {
     <div className='mx-auto py-4 lg:mr-10'>
       <div className='mb-8'>
         <div className='flex flex-col md:flex-row gap-y-3 md:gap-x-3 justify-between'>
-          <h1 className='text-3xl font-bold mb-2'>Repository</h1>
+          <h1 className='text-3xl font-bold mb-2 text-primary'>Repository</h1>
           <div className='relative max-w-xl flex items-center text-(--input-foreground)'>
             <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-(--input-foreground)' />
             <Input
@@ -106,11 +106,11 @@ export default function RepositorySettings() {
               placeholder='Search'
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className='pl-10 bg-muted text-black'
+              className='pl-10 bg-muted text-foreground'
             />
           </div>
         </div>
-        <p className='text-(--body-text) my-4 font-semibold text-2xl'>
+        <p className='text-foreground my-4 font-semibold text-2xl'>
           Select Data to Display
         </p>
       </div>
@@ -119,14 +119,14 @@ export default function RepositorySettings() {
         <CardContent>
           {/* Show message when search has no results */}
           {displayedLinks.length === 0 && searchQuery.trim() !== "" && (
-            <div className='text-center py-8 text-(--body-text)'>
+            <div className='text-center py-8 text-foreground'>
               No links found for {searchQuery}
             </div>
           )}
 
           {/* Show grid when there are links to display */}
           {displayedLinks.length > 0 && (
-            <div className='grid grid-cols-2 gap-x-8 gap-y-2 text-(--body-text)'>
+            <div className='grid grid-cols-2 gap-x-8 gap-y-2 text-foreground'>
               {/* Left Column */}
               <div className='space-y-2'>
                 {leftColumnLinks.map((link) => (
@@ -181,8 +181,10 @@ export default function RepositorySettings() {
       <AlertDialog open={showAlert} onOpenChange={setShowAlert}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Apply Repository Settings?</AlertDialogTitle>
-            <AlertDialogDescription className='text-(--body-text)'>
+            <AlertDialogTitle className='text-primary'>
+              Apply Repository Settings?
+            </AlertDialogTitle>
+            <AlertDialogDescription className='text-foreground'>
               Are you sure you want to save these changes to the footer
               navigation? Click Save Changes to apply or Cancel to keep the
               current settings.
