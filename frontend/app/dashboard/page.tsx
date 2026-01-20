@@ -1,8 +1,8 @@
 "use client";
 
+import DashboardHome from "@/components/dashboard/dashboard-home";
 import { UniversalTable } from "@/components/universal-table/UniversalTable";
-import { TableAction } from "@/components/universal-table/table.types";
-import { Column } from "@/components/universal-table/table.types";
+import { Column, TableAction } from "@/components/universal-table/table.types";
 
 // -------------------- TYPES --------------------
 type User = {
@@ -39,11 +39,10 @@ const actions: TableAction<User>[] = [
   },
 ];
 
-export default function Page() {
+export default function page() {
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-semibold mb-4">Users Table</h1>
-
+    <div className='pt-5 bg-white'>
+      <DashboardHome />
       <UniversalTable<User>
         data={users}
         columns={columns}
