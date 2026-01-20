@@ -4,13 +4,38 @@ import React from "react";
 import { PieChart, Pie, Cell, PieLabelRenderProps } from "recharts";
 import { ChartData } from "./charts.types";
 
+/**
+ * Props for the FleetUtilizationChart component
+ *
+ * @interface FleetUtilizationChartProps
+ * @property {ChartData[]} data - Array of chart data objects containing name, value, and color for each pie segment
+ * @property {boolean} [isAnimationActive=true] - Optional boolean to control whether pie chart animations are active
+ */
 interface FleetUtilizationChartProps {
   data: ChartData[];
   isAnimationActive?: boolean;
 }
 
+/**
+ * Constant representing the radian value (π/180) used for angle conversions in the pie chart label positioning
+ *
+ * This is necessary because the recharts library uses degrees for angles,
+ * but JavaScript's Math.cos() and Math.sin() functions expect radians.
+ */
 const RADIAN = Math.PI / 180;
 
+/**
+ * Renders a customized percentage label inside each pie chart segment
+ *
+ * @param {PieLabelRenderProps} props - Object containing pie chart label positioning properties
+ * @param {number | undefined} props.cx - X-coordinate of the pie chart center
+ * @param {number | undefined} props.cy - Y-coordinate of the pie chart center
+ * @param {number | undefined} props.midAngle - Mid angle of the current pie segment in degrees
+ * @param {number | undefined} props.innerRadius - Inner radius of the pie chart (for donut charts)
+ * @param {number | undefined} props.outerRadius - Outer radius of the pie chart
+ * @param {number | undefined} props.percent - Percentage value of the current segment (0-1 range)
+ * @returns {JSX.Element | null} A text element displaying the percentage or null if coordinates are undefined
+ */
 const renderCustomizedLabel = ({
   cx,
   cy,
@@ -23,12 +48,36 @@ const renderCustomizedLabel = ({
     return null;
   }
 
+  /**
+   * Calculate the radius for label positioning - places the label halfway between inner and outer radius
+   * This ensures labels appear centered within the pie segment thickness
+   */
   const radius =
     (innerRadius as number) +
     ((outerRadius as number) - (innerRadius as number)) * 0.5;
+
+  /**
+   * Convert center coordinates to numbers for mathematical operations
+   * Type assertion is safe here due to the null check above
+   */
   const ncx = Number(cx);
+
+  /**
+   * Calculate the X-coordinate for the label using trigonometry:
+   * x = centerX + radius * cos(-angle)
+   * Negative angle is used because pie segments are drawn clockwise
+   */
   const x = ncx + radius * Math.cos(-(midAngle ?? 0) * RADIAN);
+
+  /**
+   * Convert center Y coordinate to number
+   */
   const ncy = Number(cy);
+
+  /**
+   * Calculate the Y-coordinate for the label using trigonometry:
+   * y = centerY + radius * sin(-angle)
+   */
   const y = ncy + radius * Math.sin(-(midAngle ?? 0) * RADIAN);
 
   return (
