@@ -1,6 +1,5 @@
 "use client";
 
-// import FleetUtilizationChart from "../charts/FleetUtilizationChart";
 import { getFleetUtilizationData, getSummaryData } from "./summary.utils";
 import Image from "next/image";
 import dynamic from "next/dynamic";
@@ -20,6 +19,7 @@ const FleetUtilizationChart = dynamic(
 export default function DashboardSummary() {
   const summaryData = getSummaryData();
   const fleetData = getFleetUtilizationData();
+  
   // images
   const iconImages: Record<string, string> = {
     "Total Vehicles": "/dashboard/truck.png",
