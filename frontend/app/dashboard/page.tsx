@@ -1,64 +1,90 @@
 "use client";
 
 import DashboardHome from "@/components/dashboard/dashboard-home";
-
+import { Column, TableAction } from "@/components/universal-table/table.types";
 import UniversalTable from "@/components/universal-table/UniversalTable";
+import { Edit, Trash } from "lucide-react";
 
-// Data type for transportManagers
-type TransportManager = {
-  name: string;
-  assignedVehicles: number;
-  registeredDate: string;
+type Vehicle = {
+  id: string;
+  driver: string;
   status: string;
 };
 
-// Data
-const transportManagers: TransportManager[] = [
+const columns: Column<Vehicle>[] = [
+  { key: "id", title: "Vehicle ID" },
+  { key: "driver", title: "Driver" },
   {
-    name: "Alice Johnson",
-    assignedVehicles: 10,
-    registeredDate: "25 Nov, 10:00AM",
-    status: "Active",
-  },
-  {
-    name: "Mark Davis",
-    assignedVehicles: 8,
-    registeredDate: "25 Nov, 10:00AM",
-    status: "Inactive",
-  },
-  {
-    name: "Sarah Lee",
-    assignedVehicles: 4,
-    registeredDate: "25 Nov, 10:00AM",
-    status: "Active",
-  },
-  {
-    name: "Bob Green",
-    assignedVehicles: 7,
-    registeredDate: "25 Nov, 10:00AM",
-    status: "Active",
-  },
-  {
-    name: "Mark Davis",
-    assignedVehicles: 5,
-    registeredDate: "25 Nov, 10:00AM",
-    status: "Active",
+    key: "status",
+    title: "Status",
+    render: (row) => <span className='font-semibold'>{row.status}</span>,
   },
 ];
 
-// Define the columns with proper type for accessor
-const columns: { title: string; accessor: keyof TransportManager }[] = [
-  { title: "Name", accessor: "name" },
-  { title: "Assigned Vehicles", accessor: "assignedVehicles" },
-  { title: "Registered Date", accessor: "registeredDate" },
-  { title: "Status", accessor: "status" },
+const actions: TableAction<Vehicle>[] = [
+  {
+    label: "Edit",
+    onClick: (row) => console.log("Edit", row),
+    icon: <Edit size={16} />,
+  },
+  {
+    label: "Delete",
+    onClick: (row) => console.log("Delete", row),
+    variant: "destructive",
+    icon: <Trash size={16} />,
+  },
+];
+
+const data: Vehicle[] = [
+  { id: "V001", driver: "John Doe", status: "Active" },
+  { id: "V002", driver: "Jane Smith", status: "Idle" },
 ];
 
 export default function page() {
   return (
-    <div className="pt-5 bg-white">
+    <div className='pt-5 bg-white'>
       <DashboardHome />
-      <UniversalTable columns={columns} data={transportManagers} />
+      <UniversalTable
+        data={data}
+        columns={columns}
+        actions={actions}
+        rowKey={(row) => row.id}
+        title='Vehicle Overview'
+        filterable
+        filterOptions={["Active", "Idle", "Maintenance"]}
+        headerButtons={[
+          {
+            label: "Header Add",
+            onClick: () => console.log("Header Add"),
+            className: "bg-[#044192] text-white",
+          },
+          {
+            label: "Header Export",
+            onClick: () => console.log("Header Export"),
+            className: "bg-[#27AE60] text-white",
+          },
+        ]}
+        inlineButtons={[
+          {
+            label: "View All",
+            onClick: () => console.log("Inline View"),
+            variant: "default",
+          },
+          {
+            label: "Refresh",
+            onClick: () => console.log("Inline Refresh"),
+            variant: "secondary",
+          },
+        ]}
+        headerSearch={{
+          placeholder: "Search header...",
+          onChange: (val) => console.log("Header search:", val),
+        }}
+        inlineSearch={{
+          placeholder: "Search table...",
+          onChange: (val) => console.log("Inline search:", val),
+        }}
+      />
     </div>
   );
 }
