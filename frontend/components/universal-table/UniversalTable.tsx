@@ -21,7 +21,9 @@ import {
 import { useState } from "react";
 import { TableProps } from "./table.types";
 
-// Dynamic button type
+/**
+ * Type for dynamic buttons in the table header or inline container
+ */
 export type HeaderButton = {
   label: string;
   onClick: () => void;
@@ -29,7 +31,9 @@ export type HeaderButton = {
   className?: string;
 };
 
-// Dynamic search type
+/**
+ * Type for dynamic search input
+ */
 export type TableSearch = {
   value?: string;
   onChange?: (value: string) => void;
@@ -37,43 +41,73 @@ export type TableSearch = {
   className?: string;
 };
 
+/**
+ * Extends TableProps to include dynamic buttons, search, and filters
+ */
 interface UniversalTablePropsWithFilters<T> extends TableProps<T> {
-  filterOptions?: string[];
-  headerButtons?: HeaderButton[]; // top header buttons
-  inlineButtons?: HeaderButton[]; // inside table container buttons
+  filterOptionsHeader?: string[];
+  filterOptionsInline?: string[];
+  headerButtons?: HeaderButton[];
+  inlineButtons?: HeaderButton[];
   headerSearch?: TableSearch;
   inlineSearch?: TableSearch;
 }
 
+/**
+ * UniversalTable component
+ *
+ * Supports:
+ * - Dynamic columns
+ * - Row actions
+ * - Header and inline search
+ * - Header and inline filters
+ * - Header and inline buttons
+ *
+ * @template T - The type of data used in table rows
+ */
 export default function UniversalTable<T>({
   data,
   columns,
   actions,
   rowKey,
   title = "Data Table",
-  filterable = false,
   emptyText = "No records found",
   actionsPosition = "end",
-  filterOptions = [],
+  filterOptionsHeader = [],
+  filterOptionsInline = [],
   headerButtons = [],
   inlineButtons = [],
   headerSearch,
   inlineSearch,
 }: UniversalTablePropsWithFilters<T>) {
-  const [activeFilter, setActiveFilter] = useState<string | null>(null);
+  /** Active filter selected from header filter */
+  const [activeHeaderFilter, setActiveHeaderFilter] = useState<string | null>(
+    null,
+  );
+  /** Active filter selected from inline filter */
+  const [activeInlineFilter, setActiveInlineFilter] = useState<string | null>(
+    null,
+  );
 
-  // Search values (controlled or internal)
+  /** Internal state for header search */
   const [internalHeaderSearch, setInternalHeaderSearch] = useState("");
+  /** Internal state for inline search */
   const [internalInlineSearch, setInternalInlineSearch] = useState("");
 
+  /** Resolve controlled or internal search values */
   const headerSearchValue = headerSearch?.value ?? internalHeaderSearch;
   const inlineSearchValue = inlineSearch?.value ?? internalInlineSearch;
 
-  // Filtered data based on search + filter
+  /**
+   * Filter data based on search and filters
+   */
   const filteredData = data.filter((row) => {
     let matchesHeaderSearch = true;
     let matchesInlineSearch = true;
+    let matchesHeaderFilter = true;
+    let matchesInlineFilter = true;
 
+    // Header search
     if (headerSearch || internalHeaderSearch !== undefined) {
       matchesHeaderSearch = columns.some((col) =>
         String(row[col.key])
@@ -82,6 +116,7 @@ export default function UniversalTable<T>({
       );
     }
 
+    // Inline search
     if (inlineSearch || internalInlineSearch !== undefined) {
       matchesInlineSearch = columns.some((col) =>
         String(row[col.key])
@@ -90,19 +125,31 @@ export default function UniversalTable<T>({
       );
     }
 
-    let matchesFilter = true;
-    if (filterable && activeFilter) {
-      matchesFilter = Object.values(row as Record<string, unknown>).some(
-        (val) => String(val) === activeFilter,
+    // Header filter
+    if (activeHeaderFilter) {
+      matchesHeaderFilter = Object.values(row as Record<string, unknown>).some(
+        (val) => String(val) === activeHeaderFilter,
       );
     }
 
-    return matchesHeaderSearch && matchesInlineSearch && matchesFilter;
+    // Inline filter
+    if (activeInlineFilter) {
+      matchesInlineFilter = Object.values(row as Record<string, unknown>).some(
+        (val) => String(val) === activeInlineFilter,
+      );
+    }
+
+    return (
+      matchesHeaderSearch &&
+      matchesInlineSearch &&
+      matchesHeaderFilter &&
+      matchesInlineFilter
+    );
   });
 
   return (
     <div className='w-full bg-[#F9F9FA] rounded-lg shadow-sm overflow-x-auto'>
-      {/* Main Header */}
+      {/* Header */}
       <div className='mx-auto p-5'>
         <div className='flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4'>
           <h1 className='text-3xl font-semibold text-blue-800'>{title}</h1>
@@ -121,6 +168,25 @@ export default function UniversalTable<T>({
               />
             )}
 
+            {filterOptionsHeader.length > 0 && (
+              <Select
+                value={activeHeaderFilter || ""}
+                onValueChange={(val) => setActiveHeaderFilter(val || null)}>
+                <SelectTrigger className='w-40 bg-white'>
+                  <SelectValue placeholder='Header Filter' />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {filterOptionsHeader.map((option) => (
+                      <SelectItem key={option} value={option}>
+                        {option}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            )}
+
             {headerButtons.map((btn, idx) => (
               <Button
                 key={idx}
@@ -133,7 +199,7 @@ export default function UniversalTable<T>({
           </div>
         </div>
 
-        {/* Inline / Table Container Buttons + Search + Filter */}
+        {/* Inline buttons + search + filter */}
         <div className='flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4'>
           <h2 className='text-xl font-semibold'>Overview</h2>
 
@@ -151,16 +217,16 @@ export default function UniversalTable<T>({
               />
             )}
 
-            {filterable && filterOptions.length > 0 && (
+            {filterOptionsInline.length > 0 && (
               <Select
-                value={activeFilter || ""}
-                onValueChange={(val) => setActiveFilter(val || null)}>
-                <SelectTrigger className='w-40'>
-                  <SelectValue placeholder='Filter' />
+                value={activeInlineFilter || ""}
+                onValueChange={(val) => setActiveInlineFilter(val || null)}>
+                <SelectTrigger className='w-40 bg-white'>
+                  <SelectValue placeholder='Inline Filter' />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectGroup>
-                    {filterOptions.map((option) => (
+                    {filterOptionsInline.map((option) => (
                       <SelectItem key={option} value={option}>
                         {option}
                       </SelectItem>
