@@ -5,8 +5,9 @@ import DecodeToken from '../utils/jwt/decode-token';
 // Extend the Request interface to include a user property
 interface AuthenticatedRequest extends Request {
   user?: {
-    email: string;
     _id: string;
+    fullName: string;
+    email: string;
   };
 }
 
@@ -43,10 +44,10 @@ const isAuthorized = async (
     }
 
     // Extract user information from the decoded token
-    const { email, _id } = decoded as { email: string; _id: string };
+    const { email, _id, fullName } = decoded as { fullName: string; email: string; _id: string };
 
     // Attach user information to the request object
-    req.user = { email, _id };
+    req.user = { fullName, email, _id };
 
     // Proceed to the next middleware or route handler
     next();

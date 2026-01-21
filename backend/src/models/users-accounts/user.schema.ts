@@ -11,6 +11,7 @@ export interface IUser extends Document {
   resetTokenExpiry?: Date;
   role: 'SUPER_ADMIN' | 'TRANSPORT_MANAGER' | 'STANDALONE_USER' | 'STAFF';
   isEmailVerified: boolean;
+  emailVerificationToken?: string;
   isActive: boolean;
 }
 
@@ -53,6 +54,9 @@ const UserSchema: Schema<IUser> = new Schema(
       required: true,
       default: false,
     } /* Email verification status */,
+    emailVerificationToken: {
+      type: String,
+    },
     isActive: {
       type: Boolean,
       required: true,
