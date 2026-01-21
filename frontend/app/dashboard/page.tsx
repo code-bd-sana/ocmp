@@ -1,57 +1,64 @@
 "use client";
 
 import DashboardHome from "@/components/dashboard/dashboard-home";
-import { UniversalTable } from "@/components/universal-table/UniversalTable";
-import { Column, TableAction } from "@/components/universal-table/table.types";
 
-// -------------------- TYPES --------------------
-type User = {
+import UniversalTable from "@/components/universal-table/UniversalTable";
+
+// Data type for transportManagers
+type TransportManager = {
   name: string;
-  email: string;
-  role: string;
+  assignedVehicles: number;
+  registeredDate: string;
+  status: string;
 };
 
-// -------------------- DATA --------------------
-const users: User[] = [
-  { name: "Khalid Ahsan", email: "khalid@gmail.com", role: "Admin" },
-  { name: "Rahim", email: "rahim@gmail.com", role: "User" },
-  { name: "Karim", email: "karim@gmail.com", role: "User" },
-  { name: "Sabbir", email: "sabbir@gmail.com", role: "Moderator" },
-];
-
-// -------------------- COLUMNS --------------------
-const columns: readonly Column<User>[] = [
-  { key: "name", title: "Name", filterable: true },
-  { key: "email", title: "Email" },
-  { key: "role", title: "Role", filterable: true },
-];
-
-// -------------------- ACTIONS --------------------
-const actions: TableAction<User>[] = [
+// Data
+const transportManagers: TransportManager[] = [
   {
-    label: "View",
-    onClick: (row) => alert(`Viewing ${row.name}`),
+    name: "Alice Johnson",
+    assignedVehicles: 10,
+    registeredDate: "25 Nov, 10:00AM",
+    status: "Active",
   },
   {
-    label: "Delete",
-    variant: "destructive",
-    onClick: (row) => alert(`Deleting ${row.name}`),
+    name: "Mark Davis",
+    assignedVehicles: 8,
+    registeredDate: "25 Nov, 10:00AM",
+    status: "Inactive",
   },
+  {
+    name: "Sarah Lee",
+    assignedVehicles: 4,
+    registeredDate: "25 Nov, 10:00AM",
+    status: "Active",
+  },
+  {
+    name: "Bob Green",
+    assignedVehicles: 7,
+    registeredDate: "25 Nov, 10:00AM",
+    status: "Active",
+  },
+  {
+    name: "Mark Davis",
+    assignedVehicles: 5,
+    registeredDate: "25 Nov, 10:00AM",
+    status: "Active",
+  },
+];
+
+// Define the columns with proper type for accessor
+const columns: { title: string; accessor: keyof TransportManager }[] = [
+  { title: "Name", accessor: "name" },
+  { title: "Assigned Vehicles", accessor: "assignedVehicles" },
+  { title: "Registered Date", accessor: "registeredDate" },
+  { title: "Status", accessor: "status" },
 ];
 
 export default function page() {
   return (
-    <div className='pt-5 bg-white'>
+    <div className="pt-5 bg-white">
       <DashboardHome />
-      <UniversalTable<User>
-        data={users}
-        columns={columns}
-        rowKey={(row) => row.email}
-        actions={actions}
-        pageSize={2}
-        searchable
-        filterable
-      />
+      <UniversalTable columns={columns} data={transportManagers} />
     </div>
   );
 }
