@@ -28,3 +28,5 @@ export const registerSchema = z.object({
   message: "Passwords must match",
   path: ["confirmPassword"],
 });
+
+
