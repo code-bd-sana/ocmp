@@ -2,10 +2,8 @@
 
 import { registerSchema } from "@/components/universal-form/form.schema";
 import UniversalForm from "@/components/universal-form/UniversalForm";
-import React from "react";
-import { registerFields } from "./testFormsFIeld";
 import z from "zod";
-
+import { registerFields } from "./testFormsFIeld";
 
 type RegisterFormData = z.infer<typeof registerSchema>;
 
@@ -16,13 +14,13 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="max-w-md mx-auto mt-10">
+    <div className='max-w-md mx-auto mt-10'>
       <UniversalForm<RegisterFormData>
-        title="Register"
+        title='Add New Entry'
         fields={registerFields}
         schema={registerSchema}
         onSubmit={handleRegister}
-        submitText="Register"
+        submitText='Register'
       />
     </div>
   );

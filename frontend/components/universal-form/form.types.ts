@@ -17,6 +17,7 @@ export interface FieldConfig {
   label: string;
   type: FieldType;
   placeholder?: string;
+  required?: boolean;
   options?: { label: string; value: string | number }[]; // for select, radio -- react select
 }
 
