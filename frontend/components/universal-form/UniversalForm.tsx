@@ -22,7 +22,8 @@ import {
 
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, X } from "lucide-react";
+import { AlertDialogCancel } from "../ui/alert-dialog";
 
 export default function UniversalForm<T extends FieldValues>({
   title,
@@ -60,8 +61,13 @@ export default function UniversalForm<T extends FieldValues>({
     <FormProvider {...methods}>
       <form
         onSubmit={handleSubmit(onSubmit)}
-        className='space-y-6 bg-white dark:bg-gray-800 p-6 rounded-lg '>
-        <h2 className='text-2xl text-primary font-semibold pb-2'>{title}</h2>
+        className='space-y-6 bg-white dark:bg-gray-800 px-6  '>
+        <div className='flex justify-between'>
+          <h2 className='text-2xl text-primary font-semibold pb-2'>{title}</h2>
+          <AlertDialogCancel className='border-none shadow-none hover:bg-transparent p-0 hover:text-black dark:hover:text-white'>
+            <X />
+          </AlertDialogCancel>
+        </div>
 
         {fields.map((field: FieldConfig) => (
           <div key={field.name} className='flex flex-col'>
@@ -276,12 +282,18 @@ export default function UniversalForm<T extends FieldValues>({
         ))}
 
         {/* Submit Button */}
-        <button
-          type='submit'
-          disabled={formState.isSubmitting}
-          className='bg-primary text-white px-4 py-2 '>
-          {formState.isSubmitting ? "Submitting..." : submitText || "Submit"}
-        </button>
+
+        <div className='flex gap-4'>
+          <AlertDialogCancel className='bg-[#FFDDDD]  border-[#DC3545] text-[#DC3545] py-[19px] hover:bg-[#FFDDDD] hover:text-[#DC3545] rounded-none '>
+            Cancel
+          </AlertDialogCancel>
+          <button
+            type='submit'
+            disabled={formState.isSubmitting}
+            className='bg-primary text-white px-4 py-2 '>
+            {formState.isSubmitting ? "Submitting..." : submitText || "Submit"}
+          </button>
+        </div>
       </form>
     </FormProvider>
   );

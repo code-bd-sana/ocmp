@@ -1,5 +1,11 @@
 "use client";
 
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogFooter,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { registerSchema } from "@/components/universal-form/form.schema";
 import UniversalForm from "@/components/universal-form/UniversalForm";
 import z from "zod";
@@ -15,13 +21,27 @@ export default function RegisterPage() {
 
   return (
     <div className='max-w-md mx-auto mt-10'>
-      <UniversalForm<RegisterFormData>
-        title='Add New Entry'
-        fields={registerFields}
-        schema={registerSchema}
-        onSubmit={handleRegister}
-        submitText='Register'
-      />
+      <AlertDialog>
+        <AlertDialogTrigger asChild>
+          <button className='bg-primary  text-white font-bold py-2 px-4 rounded'>
+            Show Form
+          </button>
+        </AlertDialogTrigger>
+
+        <AlertDialogContent className='px-0 rounded-none'>
+          <UniversalForm<RegisterFormData>
+            title='Add New Entry'
+            fields={registerFields}
+            schema={registerSchema}
+            onSubmit={handleRegister}
+            submitText='Register'
+          />
+
+          <AlertDialogFooter></AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
+
+//             <AlertDialogAction>Continue</AlertDialogAction>
