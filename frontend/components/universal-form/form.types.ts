@@ -17,7 +17,7 @@ export interface FieldConfig {
   label: string;
   type: FieldType;
   placeholder?: string;
-  options?: { label: string; value: string | number }[]; // for select, radio
+  options?: { label: string; value: string | number }[]; // for select, radio -- react select
 }
 
 export interface UniversalFomrsProps<T> {
