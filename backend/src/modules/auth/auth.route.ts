@@ -12,6 +12,7 @@ import {
 } from './auth.controller';
 
 //Import validation from corresponding module
+import isAuthorized from 'src/middlewares/is-authorized';
 import {
   changePasswordAuth,
   forgetPasswordAuth,
@@ -74,10 +75,11 @@ router.post('/reset-password', resetPasswordAuth, resetPassword);
  * @route PUT /api/v1/auth/change-password
  * @description Change user password
  * @access Private
+ * @param {middleware} isAuthorized - ['isAuthorized']
  * @param {function} controller - ['changePassword']
  * @param {function} validation - ['changePasswordAuth']
  */
-router.put('/change-password', changePasswordAuth, changePassword);
+router.put('/change-password', isAuthorized, changePasswordAuth, changePassword);
 
 // Export the router
 module.exports = router;
