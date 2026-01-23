@@ -1,5 +1,12 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
+export enum UserRole {
+  SUPER_ADMIN = 'SUPER_ADMIN',
+  TRANSPORT_MANAGER = 'TRANSPORT_MANAGER',
+  STANDALONE_USER = 'STANDALONE_USER',
+  STAFF = 'STAFF',
+}
+
 // Define and export an interface representing a User document
 export interface IUser extends Document {
   avatar?: mongoose.Types.ObjectId;
@@ -9,7 +16,7 @@ export interface IUser extends Document {
   password: string;
   resetToken?: string;
   resetTokenExpiry?: Date;
-  role: 'SUPER_ADMIN' | 'TRANSPORT_MANAGER' | 'STANDALONE_USER' | 'STAFF';
+  role: UserRole;
   isEmailVerified: boolean;
   emailVerificationToken?: string;
   isActive: boolean;
@@ -46,7 +53,7 @@ const UserSchema: Schema<IUser> = new Schema(
     },
     role: {
       type: String,
-      enum: ['SUPER_ADMIN', 'TRANSPORT_MANAGER', 'STANDALONE_USER', 'STAFF'],
+      enum: Object.values(UserRole),
       required: true,
     },
     isEmailVerified: {
