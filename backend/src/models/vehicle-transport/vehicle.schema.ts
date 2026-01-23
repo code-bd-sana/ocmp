@@ -124,7 +124,7 @@ const VehicleSchema: Schema<IVehicle> = new Schema(
     clientId: {
       type: Schema.Types.ObjectId,
       required: true,
-      ref: 'User', // Reference to the User model
+      ref: 'User', // Which Standalone or client own this card
     },
     attachments: [
       {
@@ -146,3 +146,5 @@ const Vehicle = mongoose.model<IVehicle>('Vehicle', VehicleSchema);
 
 // Export the Vehicle model
 export default Vehicle;
+
+// employedBy
