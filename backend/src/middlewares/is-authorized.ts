@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
-import { UserRole } from 'src/models';
 import ServerResponse from '../helpers/responses/custom-response';
+import { UserRole } from '../models';
 import DecodeToken from '../utils/jwt/decode-token';
 
 // Extend the Request interface to include a user property

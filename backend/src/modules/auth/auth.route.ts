@@ -12,7 +12,7 @@ import {
 } from './auth.controller';
 
 //Import validation from corresponding module
-import isAuthorized from 'src/middlewares/is-authorized';
+import isAuthorized from '../../middlewares/is-authorized';
 import {
   changePasswordAuth,
   forgetPasswordAuth,

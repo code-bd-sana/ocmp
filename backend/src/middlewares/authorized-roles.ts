@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
-import { UserRole } from 'src/models';
 import ServerResponse from '../helpers/responses/custom-response';
+import { UserRole } from '../models';
 
 // role: 'SUPER_ADMIN' | 'TRANSPORT_MANAGER' | 'STANDALONE_USER' | 'STAFF';
 
