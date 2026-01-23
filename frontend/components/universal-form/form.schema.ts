@@ -5,28 +5,34 @@ export const registerSchema = z.object({
     .string()
     .min(2, "Name must be at least 2 characters")
     .max(50, "Name must be less than 50 characters"),
-    
+
   email: z.string().email("Invalid email address"),
-  
-  password: z
-    .string()
-    .min(6, "Password must be at least 6 characters")
-    .max(100, "Password must be less than 100 characters"),
-    
-  confirmPassword: z.string(),
-  
+
+  dateOfBirth: z
+    .date()
+    .optional()
+    .refine((val) => !val || !isNaN(Date.parse(val)), {
+      message: "Invalid date format",
+    }),
+
+  uploadPhoto: z
+    .any()
+    .refine((file) => file instanceof File, "Please upload a valid photo")
+    .optional(),
+
+  uploadFile: z
+    .any()
+    .refine((file) => file instanceof File, "Please upload a valid file")
+    .optional(),
+
   age: z
-    .string(),
-  
-    
+    .string({ invalid_type_error: "Age must be a number" })
+    .min(0, "Age cannot be negative")
+    .max(150, "Age seems too high"),
+
   gender: z.enum(["male", "female", "other"]).optional(),
-  
+
   terms: z.boolean().refine((val) => val === true, {
     message: "You must accept the terms and conditions",
   }),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords must match",
-  path: ["confirmPassword"],
 });
-
-

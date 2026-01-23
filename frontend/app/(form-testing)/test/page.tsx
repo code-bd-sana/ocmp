@@ -4,6 +4,7 @@ import {
   AlertDialog,
   AlertDialogContent,
   AlertDialogFooter,
+  AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { registerSchema } from "@/components/universal-form/form.schema";
@@ -22,13 +23,14 @@ export default function RegisterPage() {
   return (
     <div className='max-w-md mx-auto mt-10'>
       <AlertDialog>
+        <AlertDialogTitle className='hidden'></AlertDialogTitle>
         <AlertDialogTrigger asChild>
           <button className='bg-primary  text-white font-bold py-2 px-4 rounded'>
             Show Form
           </button>
         </AlertDialogTrigger>
 
-        <AlertDialogContent className='px-0 rounded-none'>
+        <AlertDialogContent className='px-0 overflow-y-scroll max-h-[80vh] rounded-none'>
           <UniversalForm<RegisterFormData>
             title='Add New Entry'
             fields={registerFields}

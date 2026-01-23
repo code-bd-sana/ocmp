@@ -10,6 +10,7 @@ export type FieldType =
   | "radio"
   | "checkbox"
   | "switch"
+  | "file"
   | "date";
 
 export interface FieldConfig {

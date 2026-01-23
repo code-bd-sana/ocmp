@@ -11,7 +11,7 @@ import { ZodType } from "zod";
 import { Calendar } from "../ui/calendar";
 import { Field } from "../ui/field";
 import { Input } from "../ui/input";
-import { FieldConfig, UniversalFomrsProps } from "./form.types";
+import { UniversalFomrsProps } from "./form.types";
 
 import {
   InputGroup,
@@ -40,6 +40,10 @@ export default function UniversalForm<T extends FieldValues>({
 
   const { handleSubmit, control, formState } = methods;
   const [date, setDate] = useState<Date | undefined>(undefined);
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState<Date | undefined>(
+    undefined,
+  );
 
   function isValidDate(date: Date | undefined) {
     if (!date) {
@@ -69,7 +73,7 @@ export default function UniversalForm<T extends FieldValues>({
           </AlertDialogCancel>
         </div>
 
-        {fields.map((field: FieldConfig) => (
+        {fields.map((field) => (
           <div key={field.name} className='flex flex-col'>
             {/* Label */}
             {field.type !== "checkbox" &&
@@ -209,57 +213,40 @@ export default function UniversalForm<T extends FieldValues>({
                     ? new Date(controllerField.value)
                     : undefined;
 
-                  const [open, setOpen] = useState(false);
-                  const [month, setMonth] = useState<Date | undefined>(
-                    selectedDate,
-                  );
-
                   return (
                     <Field>
                       <InputGroup className='border border-gray-[] rounded-none dark:border-gray-600  px-3 py-6 focus:outline-none dark:bg-gray-700 dark:text-white'>
                         <InputGroupInput
                           value={formatDate(selectedDate)}
                           placeholder={field.placeholder || "Select date"}
-                          onChange={(e) => {
-                            const date = new Date(e.target.value);
-                            if (isValidDate(date)) {
-                              controllerField.onChange(date);
-                              setMonth(date);
-                            }
-                          }}
+                          readOnly
                           onKeyDown={(e) => {
                             if (e.key === "ArrowDown") {
                               e.preventDefault();
-                              setOpen(true);
+                              setDatePickerOpen(true);
                             }
                           }}
                         />
 
-                        <InputGroupAddon align='inline-end' className=''>
-                          <Popover open={open} onOpenChange={setOpen}>
+                        <InputGroupAddon align='inline-end'>
+                          <Popover
+                            open={datePickerOpen}
+                            onOpenChange={setDatePickerOpen}>
                             <PopoverTrigger asChild>
-                              <InputGroupButton
-                                variant='ghost'
-                                size='icon-xs'
-                                aria-label='Select date'>
+                              <InputGroupButton variant='ghost' size='icon-xs'>
                                 <CalendarIcon />
-                                <span className='sr-only'>Select date</span>
                               </InputGroupButton>
                             </PopoverTrigger>
 
-                            <PopoverContent
-                              className='w-auto overflow-hidden p-0'
-                              align='end'
-                              alignOffset={-8}
-                              sideOffset={10}>
+                            <PopoverContent className='p-0' align='end'>
                               <Calendar
                                 mode='single'
                                 selected={selectedDate}
-                                month={month}
-                                onMonthChange={setMonth}
+                                month={calendarMonth ?? selectedDate}
+                                onMonthChange={setCalendarMonth}
                                 onSelect={(date) => {
                                   controllerField.onChange(date);
-                                  setOpen(false);
+                                  setDatePickerOpen(false);
                                 }}
                               />
                             </PopoverContent>
@@ -269,6 +256,72 @@ export default function UniversalForm<T extends FieldValues>({
                     </Field>
                   );
                 }}
+              />
+            )}
+
+            {field.type === "file" && (
+              <Controller
+                control={control}
+                name={field.name as any}
+                render={({ field: controllerField }) => (
+                  <label className='relative'>
+                    {/* Hidden input */}
+                    <input
+                      type='file'
+                      hidden
+                      multiple={field.multiple}
+                      onChange={(e) => {
+                        const files = e.target.files;
+                        controllerField.onChange(
+                          field.multiple ? files : files?.[0],
+                        );
+                      }}
+                    />
+
+                    {/* Upload Box */}
+                    <div
+                      className='
+            flex flex-col items-center justify-center
+            border-2 border-dashed border-gray-300
+            rounded-md
+            h-40
+            cursor-pointer
+            hover:border-primary
+            transition
+            text-center
+            dark:border-gray-600
+          '>
+                      {/* Icon */}
+                      <div className='w-12 h-12 flex items-center justify-center rounded-full bg-blue-50 mb-2'>
+                        <svg
+                          className='w-6 h-6 text-primary'
+                          fill='none'
+                          stroke='currentColor'
+                          strokeWidth='2'
+                          viewBox='0 0 24 24'>
+                          <path
+                            strokeLinecap='round'
+                            strokeLinejoin='round'
+                            d='M12 16v-8m0 0l-3 3m3-3l3 3M20 16.5A4.5 4.5 0 0015.5 12h-1.1'
+                          />
+                        </svg>
+                      </div>
+
+                      {/* Text */}
+                      <p className='text-sm'>
+                        <span className='text-primary font-medium'>
+                          Click to Upload
+                        </span>{" "}
+                        or drag and drop
+                      </p>
+
+                      {/* Hint */}
+                      <p className='text-xs text-gray-500 mt-1'>
+                        (Max. File size: 25 MB)
+                      </p>
+                    </div>
+                  </label>
+                )}
               />
             )}
 
@@ -290,7 +343,7 @@ export default function UniversalForm<T extends FieldValues>({
           <button
             type='submit'
             disabled={formState.isSubmitting}
-            className='bg-primary text-white px-4 py-2 '>
+            className='bg-primary text-white px-4 py-2 cursor-pointer'>
             {formState.isSubmitting ? "Submitting..." : submitText || "Submit"}
           </button>
         </div>
