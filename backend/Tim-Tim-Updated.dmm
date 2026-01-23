@@ -92,6 +92,34 @@
 					"estimatedSize": ""
 				},
 				{
+					"id": "de0371c6-abd7-4b5a-9f80-6d06037fd385",
+					"name": "resetToken",
+					"datatype": "String",
+					"param": "",
+					"pk": false,
+					"nn": false,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"data": "",
+					"options": "",
+					"estimatedSize": ""
+				},
+				{
+					"id": "51e4c277-68e0-4d2d-9ee6-fb048588461d",
+					"name": "resetTokenExpiry",
+					"datatype": "Date",
+					"param": "",
+					"pk": false,
+					"nn": false,
+					"list": false,
+					"fk": false,
+					"comment": "",
+					"data": "",
+					"options": "",
+					"estimatedSize": ""
+				},
+				{
 					"id": "faa56f99-dc3d-4f35-bec5-08c3b56e6cc6",
 					"name": "role",
 					"datatype": "4165f725-486e-4e6b-8dbe-300022cede2e",
@@ -3784,7 +3812,7 @@
 					"fk": false,
 					"comment": "",
 					"data": "",
-					"options": "default pending",
+					"options": "default: \"PENDING\"",
 					"estimatedSize": ""
 				},
 				{
@@ -8743,7 +8771,7 @@
 		"companyUrl": "",
 		"def_coltopk": true,
 		"def_others": "",
-		"lastSaved": 1768885419501,
+		"lastSaved": 1768901240217,
 		"modelPdfReportPath": "C:\\Users\\joysa\\Desktop\\Tim-Tim.pdf"
 	},
 	"otherObjects": {
@@ -8923,7 +8951,7 @@
 			"id": "be324272-6fba-4e45-b0db-3a892ff8d6e1",
 			"visible": true,
 			"name": "vehicleStatus",
-			"desc": "'ACTIVE', 'INACTIVE'",
+			"desc": "'PENDING', 'ACTIVE', 'INACTIVE'",
 			"type": "Enum",
 			"code": "",
 			"lines": [],
@@ -8931,7 +8959,7 @@
 			"generateCustomCode": true,
 			"customCode": "",
 			"typeExpression": "",
-			"enumValues": "'ACTIVE', 'INACTIVE'"
+			"enumValues": "'PENDING', 'ACTIVE', 'INACTIVE'"
 		},
 		"ff89be5b-2cdf-4df4-a23c-cdd0ccd96fc6": {
 			"id": "ff89be5b-2cdf-4df4-a23c-cdd0ccd96fc6",
@@ -9011,7 +9039,7 @@
 			"id": "783677cf-fcfe-475f-b793-1e3d16fb66e5",
 			"keysgraphics": true,
 			"linegraphics": "detailed",
-			"zoom": 0.2,
+			"zoom": 0.9,
 			"background": "transparent",
 			"lineColor": "transparent",
 			"isOpen": true,
@@ -9020,8 +9048,8 @@
 				"cf734b24-8386-4172-a8fb-34bd9ac99df9": {
 					"referencedItemId": "cf734b24-8386-4172-a8fb-34bd9ac99df9",
 					"x": 480,
-					"y": 1329,
-					"gHeight": 225,
+					"y": 1283,
+					"gHeight": 261,
 					"gWidth": 236,
 					"color": "#ffffff",
 					"background": "#03a9f4",
@@ -9033,7 +9061,7 @@
 				"4165f725-486e-4e6b-8dbe-300022cede2e": {
 					"referencedItemId": "4165f725-486e-4e6b-8dbe-300022cede2e",
 					"x": 480,
-					"y": 1190,
+					"y": 1144,
 					"gHeight": 51,
 					"gWidth": 234,
 					"color": "#eee",
@@ -9045,8 +9073,8 @@
 				},
 				"d8f75cca-542a-4773-9931-1d743fa5d9b7": {
 					"referencedItemId": "d8f75cca-542a-4773-9931-1d743fa5d9b7",
-					"x": 480,
-					"y": 1611,
+					"x": 481,
+					"y": 1632,
 					"gHeight": 243,
 					"gWidth": 220,
 					"color": "#ffffff",
@@ -9058,8 +9086,8 @@
 				},
 				"b58aaffc-a2ff-41d9-b211-c9ff78655fb1": {
 					"referencedItemId": "b58aaffc-a2ff-41d9-b211-c9ff78655fb1",
-					"x": 480,
-					"y": 1936,
+					"x": 481,
+					"y": 1957,
 					"gHeight": 189,
 					"gWidth": 204,
 					"color": "#ffffff",
@@ -9071,8 +9099,8 @@
 				},
 				"951543bf-bcc4-43dd-b6e0-8e6707349a34": {
 					"referencedItemId": "951543bf-bcc4-43dd-b6e0-8e6707349a34",
-					"x": 480,
-					"y": 2326,
+					"x": 481,
+					"y": 2347,
 					"gHeight": 189,
 					"gWidth": 223,
 					"color": "#ffffff",
@@ -9084,8 +9112,8 @@
 				},
 				"badfc08f-7f22-45ca-86bb-d1bb95d15bed": {
 					"referencedItemId": "badfc08f-7f22-45ca-86bb-d1bb95d15bed",
-					"x": 480,
-					"y": 2197,
+					"x": 481,
+					"y": 2218,
 					"gHeight": 48,
 					"gWidth": 213,
 					"color": "#eee",
@@ -9838,8 +9866,8 @@
 				},
 				"e5848e83-74f3-4991-82f9-83f874b42f9c": {
 					"referencedItemId": "e5848e83-74f3-4991-82f9-83f874b42f9c",
-					"x": 480,
-					"y": 2570,
+					"x": 481,
+					"y": 2591,
 					"gHeight": 477,
 					"gWidth": 383,
 					"color": "#ffffff",
