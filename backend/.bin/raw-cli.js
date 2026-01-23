@@ -97,8 +97,8 @@ router.post("/create-${args[0]}/many", validateCreateMany${capitalizedResourceNa
  * @route PATCH /api/v1/${args[0]}/update-${args[0]}/many
  * @description Update multiple ${args[0]}s information
  * @access Public
- * @param {function} controller - ['updateMany${capitalizedResourceName}']
  * @param {function} validation - ['validateIds', 'validateUpdateMany${capitalizedResourceName}']
+ * @param {function} controller - ['updateMany${capitalizedResourceName}']
  */
 router.patch("/update-${args[0]}/many", validateIds, validateUpdateMany${capitalizedResourceName}, updateMany${capitalizedResourceName});
 
@@ -107,8 +107,8 @@ router.patch("/update-${args[0]}/many", validateIds, validateUpdateMany${capital
  * @description Update ${args[0]} information
  * @param {string} id - The ID of the ${args[0]} to update
  * @access Public
- * @param {function} controller - ['update${capitalizedResourceName}']
  * @param {function} validation - ['validateId', 'validateUpdate${capitalizedResourceName}']
+ * @param {function} controller - ['update${capitalizedResourceName}']
  */
 router.patch("/update-${args[0]}/:id", validateId, validateUpdate${capitalizedResourceName}, update${capitalizedResourceName});
 
@@ -116,8 +116,8 @@ router.patch("/update-${args[0]}/:id", validateId, validateUpdate${capitalizedRe
  * @route DELETE /api/v1/${args[0]}/delete-${args[0]}/many
  * @description Delete multiple ${args[0]}s
  * @access Public
- * @param {function} controller - ['deleteMany${capitalizedResourceName}']
  * @param {function} validation - ['validateIds']
+ * @param {function} controller - ['deleteMany${capitalizedResourceName}']
  */
 router.delete("/delete-${args[0]}/many", validateIds, deleteMany${capitalizedResourceName});
 
@@ -126,8 +126,8 @@ router.delete("/delete-${args[0]}/many", validateIds, deleteMany${capitalizedRes
  * @description Delete a ${args[0]}
  * @param {string} id - The ID of the ${args[0]} to delete
  * @access Public
- * @param {function} controller - ['delete${capitalizedResourceName}']
  * @param {function} validation - ['validateId']
+ * @param {function} controller - ['delete${capitalizedResourceName}']
  */
 router.delete("/delete-${args[0]}/:id", validateId, delete${capitalizedResourceName});
 
@@ -135,8 +135,8 @@ router.delete("/delete-${args[0]}/:id", validateId, delete${capitalizedResourceN
  * @route GET /api/v1/${args[0]}/get-${args[0]}/many
  * @description Get multiple ${args[0]}s
  * @access Public
- * @param {function} controller - ['getMany${capitalizedResourceName}']
  * @param {function} validation - ['validateSearchQueries']
+ * @param {function} controller - ['getMany${capitalizedResourceName}']
  */
 router.get("/get-${args[0]}/many", validateSearchQueries, getMany${capitalizedResourceName});
 
@@ -145,8 +145,8 @@ router.get("/get-${args[0]}/many", validateSearchQueries, getMany${capitalizedRe
  * @description Get a ${args[0]} by ID
  * @param {string} id - The ID of the ${args[0]} to retrieve
  * @access Public
- * @param {function} controller - ['get${capitalizedResourceName}ById']
  * @param {function} validation - ['validateId']
+ * @param {function} controller - ['get${capitalizedResourceName}ById']
  */
 router.get("/get-${args[0]}/:id", validateId, get${capitalizedResourceName}ById);
 
