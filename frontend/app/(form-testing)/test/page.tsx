@@ -17,7 +17,6 @@ type RegisterFormData = z.infer<typeof registerSchema>;
 export default function RegisterPage() {
   const handleRegister = (data: RegisterFormData) => {
     console.log("Form submitted:", data);
-    // ekhane API call korte paro
   };
 
   return (

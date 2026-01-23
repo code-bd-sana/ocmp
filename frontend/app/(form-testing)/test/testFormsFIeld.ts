@@ -18,11 +18,13 @@ export const registerFields: FieldConfig[] = [
     name: "uploadPhoto",
     label: "Upload Photo",
     type: "file",
+    multiple: false,
     placeholder: "Upload your photo",
   },
   {
     name: "uploadFile",
     label: "Upload File",
+    multiple: true,
     type: "file",
     placeholder: "Upload your file",
   },

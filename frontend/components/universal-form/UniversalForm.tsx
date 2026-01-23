@@ -34,7 +34,7 @@ export default function UniversalForm<T extends FieldValues>({
   submitText,
 }: UniversalFomrsProps<T>) {
   const methods = useForm<T>({
-    resolver: zodResolver(schema as ZodType<T, any, any>),
+    resolver: zodResolver(schema as ZodType<T, any, any>), // chat-gpt
     defaultValues: defaultValues as DefaultValues<T>,
   });
 
@@ -97,7 +97,7 @@ export default function UniversalForm<T extends FieldValues>({
               <Input
                 type={field.type}
                 placeholder={field.placeholder}
-                {...methods.register(field.name as any)}
+                {...methods.register(field.name as any)} // remove any ---
                 className='border border-gray-[] rounded-none dark:border-gray-600  px-3 py-6 focus:outline-none dark:bg-gray-700 dark:text-white'
               />
             )}
@@ -137,7 +137,7 @@ export default function UniversalForm<T extends FieldValues>({
             {field.type === "radio" && (
               <Controller
                 control={control}
-                name={field.name as any}
+                name={field.name as any} // remove any ---
                 render={({ field: controllerField }) => (
                   <div className='flex gap-4'>
                     {field.options?.map((opt) => (
@@ -184,7 +184,7 @@ export default function UniversalForm<T extends FieldValues>({
             {field.type === "switch" && (
               <Controller
                 control={control}
-                name={field.name as any}
+                name={field.name as any} // remove any
                 render={({ field: controllerField }) => (
                   <label className='flex items-center gap-2 cursor-pointer'>
                     <div
@@ -263,65 +263,131 @@ export default function UniversalForm<T extends FieldValues>({
               <Controller
                 control={control}
                 name={field.name as any}
-                render={({ field: controllerField }) => (
-                  <label className='relative'>
-                    {/* Hidden input */}
-                    <input
-                      type='file'
-                      hidden
-                      multiple={field.multiple}
-                      onChange={(e) => {
-                        const files = e.target.files;
-                        controllerField.onChange(
-                          field.multiple ? files : files?.[0],
-                        );
-                      }}
-                    />
+                render={({ field: controllerField }) => {
+                  const [previews, setPreviews] = useState<string[]>([]); // move to top level
+                  const [isDragging, setIsDragging] = useState(false); // move to top level
 
-                    {/* Upload Box */}
-                    <div
-                      className='
-            flex flex-col items-center justify-center
-            border-2 border-dashed border-gray-300
-            rounded-md
-            h-40
-            cursor-pointer
-            hover:border-primary
-            transition
-            text-center
-            dark:border-gray-600
-          '>
-                      {/* Icon */}
-                      <div className='w-12 h-12 flex items-center justify-center rounded-full bg-blue-50 mb-2'>
-                        <svg
-                          className='w-6 h-6 text-primary'
-                          fill='none'
-                          stroke='currentColor'
-                          strokeWidth='2'
-                          viewBox='0 0 24 24'>
-                          <path
-                            strokeLinecap='round'
-                            strokeLinejoin='round'
-                            d='M12 16v-8m0 0l-3 3m3-3l3 3M20 16.5A4.5 4.5 0 0015.5 12h-1.1'
-                          />
-                        </svg>
-                      </div>
+                  const handleFiles = (files: FileList | null) => {
+                    if (!files) return;
+                    controllerField.onChange(field.multiple ? files : files[0]);
 
-                      {/* Text */}
-                      <p className='text-sm'>
-                        <span className='text-primary font-medium'>
-                          Click to Upload
-                        </span>{" "}
-                        or drag and drop
-                      </p>
+                    // Generate previews for images
+                    const filePreviews: string[] = [];
+                    for (let i = 0; i < files.length; i++) {
+                      const file = files[i];
+                      if (file.type.startsWith("image/")) {
+                        const url = URL.createObjectURL(file);
+                        filePreviews.push(url);
+                      }
+                    }
+                    setPreviews(filePreviews);
+                  };
 
-                      {/* Hint */}
-                      <p className='text-xs text-gray-500 mt-1'>
-                        (Max. File size: 25 MB)
-                      </p>
-                    </div>
-                  </label>
-                )}
+                  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+                    e.preventDefault();
+                    setIsDragging(false);
+                    handleFiles(e.dataTransfer.files);
+                  };
+
+                  const handleDragOver = (
+                    e: React.DragEvent<HTMLDivElement>,
+                  ) => {
+                    e.preventDefault();
+                    setIsDragging(true);
+                  };
+
+                  const handleDragLeave = () => setIsDragging(false);
+
+                  return (
+                    <>
+                      <label>
+                        <input
+                          type='file'
+                          hidden
+                          multiple={field.multiple}
+                          onChange={(e) => handleFiles(e.target.files)}
+                        />
+
+                        <div
+                          className={`
+                flex flex-col items-center justify-center
+                border-2 border-dashed rounded-md h-40 cursor-pointer
+                transition text-center
+                ${isDragging ? "border-primary bg-primary/10" : "border-gray-300 dark:border-gray-600"}
+              `}
+                          onDrop={handleDrop}
+                          onDragOver={handleDragOver}
+                          onDragLeave={handleDragLeave}>
+                          {/* Icon */}
+                          <div className='w-12 h-12 flex items-center justify-center rounded-full bg-blue-50 mb-2'>
+                            <svg
+                              className='w-6 h-6 text-primary'
+                              fill='none'
+                              stroke='currentColor'
+                              strokeWidth='2'
+                              viewBox='0 0 24 24'>
+                              <path
+                                strokeLinecap='round'
+                                strokeLinejoin='round'
+                                d='M12 16v-8m0 0l-3 3m3-3l3 3M20 16.5A4.5 4.5 0 0015.5 12h-1.1'
+                              />
+                            </svg>
+                          </div>
+
+                          <p className='text-sm'>
+                            <span className='text-primary font-medium'>
+                              Click or Drag & Drop
+                            </span>{" "}
+                            files
+                          </p>
+                          <p className='text-xs text-gray-500 mt-1'>
+                            (Max. File size: 25 MB)
+                          </p>
+                        </div>
+                      </label>
+
+                      {/* Previews */}
+                      {previews.length > 0 && (
+                        <div className='mt-4 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3'>
+                          {previews.map((src, idx) => (
+                            <div
+                              key={idx}
+                              className='relative w-full aspect-square border rounded overflow-hidden'>
+                              <img
+                                src={src}
+                                alt={`preview-${idx}`}
+                                className='object-cover w-full h-full'
+                              />
+                              <button
+                                type='button'
+                                onClick={() => {
+                                  // Remove preview
+                                  setPreviews((prev) =>
+                                    prev.filter((_, i) => i !== idx),
+                                  );
+
+                                  if (field.multiple) {
+                                    const dt = new DataTransfer();
+                                    const files =
+                                      controllerField.value as FileList;
+                                    for (let i = 0; i < files.length; i++) {
+                                      if (i !== idx) dt.items.add(files[i]);
+                                    }
+                                    controllerField.onChange(dt.files);
+                                  } else {
+                                    controllerField.onChange(null);
+                                  }
+                                }}
+                                className='absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs'>
+                                ×
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  );
+                }}
               />
             )}
 
