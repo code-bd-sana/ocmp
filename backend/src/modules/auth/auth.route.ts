@@ -44,13 +44,13 @@ router.post('/login', validateLoginAuth, login);
 router.post('/register', validateRegisterAuth, register);
 
 /**
- * @route PUT /api/v1/auth/verify-email
+ * @route PATCH /api/v1/auth/verify-email
  * @description Verify user email using email verification token
  * @access Public
  * @param {function} controller - ['verifyEmail']
  * @param {function} validation - ['verifyEmailTokenAuth']
  */
-router.put('/verify-email', verifyEmailTokenAuth, verifyEmail);
+router.patch('/verify-email', verifyEmailTokenAuth, verifyEmail);
 
 /**
  * @route POST /api/v1/auth/forget-password
@@ -81,4 +81,3 @@ router.put('/change-password', changePasswordAuth, changePassword);
 
 // Export the router
 module.exports = router;
-
