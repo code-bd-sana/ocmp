@@ -1,3 +1,4 @@
+import { FieldValues, Path } from "react-hook-form";
 import { ZodType } from "zod";
 
 export type FieldType =
@@ -13,20 +14,20 @@ export type FieldType =
   | "file"
   | "date";
 
-export interface FieldConfig {
-  name: string;
+export interface FieldConfig<T extends FieldValues> {
+  name: Path<T>;
   label: string;
   type: FieldType;
   multiple?: boolean;
   placeholder?: string;
   required?: boolean;
-  options?: { label: string; value: string | number }[]; // for select, radio -- react select
+  options?: { label: string; value: string | number }[];
 }
 
-export interface UniversalFomrsProps<T> {
+export interface UniversalFomrsProps<T extends FieldValues> {
   title: string;
-  fields: FieldConfig[];
-  schema: ZodType<T, any, any>; // chat-gpt
+  fields: FieldConfig<T>[];
+  schema: ZodType<T>;
   defaultValues?: Partial<T>;
   onSubmit: (data: T) => void;
   submitText?: string;

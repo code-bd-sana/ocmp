@@ -8,12 +8,7 @@ export const registerSchema = z.object({
 
   email: z.string().email("Invalid email address"),
 
-  dateOfBirth: z
-    .date()
-    .optional()
-    .refine((val) => !val || !isNaN(Date.parse(val)), {
-      message: "Invalid date format",
-    }),
+  dateOfBirth: z.date().optional(),
 
   uploadPhoto: z
     .any()
@@ -26,7 +21,7 @@ export const registerSchema = z.object({
     .optional(),
 
   age: z
-    .string({ invalid_type_error: "Age must be a number" })
+    .string()
     .min(0, "Age cannot be negative")
     .max(150, "Age seems too high"),
 
@@ -36,3 +31,5 @@ export const registerSchema = z.object({
     message: "You must accept the terms and conditions",
   }),
 });
+
+type RegisterFormData = z.infer<typeof registerSchema>;

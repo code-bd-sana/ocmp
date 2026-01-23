@@ -23,6 +23,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 
 import { CalendarIcon, X } from "lucide-react";
+import Image from "next/image";
 import { AlertDialogCancel } from "../ui/alert-dialog";
 
 export default function UniversalForm<T extends FieldValues>({
@@ -34,13 +35,15 @@ export default function UniversalForm<T extends FieldValues>({
   submitText,
 }: UniversalFomrsProps<T>) {
   const methods = useForm<T>({
-    resolver: zodResolver(schema as ZodType<T, any, any>), // chat-gpt
+    resolver: zodResolver(schema as ZodType<T, any, any>),
     defaultValues: defaultValues as DefaultValues<T>,
   });
 
   const { handleSubmit, control, formState } = methods;
   const [date, setDate] = useState<Date | undefined>(undefined);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [previews, setPreviews] = useState<string[]>([]); // move to top level
+  const [isDragging, setIsDragging] = useState(false); // move to top level
   const [calendarMonth, setCalendarMonth] = useState<Date | undefined>(
     undefined,
   );
@@ -97,7 +100,7 @@ export default function UniversalForm<T extends FieldValues>({
               <Input
                 type={field.type}
                 placeholder={field.placeholder}
-                {...methods.register(field.name as any)} // remove any ---
+                {...methods.register(field.name)} // remove any ---
                 className='border border-gray-[] rounded-none dark:border-gray-600  px-3 py-6 focus:outline-none dark:bg-gray-700 dark:text-white'
               />
             )}
@@ -106,7 +109,7 @@ export default function UniversalForm<T extends FieldValues>({
             {field.type === "textarea" && (
               <textarea
                 placeholder={field.placeholder}
-                {...methods.register(field.name as any)}
+                {...methods.register(field.name)}
                 className='border border-gray-300 dark:border-gray-600 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-rose-500 dark:bg-gray-700 dark:text-white'
               />
             )}
@@ -115,7 +118,7 @@ export default function UniversalForm<T extends FieldValues>({
             {field.type === "select" && (
               <Controller
                 control={control}
-                name={field.name as any}
+                name={field.name}
                 render={({ field: controllerField }) => (
                   <select
                     {...controllerField}
@@ -137,7 +140,7 @@ export default function UniversalForm<T extends FieldValues>({
             {field.type === "radio" && (
               <Controller
                 control={control}
-                name={field.name as any} // remove any ---
+                name={field.name}
                 render={({ field: controllerField }) => (
                   <div className='flex gap-4'>
                     {field.options?.map((opt) => (
@@ -163,7 +166,7 @@ export default function UniversalForm<T extends FieldValues>({
             {field.type === "checkbox" && (
               <Controller
                 control={control}
-                name={field.name as any}
+                name={field.name}
                 render={({ field: controllerField }) => (
                   <label className='flex items-center gap-2 cursor-pointer'>
                     <input
@@ -184,7 +187,7 @@ export default function UniversalForm<T extends FieldValues>({
             {field.type === "switch" && (
               <Controller
                 control={control}
-                name={field.name as any} // remove any
+                name={field.name}
                 render={({ field: controllerField }) => (
                   <label className='flex items-center gap-2 cursor-pointer'>
                     <div
@@ -207,7 +210,7 @@ export default function UniversalForm<T extends FieldValues>({
             {field.type === "date" && (
               <Controller
                 control={control}
-                name={field.name as any}
+                name={field.name}
                 render={({ field: controllerField }) => {
                   const selectedDate = controllerField.value
                     ? new Date(controllerField.value)
@@ -262,11 +265,8 @@ export default function UniversalForm<T extends FieldValues>({
             {field.type === "file" && (
               <Controller
                 control={control}
-                name={field.name as any}
+                name={field.name}
                 render={({ field: controllerField }) => {
-                  const [previews, setPreviews] = useState<string[]>([]); // move to top level
-                  const [isDragging, setIsDragging] = useState(false); // move to top level
-
                   const handleFiles = (files: FileList | null) => {
                     if (!files) return;
                     controllerField.onChange(field.multiple ? files : files[0]);
@@ -301,7 +301,7 @@ export default function UniversalForm<T extends FieldValues>({
                   return (
                     <>
                       <label>
-                        <input
+                        <Input
                           type='file'
                           hidden
                           multiple={field.multiple}
@@ -309,12 +309,8 @@ export default function UniversalForm<T extends FieldValues>({
                         />
 
                         <div
-                          className={`
-                flex flex-col items-center justify-center
-                border-2 border-dashed rounded-md h-40 cursor-pointer
-                transition text-center
-                ${isDragging ? "border-primary bg-primary/10" : "border-gray-300 dark:border-gray-600"}
-              `}
+                          className={`flex flex-col items-center justify-center border-2 border-dashed rounded-md h-40 cursor-pointer
+                                      transition text-center ${isDragging ? "border-primary bg-primary/10" : "border-gray-300 dark:border-gray-600"}`}
                           onDrop={handleDrop}
                           onDragOver={handleDragOver}
                           onDragLeave={handleDragLeave}>
@@ -353,7 +349,9 @@ export default function UniversalForm<T extends FieldValues>({
                             <div
                               key={idx}
                               className='relative w-full aspect-square border rounded overflow-hidden'>
-                              <img
+                              <Image
+                                width={200}
+                                height={200}
                                 src={src}
                                 alt={`preview-${idx}`}
                                 className='object-cover w-full h-full'
