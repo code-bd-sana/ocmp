@@ -79,8 +79,8 @@ const router = Router();
  * @route POST /api/v1/${args[0]}/create-${args[0]}
  * @description Create a new ${args[0]}
  * @access Public
- * @param {function} controller - ['create${capitalizedResourceName}']
  * @param {function} validation - ['validateCreate${capitalizedResourceName}']
+ * @param {function} controller - ['create${capitalizedResourceName}']
  */
 router.post("/create-${args[0]}", validateCreate${capitalizedResourceName}, create${capitalizedResourceName});
 
@@ -88,8 +88,8 @@ router.post("/create-${args[0]}", validateCreate${capitalizedResourceName}, crea
  * @route POST /api/v1/${args[0]}/create-${args[0]}/many
  * @description Create multiple ${args[0]}s
  * @access Public
- * @param {function} controller - ['createMany${capitalizedResourceName}']
  * @param {function} validation - ['validateCreateMany${capitalizedResourceName}']
+ * @param {function} controller - ['createMany${capitalizedResourceName}']
  */
 router.post("/create-${args[0]}/many", validateCreateMany${capitalizedResourceName}, createMany${capitalizedResourceName});
 
