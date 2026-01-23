@@ -208,7 +208,7 @@ export const createMany${capitalizedResourceName} = catchAsync(async (req: Reque
 export const update${capitalizedResourceName} = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params;
   // Call the service method to update the ${args[0]} by ID and get the result
-  const result = await ${resourceName}Services.update${capitalizedResourceName}(id, req.body);
+  const result = await ${resourceName}Services.update${capitalizedResourceName}(id as string, req.body);
   if (!result) throw new Error('Failed to update ${resourceName}');
   // Send a success response with the updated ${args[0]} data
   ServerResponse(res, true, 200, '${capitalizedResourceName} updated successfully', result);
@@ -241,7 +241,7 @@ export const updateMany${capitalizedResourceName} = catchAsync(async (req: Reque
 export const delete${capitalizedResourceName} = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params;
   // Call the service method to delete the ${args[0]} by ID
-  const result = await ${resourceName}Services.delete${capitalizedResourceName}(id);
+  const result = await ${resourceName}Services.delete${capitalizedResourceName}(id as string);
   if (!result) throw new Error('Failed to delete ${resourceName}');
   // Send a success response confirming the deletion
   ServerResponse(res, true, 200, '${capitalizedResourceName} deleted successfully');
@@ -274,7 +274,7 @@ export const deleteMany${capitalizedResourceName} = catchAsync(async (req: Reque
 export const get${capitalizedResourceName}ById = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params;
   // Call the service method to get the ${args[0]} by ID and get the result
-  const result = await ${resourceName}Services.get${capitalizedResourceName}ById(id);
+  const result = await ${resourceName}Services.get${capitalizedResourceName}ById(id as string);
   if (!result) throw new Error('${capitalizedResourceName} not found');
   // Send a success response with the retrieved resource data
   ServerResponse(res, true, 200, '${capitalizedResourceName} retrieved successfully', result);
