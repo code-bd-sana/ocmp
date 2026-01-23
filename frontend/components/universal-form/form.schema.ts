@@ -15,10 +15,7 @@ export const registerSchema = z.object({
     .refine((file) => file instanceof File, "Please upload a valid photo")
     .optional(),
 
-  uploadFile: z
-    .any()
-    .refine((file) => file instanceof File, "Please upload a valid file")
-    .optional(),
+  uploadFile: z.any().optional(),
 
   age: z
     .string()
@@ -32,4 +29,4 @@ export const registerSchema = z.object({
   }),
 });
 
-type RegisterFormData = z.infer<typeof registerSchema>;
+export type RegisterFormData = z.infer<typeof registerSchema>;

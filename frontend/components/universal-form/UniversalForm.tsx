@@ -42,11 +42,16 @@ export default function UniversalForm<T extends FieldValues>({
   const { handleSubmit, control, formState } = methods;
   const [date, setDate] = useState<Date | undefined>(undefined);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
-  const [previews, setPreviews] = useState<string[]>([]); // move to top level
-  const [isDragging, setIsDragging] = useState(false); // move to top level
+
   const [calendarMonth, setCalendarMonth] = useState<Date | undefined>(
     undefined,
   );
+
+  // State for file previews and drag state
+  const [filePreviews, setFilePreviews] = useState<Record<string, string[]>>(
+    {},
+  );
+  const [isDragging, setIsDragging] = useState<Record<string, boolean>>({});
 
   function isValidDate(date: Date | undefined) {
     if (!date) {
@@ -63,6 +68,75 @@ export default function UniversalForm<T extends FieldValues>({
       year: "numeric",
     });
   }
+
+  const handleFileChange = (
+    fieldName: string,
+    files: FileList | null,
+    multiple: boolean | undefined,
+    onChange: (value: string | FileList | null | File) => void,
+  ) => {
+    if (!files) return;
+    onChange(multiple ? files : files[0]);
+
+    // Generate previews for images
+    const previews: string[] = [];
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      if (file.type.startsWith("image/")) {
+        const url = URL.createObjectURL(file);
+        previews.push(url);
+      }
+    }
+    setFilePreviews((prev) => ({ ...prev, [fieldName]: previews }));
+  };
+
+  const handleFileDrop = (
+    e: React.DragEvent<HTMLDivElement>,
+    fieldName: string,
+    multiple: boolean | undefined,
+    onChange: (value: string | FileList | null | File) => void,
+  ) => {
+    e.preventDefault();
+    setIsDragging((prev) => ({ ...prev, [fieldName]: false }));
+    handleFileChange(fieldName, e.dataTransfer.files, multiple, onChange);
+  };
+
+  const handleDragOver = (
+    e: React.DragEvent<HTMLDivElement>,
+    fieldName: string,
+  ) => {
+    e.preventDefault();
+    setIsDragging((prev) => ({ ...prev, [fieldName]: true }));
+  };
+
+  const handleDragLeave = (fieldName: string) => {
+    setIsDragging((prev) => ({ ...prev, [fieldName]: false }));
+  };
+
+  const removeFilePreview = (
+    fieldName: string,
+    index: number,
+    currentValue: string | FileList | null | File,
+    multiple: boolean | undefined,
+    onChange: (value: string | FileList | null | File) => void,
+  ) => {
+    // Remove preview
+    setFilePreviews((prev) => ({
+      ...prev,
+      [fieldName]: prev[fieldName]?.filter((_, i) => i !== index) || [],
+    }));
+
+    if (multiple) {
+      const dt = new DataTransfer();
+      const files = currentValue as FileList;
+      for (let i = 0; i < files.length; i++) {
+        if (i !== index) dt.items.add(files[i]);
+      }
+      onChange(dt.files.length > 0 ? dt.files : null);
+    } else {
+      onChange(null);
+    }
+  };
 
   return (
     <FormProvider {...methods}>
@@ -147,12 +221,12 @@ export default function UniversalForm<T extends FieldValues>({
                       <label
                         key={opt.value}
                         className='flex items-center gap-2 cursor-pointer'>
-                        <input
+                        <Input
                           type='radio'
                           value={opt.value}
                           checked={controllerField.value === opt.value}
                           onChange={() => controllerField.onChange(opt.value)}
-                          className='accent-rose-500'
+                          className='accent-primary'
                         />
                         {opt.label}
                       </label>
@@ -169,13 +243,13 @@ export default function UniversalForm<T extends FieldValues>({
                 name={field.name}
                 render={({ field: controllerField }) => (
                   <label className='flex items-center gap-2 cursor-pointer'>
-                    <input
+                    <Input
                       type='checkbox'
                       checked={controllerField.value || false}
                       onChange={(e) =>
                         controllerField.onChange(e.target.checked)
                       }
-                      className='accent-rose-500'
+                      className='accent-primary size-4'
                     />
                     {field.label}
                   </label>
@@ -196,7 +270,7 @@ export default function UniversalForm<T extends FieldValues>({
                       }
                       className={`w-10 h-5 rounded-full p-1 flex items-center transition-colors ${
                         controllerField.value
-                          ? "bg-rose-500 justify-end"
+                          ? "bg-primary justify-end"
                           : "bg-gray-300 dark:bg-gray-600 justify-start"
                       }`}>
                       <div className='w-4 h-4 bg-white rounded-full shadow' />
@@ -237,7 +311,7 @@ export default function UniversalForm<T extends FieldValues>({
                             onOpenChange={setDatePickerOpen}>
                             <PopoverTrigger asChild>
                               <InputGroupButton variant='ghost' size='icon-xs'>
-                                <CalendarIcon />
+                                <CalendarIcon className='text-primary bg-transparent hover:bg-transparent' />
                               </InputGroupButton>
                             </PopoverTrigger>
 
@@ -267,36 +341,9 @@ export default function UniversalForm<T extends FieldValues>({
                 control={control}
                 name={field.name}
                 render={({ field: controllerField }) => {
-                  const handleFiles = (files: FileList | null) => {
-                    if (!files) return;
-                    controllerField.onChange(field.multiple ? files : files[0]);
-
-                    // Generate previews for images
-                    const filePreviews: string[] = [];
-                    for (let i = 0; i < files.length; i++) {
-                      const file = files[i];
-                      if (file.type.startsWith("image/")) {
-                        const url = URL.createObjectURL(file);
-                        filePreviews.push(url);
-                      }
-                    }
-                    setPreviews(filePreviews);
-                  };
-
-                  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
-                    e.preventDefault();
-                    setIsDragging(false);
-                    handleFiles(e.dataTransfer.files);
-                  };
-
-                  const handleDragOver = (
-                    e: React.DragEvent<HTMLDivElement>,
-                  ) => {
-                    e.preventDefault();
-                    setIsDragging(true);
-                  };
-
-                  const handleDragLeave = () => setIsDragging(false);
+                  const fieldName = field.name;
+                  const previews = filePreviews[fieldName] || [];
+                  const dragging = isDragging[fieldName] || false;
 
                   return (
                     <>
@@ -305,15 +352,29 @@ export default function UniversalForm<T extends FieldValues>({
                           type='file'
                           hidden
                           multiple={field.multiple}
-                          onChange={(e) => handleFiles(e.target.files)}
+                          onChange={(e) =>
+                            handleFileChange(
+                              fieldName,
+                              e.target.files,
+                              field.multiple,
+                              controllerField.onChange,
+                            )
+                          }
                         />
 
                         <div
                           className={`flex flex-col items-center justify-center border-2 border-dashed rounded-md h-40 cursor-pointer
-                                      transition text-center ${isDragging ? "border-primary bg-primary/10" : "border-gray-300 dark:border-gray-600"}`}
-                          onDrop={handleDrop}
-                          onDragOver={handleDragOver}
-                          onDragLeave={handleDragLeave}>
+                                      transition text-center ${dragging ? "border-primary bg-primary/10" : "border-gray-300 dark:border-gray-600"}`}
+                          onDrop={(e) =>
+                            handleFileDrop(
+                              e,
+                              fieldName,
+                              field.multiple,
+                              controllerField.onChange,
+                            )
+                          }
+                          onDragOver={(e) => handleDragOver(e, fieldName)}
+                          onDragLeave={() => handleDragLeave(fieldName)}>
                           {/* Icon */}
                           <div className='w-12 h-12 flex items-center justify-center rounded-full bg-blue-50 mb-2'>
                             <svg
@@ -358,24 +419,15 @@ export default function UniversalForm<T extends FieldValues>({
                               />
                               <button
                                 type='button'
-                                onClick={() => {
-                                  // Remove preview
-                                  setPreviews((prev) =>
-                                    prev.filter((_, i) => i !== idx),
-                                  );
-
-                                  if (field.multiple) {
-                                    const dt = new DataTransfer();
-                                    const files =
-                                      controllerField.value as FileList;
-                                    for (let i = 0; i < files.length; i++) {
-                                      if (i !== idx) dt.items.add(files[i]);
-                                    }
-                                    controllerField.onChange(dt.files);
-                                  } else {
-                                    controllerField.onChange(null);
-                                  }
-                                }}
+                                onClick={() =>
+                                  removeFilePreview(
+                                    fieldName,
+                                    idx,
+                                    controllerField.value,
+                                    field.multiple,
+                                    controllerField.onChange,
+                                  )
+                                }
                                 className='absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs'>
                                 ×
                               </button>

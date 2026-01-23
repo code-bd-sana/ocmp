@@ -1,6 +1,7 @@
+import { RegisterFormData } from "@/components/universal-form/form.schema";
 import { FieldConfig } from "@/components/universal-form/form.types";
 
-export const registerFields: FieldConfig[] = [
+export const registerFields: FieldConfig<RegisterFormData>[] = [
   { name: "name", label: "Full Name", type: "text", placeholder: "John Doe" },
   {
     name: "email",

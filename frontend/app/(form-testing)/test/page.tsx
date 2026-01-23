@@ -44,5 +44,3 @@ export default function RegisterPage() {
     </div>
   );
 }
-
-//             <AlertDialogAction>Continue</AlertDialogAction>
