@@ -1,4 +1,5 @@
 import { NextFunction, Request, Response } from 'express';
+import { UserRole } from 'src/models';
 import ServerResponse from '../helpers/responses/custom-response';
 import DecodeToken from '../utils/jwt/decode-token';
 
@@ -8,6 +9,7 @@ interface AuthenticatedRequest extends Request {
     _id: string;
     fullName: string;
     email: string;
+    role: UserRole;
   };
 }
 
@@ -44,10 +46,15 @@ const isAuthorized = async (
     }
 
     // Extract user information from the decoded token
-    const { email, _id, fullName } = decoded as { fullName: string; email: string; _id: string };
+    const { email, _id, fullName, role } = decoded as {
+      _id: string;
+      fullName: string;
+      email: string;
+      role: UserRole;
+    };
 
     // Attach user information to the request object
-    req.user = { fullName, email, _id };
+    req.user = { _id, fullName, email, role };
 
     // Proceed to the next middleware or route handler
     next();
