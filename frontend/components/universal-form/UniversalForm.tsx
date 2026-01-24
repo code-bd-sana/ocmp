@@ -22,9 +22,8 @@ import {
 
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 
-import { CalendarIcon, X } from "lucide-react";
+import { CalendarIcon } from "lucide-react";
 import Image from "next/image";
-import { AlertDialogCancel } from "../ui/alert-dialog";
 import { Button } from "../ui/button";
 
 export default function UniversalForm<T extends FieldValues>({
@@ -34,6 +33,7 @@ export default function UniversalForm<T extends FieldValues>({
   defaultValues,
   onSubmit,
   submitText,
+  setOpen,
 }: UniversalFomrsProps<T>) {
   const methods = useForm<T>({
     resolver: zodResolver(schema as ZodType<T, any, any>),
@@ -143,25 +143,24 @@ export default function UniversalForm<T extends FieldValues>({
     <FormProvider {...methods}>
       <form
         onSubmit={handleSubmit(onSubmit)}
-        className="space-y-6 bg-white px-6 dark:bg-gray-800"
-      >
-        <div className="flex justify-between">
-          <h2 className="text-primary pb-2 text-2xl font-semibold">{title}</h2>
-          <AlertDialogCancel className="border-none p-0 shadow-none hover:bg-transparent hover:text-black dark:hover:text-white">
+        className='space-y-6 bg-white px-6 dark:bg-gray-800'>
+        <div className='flex justify-between'>
+          <h2 className='text-primary pb-2 text-2xl font-semibold'>{title}</h2>
+          {/* <AlertDialogCancel className="border-none p-0 shadow-none hover:bg-transparent hover:text-black dark:hover:text-white">
             <X />
-          </AlertDialogCancel>
+          </AlertDialogCancel> */}
         </div>
 
         {fields.map((field) => (
-          <div key={field.name} className="flex flex-col">
+          <div key={field.name} className='flex flex-col'>
             {/* Label */}
             {field.type !== "checkbox" &&
               field.type !== "switch" &&
               field.type !== "radio" && (
-                <label className="text-foreground mb-4 text-xl font-medium">
+                <label className='text-foreground mb-4 text-xl font-medium'>
                   {field.label}
                   {field.required ? (
-                    <span className="text-red-500"> *</span>
+                    <span className='text-red-500'> *</span>
                   ) : (
                     ""
                   )}
@@ -177,7 +176,7 @@ export default function UniversalForm<T extends FieldValues>({
                 type={field.type}
                 placeholder={field.placeholder}
                 {...methods.register(field.name)} // remove any ---
-                className="border-input-border rounded-none border px-3 py-6 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                className='border-input-border rounded-none border px-3 py-6 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-white'
               />
             )}
 
@@ -186,7 +185,7 @@ export default function UniversalForm<T extends FieldValues>({
               <textarea
                 placeholder={field.placeholder}
                 {...methods.register(field.name)}
-                className="border-input-border h-25 rounded border px-3 py-2 focus:ring-2 focus:ring-rose-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                className='border-input-border h-25 rounded border px-3 py-2 focus:ring-2 focus:ring-rose-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-white'
               />
             )}
 
@@ -198,9 +197,8 @@ export default function UniversalForm<T extends FieldValues>({
                 render={({ field: controllerField }) => (
                   <select
                     {...controllerField}
-                    className="border-input-border rounded border px-3 py-2 focus:ring-2 focus:ring-rose-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                  >
-                    <option value="" disabled>
+                    className='border-input-border rounded border px-3 py-2 focus:ring-2 focus:ring-rose-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-white'>
+                    <option value='' disabled>
                       {field.placeholder || "Select an option"}
                     </option>
                     {field.options?.map((opt) => (
@@ -219,18 +217,17 @@ export default function UniversalForm<T extends FieldValues>({
                 control={control}
                 name={field.name}
                 render={({ field: controllerField }) => (
-                  <div className="flex gap-4">
+                  <div className='flex gap-4'>
                     {field.options?.map((opt) => (
                       <label
                         key={opt.value}
-                        className="flex cursor-pointer items-center gap-2"
-                      >
+                        className='flex cursor-pointer items-center gap-2'>
                         <Input
-                          type="radio"
+                          type='radio'
                           value={opt.value}
                           checked={controllerField.value === opt.value}
                           onChange={() => controllerField.onChange(opt.value)}
-                          className="accent-primary"
+                          className='accent-primary'
                         />
                         {opt.label}
                       </label>
@@ -246,14 +243,14 @@ export default function UniversalForm<T extends FieldValues>({
                 control={control}
                 name={field.name}
                 render={({ field: controllerField }) => (
-                  <label className="flex cursor-pointer items-center gap-2">
+                  <label className='flex cursor-pointer items-center gap-2'>
                     <Input
-                      type="checkbox"
+                      type='checkbox'
                       checked={controllerField.value || false}
                       onChange={(e) =>
                         controllerField.onChange(e.target.checked)
                       }
-                      className="accent-primary size-4"
+                      className='accent-primary size-4'
                     />
                     {field.label}
                   </label>
@@ -267,7 +264,7 @@ export default function UniversalForm<T extends FieldValues>({
                 control={control}
                 name={field.name}
                 render={({ field: controllerField }) => (
-                  <label className="flex cursor-pointer items-center gap-2">
+                  <label className='flex cursor-pointer items-center gap-2'>
                     <div
                       onClick={() =>
                         controllerField.onChange(!controllerField.value)
@@ -276,9 +273,8 @@ export default function UniversalForm<T extends FieldValues>({
                         controllerField.value
                           ? "bg-primary justify-end"
                           : "justify-start bg-gray-300 dark:bg-gray-600"
-                      }`}
-                    >
-                      <div className="h-4 w-4 rounded-full bg-white shadow" />
+                      }`}>
+                      <div className='h-4 w-4 rounded-full bg-white shadow' />
                     </div>
                     {field.label}
                   </label>
@@ -297,7 +293,7 @@ export default function UniversalForm<T extends FieldValues>({
 
                   return (
                     <Field>
-                      <InputGroup className="border-input-border rounded-none border px-3 py-6 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                      <InputGroup className='border-input-border rounded-none border px-3 py-6 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-white'>
                         <InputGroupInput
                           value={formatDate(selectedDate)}
                           placeholder={field.placeholder || "Select date"}
@@ -310,20 +306,19 @@ export default function UniversalForm<T extends FieldValues>({
                           }}
                         />
 
-                        <InputGroupAddon align="inline-end">
+                        <InputGroupAddon align='inline-end'>
                           <Popover
                             open={datePickerOpen}
-                            onOpenChange={setDatePickerOpen}
-                          >
+                            onOpenChange={setDatePickerOpen}>
                             <PopoverTrigger asChild>
-                              <InputGroupButton variant="ghost" size="icon-xs">
-                                <CalendarIcon className="text-primary bg-transparent hover:bg-transparent" />
+                              <InputGroupButton variant='ghost' size='icon-xs'>
+                                <CalendarIcon className='text-primary bg-transparent hover:bg-transparent' />
                               </InputGroupButton>
                             </PopoverTrigger>
 
-                            <PopoverContent className="p-0" align="end">
+                            <PopoverContent className='p-0' align='end'>
                               <Calendar
-                                mode="single"
+                                mode='single'
                                 selected={selectedDate}
                                 month={calendarMonth ?? selectedDate}
                                 onMonthChange={setCalendarMonth}
@@ -355,7 +350,7 @@ export default function UniversalForm<T extends FieldValues>({
                     <>
                       <label>
                         <Input
-                          type="file"
+                          type='file'
                           hidden
                           multiple={field.multiple}
                           onChange={(e) =>
@@ -379,32 +374,30 @@ export default function UniversalForm<T extends FieldValues>({
                             )
                           }
                           onDragOver={(e) => handleDragOver(e, fieldName)}
-                          onDragLeave={() => handleDragLeave(fieldName)}
-                        >
+                          onDragLeave={() => handleDragLeave(fieldName)}>
                           {/* Icon */}
-                          <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-blue-50">
+                          <div className='mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-blue-50'>
                             <svg
-                              className="text-primary h-6 w-6"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              viewBox="0 0 24 24"
-                            >
+                              className='text-primary h-6 w-6'
+                              fill='none'
+                              stroke='currentColor'
+                              strokeWidth='2'
+                              viewBox='0 0 24 24'>
                               <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                d="M12 16v-8m0 0l-3 3m3-3l3 3M20 16.5A4.5 4.5 0 0015.5 12h-1.1"
+                                strokeLinecap='round'
+                                strokeLinejoin='round'
+                                d='M12 16v-8m0 0l-3 3m3-3l3 3M20 16.5A4.5 4.5 0 0015.5 12h-1.1'
                               />
                             </svg>
                           </div>
 
-                          <p className="text-sm">
-                            <span className="text-primary font-medium">
+                          <p className='text-sm'>
+                            <span className='text-primary font-medium'>
                               Click or Drag & Drop
                             </span>{" "}
                             files
                           </p>
-                          <p className="mt-1 text-xs text-gray-500">
+                          <p className='mt-1 text-xs text-gray-500'>
                             (Max. File size: 25 MB)
                           </p>
                         </div>
@@ -412,21 +405,20 @@ export default function UniversalForm<T extends FieldValues>({
 
                       {/* Previews */}
                       {previews.length > 0 && (
-                        <div className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5">
+                        <div className='mt-4 grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5'>
                           {previews.map((src, idx) => (
                             <div
                               key={idx}
-                              className="relative aspect-square w-full overflow-hidden rounded border"
-                            >
+                              className='relative aspect-square w-full overflow-hidden rounded border'>
                               <Image
                                 width={200}
                                 height={200}
                                 src={src}
                                 alt={`preview-${idx}`}
-                                className="h-full w-full object-cover"
+                                className='h-full w-full object-cover'
                               />
                               <button
-                                type="button"
+                                type='button'
                                 onClick={() =>
                                   removeFilePreview(
                                     fieldName,
@@ -436,8 +428,7 @@ export default function UniversalForm<T extends FieldValues>({
                                     controllerField.onChange,
                                   )
                                 }
-                                className="absolute top-1 right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs text-white"
-                              >
+                                className='absolute top-1 right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs text-white'>
                                 ×
                               </button>
                             </div>
@@ -452,7 +443,7 @@ export default function UniversalForm<T extends FieldValues>({
 
             {/* Error Message */}
             {formState.errors[field.name] && (
-              <p className="mt-1 text-sm text-red-500">
+              <p className='mt-1 text-sm text-red-500'>
                 {formState.errors[field.name]?.message as string}
               </p>
             )}
@@ -461,15 +452,17 @@ export default function UniversalForm<T extends FieldValues>({
 
         {/* Submit Button */}
 
-        <div className="flex gap-4">
-          <AlertDialogCancel className="cursor-pointer rounded-none border-[#DC3545] bg-[#FFDDDD] py-4.75 text-[#DC3545] hover:bg-[#FFDDDD] hover:text-[#DC3545]">
-            Cancel
-          </AlertDialogCancel>
+        <div className='flex gap-4'>
           <Button
-            type="submit"
+            onClick={() => setOpen(false)}
+            type='button'
+            className='cursor-pointer border border-destructive rounded-none  bg-[#FFDDDD] py-4.75 text-[#DC3545] hover:bg-[#FFDDDD] hover:text-[#DC3545]'>
+            Cancel
+          </Button>
+          <Button
+            type='submit'
             disabled={formState.isSubmitting}
-            className="bg-primary border-primary cursor-pointer rounded-none border py-4.75 text-white"
-          >
+            className='bg-primary border-primary cursor-pointer rounded-none border py-4.75 text-white'>
             {formState.isSubmitting ? "Submitting..." : submitText || "Submit"}
           </Button>
         </div>
