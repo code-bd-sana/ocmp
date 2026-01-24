@@ -5,11 +5,13 @@ import zodErrorHandler from '../../handlers/zod-error-handler';
 /**
  * Zod schema for validating user data during creation.
  */
-const zodCreateUserSchema = z.object({
-  // Define fields required for creating a new user.
-  // Example:
-  // filedName: z.string({ message: 'Please provide a filedName.' }).min(1, "Can't be empty."),
-}).strict();
+const zodCreateUserSchema = z
+  .object({
+    // Define fields required for creating a new user.
+    // Example:
+    filedName: z.string({ message: 'Please provide a filedName.' }).min(1, "Can't be empty."),
+  })
+  .strict();
 
 /**
  * Middleware function to validate user creation data using Zod schema.
@@ -54,11 +56,13 @@ export const validateCreateManyUser = (req: Request, res: Response, next: NextFu
 /**
  * Zod schema for validating user data during updates.
  */
-const zodUpdateUserSchema = z.object({
-  // Define fields required for updating an existing user.
-  // Example:
-  // fieldName: z.string({ message: 'Please provide a filedName.' }).optional(), // Fields can be optional during updates
-}).strict();
+const zodUpdateUserSchema = z
+  .object({
+    // Define fields required for updating an existing user.
+    // Example:
+    // fieldName: z.string({ message: 'Please provide a filedName.' }).optional(), // Fields can be optional during updates
+  })
+  .strict();
 
 /**
  * Middleware function to validate user update data using Zod schema.
@@ -84,7 +88,6 @@ export const validateUpdateUser = (req: Request, res: Response, next: NextFuncti
  * Zod schema for validating multiple user data during updates.
  */
 const zodUpdateManyUserSchema = z.array(zodUpdateUserSchema);
-
 
 /**
  * Middleware function to validate multiple user update data using Zod schema.

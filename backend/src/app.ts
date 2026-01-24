@@ -81,6 +81,7 @@ const loadRoutes = (basePath: string, baseRoute: string) => {
   if (fs.existsSync(basePath)) {
     fs.readdirSync(basePath).forEach((item: string) => {
       const itemPath = path.join(basePath, item);
+
       const routePrefix = `${baseRoute}/${item.replace('.route', '')}`;
 
       const start = performance.now();

@@ -20,11 +20,7 @@ import zodErrorHandler from '../../handlers/zod-error-handler';
  * Zod schema for validating login data.
  */
 export const loginSchema = z.object({
-  email: z
-    .string({ message: 'Email is required' })
-    .email({ message: 'Invalid email format' })
-    .trim()
-    .toLowerCase(),
+  email: z.email({ message: 'Invalid email format' }).trim().toLowerCase(),
   password: z.string({ message: 'Password is required' }).min(1, 'Password is required'),
 });
 
@@ -139,4 +135,3 @@ function validate<T extends z.ZodTypeAny>(schema: T) {
     next();
   };
 }
-

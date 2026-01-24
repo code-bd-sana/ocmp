@@ -22,9 +22,8 @@ import {
 
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 
-import { CalendarIcon, X } from "lucide-react";
+import { CalendarIcon } from "lucide-react";
 import Image from "next/image";
-import { AlertDialogCancel } from "../ui/alert-dialog";
 import { Button } from "../ui/button";
 
 export default function UniversalForm<T extends FieldValues>({
@@ -147,9 +146,9 @@ export default function UniversalForm<T extends FieldValues>({
       >
         <div className="flex justify-between">
           <h2 className="text-primary pb-2 text-2xl font-semibold">{title}</h2>
-          <AlertDialogCancel className="border-none p-0 shadow-none hover:bg-transparent hover:text-black dark:hover:text-white">
+          {/* <AlertDialogCancel className="border-none p-0 shadow-none hover:bg-transparent hover:text-black dark:hover:text-white">
             <X />
-          </AlertDialogCancel>
+          </AlertDialogCancel> */}
         </div>
 
         {fields.map((field) => (
@@ -462,9 +461,12 @@ export default function UniversalForm<T extends FieldValues>({
         {/* Submit Button */}
 
         <div className="flex gap-4">
-          <AlertDialogCancel className="cursor-pointer rounded-none border-[#DC3545] bg-[#FFDDDD] py-4.75 text-[#DC3545] hover:bg-[#FFDDDD] hover:text-[#DC3545]">
+          <Button
+            type="button"
+            className="cursor-pointer rounded-none border-[#DC3545] bg-[#FFDDDD] py-4.75 text-[#DC3545] hover:bg-[#FFDDDD] hover:text-[#DC3545]"
+          >
             Cancel
-          </AlertDialogCancel>
+          </Button>
           <Button
             type="submit"
             disabled={formState.isSubmitting}
