@@ -51,7 +51,7 @@ const OrsPlanSchema: Schema<IOrsPlan> = new Schema(
 );
 
 // Create the OrsPlan model
-const OrsPlan = mongoose.model<IOrsPlan>('FuelUsage', OrsPlanSchema);
+const OrsPlan = mongoose.model<IOrsPlan>('OrsPlan', OrsPlanSchema);
 
 // Export the OrsPlan model
 export default OrsPlan;

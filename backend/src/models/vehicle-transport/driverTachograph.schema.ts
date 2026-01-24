@@ -47,7 +47,10 @@ const DriverTachographSchema: Schema<IDriverTachograph> = new Schema(
 );
 
 // Create the DriverTachograph model
-const DriverTachograph = mongoose.model<IDriverTachograph>('Vehicle', DriverTachographSchema);
+const DriverTachograph = mongoose.model<IDriverTachograph>(
+  'DriverTachograph',
+  DriverTachographSchema
+);
 
 // Export the DriverTachograph model
 export default DriverTachograph;

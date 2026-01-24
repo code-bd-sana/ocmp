@@ -60,7 +60,7 @@ const SpotCheckSchema: Schema<ISpotCheck> = new Schema(
 );
 
 // Create the SpotCheck model
-const SpotCheck = mongoose.model<ISpotCheck>('FuelUsage', SpotCheckSchema);
+const SpotCheck = mongoose.model<ISpotCheck>('SpotCheck', SpotCheckSchema);
 
 // Export the SpotCheck model
 export default SpotCheck;
