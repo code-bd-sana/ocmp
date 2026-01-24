@@ -31,7 +31,7 @@ const SubscriptionCustomizationSchema: Schema<ISubscriptionCustomization> = new 
 
 // Create the SubscriptionCustomization model
 const SubscriptionCustomization = mongoose.model<ISubscriptionCustomization>(
-  'SubscriptionFeature',
+  'SubscriptionCustomization',
   SubscriptionCustomizationSchema
 );
 

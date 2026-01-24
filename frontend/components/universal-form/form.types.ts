@@ -31,4 +31,5 @@ export interface UniversalFomrsProps<T extends FieldValues> {
   defaultValues?: Partial<T>;
   onSubmit: (data: T) => void;
   submitText?: string;
+  setOpen: (open: boolean) => void;
 }

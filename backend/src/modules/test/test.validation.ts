@@ -1,15 +1,28 @@
 import { NextFunction, Request, Response } from 'express';
 import { z } from 'zod';
 import zodErrorHandler from '../../handlers/zod-error-handler';
+import { UserRole } from '../../models';
 
 /**
  * Zod schema for validating test data during creation.
  */
-const zodCreateTestSchema = z.object({
-  // Define fields required for creating a new test.
-  // Example:
-  // filedName: z.string({ message: 'Please provide a filedName.' }).min(1, "Can't be empty."),
-}).strict();
+const zodCreateTestSchema = z
+  .object({
+    // Define fields required for creating a new test.
+    // Example:
+    // filedName: z.string({ message: 'Please provide a filedName.' }).min(1, "Can't be empty."),
+
+    email: z.email({ message: 'Please provide a valid email address.' }),
+    name: z.string({ message: 'Please provide a name.' }).min(1, "Name can't be empty."),
+    password: z
+      .string({ message: 'Please provide a password.' })
+      .min(6, 'Password must be at least 6 characters long.'),
+    age: z.number({ message: 'Please provide a valid age.' }).optional(),
+    isActive: z.boolean({ message: 'Please provide isActive status.' }).optional(),
+    isVerified: z.boolean({ message: 'Please provide isVerified status.' }).optional(),
+    UserRole,
+  })
+  .strict();
 
 /**
  * Middleware function to validate test creation data using Zod schema.
@@ -54,11 +67,13 @@ export const validateCreateManyTest = (req: Request, res: Response, next: NextFu
 /**
  * Zod schema for validating test data during updates.
  */
-const zodUpdateTestSchema = z.object({
-  // Define fields required for updating an existing test.
-  // Example:
-  // fieldName: z.string({ message: 'Please provide a filedName.' }).optional(), // Fields can be optional during updates
-}).strict();
+const zodUpdateTestSchema = z
+  .object({
+    // Define fields required for updating an existing test.
+    // Example:
+    // fieldName: z.string({ message: 'Please provide a filedName.' }).optional(), // Fields can be optional during updates
+  })
+  .strict();
 
 /**
  * Middleware function to validate test update data using Zod schema.
@@ -85,7 +100,6 @@ export const validateUpdateTest = (req: Request, res: Response, next: NextFuncti
  */
 const zodUpdateManyTestSchema = z.array(zodUpdateTestSchema);
 
-
 /**
  * Middleware function to validate multiple test update data using Zod schema.
  * @param {Request} req - The request object.
@@ -100,3 +114,4 @@ export const validateUpdateManyTest = (req: Request, res: Response, next: NextFu
   }
   return next();
 };
+

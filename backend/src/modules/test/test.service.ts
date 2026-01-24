@@ -1,5 +1,12 @@
 // Import the model
-import TestModel, { ITest } from './test.model';
+import TestModel, { ITest } from '../../models/test/test.model';
+
+export enum UserRole {
+  SUPER_ADMIN = 'SUPER_ADMIN',
+  TRANSPORT_MANAGER = 'TRANSPORT_MANAGER',
+  STANDALONE_USER = 'STANDALONE_USER',
+  STAFF = 'STAFF',
+}
 
 /**
  * Service function to create a new test.
@@ -42,13 +49,15 @@ const updateTest = async (id: string, data: Partial<ITest>): Promise<Partial<ITe
  * @param {Array<{ id: string, updates: Partial<ITest> }>} data - An array of data to update multiple test.
  * @returns {Promise<Partial<ITest>[]>} - The updated test.
  */
-const updateManyTest = async (data: Array<{ id: string, updates: Partial<ITest> }>): Promise<Partial<ITest>[]> => {
+const updateManyTest = async (
+  data: Array<{ id: string; updates: Partial<ITest> }>
+): Promise<Partial<ITest>[]> => {
   const updatePromises = data.map(({ id, updates }) =>
     TestModel.findByIdAndUpdate(id, updates, { new: true })
   );
   const updatedTest = await Promise.all(updatePromises);
   // Filter out null values
-  const validUpdatedTest = updatedTest.filter(item => item !== null) as ITest[];
+  const validUpdatedTest = updatedTest.filter((item) => item !== null) as ITest[];
   return validUpdatedTest;
 };
 
@@ -73,7 +82,7 @@ const deleteManyTest = async (ids: string[]): Promise<Partial<ITest>[]> => {
   const testToDelete = await TestModel.find({ _id: { $in: ids } });
   if (!testToDelete.length) throw new Error('No test found to delete');
   await TestModel.deleteMany({ _id: { $in: ids } });
-  return testToDelete; 
+  return testToDelete;
 };
 
 /**
@@ -119,10 +128,7 @@ const getManyTest = async (query: {
   const totalPages = Math.ceil(totalData / showPerPage);
 
   // Find test based on the search filter with pagination
-  const tests = await TestModel.find(searchFilter)
-    .skip(skipItems)
-    .limit(showPerPage)
-    .select(''); // Keep/Exclude any field if needed
+  const tests = await TestModel.find(searchFilter).skip(skipItems).limit(showPerPage).select(''); // Keep/Exclude any field if needed
 
   return { tests, totalData, totalPages };
 };
@@ -137,3 +143,4 @@ export const testServices = {
   getTestById,
   getManyTest,
 };
+

@@ -24,6 +24,9 @@ interface Config {
   REDIS_URL: string;
   REDIS_HOST: string;
   REDIS_PORT: string;
+  KEYCLOAK_REALM: string;
+  KEYCLOAK_CLIENT_ID: string;
+  KEYCLOAK_CLIENT_SECRET: string;
 }
 
 const config: Config = {
@@ -54,6 +57,9 @@ const config: Config = {
   REDIS_URL: process.env.REDIS_URL as string,
   REDIS_HOST: process.env.REDIS_HOST as string,
   REDIS_PORT: process.env.REDIS_PORT as string,
+  KEYCLOAK_REALM: process.env.KEYCLOAK_REALM as string,
+  KEYCLOAK_CLIENT_ID: process.env.KEYCLOAK_CLIENT_ID as string,
+  KEYCLOAK_CLIENT_SECRET: process.env.KEYCLOAK_CLIENT_SECRET as string,
 };
 
 export default config;

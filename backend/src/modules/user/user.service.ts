@@ -1,6 +1,5 @@
 // Import the model
-import UserModel, { IUser } from './user.model';
-
+import UserModel, { IUser } from '../../models/user/user.model';
 /**
  * Service function to create a new user.
  *
@@ -42,13 +41,15 @@ const updateUser = async (id: string, data: Partial<IUser>): Promise<Partial<IUs
  * @param {Array<{ id: string, updates: Partial<IUser> }>} data - An array of data to update multiple user.
  * @returns {Promise<Partial<IUser>[]>} - The updated user.
  */
-const updateManyUser = async (data: Array<{ id: string, updates: Partial<IUser> }>): Promise<Partial<IUser>[]> => {
+const updateManyUser = async (
+  data: Array<{ id: string; updates: Partial<IUser> }>
+): Promise<Partial<IUser>[]> => {
   const updatePromises = data.map(({ id, updates }) =>
     UserModel.findByIdAndUpdate(id, updates, { new: true })
   );
   const updatedUser = await Promise.all(updatePromises);
   // Filter out null values
-  const validUpdatedUser = updatedUser.filter(item => item !== null) as IUser[];
+  const validUpdatedUser = updatedUser.filter((item) => item !== null) as IUser[];
   return validUpdatedUser;
 };
 
@@ -73,7 +74,7 @@ const deleteManyUser = async (ids: string[]): Promise<Partial<IUser>[]> => {
   const userToDelete = await UserModel.find({ _id: { $in: ids } });
   if (!userToDelete.length) throw new Error('No user found to delete');
   await UserModel.deleteMany({ _id: { $in: ids } });
-  return userToDelete; 
+  return userToDelete;
 };
 
 /**
@@ -119,10 +120,7 @@ const getManyUser = async (query: {
   const totalPages = Math.ceil(totalData / showPerPage);
 
   // Find user based on the search filter with pagination
-  const users = await UserModel.find(searchFilter)
-    .skip(skipItems)
-    .limit(showPerPage)
-    .select(''); // Keep/Exclude any field if needed
+  const users = await UserModel.find(searchFilter).skip(skipItems).limit(showPerPage).select(''); // Keep/Exclude any field if needed
 
   return { users, totalData, totalPages };
 };
