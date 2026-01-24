@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
-import { testServices } from './test.service';
 import ServerResponse from '../../helpers/responses/custom-response';
 import catchAsync from '../../utils/catch-async/catch-async';
+import { testServices } from './test.service';
 
 /**
  * Controller function to handle the creation of a single Test.
@@ -127,8 +127,8 @@ export const getTestById = catchAsync(async (req: Request, res: Response) => {
  * @throws {Error} - Throws an error if the tests retrieval fails.
  */
 export const getManyTest = catchAsync(async (req: Request, res: Response) => {
-  // Type assertion for query parameters 
-  const query = req.query as unknown as { searchKey?: string, showPerPage: number, pageNo: number };
+  // Type assertion for query parameters
+  const query = req.query as unknown as { searchKey?: string; showPerPage: number; pageNo: number };
   // Call the service method to get multiple tests based on query parameters and get the result
   const { tests, totalData, totalPages } = await testServices.getManyTest(query);
   if (!tests) throw new Error('Failed to retrieve tests');

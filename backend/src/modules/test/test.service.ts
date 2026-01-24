@@ -1,12 +1,13 @@
 // Import the model
+import kcAdmin from '../../config/keycloak';
 import TestModel, { ITest } from '../../models/test/test.model';
 
-export enum UserRole {
-  SUPER_ADMIN = 'SUPER_ADMIN',
-  TRANSPORT_MANAGER = 'TRANSPORT_MANAGER',
-  STANDALONE_USER = 'STANDALONE_USER',
-  STAFF = 'STAFF',
-}
+// export enum UserRole {
+//   SUPER_ADMIN = 'SUPER_ADMIN',
+//   TRANSPORT_MANAGER = 'TRANSPORT_MANAGER',
+//   STANDALONE_USER = 'STANDALONE_USER',
+//   STAFF = 'STAFF',
+// }
 
 /**
  * Service function to create a new test.
@@ -15,8 +16,25 @@ export enum UserRole {
  * @returns {Promise<Partial<ITest>>} - The created test.
  */
 const createTest = async (data: Partial<ITest>): Promise<Partial<ITest>> => {
+  const kcUser = await kcAdmin.users.create({
+    realm: 'ocmp',
+    username: data.email,
+    email: data.email,
+    enabled: true,
+    credentials: [
+      {
+        type: 'password',
+        value: data.password,
+        temporary: false,
+      },
+    ],
+  });
+
+  console.log(kcUser, 'ami hoilam kc');
+
   const newTest = new TestModel(data);
   const savedTest = await newTest.save();
+
   return savedTest;
 };
 

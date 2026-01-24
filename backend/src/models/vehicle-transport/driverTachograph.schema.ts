@@ -48,7 +48,7 @@ const DriverTachographSchema: Schema<IDriverTachograph> = new Schema(
 
 // Create the DriverTachograph model
 const DriverTachograph = mongoose.model<IDriverTachograph>(
-  'DriverTachographSchema',
+  'DriverTachograph',
   DriverTachographSchema
 );
 

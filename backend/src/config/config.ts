@@ -27,6 +27,8 @@ interface Config {
   KEYCLOAK_REALM: string;
   KEYCLOAK_CLIENT_ID: string;
   KEYCLOAK_CLIENT_SECRET: string;
+  KEYCLOAK_ADMIN_PASSWORD: string;
+  KEYCLOAK_ADMIN_USERNAME: string;
 }
 
 const config: Config = {
@@ -60,6 +62,8 @@ const config: Config = {
   KEYCLOAK_REALM: process.env.KEYCLOAK_REALM as string,
   KEYCLOAK_CLIENT_ID: process.env.KEYCLOAK_CLIENT_ID as string,
   KEYCLOAK_CLIENT_SECRET: process.env.KEYCLOAK_CLIENT_SECRET as string,
+  KEYCLOAK_ADMIN_PASSWORD: process.env.KEYCLOAK_ADMIN_PASSWORD as string,
+  KEYCLOAK_ADMIN_USERNAME: process.env.KEYCLOAK_ADMIN_USERNAME as string,
 };
 
 export default config;

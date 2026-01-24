@@ -34,6 +34,7 @@ const TestSchema: Schema<ITest> = new Schema(
       type: String,
       required: true,
       trim: true,
+      unique: true,
     },
     age: {
       type: Number,

@@ -20,7 +20,9 @@ const zodCreateTestSchema = z
     age: z.number({ message: 'Please provide a valid age.' }).optional(),
     isActive: z.boolean({ message: 'Please provide isActive status.' }).optional(),
     isVerified: z.boolean({ message: 'Please provide isVerified status.' }).optional(),
-    UserRole,
+    role: z.nativeEnum(UserRole, {
+      message: 'Please provide a valid user role.',
+    }),
   })
   .strict();
 
