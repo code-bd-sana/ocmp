@@ -25,6 +25,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { CalendarIcon, X } from "lucide-react";
 import Image from "next/image";
 import { AlertDialogCancel } from "../ui/alert-dialog";
+import { Button } from "../ui/button";
 
 export default function UniversalForm<T extends FieldValues>({
   title,
@@ -461,16 +462,16 @@ export default function UniversalForm<T extends FieldValues>({
         {/* Submit Button */}
 
         <div className="flex gap-4">
-          <AlertDialogCancel className="rounded-none border-[#DC3545] bg-[#FFDDDD] py-4.75 text-[#DC3545] hover:bg-[#FFDDDD] hover:text-[#DC3545]">
+          <AlertDialogCancel className="cursor-pointer rounded-none border-[#DC3545] bg-[#FFDDDD] py-4.75 text-[#DC3545] hover:bg-[#FFDDDD] hover:text-[#DC3545]">
             Cancel
           </AlertDialogCancel>
-          <button
+          <Button
             type="submit"
             disabled={formState.isSubmitting}
-            className="bg-primary cursor-pointer px-4 py-2 text-white"
+            className="bg-primary border-primary cursor-pointer rounded-none border py-4.75 text-white"
           >
             {formState.isSubmitting ? "Submitting..." : submitText || "Submit"}
-          </button>
+          </Button>
         </div>
       </form>
     </FormProvider>
