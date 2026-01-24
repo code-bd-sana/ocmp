@@ -41,4 +41,5 @@ export const registerFields: FieldConfig<RegisterFormData>[] = [
     ],
   },
   { name: "terms", label: "Accept Terms & Conditions", type: "checkbox" },
+  { name: "happy", label: "Are you happy?", type: "textarea" },
 ];
