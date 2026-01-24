@@ -4,18 +4,18 @@ import DashboardSummary from "./summary/DashboardSummary";
 
 export default function DashboardHome() {
   return (
-    <div className='mx-auto py-4 lg:mr-10'>
-      <div className='mb-8'>
-        <div className='flex flex-col md:flex-row gap-y-3 md:gap-x-3 justify-between'>
-          <h1 className='text-3xl font-bold mb-2 text-primary'>
+    <div className="mx-auto py-4 lg:mr-10">
+      <div className="mb-8">
+        <div className="flex flex-col justify-between gap-y-3 md:flex-row md:gap-x-3">
+          <h1 className="text-primary mb-2 text-3xl font-bold">
             Main Dashboard
           </h1>
-          <div className='relative max-w-2xl flex items-center text-(--input-foreground)'>
-            <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-(--input-foreground)' />
+          <div className="relative flex max-w-2xl items-center text-(--input-foreground)">
+            <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform text-(--input-foreground)" />
             <Input
-              type='text'
-              placeholder='Search'
-              className='pl-10 bg-muted text-black'
+              type="text"
+              placeholder="Search"
+              className="bg-muted rounded-none pl-10 text-black"
             />
           </div>
         </div>
