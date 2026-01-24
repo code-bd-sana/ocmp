@@ -9,7 +9,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { registerSchema } from "@/components/universal-form/form.schema";
 import UniversalForm from "@/components/universal-form/UniversalForm";
-import { useKeycloak } from "@/hooks/useKeycloak";
 import z from "zod";
 import { registerFields } from "./testFormsFIeld";
 
@@ -20,8 +19,8 @@ export default function RegisterPage() {
     console.log("Form submitted:", data);
   };
 
-  const keyCloak = useKeycloak();
-  console.log(keyCloak, "ami keyclaok");
+  // const keyCloak = useKeycloak();
+  // console.log(keyCloak, "ami keyclaok");
 
   return (
     <div className="mx-auto mt-10 max-w-md">
