@@ -1,5 +1,6 @@
 // Import the model
-import UserModel, { IUser } from './user.model';
+
+import User, { IUser } from '../../models/users-accounts/user.schema';
 
 /**
  * Service function to create a new user.
@@ -8,7 +9,7 @@ import UserModel, { IUser } from './user.model';
  * @returns {Promise<Partial<IUser>>} - The created user.
  */
 const createUser = async (data: Partial<IUser>): Promise<Partial<IUser>> => {
-  const newUser = new UserModel(data);
+  const newUser = new User(data);
   const savedUser = await newUser.save();
   return savedUser;
 };
@@ -20,7 +21,7 @@ const createUser = async (data: Partial<IUser>): Promise<Partial<IUser>> => {
  * @returns {Promise<Partial<IUser>[]>} - The created user.
  */
 const createManyUser = async (data: Partial<IUser>[]): Promise<Partial<IUser>[]> => {
-  const createdUser = await UserModel.insertMany(data);
+  const createdUser = await User.insertMany(data);
   return createdUser;
 };
 
@@ -32,7 +33,7 @@ const createManyUser = async (data: Partial<IUser>[]): Promise<Partial<IUser>[]>
  * @returns {Promise<Partial<IUser>>} - The updated user.
  */
 const updateUser = async (id: string, data: Partial<IUser>): Promise<Partial<IUser | null>> => {
-  const updatedUser = await UserModel.findByIdAndUpdate(id, data, { new: true });
+  const updatedUser = await User.findByIdAndUpdate(id, data, { new: true });
   return updatedUser;
 };
 
@@ -42,13 +43,15 @@ const updateUser = async (id: string, data: Partial<IUser>): Promise<Partial<IUs
  * @param {Array<{ id: string, updates: Partial<IUser> }>} data - An array of data to update multiple user.
  * @returns {Promise<Partial<IUser>[]>} - The updated user.
  */
-const updateManyUser = async (data: Array<{ id: string, updates: Partial<IUser> }>): Promise<Partial<IUser>[]> => {
+const updateManyUser = async (
+  data: Array<{ id: string; updates: Partial<IUser> }>
+): Promise<Partial<IUser>[]> => {
   const updatePromises = data.map(({ id, updates }) =>
-    UserModel.findByIdAndUpdate(id, updates, { new: true })
+    User.findByIdAndUpdate(id, updates, { new: true })
   );
   const updatedUser = await Promise.all(updatePromises);
   // Filter out null values
-  const validUpdatedUser = updatedUser.filter(item => item !== null) as IUser[];
+  const validUpdatedUser = updatedUser.filter((item) => item !== null) as IUser[];
   return validUpdatedUser;
 };
 
@@ -59,7 +62,7 @@ const updateManyUser = async (data: Array<{ id: string, updates: Partial<IUser> 
  * @returns {Promise<Partial<IUser>>} - The deleted user.
  */
 const deleteUser = async (id: string): Promise<Partial<IUser | null>> => {
-  const deletedUser = await UserModel.findByIdAndDelete(id);
+  const deletedUser = await User.findByIdAndDelete(id);
   return deletedUser;
 };
 
@@ -70,10 +73,10 @@ const deleteUser = async (id: string): Promise<Partial<IUser | null>> => {
  * @returns {Promise<Partial<IUser>[]>} - The deleted user.
  */
 const deleteManyUser = async (ids: string[]): Promise<Partial<IUser>[]> => {
-  const userToDelete = await UserModel.find({ _id: { $in: ids } });
+  const userToDelete = await User.find({ _id: { $in: ids } });
   if (!userToDelete.length) throw new Error('No user found to delete');
-  await UserModel.deleteMany({ _id: { $in: ids } });
-  return userToDelete; 
+  await User.deleteMany({ _id: { $in: ids } });
+  return userToDelete;
 };
 
 /**
@@ -83,7 +86,7 @@ const deleteManyUser = async (ids: string[]): Promise<Partial<IUser>[]> => {
  * @returns {Promise<Partial<IUser>>} - The retrieved user.
  */
 const getUserById = async (id: string): Promise<Partial<IUser | null>> => {
-  const user = await UserModel.findById(id);
+  const user = await User.findById(id);
   return user;
 };
 
@@ -113,16 +116,13 @@ const getManyUser = async (query: {
   const skipItems = (pageNo - 1) * showPerPage;
 
   // Find the total count of matching user
-  const totalData = await UserModel.countDocuments(searchFilter);
+  const totalData = await User.countDocuments(searchFilter);
 
   // Calculate the total number of pages
   const totalPages = Math.ceil(totalData / showPerPage);
 
   // Find user based on the search filter with pagination
-  const users = await UserModel.find(searchFilter)
-    .skip(skipItems)
-    .limit(showPerPage)
-    .select(''); // Keep/Exclude any field if needed
+  const users = await User.find(searchFilter).skip(skipItems).limit(showPerPage).select(''); // Keep/Exclude any field if needed
 
   return { users, totalData, totalPages };
 };
