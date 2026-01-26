@@ -1,4 +1,4 @@
-import express, { Application, Request, Response } from 'express';
+import express, { Application } from 'express';
 import fs from 'fs';
 import path from 'path';
 import config from './config/config';
@@ -15,6 +15,13 @@ import morgan from 'morgan';
 import { initKeycloak } from './config/keycloak';
 import PathNotFound from './helpers/responses/path-not-found';
 import { loggerStream } from './utils/logger/logger';
+
+// Terminal colors
+const GREEN = '\x1b[32m';
+const BLUE = '\x1b[34m';
+const YELLOW = '\x1b[33m';
+const WHITE = '\x1b[37m';
+const RESET = '\x1b[0m';
 
 // Express app initialization
 const app: Application = express();
@@ -78,7 +85,12 @@ app.use(
 );
 
 // Recursive function to load routes from nested folders
-export const routes: { module: string; path: string; method: string; time: number }[] = [];
+export const routes: {
+  module: string;
+  path: string;
+  method: string;
+  time: number;
+}[] = [];
 
 const loadRoutes = (basePath: string, baseRoute: string) => {
   if (fs.existsSync(basePath)) {
@@ -117,17 +129,51 @@ const loadRoutes = (basePath: string, baseRoute: string) => {
 const routesPath = path.join(__dirname, 'modules');
 loadRoutes(routesPath, '/api/v1');
 
-// Serve an image file on the root route
-app.get('/', (req: Request, res: Response) => {
-  res.sendFile(path.join(publicDirPath, 'images', 'index.png'), (err) => {
-    if (err) {
-      console.error(`Failed to send image file: ${err.message}`);
-      res.status(500).send('Failed to send image.');
-    }
-  });
-});
-
 // Path not found handler
 app.use(PathNotFound);
+
+// Helper: formatted date
+const getFormattedDate = () => {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+};
+
+// Helper: formatted time
+const getFormattedTime = () => {
+  const now = new Date();
+  return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+};
+
+// ────────────────────────────────────────────────
+// Log routes grouped by module
+// ────────────────────────────────────────────────
+function logRoutesByModule() {
+  const grouped: Record<string, any[]> = {};
+
+  routes.forEach((route) => {
+    if (!grouped[route.module]) grouped[route.module] = [];
+    grouped[route.module].push(route);
+  });
+
+  Object.entries(grouped).forEach(([module, routeList]) => {
+    console.log(
+      `${YELLOW}======================= ${module.toUpperCase()} =======================${RESET}\n`
+    );
+
+    routeList.forEach((route: any) => {
+      const info = `${GREEN}${route.method} ${route.path} - ${YELLOW}${route.time.toFixed(2)} ms${RESET}`;
+      console.log(
+        `${GREEN}[Express] ${WHITE}${getFormattedDate()} ${getFormattedTime()} ${GREEN}LOG ${YELLOW}[RouterExplorer] ${info}${RESET}`
+      );
+    });
+
+    console.log(`\n${YELLOW}======================== END ========================${RESET}\n`);
+  });
+}
+
+app.listen(config.PORT, () => {
+  console.log(`Server is running at ${config.BASE_URL}:${config.PORT} in ${config.NODE_ENV} mode.`);
+  logRoutesByModule();
+});
 
 export default app;

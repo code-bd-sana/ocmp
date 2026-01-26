@@ -23,8 +23,8 @@ const login = async (data: ILogin): Promise<ILoginResponse> => {
   console.log(data, 'kire data ');
   const login = await loginUser(data);
 
-  console.log(login, 'hey login pleae');
-  const simpleLogin = { token: 'login.access_token' };
+  console.log(login.access_token, 'hey login pleaedddddd');
+  const simpleLogin = { token: login.access_token };
   return simpleLogin;
 };
 
@@ -38,7 +38,7 @@ const register = async (data: IUser): Promise<IUser> => {
   console.log(data, 'user kaka data');
 
   const existingUsers = await kcAdmin.users.find({
-    realm: 'ocmpClient',
+    realm: 'ocmp',
     email: data.email,
   });
 
@@ -47,7 +47,7 @@ const register = async (data: IUser): Promise<IUser> => {
   }
 
   const user = await kcAdmin.users.create({
-    realm: 'ocmpClient',
+    realm: 'ocmp',
     username: data.email, // ✅
     email: data.email,
     firstName: data.fullName, // ✅
@@ -65,7 +65,7 @@ const register = async (data: IUser): Promise<IUser> => {
   console.log(user, 'joy bangla');
 
   const role = await kcAdmin.roles.findOneByName({
-    realm: 'ocmpClient',
+    realm: 'ocmp',
     name: data.role,
   });
 
@@ -74,7 +74,7 @@ const register = async (data: IUser): Promise<IUser> => {
   }
 
   await kcAdmin.users.addRealmRoleMappings({
-    realm: 'ocmpClient',
+    realm: 'ocmp',
     id: user.id!,
     roles: [
       {

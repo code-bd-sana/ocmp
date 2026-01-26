@@ -6,8 +6,8 @@ export const loginUser = async (data: LoginData): Promise<KeycloakToken> => {
     // Form data for Keycloak token endpoint
     const params = new URLSearchParams();
     params.append('grant_type', 'password'); // Resource Owner Password Grant
-    params.append('client_id', 'ocmpClient'); // confidential client
-    params.append('client_secret', 'NoE04RYA5HVQm4k9zXZwBKmLhxnSaPem'); // from env
+    params.append('client_id', 'ocmp'); // confidential client
+    params.append('client_secret', 'qUHC6bVHWKYHuhPtQPqimBy58bufw9ho'); // from env
     params.append('username', data.email); // email/login
     params.append('password', data.password); // plain password
 

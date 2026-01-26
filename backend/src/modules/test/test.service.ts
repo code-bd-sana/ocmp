@@ -17,7 +17,7 @@ import TestModel, { ITest } from '../../models/test/test.model';
  */
 const createTest = async (data: Partial<ITest>): Promise<Partial<ITest>> => {
   const kcUser = await kcAdmin.users.create({
-    realm: 'ocmpClient',
+    realm: 'ocmp',
     username: data.email,
     email: data.email,
     enabled: true,

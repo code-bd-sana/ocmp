@@ -7,7 +7,7 @@ export const useKeycloak = () => {
   useEffect(() => {
     const kc = new Keycloak({
       url: "http://localhost:8080",
-      realm: "ocmpClient",
+      realm: "ocmp",
       clientId: "myclient",
     });
 
