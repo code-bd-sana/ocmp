@@ -20,6 +20,9 @@ export const loginUser = async (data: LoginData): Promise<KeycloakToken> => {
       }
     );
 
+    // Set user token to the redis
+    // await setUserToken()
+
     // Return token object
     return res.data as KeycloakToken;
   } catch (err: any) {
