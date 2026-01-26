@@ -1,4 +1,6 @@
-import client from '../redis-client';
+import client, { connectRedis, disconnectRedis } from '../redis-client';
+export const connect = async () => connectRedis();
+export const disconnect = async () => disconnectRedis();
 
 /**
  * To set a user access token in Redis with optional TTL (in seconds)

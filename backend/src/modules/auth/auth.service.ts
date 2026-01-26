@@ -23,7 +23,7 @@ const login = async (data: ILogin): Promise<ILoginResponse> => {
   console.log(data, 'kire data ');
   const login = await loginUser(data);
 
-  console.log(login.access_token, 'hey login pleaedddddd');
+  console.log(login, 'hey login please');
   const simpleLogin = { token: login.access_token };
   return simpleLogin;
 };
