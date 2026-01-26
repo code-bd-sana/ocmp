@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import ServerResponse from '../../helpers/responses/custom-response';
 import catchAsync from '../../utils/catch-async/catch-async';
+import { IRegister } from './auth.interface';
 import { authServices } from './auth.service';
 
 /**
@@ -29,9 +30,9 @@ export const login = catchAsync(async (req: Request, res: Response) => {
  */
 export const register = catchAsync(async (req: Request, res: Response) => {
   // Call the service method to create a new auth and get the result
-  await authServices.register(req.body);
+  const savedUser = await authServices.register(req.body);
   // Send a success response with the created auth data
-  ServerResponse(res, true, 201, 'Registration successful');
+  ServerResponse(res, true, 201, 'Registration successful', savedUser);
 });
 
 /**
@@ -94,4 +95,3 @@ export const changePassword = catchAsync(async (req: Request, res: Response) => 
   // Send a success response indicating password change
   ServerResponse(res, true, 200, 'Password changed successfully');
 });
-
