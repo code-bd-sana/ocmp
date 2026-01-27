@@ -26,10 +26,9 @@ export interface ILoginResponse {
  * @interface IRegister
  */
 export interface IRegister {
+  _id: string;
   fullName: string;
   email: string;
-  phone: string;
-  password: string;
   role: 'TRANSPORT_MANAGER' | 'STANDALONE_USER';
 }
 
@@ -76,4 +75,17 @@ export interface IChangePassword {
   oldPassword: string;
   newPassword: string;
   confirmNewPassword: string;
+}
+
+export interface LoginData {
+  email: string;
+  password: string;
+}
+
+export interface KeycloakToken {
+  access_token: string;
+  refresh_token: string;
+  expires_in: number;
+  refresh_expires_in: number;
+  token_type: string;
 }

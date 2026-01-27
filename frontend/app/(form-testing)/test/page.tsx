@@ -24,24 +24,24 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className='mx-auto mt-10 max-w-md'>
+    <div className="mx-auto mt-10 max-w-md">
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
-          <button className='bg-primary rounded px-4 py-2 font-bold text-white'>
+          <button className="bg-primary rounded px-4 py-2 font-bold text-white">
             Show Form
           </button>
         </DialogTrigger>
 
-        <DialogContent className='max-h-[80vh] overflow-y-scroll rounded-none px-0'>
+        <DialogContent className="max-h-[80vh] overflow-y-scroll rounded-none px-0">
           {/* accessibility only */}
-          <DialogTitle className='hidden'>Add New Entry</DialogTitle>
+          <DialogTitle className="hidden">Add New Entry</DialogTitle>
 
           <UniversalForm<RegisterFormData>
-            title='Add New Entry'
+            title="Add New Entry"
             fields={registerFields}
             schema={registerSchema}
             onSubmit={handleRegister}
-            submitText='Register'
+            submitText="Register"
             setOpen={setOpen}
           />
         </DialogContent>

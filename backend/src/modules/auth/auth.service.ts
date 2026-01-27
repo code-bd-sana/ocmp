@@ -1,3 +1,6 @@
+import kcAdmin from '../../config/keycloak';
+import User, { IUser } from '../../models/users-accounts/user.schema';
+import HashInfo from '../../utils/bcrypt/hash-info';
 import {
   IChangePassword,
   IForgetPassword,
@@ -7,6 +10,7 @@ import {
   IResetPassword,
   IVerifyEmail,
 } from './auth.interface';
+import { loginUser } from './keycloak.service';
 
 /**
  * Service function to login.
@@ -16,16 +20,92 @@ import {
  */
 const login = async (data: ILogin): Promise<ILoginResponse> => {
   // Implementation for login service
-  return { token: 'sample-token' };
+  console.log(data, 'kire data ');
+  const login = await loginUser(data);
+
+  console.log(login, 'hey login please');
+  const simpleLogin = { token: login.access_token };
+  return simpleLogin;
 };
 
 /**
  * Service function to register.
  *
  * @param {IRegister} data - The data to register.
- * @returns {Promise<void>} - The register result.
+ * @returns {Promise<IUser>} - The register result.
  */
-const register = async (data: IRegister): Promise<void> => {
+const register = async (data: IUser): Promise<IUser> => {
+  console.log(data, 'user kaka data');
+
+  const existingUsers = await kcAdmin.users.find({
+    realm: 'ocmp',
+    email: data.email,
+  });
+
+  if (existingUsers.length > 0) {
+    throw new Error('User already exists with this email');
+  }
+
+  const user = await kcAdmin.users.create({
+    realm: 'ocmp',
+    username: data.email, // ✅
+    email: data.email,
+    firstName: data.fullName, // ✅
+    enabled: true,
+    emailVerified: true,
+    credentials: [
+      {
+        type: 'password',
+        value: data.password,
+        temporary: false,
+      },
+    ],
+  });
+
+  console.log(user, 'joy bangla');
+
+  const role = await kcAdmin.roles.findOneByName({
+    realm: 'ocmp',
+    name: data.role,
+  });
+
+  if (!role) {
+    throw new Error(`Role "${data.role}" not found`);
+  }
+
+  await kcAdmin.users.addRealmRoleMappings({
+    realm: 'ocmp',
+    id: user.id!,
+    roles: [
+      {
+        id: role.id!,
+        name: role.name!,
+      },
+    ],
+  });
+
+  const isExist = await User.findOne({ email: data.email });
+  if (isExist) {
+    throw new Error('User already exists with this email');
+  }
+
+  const hashPassword = await HashInfo(data.password);
+
+  const savedUser = await User.create({
+    keyCloakId: user.id ?? '',
+    fullName: data.fullName,
+    email: data.email,
+    password: hashPassword,
+    role: data.role,
+  });
+
+  return {
+    fullName: savedUser.fullName,
+    email: savedUser.email,
+    role: savedUser.role,
+    _id: savedUser._id,
+  } as IUser;
+
   // Implementation for register service
 };
 
@@ -77,4 +157,3 @@ export const authServices = {
   resetPassword,
   changePassword,
 };
-

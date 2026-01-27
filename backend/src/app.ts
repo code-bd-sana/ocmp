@@ -11,7 +11,9 @@ import mongoSanitize from 'express-mongo-sanitize';
 import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
 import hpp from 'hpp';
+import mongoose from 'mongoose';
 import morgan from 'morgan';
+import { initKeycloak } from './config/keycloak';
 import PathNotFound from './helpers/responses/path-not-found';
 import { loggerStream } from './utils/logger/logger';
 
@@ -24,12 +26,14 @@ const RESET = '\x1b[0m';
 
 // Express app initialization
 const app: Application = express();
+initKeycloak();
 
 // Define the path to the public directory
 const publicDirPath = path.join(__dirname, '..', 'public');
 
 // Middleware setup
 app.use(express.json({ limit: config.MAX_JSON_SIZE }));
+
 app.use(express.urlencoded({ extended: config.URL_ENCODED }));
 app.use(cookieParser());
 app.use(fileUpload(config.EXPRESS_FILE_UPLOAD_CONFIG));
@@ -168,7 +172,15 @@ function logRoutesByModule() {
   });
 }
 
-app.listen(config.PORT, () => {
+app.listen(config.PORT, async () => {
+  // console.log(config.DB_CONNECTION_URI);
+  await mongoose.connect(config.DB_CONNECTION_URI);
+  console.log(
+    `${GREEN}✔${RESET} ${WHITE}Connected to MongoDB successfully.${RESET} \n`,
+    `Base URL: ${YELLOW}${config.BASE_URL}:${config.PORT}${RESET} \n`,
+    `Environment: ${YELLOW}${config.NODE_ENV}${RESET} \n`,
+    `Port: ${YELLOW}${config.PORT}${RESET} \n`
+  );
   console.log(`Server is running at ${config.BASE_URL}:${config.PORT} in ${config.NODE_ENV} mode.`);
   logRoutesByModule();
 });
