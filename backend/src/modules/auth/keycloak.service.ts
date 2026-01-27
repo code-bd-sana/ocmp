@@ -27,6 +27,7 @@ export const loginUser = async (data: LoginData): Promise<KeycloakToken | void> 
     params.append('client_secret', config.KEYCLOAK_CLIENT_SECRET || '');
     params.append('username', data.email);
     params.append('password', data.password);
+    params.append('scope', 'openid profile email');
 
     // call Keycloak token endpoint
     const res = await axios.post(
