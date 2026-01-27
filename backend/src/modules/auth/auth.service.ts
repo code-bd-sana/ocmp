@@ -79,11 +79,11 @@ const register = async (data: IUser): Promise<IUser> => {
   // Create user in Keycloak
   const user = await kcAdmin.users.create({
     realm: process.env.KEYCLOAK_REALM || 'ocmp',
-    username: data.email, // ✅
+    username: data.email,
     email: data.email,
-    firstName: data.fullName, // ✅
+    firstName: data.fullName,
     enabled: true,
-    emailVerified: true,
+    emailVerified: false, // Will verify via email
     credentials: [
       {
         type: 'password',
@@ -93,54 +93,40 @@ const register = async (data: IUser): Promise<IUser> => {
     ],
   });
 
-  // Assign role to the user in Keycloak
+  // Assign role
   const role = await kcAdmin.roles.findOneByName({
     realm: process.env.KEYCLOAK_REALM || 'ocmp',
     name: data.role,
   });
 
-  // If role not found, throw an error
-  if (!role) {
-    throw new Error(`Role "${data.role}" not found`);
-  }
+  if (!role) throw new Error(`Role "${data.role}" not found`);
 
-  // Assign the role to the user
   await kcAdmin.users.addRealmRoleMappings({
     realm: process.env.KEYCLOAK_REALM || 'ocmp',
     id: user.id!,
-    roles: [
-      {
-        id: role.id!,
-        name: role.name!,
-      },
-    ],
+    roles: [{ id: role.id!, name: role.name! }],
   });
 
-  // Check if user already exists in our database
-  const isExist = await User.findOne({ email: data.email });
-  if (isExist) {
-    throw new Error('User already exists with this email');
-  }
+  // Send verification email
+  await kcAdmin.users.sendVerifyEmail({
+    realm: process.env.KEYCLOAK_REALM || 'ocmp',
+    id: user.id!,
+  });
 
-  // Hash the user's password
+  // Save in remote database
   const hashPassword = await HashInfo(data.password);
 
-  // Save the user in our database
   const savedUser = await User.create({
     keyCloakId: user.id,
     fullName: data.fullName,
     email: data.email,
     password: hashPassword,
     role: data.role,
+    isEmailVerified: false,
+    isActive: true,
   });
 
-  // Return the newly created user
-  return {
-    _id: savedUser._id,
-    fullName: savedUser.fullName,
-    email: savedUser.email,
-    role: savedUser.role,
-  } as IUser;
+  return savedUser;
 };
 
 /**

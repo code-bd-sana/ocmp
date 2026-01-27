@@ -57,6 +57,11 @@ const isAuthorized = async (
       const _id = userInfo.sub || (userInfo.id as string) || '';
       const fullName = userInfo.name || userInfo.preferred_username || '';
       const email = userInfo.email || '';
+      const emailVerified = userInfo.email_verified || false;
+
+      if (emailVerified === false) {
+        return ServerResponse(res, false, 401, 'Email not verified');
+      }
 
       // Attempt to infer role from Keycloak userinfo (may be absent)
       // Keycloak often returns roles under `realm_access.roles` when configured
@@ -69,7 +74,7 @@ const isAuthorized = async (
         fullName,
         email,
         role: (roleFromKc as UserRole) || (UserRole as any).USER,
-        isEmailVerified: userInfo.email_verified || false,
+        isEmailVerified: emailVerified,
       };
     } catch (kcErr) {
       // If Keycloak validation fails, fallback to local JWT verification
@@ -87,6 +92,10 @@ const isAuthorized = async (
         role: UserRole;
         isEmailVerified: boolean;
       };
+
+      if (isEmailVerified === false) {
+        return ServerResponse(res, false, 401, 'Email not verified');
+      }
 
       req.user = { _id, fullName, email, role, isEmailVerified };
     }
