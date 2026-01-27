@@ -153,7 +153,7 @@ export default function UniversalTable<T>({
       {/* Header */}
       <div className="mx-auto p-5">
         {headerActionGroups.map((group, idx) => (
-          <div key={idx} className="flex justify-between items-center mb-4">
+          <div key={idx} className="flex justify-between flex-col md:flex-row  items-center mb-4">
             {group.title && <h2 className="text-2xl font-semibold">{group.title}</h2>}
 
             <div className="flex gap-2 items-center">
@@ -168,7 +168,7 @@ export default function UniversalTable<T>({
                       <Input
                         key={idx}
                         placeholder={btn.label || "Search..."}
-                        className={btn.inputClassName}
+                        className={`${btn.inputClassName} rounded-none`}
                         onChange={handleHeaderSearch}
                       />
                     );
@@ -180,7 +180,7 @@ export default function UniversalTable<T>({
                     return (
                       <div key={idx}>
                         <Select onValueChange={handleHeaderFilterChange}>
-                          <SelectTrigger className={btn.selectTriggerCalssName}>
+                          <SelectTrigger className={`${btn.selectTriggerCalssName} rounded-none`}>
                             <SelectValue placeholder={btn.label || "Filter"} />
                           </SelectTrigger>
                           <SelectContent>
@@ -202,7 +202,7 @@ export default function UniversalTable<T>({
                     <Button
                       key={idx}
                       variant={btn.variant || "default"}
-                      className={btn.className || ""}
+                      className={`${btn.className || ""} rounded-none`}
                       onClick={() => btn.onClick()}
                       size={btn.size || "default"}
                     >
@@ -223,7 +223,7 @@ export default function UniversalTable<T>({
                       <Input
                         key={idx}
                         placeholder={btn.label || "Search..."}
-                        className={btn.inputClassName}
+                        className={`${btn.inputClassName} rounded-none`}
                         onChange={handleHeaderSearch}
                       />
                     );
@@ -236,7 +236,7 @@ export default function UniversalTable<T>({
                         onValueChange={handleHeaderFilterChange}
 
                       >
-                        <SelectTrigger className={btn.selectTriggerCalssName}>
+                        <SelectTrigger className={`${btn.selectTriggerCalssName} rounded-none`}>
                           <SelectValue placeholder={btn.label || "Filter"} />
                         </SelectTrigger>
                         <SelectContent>
@@ -256,7 +256,7 @@ export default function UniversalTable<T>({
                     <Button
                       key={idx}
                       variant={btn.variant || "default"}
-                      className={btn.className}
+                      className={`${btn.className || ""} rounded-none`}
                       onClick={() => btn.onClick()}
                       size={btn.size || "default"}
                     >
@@ -275,7 +275,7 @@ export default function UniversalTable<T>({
         <div className="mx-auto p-5">
           {/* Inner Action Groups */}
           {innerActionGroup.map((group, idx) => (
-            <div key={idx} className="flex justify-between items-center mb-4">
+            <div key={idx} className="flex justify-between flex-col md:flex-row items-center mb-4">
               {group.title && <h2 className="text-2xl font-semibold">{group.title}</h2>}
 
               <div className="flex gap-2 items-center">
@@ -289,8 +289,8 @@ export default function UniversalTable<T>({
                         <Input
                           key={idx}
                           placeholder={btn.label || "Search..."}
-                          className={btn.inputClassName}
-                          onChange={handleInlineSearch} // Pass value on input change
+                          className={`${btn.inputClassName} rounded-none`}
+                          onChange={handleInlineSearch} 
                         />
                       );
                     }
@@ -299,7 +299,7 @@ export default function UniversalTable<T>({
                       return (
                         <div key={idx} className={btn.className || "w-40 bg-white"}>
                           <Select onValueChange={handleInlineFilterChange}>
-                            <SelectTrigger className={btn.selectTriggerCalssName}>
+                            <SelectTrigger className={`${btn.selectTriggerCalssName} rounded-none`}>
                               <SelectValue placeholder={btn.label || "Filter"} />
                             </SelectTrigger>
                             <SelectContent>
@@ -308,7 +308,7 @@ export default function UniversalTable<T>({
                                   <SelectItem
                                     key={optionIdx}
                                     value={option}
-                                    className={btn.selectItemClassName}
+                                    className={`${btn.selectItemClassName} rounded-none`}
                                   >
                                     {option}
                                   </SelectItem>
@@ -325,7 +325,7 @@ export default function UniversalTable<T>({
                       <Button
                         key={idx}
                         variant={btn.variant || "default"}
-                        className={btn.className || ""}
+                        className={`${btn.className || ""} rounded-none`}
                         onClick={() => btn.onClick()}
                         size={btn.size || "default"}
                       >
@@ -346,7 +346,7 @@ export default function UniversalTable<T>({
                         <Input
                           key={idx}
                           placeholder={btn.label || "Search..."}
-                          className={btn.inputClassName}
+                          className={`${btn.inputClassName} rounded-none`}
                           onChange={handleInlineSearch}
                         />
                       );
@@ -355,7 +355,7 @@ export default function UniversalTable<T>({
                     if (btn.filter) {
                       return (
                         <Select key={idx} onValueChange={handleInlineFilterChange}>
-                          <SelectTrigger className={btn.selectTriggerCalssName}>
+                          <SelectTrigger className={`${btn.selectTriggerCalssName} rounded-none`}>
                             <SelectValue placeholder={btn.label || "Filter"} />
                           </SelectTrigger>
                           <SelectContent>
@@ -379,7 +379,7 @@ export default function UniversalTable<T>({
                       <Button
                         key={idx}
                         variant={btn.variant || "default"}
-                        className={btn.className}
+                        className={`${btn.className || ""} rounded-none`}
                         onClick={() => btn.onClick()}
                         size={btn.size || "default"}
                       >
@@ -477,8 +477,6 @@ export default function UniversalTable<T>({
           </Table>
 
         </div>
-
-
       </div>
     </div>
   );
