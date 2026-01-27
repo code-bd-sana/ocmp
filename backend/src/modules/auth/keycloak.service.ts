@@ -1,7 +1,14 @@
 import axios from 'axios';
+import config from '../../config/config';
 import { KeycloakToken, LoginData } from './auth.interface';
+
+/**
+ * Function to login a user via Keycloak.
+ *
+ * @param {LoginData} data - The login data containing email and password.
+ * @returns {Promise<KeycloakToken>} - The Keycloak token response.
+ */
 export const loginUser = async (data: LoginData): Promise<KeycloakToken> => {
-  console.log(data, 'data ');
   try {
     // Form data for Keycloak token endpoint
     const params = new URLSearchParams();
@@ -15,29 +22,21 @@ export const loginUser = async (data: LoginData): Promise<KeycloakToken> => {
      * - username: User's email
      * - password: User's password
      */
-    params.append('grant_type', 'password');
-    params.append('client_id', process.env.KEYCLOAK_CLIENT_ID || '');
-    params.append('client_secret', process.env.KEYCLOAK_CLIENT_SECRET || '');
+    params.append('grant_type', config.KEYCLOAK_GRANT_TYPE || 'password');
+    params.append('client_id', config.KEYCLOAK_CLIENT_ID || '');
+    params.append('client_secret', config.KEYCLOAK_CLIENT_SECRET || '');
     params.append('username', data.email);
     params.append('password', data.password);
 
     // call Keycloak token endpoint
     const res = await axios.post(
-      `http://127.0.0.1:8080/realms/${process.env.KEYCLOAK_REALM}/protocol/openid-connect/token`,
+      `${config.KEYCLOAK_HOST}/realms/${config.KEYCLOAK_REALM}/protocol/openid-connect/token`,
       params,
       {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       }
     );
 
-    // {
-    //   res.data.access_token;
-    // }
-    // uuuid generated for user session
-    // Set user token to the redis
-    // await setUserToken(uuuid, res.data.access_token);
-
-    // Return token object
     return res.data as KeycloakToken;
   } catch (err: any) {
     console.error('Keycloak login faileds:', err.response?.data || err.message);

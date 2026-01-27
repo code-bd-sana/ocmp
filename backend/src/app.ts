@@ -16,6 +16,7 @@ import morgan from 'morgan';
 import { initKeycloak } from './config/keycloak';
 import PathNotFound from './helpers/responses/path-not-found';
 import { loggerStream } from './utils/logger/logger';
+import { connectRedis } from './utils/redis/redis-client';
 
 // Terminal colors
 const GREEN = '\x1b[32m';
@@ -175,11 +176,15 @@ function logRoutesByModule() {
 app.listen(config.PORT, async () => {
   // Connect to MongoDB
   await mongoose.connect(config.DB_CONNECTION_URI);
+  // Connect to Redis
+  await connectRedis();
   console.log(
-    `${GREEN}✔${RESET} ${WHITE}Connected to MongoDB successfully.${RESET} \n`,
-    `Base URL: ${YELLOW}${config.BASE_URL}:${config.PORT}${RESET} \n`,
-    `Environment: ${YELLOW}${config.NODE_ENV}${RESET} \n`,
-    `Port: ${YELLOW}${config.PORT}${RESET} \n`
+    `${GREEN}✔${RESET} ${WHITE}Connected to MongoDB successfully.${RESET}\n`,
+    `${GREEN}✔${RESET} ${WHITE}Connected to Redis successfully.${RESET}\n`,
+    `${BLUE}🚀  Server Details:${RESET}\n`,
+    `Base URL: ${YELLOW}${config.BASE_URL}:${config.PORT}${RESET}\n`,
+    `Environment: ${YELLOW}${config.NODE_ENV}${RESET}\n`,
+    `Port: ${YELLOW}${config.PORT}${RESET}\n`
   );
   console.log(`Server is running at ${config.BASE_URL}:${config.PORT} in ${config.NODE_ENV} mode.`);
   logRoutesByModule();

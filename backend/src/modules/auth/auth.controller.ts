@@ -17,7 +17,7 @@ export const login = catchAsync(async (req: Request, res: Response) => {
   const result = await authServices.login(req.body);
   if (!result) throw new Error('Failed to create auth');
   // Send a success response with the created auth data
-  ServerResponse(res, true, 201, 'Auth created successfully', result);
+  ServerResponse(res, true, 201, 'Login successful', result);
 });
 
 /**
