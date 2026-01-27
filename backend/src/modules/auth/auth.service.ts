@@ -25,14 +25,24 @@ import { loginUser } from './keycloak.service';
  * @returns {Promise<ILoginResponse|void* >} - The login result.
  */
 const login = async (data: ILogin): Promise<ILoginResponse | void> => {
+  // Check the requested user from the keycloak is verified
+  const user = await kcAdmin.users.find({
+    realm: config.KEYCLOAK_REALM,
+    username: data.email,
+  });
+
+  if (user.length === 0 || user[0].emailVerified === false) {
+    throw new Error('Email not verified');
+  }
+
   // Implementation for login service
-  const login = await loginUser(data);
+  const loginData = await loginUser(data);
 
   // Generate a unique user ID for session management
   const userId = v4();
 
   // If Keycloak did not return an access token, validate against our DB
-  if (!login?.access_token) {
+  if (!loginData?.access_token) {
     // Verify user exists in our database
     const isExist = await User.findOne({ email: data.email });
 
@@ -59,7 +69,7 @@ const login = async (data: ILogin): Promise<ILoginResponse | void> => {
   }
 
   // Set the user token in Redis with a TTL of 30 days
-  await setUserToken(userId, login.access_token, 30 * 24 * 60 * 60);
+  await setUserToken(userId, loginData.access_token, 30 * 24 * 60 * 60);
 
   // Return the unique user ID as the token
   return {
@@ -209,7 +219,10 @@ const verifyEmail = async (data: IVerifyEmail): Promise<void> => {
   );
 
   // Update in remote database
-  await User.updateOne({ email: data.email }, { isEmailVerified: true });
+  await User.updateOne(
+    { email: data.email, emailVerificationToken: data.token },
+    { isEmailVerified: true, emailVerificationToken: null }
+  );
 
   return;
 };
