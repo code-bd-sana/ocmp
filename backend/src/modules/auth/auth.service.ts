@@ -19,32 +19,42 @@ import { loginUser } from './keycloak.service';
  * Service function to login.
  *
  * @param {ILogin} data - The data to login.
- * @returns {Promise<ILoginResponse>} - The login result.
+ * @returns {Promise<ILoginResponse|void* >} - The login result.
  */
-const login = async (data: ILogin): Promise<ILoginResponse> => {
+const login = async (data: ILogin): Promise<ILoginResponse | void> => {
   // Implementation for login service
-  console.log(data, 'kire data ');
-  const isExist = await User.findOne({ email: data.email });
-
-  console.log(isExist, 'kire kahma');
-
   const login = await loginUser(data);
+
+  // Generate a unique user ID for session management
   const userId = v4();
+
+  // If Keycloak did not return an access token, create one from our DB
   if (!login.access_token) {
+    // Verify user exists in our database
     const isExist = await User.findOne({ email: data.email });
+
+    // If user does not exist, throw an error
     if (!isExist) {
       throw new Error('Invalid credentials');
     }
 
+    // Encode a new JWT token for the user
     const accessToken = await EncodeToken(isExist.email, isExist._id.toString());
-    console.log(accessToken, 'this is access token from db');
-    setUserToken(userId, accessToken, 3600); // Set token with 1 hour TTL
+
+    // Set the user token in Redis with a TTL of 30 days
+    setUserToken(userId, accessToken, 30 * 24 * 60 * 60);
+
+    return {
+      token: userId, // Return the unique user ID as the token
+    };
   }
 
-  setUserToken(userId, login.access_token, 3600); // Set token with 1 hour TTL
+  // Set the user token in Redis with a TTL of 30 days
+  await setUserToken(userId, login.access_token, 30 * 24 * 60 * 60);
 
-  const simpleLogin = { token: userId, expiresIn: 3600 };
-  return simpleLogin;
+  return {
+    token: userId,
+  };
 };
 
 /**
@@ -54,10 +64,8 @@ const login = async (data: ILogin): Promise<ILoginResponse> => {
  * @returns {Promise<IUser>} - The register result.
  */
 const register = async (data: IUser): Promise<IUser> => {
-  console.log(data, 'user kaka data');
-
   const existingUsers = await kcAdmin.users.find({
-    realm: 'ocmp',
+    realm: process.env.KEYCLOAK_REALM || 'ocmp',
     email: data.email,
   });
 
@@ -66,7 +74,7 @@ const register = async (data: IUser): Promise<IUser> => {
   }
 
   const user = await kcAdmin.users.create({
-    realm: 'ocmp',
+    realm: process.env.KEYCLOAK_REALM || 'ocmp',
     username: data.email, // ✅
     email: data.email,
     firstName: data.fullName, // ✅
@@ -81,10 +89,8 @@ const register = async (data: IUser): Promise<IUser> => {
     ],
   });
 
-  console.log(user);
-
   const role = await kcAdmin.roles.findOneByName({
-    realm: 'ocmp',
+    realm: process.env.KEYCLOAK_REALM || 'ocmp',
     name: data.role,
   });
 
@@ -93,7 +99,7 @@ const register = async (data: IUser): Promise<IUser> => {
   }
 
   await kcAdmin.users.addRealmRoleMappings({
-    realm: 'ocmp',
+    realm: process.env.KEYCLOAK_REALM || 'ocmp',
     id: user.id!,
     roles: [
       {
@@ -119,13 +125,11 @@ const register = async (data: IUser): Promise<IUser> => {
   });
 
   return {
+    _id: savedUser._id,
     fullName: savedUser.fullName,
     email: savedUser.email,
     role: savedUser.role,
-    _id: savedUser._id,
   } as IUser;
-
-  // Implementation for register service
 };
 
 /**
