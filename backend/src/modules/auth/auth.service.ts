@@ -1,6 +1,9 @@
+import { v4 } from 'uuid';
 import kcAdmin from '../../config/keycloak';
 import User, { IUser } from '../../models/users-accounts/user.schema';
 import HashInfo from '../../utils/bcrypt/hash-info';
+import EncodeToken from '../../utils/jwt/encode-token';
+import { setUserToken } from '../../utils/redis/auth/auth';
 import {
   IChangePassword,
   IForgetPassword,
@@ -21,10 +24,26 @@ import { loginUser } from './keycloak.service';
 const login = async (data: ILogin): Promise<ILoginResponse> => {
   // Implementation for login service
   console.log(data, 'kire data ');
-  const login = await loginUser(data);
+  const isExist = await User.findOne({ email: data.email });
 
-  console.log(login, 'hey login please');
-  const simpleLogin = { token: login.access_token };
+  console.log(isExist, 'kire kahma');
+
+  const login = await loginUser(data);
+  const userId = v4();
+  if (!login.access_token) {
+    const isExist = await User.findOne({ email: data.email });
+    if (!isExist) {
+      throw new Error('Invalid credentials');
+    }
+
+    const accessToken = await EncodeToken(isExist.email, isExist._id.toString());
+    console.log(accessToken, 'this is access token from db');
+    setUserToken(userId, accessToken, 3600); // Set token with 1 hour TTL
+  }
+
+  setUserToken(userId, login.access_token, 3600); // Set token with 1 hour TTL
+
+  const simpleLogin = { token: userId, expiresIn: 3600 };
   return simpleLogin;
 };
 
@@ -62,7 +81,7 @@ const register = async (data: IUser): Promise<IUser> => {
     ],
   });
 
-  console.log(user, 'joy bangla');
+  console.log(user);
 
   const role = await kcAdmin.roles.findOneByName({
     realm: 'ocmp',

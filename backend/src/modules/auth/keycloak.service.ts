@@ -5,15 +5,25 @@ export const loginUser = async (data: LoginData): Promise<KeycloakToken> => {
   try {
     // Form data for Keycloak token endpoint
     const params = new URLSearchParams();
-    params.append('grant_type', 'password'); // Resource Owner Password Grant
-    params.append('client_id', 'ocmp'); // confidential client
-    params.append('client_secret', 'qUHC6bVHWKYHuhPtQPqimBy58bufw9ho'); // from env
-    params.append('username', data.email); // email/login
-    params.append('password', data.password); // plain password
+
+    /**
+     * Parameters for Keycloak token request
+     *
+     * - grant_type: 'password' (indicates password grant type)
+     * - client_id: Client ID from environment variables
+     * - client_secret: Client secret from environment variables
+     * - username: User's email
+     * - password: User's password
+     */
+    params.append('grant_type', 'password');
+    params.append('client_id', process.env.KEYCLOAK_CLIENT_ID || '');
+    params.append('client_secret', process.env.KEYCLOAK_CLIENT_SECRET || '');
+    params.append('username', data.email);
+    params.append('password', data.password);
 
     // call Keycloak token endpoint
     const res = await axios.post(
-      'http://127.0.0.1:8080/realms/ocmp/protocol/openid-connect/token',
+      `http://127.0.0.1:8080/realms/${process.env.KEYCLOAK_REALM}/protocol/openid-connect/token`,
       params,
       {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
