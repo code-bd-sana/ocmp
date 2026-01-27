@@ -11,6 +11,7 @@ import mongoSanitize from 'express-mongo-sanitize';
 import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
 import hpp from 'hpp';
+import mongoose from 'mongoose';
 import morgan from 'morgan';
 import { initKeycloak } from './config/keycloak';
 import PathNotFound from './helpers/responses/path-not-found';
@@ -85,7 +86,7 @@ app.use(
 );
 
 // Recursive function to load routes from nested folders
-export const routes: {
+const routes: {
   module: string;
   path: string;
   method: string;
@@ -171,9 +172,15 @@ function logRoutesByModule() {
   });
 }
 
-app.listen(config.PORT, () => {
+app.listen(config.PORT, async () => {
+  // Connect to MongoDB
+  await mongoose.connect(config.DB_CONNECTION_URI);
+  console.log(
+    `${GREEN}✔${RESET} ${WHITE}Connected to MongoDB successfully.${RESET} \n`,
+    `Base URL: ${YELLOW}${config.BASE_URL}:${config.PORT}${RESET} \n`,
+    `Environment: ${YELLOW}${config.NODE_ENV}${RESET} \n`,
+    `Port: ${YELLOW}${config.PORT}${RESET} \n`
+  );
   console.log(`Server is running at ${config.BASE_URL}:${config.PORT} in ${config.NODE_ENV} mode.`);
   logRoutesByModule();
 });
-
-export default app;
