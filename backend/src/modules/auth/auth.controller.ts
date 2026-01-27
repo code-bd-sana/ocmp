@@ -32,7 +32,7 @@ export const register = catchAsync(async (req: Request, res: Response) => {
   // Call the service method to create a new auth and get the result
   const savedUser = await authServices.register(req.body);
   // Send a success response with the created auth data
-  ServerResponse(res, true, 201, 'Registration successful', savedUser);
+  ServerResponse(res, true, 201, 'Registration successful. Please verify your email.', savedUser);
 });
 
 /**
@@ -48,6 +48,13 @@ export const verifyEmail = catchAsync(async (req: Request, res: Response) => {
   await authServices.verifyEmail(req.body);
   // Send a success response indicating email verification
   ServerResponse(res, true, 200, 'Email verified successfully');
+});
+
+export const resendVerificationEmail = catchAsync(async (req: Request, res: Response) => {
+  // Call the service method to resend verification email
+  await authServices.resendVerificationEmail(req.body);
+  // Send a success response indicating email verification
+  ServerResponse(res, true, 200, 'Verification email resent successfully');
 });
 
 /**

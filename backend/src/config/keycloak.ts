@@ -22,9 +22,11 @@ export const initKeycloak = async () => {
         'password') as import('@keycloak/keycloak-admin-client/lib/utils/auth').GrantTypes,
       clientId: process.env.KEYCLOAK_ADMIN_CLIENT_ID || 'admin-cli',
     });
+
     console.log('✅ Keycloak admin authenticated');
   } catch (err: any) {
     // <--- important
+    console.log(err);
     console.error('❌ Keycloak auth failed:', err.response?.data || err.message);
   }
 };

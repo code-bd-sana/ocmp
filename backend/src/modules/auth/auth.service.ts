@@ -1,6 +1,7 @@
 import { v4 } from 'uuid';
 import kcAdmin from '../../config/keycloak';
 import User, { IUser } from '../../models/users-accounts/user.schema';
+import compareInfo from '../../utils/bcrypt/compare-info';
 import HashInfo from '../../utils/bcrypt/hash-info';
 import EncodeToken from '../../utils/jwt/encode-token';
 import { setUserToken } from '../../utils/redis/auth/auth';
@@ -28,8 +29,8 @@ const login = async (data: ILogin): Promise<ILoginResponse | void> => {
   // Generate a unique user ID for session management
   const userId = v4();
 
-  // If Keycloak did not return an access token, create one from our DB
-  if (!login.access_token) {
+  // If Keycloak did not return an access token, validate against our DB
+  if (!login?.access_token) {
     // Verify user exists in our database
     const isExist = await User.findOne({ email: data.email });
 
@@ -38,11 +39,17 @@ const login = async (data: ILogin): Promise<ILoginResponse | void> => {
       throw new Error('Invalid credentials');
     }
 
+    // Validate password from DB when Keycloak is unavailable
+    const isValidPassword = await compareInfo(data.password, isExist.password);
+    if (!isValidPassword) {
+      throw new Error('Invalid credentials');
+    }
+
     // Encode a new JWT token for the user
     const accessToken = await EncodeToken(isExist.email, isExist._id.toString());
 
     // Set the user token in Redis with a TTL of 30 days
-    setUserToken(userId, accessToken, 30 * 24 * 60 * 60);
+    await setUserToken(userId, accessToken, 30 * 24 * 60 * 60);
 
     return {
       token: userId, // Return the unique user ID as the token
@@ -52,6 +59,7 @@ const login = async (data: ILogin): Promise<ILoginResponse | void> => {
   // Set the user token in Redis with a TTL of 30 days
   await setUserToken(userId, login.access_token, 30 * 24 * 60 * 60);
 
+  // Return the unique user ID as the token
   return {
     token: userId,
   };
@@ -64,22 +72,25 @@ const login = async (data: ILogin): Promise<ILoginResponse | void> => {
  * @returns {Promise<IUser>} - The register result.
  */
 const register = async (data: IUser): Promise<IUser> => {
+  // Check if user already exists in Keycloak
   const existingUsers = await kcAdmin.users.find({
     realm: process.env.KEYCLOAK_REALM || 'ocmp',
     email: data.email,
   });
 
+  // If user exists, throw an error
   if (existingUsers.length > 0) {
     throw new Error('User already exists with this email');
   }
 
+  // Create user in Keycloak
   const user = await kcAdmin.users.create({
     realm: process.env.KEYCLOAK_REALM || 'ocmp',
-    username: data.email, // ✅
+    username: data.email,
     email: data.email,
-    firstName: data.fullName, // ✅
+    firstName: data.fullName,
     enabled: true,
-    emailVerified: true,
+    emailVerified: false, // Will verify via email
     credentials: [
       {
         type: 'password',
@@ -89,47 +100,72 @@ const register = async (data: IUser): Promise<IUser> => {
     ],
   });
 
+  // Assign role
   const role = await kcAdmin.roles.findOneByName({
     realm: process.env.KEYCLOAK_REALM || 'ocmp',
     name: data.role,
   });
 
-  if (!role) {
-    throw new Error(`Role "${data.role}" not found`);
-  }
+  if (!role) throw new Error(`Role "${data.role}" not found`);
 
   await kcAdmin.users.addRealmRoleMappings({
     realm: process.env.KEYCLOAK_REALM || 'ocmp',
     id: user.id!,
-    roles: [
-      {
-        id: role.id!,
-        name: role.name!,
-      },
-    ],
+    roles: [{ id: role.id!, name: role.name! }],
   });
 
-  const isExist = await User.findOne({ email: data.email });
-  if (isExist) {
-    throw new Error('User already exists with this email');
-  }
+  // Send verification email (best-effort)
 
+  await kcAdmin.users.sendVerifyEmail({
+    realm: process.env.KEYCLOAK_REALM || 'ocmp',
+    id: user.id!,
+  });
+
+  // Save in remote database
   const hashPassword = await HashInfo(data.password);
 
   const savedUser = await User.create({
-    keyCloakId: user.id ?? '',
+    keyCloakId: user.id,
     fullName: data.fullName,
     email: data.email,
     password: hashPassword,
     role: data.role,
+    isEmailVerified: false,
+    isActive: true,
   });
 
   return {
-    _id: savedUser._id,
     fullName: savedUser.fullName,
     email: savedUser.email,
+    phone: savedUser.phone,
     role: savedUser.role,
   } as IUser;
+};
+
+/**
+ * Resend verification email service function.
+ *
+ * @param {string} email - The email to resend verification.
+ * @returns {Promise<void>} - The resend verification email result.
+ */
+const resendVerificationEmail = async (email: string): Promise<void> => {
+  // Check if user already exists in Keycloak
+  const existingUsers = await kcAdmin.users.find({
+    realm: process.env.KEYCLOAK_REALM || 'ocmp',
+    email,
+  });
+
+  if (existingUsers.length === 0) {
+    throw new Error('User not found with this email');
+  }
+
+  // Send verification email
+  await kcAdmin.users.sendVerifyEmail({
+    realm: process.env.KEYCLOAK_REALM || 'ocmp',
+    id: existingUsers[0].id!,
+  });
+
+  return;
 };
 
 /**
@@ -176,6 +212,7 @@ export const authServices = {
   login,
   register,
   verifyEmail,
+  resendVerificationEmail,
   forgetPassword,
   resetPassword,
   changePassword,
