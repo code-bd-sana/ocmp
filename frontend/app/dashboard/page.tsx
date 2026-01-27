@@ -162,7 +162,7 @@ const headerActionGroups: HeaderActionGroup[] = [
 
 const innerActionGroup: HeaderActionGroup[] = [
   {
-    title: "",
+    title: "hello Sung",
     startingActionGroup: [
       {
         label: "Refresh",
@@ -173,46 +173,6 @@ const innerActionGroup: HeaderActionGroup[] = [
         position: "left",
         visibility: true,
         positionIndex: 5,
-      },
-      {
-        label: "View All",
-        onClick: () => console.log("View All Clicked"),
-        className: "bg-[#27AE60] text-white",
-        variant: "secondary",
-        size: "sm",
-        position: "right",
-        visibility: true,
-        positionIndex: 2,
-      },
-      {
-        label: "View All",
-        onClick: () => console.log("View All Clicked"),
-        className: "bg-[#27AE60] text-white",
-        variant: "secondary",
-        size: "sm",
-        position: "right",
-        visibility: true,
-        positionIndex: 2,
-      },
-      {
-        label: "View All",
-        onClick: () => console.log("View All Clicked"),
-        className: "bg-[#27AE60] text-white",
-        variant: "secondary",
-        size: "sm",
-        position: "right",
-        visibility: true,
-        positionIndex: 2,
-      },
-      {
-        label: "View All",
-        onClick: () => console.log("View All Clicked"),
-        className: "bg-[#27AE60] text-white",
-        variant: "secondary",
-        size: "sm",
-        position: "right",
-        visibility: true,
-        positionIndex: 2,
       },
       {
         label: "View All",

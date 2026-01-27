@@ -395,23 +395,32 @@ export default function UniversalTable<T>({
 
         {/* Table */}
         <div className="p-5">
-          <Table className="min-w-[600px]">
+          <Table className="w-full table-auto">
             <TableHeader>
               <TableRow>
                 {/* Actions at the start */}
-                {actions && actionsPosition === "start" && <TableHead>Actions</TableHead>}
+                {actions && actionsPosition === "start" && (
+                  <TableHead className="">Actions</TableHead>
+                )}
                 {columns.map((col) => (
-                  <TableHead key={String(col.key)}>{col.title}</TableHead>
+                  <TableHead
+                    key={String(col.key)}
+                    className=""
+                  >
+                    {col.title}
+                  </TableHead>
                 ))}
                 {/* Actions at the end */}
-                {actions && actionsPosition === "end" && <TableHead>Actions</TableHead>}
+                {actions && actionsPosition === "end" && (
+                  <TableHead className="">Actions</TableHead>
+                )}
               </TableRow>
             </TableHeader>
 
             <TableBody>
               {filteredData.length > 0 ? (
                 filteredData.map((row) => (
-                  <TableRow key={rowKey(row)}>
+                  <TableRow key={rowKey(row)} className="border-0">
                     {/* Starting Action Group in Row */}
                     {actions && actionsPosition === "start" && (
                       <TableCell className="flex gap-2">
@@ -430,7 +439,10 @@ export default function UniversalTable<T>({
                     )}
 
                     {columns.map((col) => (
-                      <TableCell key={String(col.key)}>{col.render ? col.render(row) : String(row[col.key])}</TableCell>
+                      <TableCell key={String(col.key)} className="min-w-[100px]">
+
+                        {col.render ? col.render(row) : String(row[col.key])}
+                      </TableCell>
                     ))}
 
                     {/* End Action Group in Row */}
@@ -463,7 +475,10 @@ export default function UniversalTable<T>({
               )}
             </TableBody>
           </Table>
+
         </div>
+
+
       </div>
     </div>
   );
