@@ -126,6 +126,7 @@ const register = async (data: IUser): Promise<IUser> => {
   await SendEmail({
     to: data.email,
     subject: 'Verify your email',
+    text: `Please verify your email by clicking the link: ${verificationLink}`,
     html: `<p>Please verify your email by clicking the link: <a href="${verificationLink}">Verify Email</a></p>`,
   });
 
