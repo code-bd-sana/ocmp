@@ -6,9 +6,9 @@ import { KeycloakToken, LoginData } from './auth.interface';
  * Function to login a user via Keycloak.
  *
  * @param {LoginData} data - The login data containing email and password.
- * @returns {Promise<KeycloakToken>} - The Keycloak token response.
+ * @returns {Promise<KeycloakToken| void>} - The Keycloak token response.
  */
-export const loginUser = async (data: LoginData): Promise<KeycloakToken> => {
+export const loginUser = async (data: LoginData): Promise<KeycloakToken | void> => {
   try {
     // Form data for Keycloak token endpoint
     const params = new URLSearchParams();
@@ -37,12 +37,12 @@ export const loginUser = async (data: LoginData): Promise<KeycloakToken> => {
       }
     );
 
-    return res.data as KeycloakToken;
+    return res.data ? (res.data as KeycloakToken) : undefined;
   } catch (err: any) {
     console.error('Keycloak login faileds:', err.response?.data || err.message);
 
-    // Return more meaningful error
-    const message = err.response?.data?.error_description || 'Invalid credentials';
-    throw new Error(message);
+    // If Keycloak is unreachable or credentials are invalid, return undefined
+    // so callers can fallback to local DB validation.
+    return undefined;
   }
 };

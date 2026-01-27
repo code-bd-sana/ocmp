@@ -29,7 +29,7 @@ const login = async (data: ILogin): Promise<ILoginResponse | void> => {
   const userId = v4();
 
   // If Keycloak did not return an access token, create one from our DB
-  if (!login.access_token) {
+  if (!login?.access_token) {
     // Verify user exists in our database
     const isExist = await User.findOne({ email: data.email });
 
@@ -42,7 +42,7 @@ const login = async (data: ILogin): Promise<ILoginResponse | void> => {
     const accessToken = await EncodeToken(isExist.email, isExist._id.toString());
 
     // Set the user token in Redis with a TTL of 30 days
-    setUserToken(userId, accessToken, 30 * 24 * 60 * 60);
+    await setUserToken(userId, accessToken, 30 * 24 * 60 * 60);
 
     return {
       token: userId, // Return the unique user ID as the token
@@ -52,6 +52,7 @@ const login = async (data: ILogin): Promise<ILoginResponse | void> => {
   // Set the user token in Redis with a TTL of 30 days
   await setUserToken(userId, login.access_token, 30 * 24 * 60 * 60);
 
+  // Return the unique user ID as the token
   return {
     token: userId,
   };
@@ -64,15 +65,18 @@ const login = async (data: ILogin): Promise<ILoginResponse | void> => {
  * @returns {Promise<IUser>} - The register result.
  */
 const register = async (data: IUser): Promise<IUser> => {
+  // Check if user already exists in Keycloak
   const existingUsers = await kcAdmin.users.find({
     realm: process.env.KEYCLOAK_REALM || 'ocmp',
     email: data.email,
   });
 
+  // If user exists, throw an error
   if (existingUsers.length > 0) {
     throw new Error('User already exists with this email');
   }
 
+  // Create user in Keycloak
   const user = await kcAdmin.users.create({
     realm: process.env.KEYCLOAK_REALM || 'ocmp',
     username: data.email, // ✅
@@ -89,15 +93,18 @@ const register = async (data: IUser): Promise<IUser> => {
     ],
   });
 
+  // Assign role to the user in Keycloak
   const role = await kcAdmin.roles.findOneByName({
     realm: process.env.KEYCLOAK_REALM || 'ocmp',
     name: data.role,
   });
 
+  // If role not found, throw an error
   if (!role) {
     throw new Error(`Role "${data.role}" not found`);
   }
 
+  // Assign the role to the user
   await kcAdmin.users.addRealmRoleMappings({
     realm: process.env.KEYCLOAK_REALM || 'ocmp',
     id: user.id!,
@@ -109,21 +116,25 @@ const register = async (data: IUser): Promise<IUser> => {
     ],
   });
 
+  // Check if user already exists in our database
   const isExist = await User.findOne({ email: data.email });
   if (isExist) {
     throw new Error('User already exists with this email');
   }
 
+  // Hash the user's password
   const hashPassword = await HashInfo(data.password);
 
+  // Save the user in our database
   const savedUser = await User.create({
-    keyCloakId: user.id ?? '',
+    keyCloakId: user.id,
     fullName: data.fullName,
     email: data.email,
     password: hashPassword,
     role: data.role,
   });
 
+  // Return the newly created user
   return {
     _id: savedUser._id,
     fullName: savedUser.fullName,
