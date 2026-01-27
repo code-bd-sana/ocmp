@@ -152,7 +152,7 @@ const register = async (data: IUser): Promise<IUser> => {
     isEmailVerified: false,
     isActive: true,
     emailVerificationToken,
-    resetTokenExpiry: emailVerificationExpiry,
+    emailVerificationTokenExpiry: emailVerificationExpiry,
   });
 
   return {
@@ -171,21 +171,6 @@ const register = async (data: IUser): Promise<IUser> => {
  */
 const resendVerificationEmail = async (email: string): Promise<void> => {
   // Check if user already exists in Keycloak
-  const existingUsers = await kcAdmin.users.find({
-    realm: config.KEYCLOAK_REALM,
-    email,
-  });
-
-  if (existingUsers.length === 0) {
-    throw new Error('User not found with this email');
-  }
-
-  // Send verification email
-  await kcAdmin.users.sendVerifyEmail({
-    realm: config.KEYCLOAK_REALM,
-    id: existingUsers[0].id!,
-  });
-
   return;
 };
 
@@ -220,8 +205,12 @@ const verifyEmail = async (data: IVerifyEmail): Promise<void> => {
 
   // Update in remote database
   await User.updateOne(
-    { email: data.email, emailVerificationToken: data.token },
-    { isEmailVerified: true, emailVerificationToken: null }
+    {
+      email: data.email,
+      emailVerificationToken: data.token,
+      emailVerificationTokenExpiry: { $gt: new Date() },
+    },
+    { isEmailVerified: true, emailVerificationToken: null, emailVerificationTokenExpiry: null }
   );
 
   return;
