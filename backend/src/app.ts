@@ -86,7 +86,7 @@ app.use(
 );
 
 // Recursive function to load routes from nested folders
-export const routes: {
+const routes: {
   module: string;
   path: string;
   method: string;
@@ -173,7 +173,7 @@ function logRoutesByModule() {
 }
 
 app.listen(config.PORT, async () => {
-  // console.log(config.DB_CONNECTION_URI);
+  // Connect to MongoDB
   await mongoose.connect(config.DB_CONNECTION_URI);
   console.log(
     `${GREEN}✔${RESET} ${WHITE}Connected to MongoDB successfully.${RESET} \n`,
@@ -184,5 +184,3 @@ app.listen(config.PORT, async () => {
   console.log(`Server is running at ${config.BASE_URL}:${config.PORT} in ${config.NODE_ENV} mode.`);
   logRoutesByModule();
 });
-
-export default app;
