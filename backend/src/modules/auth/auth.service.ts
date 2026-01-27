@@ -114,16 +114,12 @@ const register = async (data: IUser): Promise<IUser> => {
     roles: [{ id: role.id!, name: role.name! }],
   });
 
-  // Send verification email (best-effort). If Keycloak email sending fails
-  // we should still complete registration locally — log and continue.
-  try {
-    await kcAdmin.users.sendVerifyEmail({
-      realm: process.env.KEYCLOAK_REALM || 'ocmp',
-      id: user.id!,
-    });
-  } catch (err: any) {
-    console.warn('Warning: sendVerifyEmail failed, continuing registration:', err.response?.data || err.message || err);
-  }
+  // Send verification email (best-effort)
+
+  await kcAdmin.users.sendVerifyEmail({
+    realm: process.env.KEYCLOAK_REALM || 'ocmp',
+    id: user.id!,
+  });
 
   // Save in remote database
   const hashPassword = await HashInfo(data.password);
