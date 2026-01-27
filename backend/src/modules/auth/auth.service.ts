@@ -1,8 +1,10 @@
 import { v4 } from 'uuid';
+import config from '../../config/config';
 import kcAdmin from '../../config/keycloak';
 import User, { IUser } from '../../models/users-accounts/user.schema';
 import compareInfo from '../../utils/bcrypt/compare-info';
 import HashInfo from '../../utils/bcrypt/hash-info';
+import SendEmail from '../../utils/email/send-email';
 import EncodeToken from '../../utils/jwt/encode-token';
 import { setUserToken } from '../../utils/redis/auth/auth';
 import {
@@ -74,7 +76,7 @@ const login = async (data: ILogin): Promise<ILoginResponse | void> => {
 const register = async (data: IUser): Promise<IUser> => {
   // Check if user already exists in Keycloak
   const existingUsers = await kcAdmin.users.find({
-    realm: process.env.KEYCLOAK_REALM || 'ocmp',
+    realm: config.KEYCLOAK_REALM,
     email: data.email,
   });
 
@@ -85,7 +87,7 @@ const register = async (data: IUser): Promise<IUser> => {
 
   // Create user in Keycloak
   const user = await kcAdmin.users.create({
-    realm: process.env.KEYCLOAK_REALM || 'ocmp',
+    realm: config.KEYCLOAK_REALM,
     username: data.email,
     email: data.email,
     firstName: data.fullName,
@@ -102,23 +104,29 @@ const register = async (data: IUser): Promise<IUser> => {
 
   // Assign role
   const role = await kcAdmin.roles.findOneByName({
-    realm: process.env.KEYCLOAK_REALM || 'ocmp',
+    realm: config.KEYCLOAK_REALM,
     name: data.role,
   });
 
   if (!role) throw new Error(`Role "${data.role}" not found`);
 
   await kcAdmin.users.addRealmRoleMappings({
-    realm: process.env.KEYCLOAK_REALM || 'ocmp',
+    realm: config.KEYCLOAK_REALM,
     id: user.id!,
     roles: [{ id: role.id!, name: role.name! }],
   });
 
-  // Send verification email (best-effort)
+  const emailVerificationToken = v4();
+  const emailVerificationExpiry = new Date();
+  emailVerificationExpiry.setHours(emailVerificationExpiry.getHours() + 12); // 12 hours expiry
 
-  await kcAdmin.users.sendVerifyEmail({
-    realm: process.env.KEYCLOAK_REALM || 'ocmp',
-    id: user.id!,
+  // Send verification email with custom link
+  const verificationLink = `${config.EMAIL_VERIFICATION_REDIRECT_URI}?email=${encodeURIComponent(data.email)}&token=${emailVerificationToken}`;
+
+  await SendEmail({
+    to: data.email,
+    subject: 'Verify your email',
+    html: `<p>Please verify your email by clicking the link: <a href="${verificationLink}">Verify Email</a></p>`,
   });
 
   // Save in remote database
@@ -132,6 +140,8 @@ const register = async (data: IUser): Promise<IUser> => {
     role: data.role,
     isEmailVerified: false,
     isActive: true,
+    emailVerificationToken,
+    resetTokenExpiry: emailVerificationExpiry,
   });
 
   return {
@@ -151,7 +161,7 @@ const register = async (data: IUser): Promise<IUser> => {
 const resendVerificationEmail = async (email: string): Promise<void> => {
   // Check if user already exists in Keycloak
   const existingUsers = await kcAdmin.users.find({
-    realm: process.env.KEYCLOAK_REALM || 'ocmp',
+    realm: config.KEYCLOAK_REALM,
     email,
   });
 
@@ -161,7 +171,7 @@ const resendVerificationEmail = async (email: string): Promise<void> => {
 
   // Send verification email
   await kcAdmin.users.sendVerifyEmail({
-    realm: process.env.KEYCLOAK_REALM || 'ocmp',
+    realm: config.KEYCLOAK_REALM,
     id: existingUsers[0].id!,
   });
 
@@ -175,7 +185,32 @@ const resendVerificationEmail = async (email: string): Promise<void> => {
  * @returns {Promise<void>} - The verify email result.
  */
 const verifyEmail = async (data: IVerifyEmail): Promise<void> => {
-  // Implementation for verify email service
+  // Update user email verification status in Keycloak
+  const existingUsers = await kcAdmin.users.find({
+    realm: config.KEYCLOAK_REALM,
+    email: data.email,
+  });
+
+  // If user does not exist, throw an error
+  if (existingUsers.length === 0) {
+    throw new Error('User not found with this email');
+  }
+
+  // Update emailVerified to true in Keycloak
+  await kcAdmin.users.update(
+    {
+      realm: config.KEYCLOAK_REALM,
+      id: existingUsers[0].id!,
+    },
+    {
+      emailVerified: true,
+    }
+  );
+
+  // Update in remote database
+  await User.updateOne({ email: data.email }, { isEmailVerified: true });
+
+  return;
 };
 
 /**

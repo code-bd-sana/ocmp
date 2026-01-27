@@ -5,6 +5,7 @@ dotenv.config();
 interface Config {
   BASE_URL: string;
   PORT: number;
+  EMAIL_VERIFICATION_REDIRECT_URI: string;
   DB_CONNECTION_URI: string;
   NODE_ENV: string;
   SALT_ROUNDS: number;
@@ -37,6 +38,7 @@ interface Config {
 const config: Config = {
   BASE_URL: process.env.BASE_URL as string,
   PORT: parseInt(process.env.PORT as string, 10),
+  EMAIL_VERIFICATION_REDIRECT_URI: process.env.EMAIL_VERIFICATION_REDIRECT_URI as string,
   DB_CONNECTION_URI: process.env.DB_CONNECTION_URI as string,
   NODE_ENV: process.env.NODE_ENV as string,
   SALT_ROUNDS: parseInt(process.env.SALT_ROUNDS as string, 10),
