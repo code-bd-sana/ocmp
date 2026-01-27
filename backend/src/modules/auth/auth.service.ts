@@ -13,7 +13,6 @@ import {
   IResetPassword,
   IVerifyEmail,
 } from './auth.interface';
-import { loginUser } from './keycloak.service';
 
 /**
  * Service function to login.
@@ -28,7 +27,7 @@ const login = async (data: ILogin): Promise<ILoginResponse> => {
 
   console.log(isExist, 'kire kahma');
 
-  const login = await loginUser(data);
+  const login = await { access_token: '' };
   const userId = v4();
   if (!login.access_token) {
     const isExist = await User.findOne({ email: data.email });
