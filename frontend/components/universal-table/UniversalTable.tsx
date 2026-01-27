@@ -21,19 +21,31 @@ import {
 import { useState } from "react";
 import { TableProps } from "./table.types";
 
-/**
- * Type for dynamic buttons in the table header or inline container
- */
-export type HeaderButton = {
-  label: string;
-  onClick: () => void;
-  variant?: "default" | "destructive" | "secondary" | "edit" | "delete" | "view" | "download";
-  className?: string;
+// Define types for the action groups and buttons
+export type HeaderActionGroup = {
+  title: string;
+  startingActionGroup: HeaderButton[];
+  endActionGroup: HeaderButton[];
 };
 
-/**
- * Type for dynamic search input
- */
+export type HeaderButton = {
+  label: string;
+  onClick: (value?: string) => void;
+  icon?: React.ReactNode;
+  variant?: "default" | "destructive" | "secondary" | "edit" | "delete" | "view" | "download";
+  className?: string;
+  inputClassName?: string;
+  selectTriggerCalssName?: string;
+  selectItemClassName?: string;
+  size?: "sm" | "default" | "lg";
+  position?: "left" | "center" | "right";
+  visibility?: boolean;
+  positionIndex?: number;
+  search?: boolean;
+  filter?: boolean;
+  options?: string[];
+};
+
 export type TableSearch = {
   value?: string;
   onChange?: (value: string) => void;
@@ -41,66 +53,58 @@ export type TableSearch = {
   className?: string;
 };
 
-/**
- * Extends TableProps to include dynamic buttons, search, and filters
- */
 interface UniversalTablePropsWithFilters<T> extends TableProps<T> {
-  filterOptionsHeader?: string[];
-  filterOptionsInline?: string[];
-  headerButtons?: HeaderButton[];
-  inlineButtons?: HeaderButton[];
+  headerActionGroups?: HeaderActionGroup[];
+  innerActionGroup?: HeaderActionGroup[];
   headerSearch?: TableSearch;
   inlineSearch?: TableSearch;
 }
 
-/**
- * UniversalTable component
- *
- * Supports:
- * - Dynamic columns
- * - Row actions
- * - Header and inline search
- * - Header and inline filters
- * - Header and inline buttons
- *
- * @template T - The type of data used in table rows
- */
 export default function UniversalTable<T>({
   data,
   columns,
   actions,
   rowKey,
-  title = "Data Table",
-  emptyText = "No records found",
   actionsPosition = "end",
-  filterOptionsHeader = [],
-  filterOptionsInline = [],
-  headerButtons = [],
-  inlineButtons = [],
+  headerActionGroups = [],
+  innerActionGroup = [],
   headerSearch,
   inlineSearch,
 }: UniversalTablePropsWithFilters<T>) {
-  /** Active filter selected from header filter */
-  const [activeHeaderFilter, setActiveHeaderFilter] = useState<string | null>(
-    null,
-  );
-  /** Active filter selected from inline filter */
-  const [activeInlineFilter, setActiveInlineFilter] = useState<string | null>(
-    null,
-  );
-
-  /** Internal state for header search */
+  // State for header and inline search/filter
   const [internalHeaderSearch, setInternalHeaderSearch] = useState("");
-  /** Internal state for inline search */
   const [internalInlineSearch, setInternalInlineSearch] = useState("");
+  const [activeHeaderFilter, setActiveHeaderFilter] = useState<string | null>(null);
+  const [activeInlineFilter, setActiveInlineFilter] = useState<string | null>(null);
 
-  /** Resolve controlled or internal search values */
+  // Controlled or internal search values
   const headerSearchValue = headerSearch?.value ?? internalHeaderSearch;
   const inlineSearchValue = inlineSearch?.value ?? internalInlineSearch;
 
-  /**
-   * Filter data based on search and filters
-   */
+  const handleHeaderSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setInternalHeaderSearch(e.target.value);
+    if (headerSearch?.onChange) {
+      headerSearch.onChange(e.target.value);
+    }
+  };
+
+  const handleInlineSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setInternalInlineSearch(e.target.value);
+    if (inlineSearch?.onChange) {
+      inlineSearch.onChange(e.target.value);
+    }
+  };
+
+  // Handle filter change
+  const handleHeaderFilterChange = (value: string) => {
+    setActiveHeaderFilter(value);
+  };
+
+  const handleInlineFilterChange = (value: string) => {
+    setActiveInlineFilter(value);
+  };
+
+  // Filter data based on search and filters
   const filteredData = data.filter((row) => {
     let matchesHeaderSearch = true;
     let matchesInlineSearch = true;
@@ -108,34 +112,30 @@ export default function UniversalTable<T>({
     let matchesInlineFilter = true;
 
     // Header search
-    if (headerSearch || internalHeaderSearch !== undefined) {
+    if (headerSearchValue) {
       matchesHeaderSearch = columns.some((col) =>
-        String(row[col.key])
-          .toLowerCase()
-          .includes(headerSearchValue.toLowerCase()),
+        String(row[col.key]).toLowerCase().includes(headerSearchValue.toLowerCase())
       );
     }
 
     // Inline search
-    if (inlineSearch || internalInlineSearch !== undefined) {
+    if (inlineSearchValue) {
       matchesInlineSearch = columns.some((col) =>
-        String(row[col.key])
-          .toLowerCase()
-          .includes(inlineSearchValue.toLowerCase()),
+        String(row[col.key]).toLowerCase().includes(inlineSearchValue.toLowerCase())
       );
     }
 
     // Header filter
     if (activeHeaderFilter) {
       matchesHeaderFilter = Object.values(row as Record<string, unknown>).some(
-        (val) => String(val) === activeHeaderFilter,
+        (val) => String(val) === activeHeaderFilter
       );
     }
 
     // Inline filter
     if (activeInlineFilter) {
       matchesInlineFilter = Object.values(row as Record<string, unknown>).some(
-        (val) => String(val) === activeInlineFilter,
+        (val) => String(val) === activeInlineFilter
       );
     }
 
@@ -148,176 +148,322 @@ export default function UniversalTable<T>({
   });
 
   return (
-    <div className='w-full bg-[#F9F9FA] rounded-lg shadow-sm overflow-x-auto'>
+
+    <div>
       {/* Header */}
-      <div className='mx-auto p-5'>
-        <div className='flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4'>
-          <h1 className='text-3xl font-semibold text-blue-800'>{title}</h1>
+      <div className="mx-auto p-5">
+        {headerActionGroups.map((group, idx) => (
+          <div key={idx} className="flex justify-between items-center mb-4">
+            {group.title && <h2 className="text-2xl font-semibold">{group.title}</h2>}
 
-          <div className='flex items-center gap-2'>
-            {headerSearch && (
-              <Input
-                placeholder={headerSearch.placeholder || "Search..."}
-                value={headerSearchValue}
-                onChange={(e) =>
-                  headerSearch.onChange
-                    ? headerSearch.onChange(e.target.value)
-                    : setInternalHeaderSearch(e.target.value)
-                }
-                className={headerSearch.className}
-              />
-            )}
+            <div className="flex gap-2 items-center">
+              {/* Starting Action Group */}
+              {group.startingActionGroup
+                .filter((btn) => btn.visibility)
+                .sort((a, b) => (a.positionIndex ?? 0) - (b.positionIndex ?? 0))
+                .map((btn, idx) => {
+                  // Handle search button
+                  if (btn.search) {
+                    return (
+                      <Input
+                        key={idx}
+                        placeholder={btn.label || "Search..."}
+                        className={btn.inputClassName}
+                        onChange={handleHeaderSearch}
+                      />
+                    );
+                  }
 
-            {filterOptionsHeader.length > 0 && (
-              <Select
-                value={activeHeaderFilter || ""}
-                onValueChange={(val) => setActiveHeaderFilter(val || null)}>
-                <SelectTrigger className='w-40 bg-white'>
-                  <SelectValue placeholder='Header Filter' />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    {filterOptionsHeader.map((option) => (
-                      <SelectItem key={option} value={option}>
-                        {option}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-            )}
+                  // Handle filter button
+                  if (btn.filter) {
+                    console.log(btn)
+                    return (
+                      <div key={idx}>
+                        <Select onValueChange={handleHeaderFilterChange}>
+                          <SelectTrigger className={btn.selectTriggerCalssName}>
+                            <SelectValue placeholder={btn.label || "Filter"} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectGroup>
+                              {btn.options?.map((option, optionIdx) => (
+                                <SelectItem key={optionIdx} value={option} className={btn.selectItemClassName}>
+                                  {option}
+                                </SelectItem>
+                              ))}
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    );
+                  }
 
-            {headerButtons.map((btn, idx) => (
-              <Button
-                key={idx}
-                variant={btn.variant || "default"}
-                className={btn.className}
-                onClick={btn.onClick}>
-                {btn.label}
-              </Button>
-            ))}
+                  // Regular button
+                  return (
+                    <Button
+                      key={idx}
+                      variant={btn.variant || "default"}
+                      className={btn.className || ""}
+                      onClick={() => btn.onClick()}
+                      size={btn.size || "default"}
+                    >
+                      {btn.icon}
+                      {btn.label}
+                    </Button>
+                  );
+                })}
+            </div>
+            {/* End Action Group */}
+            <div className="flex gap-2 items-center">
+              {group.endActionGroup
+                .filter((btn) => btn.visibility)
+                .sort((a, b) => (a.positionIndex ?? 0) - (b.positionIndex ?? 0))
+                .map((btn, idx) => {
+                  if (btn.search) {
+                    return (
+                      <Input
+                        key={idx}
+                        placeholder={btn.label || "Search..."}
+                        className={btn.inputClassName}
+                        onChange={handleHeaderSearch}
+                      />
+                    );
+                  }
+
+                  if (btn.filter) {
+                    return (
+                      <Select
+                        key={idx}
+                        onValueChange={handleHeaderFilterChange}
+
+                      >
+                        <SelectTrigger className={btn.selectTriggerCalssName}>
+                          <SelectValue placeholder={btn.label || "Filter"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectGroup>
+                            {btn.options?.map((option, optionIdx) => (
+                              <SelectItem className={btn.selectItemClassName} key={optionIdx} value={option}>
+                                {option}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                    );
+                  }
+
+                  return (
+                    <Button
+                      key={idx}
+                      variant={btn.variant || "default"}
+                      className={btn.className}
+                      onClick={() => btn.onClick()}
+                      size={btn.size || "default"}
+                    >
+                      {btn.label}
+                    </Button>
+                  );
+                })}
+            </div>
           </div>
-        </div>
-
-        {/* Inline buttons + search + filter */}
-        <div className='flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4'>
-          <h2 className='text-xl font-semibold'>Overview</h2>
-
-          <div className='flex items-center gap-2'>
-            {inlineSearch && (
-              <Input
-                placeholder={inlineSearch.placeholder || "Search..."}
-                value={inlineSearchValue}
-                onChange={(e) =>
-                  inlineSearch.onChange
-                    ? inlineSearch.onChange(e.target.value)
-                    : setInternalInlineSearch(e.target.value)
-                }
-                className={inlineSearch.className}
-              />
-            )}
-
-            {filterOptionsInline.length > 0 && (
-              <Select
-                value={activeInlineFilter || ""}
-                onValueChange={(val) => setActiveInlineFilter(val || null)}>
-                <SelectTrigger className='w-40 bg-white'>
-                  <SelectValue placeholder='Inline Filter' />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    {filterOptionsInline.map((option) => (
-                      <SelectItem key={option} value={option}>
-                        {option}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-            )}
-
-            {inlineButtons.map((btn, idx) => (
-              <Button
-                key={idx}
-                variant={btn.variant || "default"}
-                className={btn.className}
-                onClick={btn.onClick}>
-                {btn.label}
-              </Button>
-            ))}
-          </div>
-        </div>
+        ))}
       </div>
 
-      {/* Table */}
-      <div className='p-5'>
-        <Table className='min-w-[600px]'>
-          <TableHeader>
-            <TableRow>
-              {actions && actionsPosition === "start" && (
-                <TableHead>Actions</TableHead>
-              )}
-              {columns.map((col) => (
-                <TableHead key={String(col.key)}>{col.title}</TableHead>
-              ))}
-              {actions && actionsPosition === "end" && (
-                <TableHead>Actions</TableHead>
-              )}
-            </TableRow>
-          </TableHeader>
 
-          <TableBody>
-            {filteredData.length > 0 ? (
-              filteredData.map((row) => (
-                <TableRow key={rowKey(row)}>
-                  {actions && actionsPosition === "start" && (
-                    <TableCell className='flex gap-2'>
-                      {actions.map((action, idx) => (
-                        <Button
+      <div className="w-full bg-[#F9F9FA] rounded-lg shadow-sm overflow-x-auto">
+        {/* Inner */}
+        <div className="mx-auto p-5">
+          {/* Inner Action Groups */}
+          {innerActionGroup.map((group, idx) => (
+            <div key={idx} className="flex justify-between items-center mb-4">
+              {group.title && <h2 className="text-2xl font-semibold">{group.title}</h2>}
+
+              <div className="flex gap-2 items-center">
+                {/* Starting Action Group for Inner Actions */}
+                {group.startingActionGroup
+                  .filter((btn) => btn.visibility)
+                  .sort((a, b) => (a.positionIndex ?? 0) - (b.positionIndex ?? 0))
+                  .map((btn, idx) => {
+                    if (btn.search) {
+                      return (
+                        <Input
                           key={idx}
-                          variant={action.variant || "default"}
-                          size='sm'
-                          onClick={() => action.onClick(row)}>
-                          {action.icon}
-                          {action.label}
-                        </Button>
-                      ))}
-                    </TableCell>
-                  )}
+                          placeholder={btn.label || "Search..."}
+                          className={btn.inputClassName}
+                          onChange={handleInlineSearch} // Pass value on input change
+                        />
+                      );
+                    }
 
-                  {columns.map((col) => (
-                    <TableCell key={String(col.key)}>
-                      {col.render ? col.render(row) : String(row[col.key])}
-                    </TableCell>
-                  ))}
+                    if (btn.filter) {
+                      return (
+                        <div key={idx} className={btn.className || "w-40 bg-white"}>
+                          <Select onValueChange={handleInlineFilterChange}>
+                            <SelectTrigger className={btn.selectTriggerCalssName}>
+                              <SelectValue placeholder={btn.label || "Filter"} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectGroup>
+                                {btn.options?.map((option, optionIdx) => (
+                                  <SelectItem
+                                    key={optionIdx}
+                                    value={option}
+                                    className={btn.selectItemClassName}
+                                  >
+                                    {option}
+                                  </SelectItem>
+                                ))}
+                              </SelectGroup>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      );
+                    }
 
-                  {actions && actionsPosition === "end" && (
-                    <TableCell className='flex gap-2'>
-                      {actions.map((action, idx) => (
-                        <Button
+                    // Regular button
+                    return (
+                      <Button
+                        key={idx}
+                        variant={btn.variant || "default"}
+                        className={btn.className || ""}
+                        onClick={() => btn.onClick()}
+                        size={btn.size || "default"}
+                      >
+                        {btn.label}
+                      </Button>
+                    );
+                  })}
+              </div>
+
+              <div className="flex gap-2 items-center">
+                {/* End Action Group for Inner Actions */}
+                {group.endActionGroup
+                  .filter((btn) => btn.visibility)
+                  .sort((a, b) => (a.positionIndex ?? 0) - (b.positionIndex ?? 0))
+                  .map((btn, idx) => {
+                    if (btn.search) {
+                      return (
+                        <Input
                           key={idx}
-                          variant={action.variant || "default"}
-                          size='sm'
-                          onClick={() => action.onClick(row)}>
-                          {action.icon}
-                          {action.label}
-                        </Button>
-                      ))}
-                    </TableCell>
-                  )}
-                </TableRow>
-              ))
-            ) : (
+                          placeholder={btn.label || "Search..."}
+                          className={btn.inputClassName}
+                          onChange={handleInlineSearch}
+                        />
+                      );
+                    }
+
+                    if (btn.filter) {
+                      return (
+                        <Select key={idx} onValueChange={handleInlineFilterChange}>
+                          <SelectTrigger className={btn.selectTriggerCalssName}>
+                            <SelectValue placeholder={btn.label || "Filter"} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectGroup>
+                              {btn.options?.map((option, optionIdx) => (
+                                <SelectItem
+                                  key={optionIdx}
+                                  value={option}
+                                  className={btn.selectItemClassName}
+                                >
+                                  {option}
+                                </SelectItem>
+                              ))}
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
+                      );
+                    }
+
+                    return (
+                      <Button
+                        key={idx}
+                        variant={btn.variant || "default"}
+                        className={btn.className}
+                        onClick={() => btn.onClick()}
+                        size={btn.size || "default"}
+                      >
+                        {btn.label}
+                      </Button>
+                    );
+                  })}
+              </div>
+            </div>
+          ))}
+
+        </div>
+
+        {/* Table */}
+        <div className="p-5">
+          <Table className="min-w-[600px]">
+            <TableHeader>
               <TableRow>
-                <TableCell
-                  colSpan={columns.length + (actions ? 1 : 0)}
-                  className='text-center py-4'>
-                  No records found
-                </TableCell>
+                {/* Actions at the start */}
+                {actions && actionsPosition === "start" && <TableHead>Actions</TableHead>}
+                {columns.map((col) => (
+                  <TableHead key={String(col.key)}>{col.title}</TableHead>
+                ))}
+                {/* Actions at the end */}
+                {actions && actionsPosition === "end" && <TableHead>Actions</TableHead>}
               </TableRow>
-            )}
-          </TableBody>
-        </Table>
+            </TableHeader>
+
+            <TableBody>
+              {filteredData.length > 0 ? (
+                filteredData.map((row) => (
+                  <TableRow key={rowKey(row)}>
+                    {/* Starting Action Group in Row */}
+                    {actions && actionsPosition === "start" && (
+                      <TableCell className="flex gap-2">
+                        {actions.map((action, idx) => (
+                          <Button
+                            key={idx}
+                            variant={action.variant || "default"}
+                            size="sm"
+                            onClick={() => action.onClick(row)}
+                          >
+                            {action.icon}
+                            {action.label}
+                          </Button>
+                        ))}
+                      </TableCell>
+                    )}
+
+                    {columns.map((col) => (
+                      <TableCell key={String(col.key)}>{col.render ? col.render(row) : String(row[col.key])}</TableCell>
+                    ))}
+
+                    {/* End Action Group in Row */}
+                    {actions && actionsPosition === "end" && (
+                      <TableCell className="flex gap-2">
+                        {actions.map((action, idx) => (
+                          <Button
+                            key={idx}
+                            variant={action.variant || "default"}
+                            size="sm"
+                            onClick={() => action.onClick(row)}
+                          >
+                            {action.icon}
+                            {action.label}
+                          </Button>
+                        ))}
+                      </TableCell>
+                    )}
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell
+                    colSpan={columns.length + (actions ? 1 : 0)}
+                    className="text-center py-4"
+                  >
+                    No records found
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </div>
     </div>
   );
