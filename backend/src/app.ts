@@ -13,7 +13,6 @@ import helmet from 'helmet';
 import hpp from 'hpp';
 import mongoose from 'mongoose';
 import morgan from 'morgan';
-import { initKeycloak } from './config/keycloak';
 import PathNotFound from './helpers/responses/path-not-found';
 import { loggerStream } from './utils/logger/logger';
 import { connectRedis } from './utils/redis/redis-client';
@@ -27,7 +26,6 @@ const RESET = '\x1b[0m';
 
 // Express app initialization
 const app: Application = express();
-initKeycloak();
 
 // Define the path to the public directory
 const publicDirPath = path.join(__dirname, '..', 'public');
