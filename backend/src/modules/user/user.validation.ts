@@ -24,11 +24,14 @@ export const profileInfoSchema = z.object({
     .string({ message: 'Full name is required' })
     .min(2, 'Full name must be at least 2 characters')
     .max(100, 'Full name is too long')
-    .trim(),
+    .trim()
+    .optional(),
+  // empty string allow to unset the phone number but regex will fail on empty string
   phone: z
     .string()
     .regex(/^\+?[1-9]\d{1,14}$/, 'Invalid phone number format')
-    .optional(),
+    .optional()
+    .or(z.literal('')),
 });
 
 export type ProfileInfoInput = z.infer<typeof profileInfoSchema>;

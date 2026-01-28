@@ -8,7 +8,7 @@ import HashInfo from '../../utils/bcrypt/hash-info';
 import SendEmail from '../../utils/email/send-email';
 import EncodeToken from '../../utils/jwt/encode-token';
 import { delUserToken, existsUserToken, setUserToken } from '../../utils/redis/auth/auth';
-import { getUserData, setUserData } from '../../utils/redis/user/user';
+import { delUserData, getUserData, setUserData } from '../../utils/redis/user/user';
 import {
   IChangePassword,
   IForgetPassword,
@@ -126,6 +126,9 @@ const logout = async (req: any): Promise<void> => {
 
       // Delete the user token from Redis
       await delUserToken(userId);
+
+      // Optionally, you can also clear user data from Redis cache
+      await delUserData(req.user._id);
     }
   }
 };

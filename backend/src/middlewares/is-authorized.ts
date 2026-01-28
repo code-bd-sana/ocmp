@@ -71,7 +71,7 @@ const isAuthorized = async (
       _id,
       fullName,
       email,
-      role,
+      role: role as UserRole,
       isEmailVerified,
       loginHash,
     };
