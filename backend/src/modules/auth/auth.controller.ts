@@ -32,6 +32,21 @@ export const login = catchAsync(async (req: Request, res: Response) => {
 });
 
 /**
+ * Controller function to handle the logout.
+ *
+ * @param {Request} req - The request object containing logout data in the body.
+ * @param {Response} res - The response object used to send the response.
+ * @returns {Promise<void>} - A promise that resolves when the logout is successful.
+ * @throws {Error} - Throws an error if the logout process fails.
+ */
+export const logout = catchAsync(async (req: Request, res: Response) => {
+  // Call the service method to logout
+  await authServices.logout(req.body);
+  // Send a success response indicating logout
+  ServerResponse(res, true, 200, 'Logout successful');
+});
+
+/**
  * Controller function to handle the register.
  *
  * @param {Request} req - The request object containing register data in the body.

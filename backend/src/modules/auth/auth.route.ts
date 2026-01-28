@@ -6,6 +6,7 @@ import {
   changePassword,
   forgetPassword,
   login,
+  logout,
   register,
   resendVerificationEmail,
   resetPassword,
@@ -38,6 +39,15 @@ const router = Router();
  * @param {function} controller - ['login']
  */
 router.post('/login', validateLoginAuth, requestMeta, login);
+
+/**
+ * @route POST /api/v1/auth/logout
+ * @description Logout user and invalidate JWT token
+ * @access Private
+ * @param {middleware} isAuthorized - ['isAuthorized']
+ * @param {function} controller - ['logout']
+ */
+router.post('/logout', isAuthorized, logout);
 
 /**
  * @route POST /api/v1/auth/register

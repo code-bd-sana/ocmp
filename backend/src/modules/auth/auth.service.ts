@@ -26,13 +26,7 @@ import { loginUser } from './keycloak.service';
  * @returns {Promise<ILoginResponse|void* >} - The login result.
  */
 const login = async (data: ILogin): Promise<ILoginResponse | void> => {
-  // Check the requested user from the keycloak is verified
-  const user = await kcAdmin.users.find({
-    realm: config.KEYCLOAK_REALM,
-    username: data.email,
-  });
-
-  // Implementation for login service
+  // Implementation for keycloak login service
   const loginData = await loginUser(data);
 
   // Generate a unique user ID for session management
