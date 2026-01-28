@@ -1,9 +1,10 @@
 import { v4 } from 'uuid';
+import config from '../../config/config';
 import kcAdmin from '../../config/keycloak';
+import LoginActivity from '../../models/users-accounts/loginActivity.schema';
 import User, { IUser } from '../../models/users-accounts/user.schema';
-import compareInfo from '../../utils/bcrypt/compare-info';
 import HashInfo from '../../utils/bcrypt/hash-info';
-import EncodeToken from '../../utils/jwt/encode-token';
+import SendEmail from '../../utils/email/send-email';
 import { setUserToken } from '../../utils/redis/auth/auth';
 import {
   IChangePassword,
@@ -23,41 +24,36 @@ import { loginUser } from './keycloak.service';
  * @returns {Promise<ILoginResponse|void* >} - The login result.
  */
 const login = async (data: ILogin): Promise<ILoginResponse | void> => {
-  // Implementation for login service
-  const login = await loginUser(data);
+  // Check the requested user from the keycloak is verified
+  const user = await kcAdmin.users.find({
+    realm: config.KEYCLOAK_REALM,
+    username: data.email,
+  });
 
+  if (user.length === 0 || !user[0].emailVerified) {
+    throw new Error('User email is not verified');
+  }
   // Generate a unique user ID for session management
   const userId = v4();
 
-  // If Keycloak did not return an access token, validate against our DB
-  if (!login?.access_token) {
-    // Verify user exists in our database
-    const isExist = await User.findOne({ email: data.email });
+  // Authenticate user with Keycloak
+  const loginData = await loginUser(data);
 
-    // If user does not exist, throw an error
-    if (!isExist) {
-      throw new Error('Invalid credentials');
-    }
-
-    // Validate password from DB when Keycloak is unavailable
-    const isValidPassword = await compareInfo(data.password, isExist.password);
-    if (!isValidPassword) {
-      throw new Error('Invalid credentials');
-    }
-
-    // Encode a new JWT token for the user
-    const accessToken = await EncodeToken(isExist.email, isExist._id.toString());
-
-    // Set the user token in Redis with a TTL of 30 days
-    await setUserToken(userId, accessToken, 30 * 24 * 60 * 60);
-
-    return {
-      token: userId, // Return the unique user ID as the token
-    };
+  if (!loginData) {
+    throw new Error('Invalid credentials');
   }
 
+  // Log the login activity for the Keycloak login
+  await LoginActivity.create({
+    email: data.email,
+    ipAddress: data.ipAddress,
+    deviceInfo: data.userAgent,
+    loginAt: new Date(),
+    isSuccessful: true,
+  });
+
   // Set the user token in Redis with a TTL of 30 days
-  await setUserToken(userId, login.access_token, 30 * 24 * 60 * 60);
+  await setUserToken(userId, loginData.access_token, 30 * 24 * 60 * 60);
 
   // Return the unique user ID as the token
   return {
@@ -74,7 +70,7 @@ const login = async (data: ILogin): Promise<ILoginResponse | void> => {
 const register = async (data: IUser): Promise<IUser> => {
   // Check if user already exists in Keycloak
   const existingUsers = await kcAdmin.users.find({
-    realm: process.env.KEYCLOAK_REALM || 'ocmp',
+    realm: config.KEYCLOAK_REALM,
     email: data.email,
   });
 
@@ -85,7 +81,7 @@ const register = async (data: IUser): Promise<IUser> => {
 
   // Create user in Keycloak
   const user = await kcAdmin.users.create({
-    realm: process.env.KEYCLOAK_REALM || 'ocmp',
+    realm: config.KEYCLOAK_REALM,
     username: data.email,
     email: data.email,
     firstName: data.fullName,
@@ -102,23 +98,30 @@ const register = async (data: IUser): Promise<IUser> => {
 
   // Assign role
   const role = await kcAdmin.roles.findOneByName({
-    realm: process.env.KEYCLOAK_REALM || 'ocmp',
+    realm: config.KEYCLOAK_REALM,
     name: data.role,
   });
 
   if (!role) throw new Error(`Role "${data.role}" not found`);
 
   await kcAdmin.users.addRealmRoleMappings({
-    realm: process.env.KEYCLOAK_REALM || 'ocmp',
+    realm: config.KEYCLOAK_REALM,
     id: user.id!,
     roles: [{ id: role.id!, name: role.name! }],
   });
 
-  // Send verification email (best-effort)
+  const emailVerificationToken = v4();
+  const emailVerificationExpiry = new Date();
+  emailVerificationExpiry.setHours(emailVerificationExpiry.getHours() + 12); // 12 hours expiry
 
-  await kcAdmin.users.sendVerifyEmail({
-    realm: process.env.KEYCLOAK_REALM || 'ocmp',
-    id: user.id!,
+  // Send verification email with custom link
+  const verificationLink = `${config.EMAIL_VERIFICATION_REDIRECT_URI}?email=${encodeURIComponent(data.email)}&token=${emailVerificationToken}`;
+
+  await SendEmail({
+    to: data.email,
+    subject: 'Verify your email',
+    text: `Please verify your email by clicking the link: ${verificationLink}`,
+    html: `<p>Please verify your email by clicking the link: <a href="${verificationLink}">Verify Email</a></p>`,
   });
 
   // Save in remote database
@@ -132,6 +135,8 @@ const register = async (data: IUser): Promise<IUser> => {
     role: data.role,
     isEmailVerified: false,
     isActive: true,
+    emailVerificationToken,
+    emailVerificationTokenExpiry: emailVerificationExpiry,
   });
 
   return {
@@ -150,21 +155,6 @@ const register = async (data: IUser): Promise<IUser> => {
  */
 const resendVerificationEmail = async (email: string): Promise<void> => {
   // Check if user already exists in Keycloak
-  const existingUsers = await kcAdmin.users.find({
-    realm: process.env.KEYCLOAK_REALM || 'ocmp',
-    email,
-  });
-
-  if (existingUsers.length === 0) {
-    throw new Error('User not found with this email');
-  }
-
-  // Send verification email
-  await kcAdmin.users.sendVerifyEmail({
-    realm: process.env.KEYCLOAK_REALM || 'ocmp',
-    id: existingUsers[0].id!,
-  });
-
   return;
 };
 
@@ -175,7 +165,39 @@ const resendVerificationEmail = async (email: string): Promise<void> => {
  * @returns {Promise<void>} - The verify email result.
  */
 const verifyEmail = async (data: IVerifyEmail): Promise<void> => {
-  // Implementation for verify email service
+  // Update user email verification status in Keycloak
+  const existingUsers = await kcAdmin.users.find({
+    realm: config.KEYCLOAK_REALM,
+    email: data.email,
+  });
+
+  // If user does not exist, throw an error
+  if (existingUsers.length === 0) {
+    throw new Error('User not found with this email');
+  }
+
+  // Update emailVerified to true in Keycloak
+  await kcAdmin.users.update(
+    {
+      realm: config.KEYCLOAK_REALM,
+      id: existingUsers[0].id!,
+    },
+    {
+      emailVerified: true,
+    }
+  );
+
+  // Update in remote database
+  await User.updateOne(
+    {
+      email: data.email,
+      emailVerificationToken: data.token,
+      emailVerificationTokenExpiry: { $gt: new Date() },
+    },
+    { isEmailVerified: true, emailVerificationToken: null, emailVerificationTokenExpiry: null }
+  );
+
+  return;
 };
 
 /**

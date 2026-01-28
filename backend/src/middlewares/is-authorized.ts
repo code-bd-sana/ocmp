@@ -45,12 +45,16 @@ const isAuthorized = async (
       return ServerResponse(res, false, 401, 'Invalid or expired token');
     }
 
+    return;
+
     // First, try validating token with Keycloak's userinfo endpoint
     try {
       const kcRes = await axios.get(
         `${config.KEYCLOAK_HOST}/realms/${config.KEYCLOAK_REALM}/protocol/openid-connect/userinfo`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
+
+      console.log('Keycloak userinfo:', kcRes);
 
       const userInfo = kcRes.data || {};
 
@@ -78,6 +82,8 @@ const isAuthorized = async (
       };
     } catch (kcErr) {
       // If Keycloak validation fails, fallback to local JWT verification
+      console.warn('Keycloak userinfo endpoint failed, falling back to JWT decoding:', kcErr);
+
       const decoded = await DecodeToken(token);
 
       // If token decoding fails as well, respond with unauthorized
@@ -85,19 +91,36 @@ const isAuthorized = async (
         return ServerResponse(res, false, 401, 'Unauthorized');
       }
 
-      const { email, _id, fullName, role, isEmailVerified } = decoded as {
-        _id: string;
-        fullName: string;
-        email: string;
-        role: UserRole;
-        isEmailVerified: boolean;
+      const decodedUser = decoded as {
+        sub?: string;
+        email?: string;
+        name?: string;
+        email_verified?: boolean;
+        realm_access?: { roles?: string[] };
       };
 
-      if (isEmailVerified === false) {
+      const _id = decodedUser.sub || '';
+      const email = decodedUser.email || '';
+      const fullName = decodedUser.name || '';
+      const emailVerified = decodedUser.email_verified || false;
+
+      if (emailVerified === false) {
         return ServerResponse(res, false, 401, 'Email not verified');
       }
 
-      req.user = { _id, fullName, email, role, isEmailVerified };
+      const roleFromToken =
+        (decodedUser.realm_access &&
+          decodedUser.realm_access.roles &&
+          decodedUser.realm_access.roles[0]) ||
+        undefined;
+
+      req.user = {
+        _id,
+        fullName,
+        email,
+        role: (roleFromToken as UserRole) || (UserRole as any).USER,
+        isEmailVerified: emailVerified,
+      };
     }
 
     // Proceed to the next middleware or route handler
