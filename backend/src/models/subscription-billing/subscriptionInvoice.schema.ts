@@ -36,7 +36,7 @@ const SubscriptionInvoiceSchema: Schema<ISubscriptionInvoice> = new Schema(
       enum: ['PENDING', 'PAID', 'FAILED', 'REFUNDED'],
     },
     dueDate: {
-      type: Date,
+      type: Date, // Due date for the invoice payment
     },
   },
   { timestamps: true, versionKey: false }

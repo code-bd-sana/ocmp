@@ -7,6 +7,8 @@
 export interface ILogin {
   email: string;
   password: string;
+  ipAddress?: string;
+  userAgent?: string;
 }
 
 /**
@@ -26,11 +28,19 @@ export interface ILoginResponse {
  * @interface IRegister
  */
 export interface IRegister {
+  _id: string;
   fullName: string;
   email: string;
-  phone: string;
-  password: string;
   role: 'TRANSPORT_MANAGER' | 'STANDALONE_USER';
+}
+
+/** Type definition for Resend Verification Email.
+ *
+ * This type defines the structure of a resend verification email object.
+ * @interface IResendVerificationEmail
+ */
+export interface IResendVerificationEmail {
+  email: string;
 }
 
 /**
@@ -50,9 +60,7 @@ export interface IVerifyEmail {
  * This type defines the structure of a forget password object.
  * @interface IForgetPassword
  */
-export interface IForgetPassword {
-  email: string;
-}
+export interface IForgetPassword extends IResendVerificationEmail {}
 
 /**
  * Type definition for Reset Password.
@@ -61,6 +69,7 @@ export interface IForgetPassword {
  * @interface IResetPassword
  */
 export interface IResetPassword {
+  email: string;
   token: string;
   password: string;
   confirmPassword: string;
@@ -73,7 +82,7 @@ export interface IResetPassword {
  * @interface IChangePassword
  */
 export interface IChangePassword {
-  oldPassword: string;
+  userId: string; // User ID
+  currentPassword: string;
   newPassword: string;
-  confirmNewPassword: string;
 }

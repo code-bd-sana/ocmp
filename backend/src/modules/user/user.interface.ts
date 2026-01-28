@@ -1,9 +1,11 @@
 /**
- * Type definition for User.
- *
- * This type defines the structure of a single user object.
- * @interface TUser
+ * Interface representing a User object.
  */
-export interface TUser {
-  // Add fields as needed
+export interface IUserResponse {
+  _id: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  role: string;
+  isEmailVerified: boolean;
 }

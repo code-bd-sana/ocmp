@@ -20,7 +20,6 @@ export default function RegisterPage() {
   const handleRegister = (data: RegisterFormData) => {
     console.log("Form submitted:", data);
 
-    // ✅ submit success → dialog close
     setOpen(false);
   };
 
@@ -43,6 +42,7 @@ export default function RegisterPage() {
             schema={registerSchema}
             onSubmit={handleRegister}
             submitText="Register"
+            setOpen={setOpen}
           />
         </DialogContent>
       </Dialog>

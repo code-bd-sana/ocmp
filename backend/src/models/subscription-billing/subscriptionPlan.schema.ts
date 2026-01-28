@@ -16,6 +16,7 @@ const SubscriptionPlanSchema: Schema<ISubscriptionPlan> = new Schema(
     name: {
       type: String,
       required: true,
+      unique: true,
     },
     planType: {
       type: String,

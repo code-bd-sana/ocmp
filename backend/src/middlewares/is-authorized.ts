@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from 'express';
 import ServerResponse from '../helpers/responses/custom-response';
 import { UserRole } from '../models';
 import DecodeToken from '../utils/jwt/decode-token';
+import { getUserToken } from '../utils/redis/auth/auth';
 
 // Extend the Request interface to include a user property
 interface AuthenticatedRequest extends Request {
@@ -10,6 +11,8 @@ interface AuthenticatedRequest extends Request {
     fullName: string;
     email: string;
     role: UserRole;
+    isEmailVerified: boolean;
+    loginHash: string;
   };
 }
 
@@ -31,32 +34,48 @@ const isAuthorized = async (
 
     // Check if the Authorization header is present and starts with 'Bearer '
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return ServerResponse(res, false, 401, 'Unauthorized');
+      return ServerResponse(res, false, 401, 'Authorization header missing or malformed');
     }
+
+    // Extract the user ID from the Bearer token
+    const accessToken = authHeader.split(' ')[1];
+
+    // Retrieve the actual token from Redis
+    const token = await getUserToken(accessToken);
 
     // Extract the token from the Authorization header
-    const token = authHeader.split(' ')[1];
-
-    // Decode the token
-    const decoded = await DecodeToken(token);
-
-    // If token decoding fails, respond with unauthorized
-    if (!decoded) {
-      return ServerResponse(res, false, 401, 'Unauthorized');
+    if (!token) {
+      return ServerResponse(res, false, 401, 'Invalid or expired token');
     }
 
-    // Extract user information from the decoded token
-    const { email, _id, fullName, role } = decoded as {
+    // Decode the token to get user details
+    const decodedToken = await DecodeToken(token);
+
+    // Check if decoding was successful
+    if (!decodedToken) {
+      return ServerResponse(res, false, 401, 'Failed to decode token');
+    }
+
+    // decoded user details
+    const { _id, fullName, email, role, isEmailVerified, loginHash } = decodedToken as {
       _id: string;
       fullName: string;
       email: string;
       role: UserRole;
+      isEmailVerified: boolean;
+      loginHash: string;
     };
 
     // Attach user information to the request object
-    req.user = { _id, fullName, email, role };
+    req.user = {
+      _id,
+      fullName,
+      email,
+      role: role as UserRole,
+      isEmailVerified,
+      loginHash,
+    };
 
-    // Proceed to the next middleware or route handler
     next();
   } catch (error) {
     console.error('Authentication error:', error);

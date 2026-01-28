@@ -17,7 +17,14 @@ export type TableAction<T> = {
   /** Function to call when clicked, receives row data */
   onClick: (row: T) => void;
   /** Optional variant for styling */
-  variant?: "default" | "destructive" | "secondary" | "edit" | "delete" | "view" | "download";
+  variant?:
+    | "default"
+    | "destructive"
+    | "secondary"
+    | "edit"
+    | "delete"
+    | "view"
+    | "download";
   /** Optional icon */
   icon?: React.ReactNode;
 };

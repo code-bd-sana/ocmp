@@ -3,11 +3,11 @@ import mongoose, { Document, Schema } from 'mongoose';
 // Define and export an interface representing a Driver document
 export interface IDriver extends Document {
   fullName: string;
-  licenceNumber: string;
+  licenseNumber: string;
   postCode: string;
   niNumber: string;
-  licenceExpiry?: Date;
-  licenceExpiryDTC?: Date;
+  licenseExpiry?: Date;
+  licenseExpiryDTC?: Date;
   cpcExpiry?: Date;
   points: Number;
   endorsementCodes: string[];
@@ -28,7 +28,7 @@ const DriverSchema: Schema<IDriver> = new Schema(
       type: String,
       required: true,
     },
-    licenceNumber: {
+    licenseNumber: {
       type: String,
       required: true,
     },
@@ -40,10 +40,10 @@ const DriverSchema: Schema<IDriver> = new Schema(
       type: String,
       required: true,
     },
-    licenceExpiry: {
+    licenseExpiry: {
       type: Date,
     },
-    licenceExpiryDTC: {
+    licenseExpiryDTC: {
       type: Date,
     },
     cpcExpiry: {

@@ -33,6 +33,7 @@ export default function UniversalForm<T extends FieldValues>({
   defaultValues,
   onSubmit,
   submitText,
+  setOpen,
 }: UniversalFomrsProps<T>) {
   const methods = useForm<T>({
     resolver: zodResolver(schema as ZodType<T, any, any>),
@@ -462,8 +463,9 @@ export default function UniversalForm<T extends FieldValues>({
 
         <div className="flex gap-4">
           <Button
+            onClick={() => setOpen(false)}
             type="button"
-            className="cursor-pointer rounded-none border-[#DC3545] bg-[#FFDDDD] py-4.75 text-[#DC3545] hover:bg-[#FFDDDD] hover:text-[#DC3545]"
+            className="border-destructive cursor-pointer rounded-none border bg-[#FFDDDD] py-4.75 text-[#DC3545] hover:bg-[#FFDDDD] hover:text-[#DC3545]"
           >
             Cancel
           </Button>

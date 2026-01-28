@@ -1,139 +1,70 @@
 // Import the model
-import UserModel, { IUser } from './user.model';
 
-/**
- * Service function to create a new user.
- *
- * @param {Partial<IUser>} data - The data to create a new user.
- * @returns {Promise<Partial<IUser>>} - The created user.
- */
-const createUser = async (data: Partial<IUser>): Promise<Partial<IUser>> => {
-  const newUser = new UserModel(data);
-  const savedUser = await newUser.save();
-  return savedUser;
-};
-
-/**
- * Service function to create multiple user.
- *
- * @param {Partial<IUser>[]} data - An array of data to create multiple user.
- * @returns {Promise<Partial<IUser>[]>} - The created user.
- */
-const createManyUser = async (data: Partial<IUser>[]): Promise<Partial<IUser>[]> => {
-  const createdUser = await UserModel.insertMany(data);
-  return createdUser;
-};
+import User, { IUser as IUserPayload } from '../../models/users-accounts/user.schema';
+import { getUserData, setUserData } from '../../utils/redis/user/user';
+import { IUserResponse } from './user.interface';
 
 /**
  * Service function to update a single user by ID.
  *
  * @param {string} id - The ID of the user to update.
- * @param {Partial<IUser>} data - The updated data for the user.
- * @returns {Promise<Partial<IUser>>} - The updated user.
+ * @param {Partial<IUserPayload>} data - The updated data for the user.
+ * @returns {Promise<Partial<IUserResponse>>} - The updated user.
  */
-const updateUser = async (id: string, data: Partial<IUser>): Promise<Partial<IUser | null>> => {
-  const updatedUser = await UserModel.findByIdAndUpdate(id, data, { new: true });
-  return updatedUser;
-};
+const updateUser = async (
+  id: string,
+  data: Partial<IUserPayload>
+): Promise<Partial<IUserResponse | null>> => {
+  const updatedUser = await User.findByIdAndUpdate(id, data, { new: true });
 
-/**
- * Service function to update multiple user.
- *
- * @param {Array<{ id: string, updates: Partial<IUser> }>} data - An array of data to update multiple user.
- * @returns {Promise<Partial<IUser>[]>} - The updated user.
- */
-const updateManyUser = async (data: Array<{ id: string, updates: Partial<IUser> }>): Promise<Partial<IUser>[]> => {
-  const updatePromises = data.map(({ id, updates }) =>
-    UserModel.findByIdAndUpdate(id, updates, { new: true })
-  );
-  const updatedUser = await Promise.all(updatePromises);
-  // Filter out null values
-  const validUpdatedUser = updatedUser.filter(item => item !== null) as IUser[];
-  return validUpdatedUser;
-};
-
-/**
- * Service function to delete a single user by ID.
- *
- * @param {string} id - The ID of the user to delete.
- * @returns {Promise<Partial<IUser>>} - The deleted user.
- */
-const deleteUser = async (id: string): Promise<Partial<IUser | null>> => {
-  const deletedUser = await UserModel.findByIdAndDelete(id);
-  return deletedUser;
-};
-
-/**
- * Service function to delete multiple user.
- *
- * @param {string[]} ids - An array of IDs of user to delete.
- * @returns {Promise<Partial<IUser>[]>} - The deleted user.
- */
-const deleteManyUser = async (ids: string[]): Promise<Partial<IUser>[]> => {
-  const userToDelete = await UserModel.find({ _id: { $in: ids } });
-  if (!userToDelete.length) throw new Error('No user found to delete');
-  await UserModel.deleteMany({ _id: { $in: ids } });
-  return userToDelete; 
-};
-
-/**
- * Service function to retrieve a single user by ID.
- *
- * @param {string} id - The ID of the user to retrieve.
- * @returns {Promise<Partial<IUser>>} - The retrieved user.
- */
-const getUserById = async (id: string): Promise<Partial<IUser | null>> => {
-  const user = await UserModel.findById(id);
-  return user;
-};
-
-/**
- * Service function to retrieve multiple user based on query parameters.
- *
- * @param {object} query - The query parameters for filtering user.
- * @returns {Promise<Partial<IUser>[]>} - The retrieved user
- */
-const getManyUser = async (query: {
-  searchKey?: string;
-  showPerPage: number;
-  pageNo: number;
-}): Promise<{ users: Partial<IUser>[]; totalData: number; totalPages: number }> => {
-  const { searchKey = '', showPerPage, pageNo } = query;
-
-  // Build the search filter based on the search key
-  const searchFilter = {
-    $or: [
-      { fieldName: { $regex: searchKey, $options: 'i' } },
-      { fieldName: { $regex: searchKey, $options: 'i' } },
-      // Add more fields as needed
-    ],
+  const updateUserData: Partial<IUserResponse> = {
+    _id: updatedUser?._id.toString(),
+    fullName: updatedUser?.fullName,
+    email: updatedUser?.email,
+    phone: updatedUser?.phone || '',
+    role: updatedUser?.role,
+    isEmailVerified: updatedUser?.isEmailVerified || false,
   };
 
-  // Calculate the number of items to skip based on the page number
-  const skipItems = (pageNo - 1) * showPerPage;
+  // Update the user data in Redis cache
+  if (updateUserData._id) {
+    await setUserData(id, updateUserData as IUserResponse, 30 * 24 * 60 * 60); // Set TTL to 30 days
+  }
 
-  // Find the total count of matching user
-  const totalData = await UserModel.countDocuments(searchFilter);
+  return updateUserData;
+};
 
-  // Calculate the total number of pages
-  const totalPages = Math.ceil(totalData / showPerPage);
+/**
+ * Service function to get user profile by ID.
+ *
+ * @param {string} id - The ID of the user.
+ * @returns {Promise<Partial<IUserResponse | null>>} - The user profile.
+ */
+const getUserProfile = async (id: string): Promise<Partial<IUserResponse | null>> => {
+  // Try to get the user profile from Redis cache first
+  const cacheUserProfileData = await getUserData<Partial<IUserResponse>>(id);
+  if (cacheUserProfileData) {
+    return cacheUserProfileData;
+  }
 
-  // Find user based on the search filter with pagination
-  const users = await UserModel.find(searchFilter)
-    .skip(skipItems)
-    .limit(showPerPage)
-    .select(''); // Keep/Exclude any field if needed
+  const userProfile = await User.findById(id);
 
-  return { users, totalData, totalPages };
+  const userProfileData: Partial<IUserResponse> = {
+    _id: userProfile?._id.toString(),
+    fullName: userProfile?.fullName,
+    email: userProfile?.email,
+    phone: userProfile?.phone || '',
+    role: userProfile?.role,
+    isEmailVerified: userProfile?.isEmailVerified || false,
+  };
+
+  // Store the user profile in Redis cache
+  await setUserData(id, userProfileData as IUserResponse, 30 * 24 * 60 * 60); // Set TTL to 30 days
+
+  return userProfileData;
 };
 
 export const userServices = {
-  createUser,
-  createManyUser,
   updateUser,
-  updateManyUser,
-  deleteUser,
-  deleteManyUser,
-  getUserById,
-  getManyUser,
+  getUserProfile,
 };
