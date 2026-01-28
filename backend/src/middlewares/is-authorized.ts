@@ -37,8 +37,10 @@ const isAuthorized = async (
       return ServerResponse(res, false, 401, 'Authorization header missing or malformed');
     }
 
+    // Extract the user ID from the Bearer token
     const accessToken = authHeader.split(' ')[1];
 
+    // Retrieve the actual token from Redis
     const token = await getUserToken(accessToken);
 
     // Extract the token from the Authorization header
@@ -46,8 +48,10 @@ const isAuthorized = async (
       return ServerResponse(res, false, 401, 'Invalid or expired token');
     }
 
+    // Decode the token to get user details
     const decodedToken = await DecodeToken(token);
 
+    // Check if decoding was successful
     if (!decodedToken) {
       return ServerResponse(res, false, 401, 'Failed to decode token');
     }

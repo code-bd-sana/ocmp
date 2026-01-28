@@ -8,6 +8,7 @@ import HashInfo from '../../utils/bcrypt/hash-info';
 import SendEmail from '../../utils/email/send-email';
 import EncodeToken from '../../utils/jwt/encode-token';
 import { delUserToken, existsUserToken, setUserToken } from '../../utils/redis/auth/auth';
+import { getUserData, setUserData } from '../../utils/redis/user/user';
 import {
   IChangePassword,
   IForgetPassword,
@@ -75,6 +76,23 @@ const login = async (data: ILogin): Promise<ILoginResponse | void> => {
 
   // Set the user token in Redis with a TTL of 30 days
   await setUserToken(userId, accessToken, 30 * 24 * 60 * 60);
+
+  // Set user data in Redis if not already present
+  if (!(await getUserData<IUser>(user._id.toString())) !== null) {
+    // Update the user data in Redis cache
+    await setUserData(
+      user._id.toString(),
+      {
+        _id: user._id.toString(),
+        fullName: user.fullName,
+        email: user.email,
+        phone: user.phone || '',
+        role: user.role,
+        isEmailVerified: user.isEmailVerified,
+      },
+      30 * 24 * 60 * 60
+    ); // Set TTL to 30 days
+  }
 
   // Return the unique user ID as the token
   return {
@@ -354,8 +372,6 @@ const changePassword = async (data: IChangePassword): Promise<void> => {
   }
 
   // Match old password
-  const isPasswordValid = await compareInfo(currentPassword, user.password);
-
   const isOldPasswordValid = await compareInfo(currentPassword, user.password);
 
   // If old password is invalid
