@@ -1,6 +1,7 @@
 import { v4 } from 'uuid';
 import config from '../../config/config';
 import kcAdmin from '../../config/keycloak';
+import LoginActivity from '../../models/users-accounts/loginActivity.schema';
 import User, { IUser } from '../../models/users-accounts/user.schema';
 import compareInfo from '../../utils/bcrypt/compare-info';
 import HashInfo from '../../utils/bcrypt/hash-info';
@@ -31,10 +32,6 @@ const login = async (data: ILogin): Promise<ILoginResponse | void> => {
     username: data.email,
   });
 
-  if (user.length === 0 || user[0].emailVerified === false) {
-    throw new Error('Email not verified');
-  }
-
   // Implementation for login service
   const loginData = await loginUser(data);
 
@@ -60,6 +57,15 @@ const login = async (data: ILogin): Promise<ILoginResponse | void> => {
     // Encode a new JWT token for the user
     const accessToken = await EncodeToken(isExist.email, isExist._id.toString());
 
+    // Log the login activity
+    await LoginActivity.create({
+      email: data.email,
+      ipAddress: data.ipAddress,
+      deviceInfo: data.userAgent,
+      loginAt: new Date(),
+      isSuccessful: true,
+    });
+
     // Set the user token in Redis with a TTL of 30 days
     await setUserToken(userId, accessToken, 30 * 24 * 60 * 60);
 
@@ -67,6 +73,15 @@ const login = async (data: ILogin): Promise<ILoginResponse | void> => {
       token: userId, // Return the unique user ID as the token
     };
   }
+
+  // Log the login activity
+  await LoginActivity.create({
+    email: data.email,
+    ipAddress: data.ipAddress,
+    deviceInfo: data.userAgent,
+    loginAt: new Date(),
+    isSuccessful: true,
+  });
 
   // Set the user token in Redis with a TTL of 30 days
   await setUserToken(userId, loginData.access_token, 30 * 24 * 60 * 60);

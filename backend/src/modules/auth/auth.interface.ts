@@ -7,6 +7,8 @@
 export interface ILogin {
   email: string;
   password: string;
+  ipAddress?: string;
+  userAgent?: string;
 }
 
 /**

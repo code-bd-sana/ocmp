@@ -14,6 +14,7 @@ import {
 
 //Import validation from corresponding module
 import isAuthorized from '../../middlewares/is-authorized';
+import { requestMeta } from '../../middlewares/request-meta';
 import {
   changePasswordAuth,
   forgetPasswordAuth,
@@ -33,9 +34,10 @@ const router = Router();
  * @description Login user and return JWT token
  * @access Public
  * @param {function} validation - ['validateLoginAuth']
+ * @param {middleware} requestMeta - ['requestMeta']
  * @param {function} controller - ['login']
  */
-router.post('/login', validateLoginAuth, login);
+router.post('/login', validateLoginAuth, requestMeta, login);
 
 /**
  * @route POST /api/v1/auth/register
