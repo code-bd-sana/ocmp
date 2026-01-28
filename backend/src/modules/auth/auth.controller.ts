@@ -85,7 +85,7 @@ export const verifyEmail = catchAsync(async (req: Request, res: Response) => {
  */
 export const resendVerificationEmail = catchAsync(async (req: Request, res: Response) => {
   // Call the service method to resend verification email
-  await authServices.resendVerificationEmail(req.body.email);
+  await authServices.resendVerificationEmail(req.body);
   // Send a success response indicating email verification
   ServerResponse(res, true, 200, 'Verification email resent successfully');
 });

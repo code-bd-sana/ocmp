@@ -34,6 +34,15 @@ export interface IRegister {
   role: 'TRANSPORT_MANAGER' | 'STANDALONE_USER';
 }
 
+/** Type definition for Resend Verification Email.
+ *
+ * This type defines the structure of a resend verification email object.
+ * @interface IResendVerificationEmail
+ */
+export interface IResendVerificationEmail {
+  email: string;
+}
+
 /**
  * Type definition for Verify Email.
  *
@@ -51,9 +60,7 @@ export interface IVerifyEmail {
  * This type defines the structure of a forget password object.
  * @interface IForgetPassword
  */
-export interface IForgetPassword {
-  email: string;
-}
+export interface IForgetPassword extends IResendVerificationEmail {}
 
 /**
  * Type definition for Reset Password.
@@ -77,17 +84,4 @@ export interface IChangePassword {
   oldPassword: string;
   newPassword: string;
   confirmNewPassword: string;
-}
-
-export interface LoginData {
-  email: string;
-  password: string;
-}
-
-export interface KeycloakToken {
-  access_token: string;
-  refresh_token: string;
-  expires_in: number;
-  refresh_expires_in: number;
-  token_type: string;
 }

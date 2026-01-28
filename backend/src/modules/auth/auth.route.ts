@@ -15,6 +15,7 @@ import {
 
 //Import validation from corresponding module
 import isAuthorized from '../../middlewares/is-authorized';
+import { forgetPasswordRateLimiter } from '../../middlewares/rate-limiters/forget-password-rate-limiter';
 import { requestMeta } from '../../middlewares/request-meta';
 import {
   changePasswordAuth,
@@ -80,10 +81,11 @@ router.post('/resend-verification-email', resendVerificationEmailAuth, resendVer
  * @route POST /api/v1/auth/forget-password
  * @description Send password reset link to user's email
  * @access Public
+ * @param {middleware} forgetPasswordRateLimiter - ['forgetPasswordRateLimiter']
  * @param {function} validation - ['forgetPasswordAuth']
  * @param {function} controller - ['forgetPassword']
  */
-router.post('/forget-password', forgetPasswordAuth, forgetPassword);
+router.post('/forget-password', forgetPasswordRateLimiter, forgetPasswordAuth, forgetPassword);
 
 /**
  * @route POST /api/v1/auth/reset-password

@@ -7,13 +7,13 @@ import HashInfo from '../../utils/bcrypt/hash-info';
 import SendEmail from '../../utils/email/send-email';
 import EncodeToken from '../../utils/jwt/encode-token';
 import { delUserToken, existsUserToken, setUserToken } from '../../utils/redis/auth/auth';
-import { login } from './auth.controller';
 import {
   IChangePassword,
   IForgetPassword,
   ILogin,
   ILoginResponse,
   IRegister,
+  IResendVerificationEmail,
   IResetPassword,
   IVerifyEmail,
 } from './auth.interface';
@@ -174,12 +174,12 @@ const register = async (data: IUser): Promise<IUser> => {
 /**
  * Resend verification email service function.
  *
- * @param {string} email - The email to resend verification.
+ * @param {IResendVerificationEmail} data - The data to resend verification.
  * @returns {Promise<void>} - The resend verification email result.
  */
-const resendVerificationEmail = async (email: string): Promise<void> => {
+const resendVerificationEmail = async (data: IResendVerificationEmail): Promise<void> => {
   // Check if user already exists in Database
-  const user = await User.findOne({ email });
+  const user = await User.findOne({ email: data.email });
 
   // If user not found
   if (!user) {
@@ -197,7 +197,7 @@ const resendVerificationEmail = async (email: string): Promise<void> => {
 
   // Update user with new token and expiry
   await User.updateOne(
-    { email },
+    { email: data.email },
     {
       emailVerificationToken,
       emailVerificationTokenExpiry: emailVerificationExpiry,
@@ -206,12 +206,12 @@ const resendVerificationEmail = async (email: string): Promise<void> => {
 
   // Send verification email
   const verificationLink = `${config.EMAIL_VERIFICATION_REDIRECT_URI}?email=${encodeURIComponent(
-    email
+    data.email
   )}&token=${emailVerificationToken}`;
 
   // Send verification email
   await SendEmail({
-    to: email,
+    to: data.email,
     subject: 'Verify your email address',
     text: `Click the link to verify your email: ${verificationLink}`,
     html: `
@@ -252,7 +252,42 @@ const verifyEmail = async (data: IVerifyEmail): Promise<void> => {
  * @returns {Promise<void>} - The forget password result.
  */
 const forgetPassword = async (data: IForgetPassword): Promise<void> => {
-  // Implementation for forget password service
+  // Check if user exists
+  const user = await User.findOne({ email: data.email });
+
+  // If user not found
+  if (!user) {
+    throw new Error('User not found');
+  }
+
+  // Generate reset password token
+  const resetPasswordToken = v4();
+  const resetPasswordExpiry = new Date(Date.now() + 1 * 60 * 60 * 1000); // 1 hour
+
+  // Set the user's password reset token and expiry
+  await User.updateOne(
+    { email: data.email },
+    { resetToken: resetPasswordToken, resetTokenExpiry: resetPasswordExpiry }
+  );
+
+  // Send reset password email
+  const resetLink = `${config.PASSWORD_RESET_REDIRECT_URI}?email=${encodeURIComponent(
+    data.email
+  )}&token=${resetPasswordToken}`;
+
+  await SendEmail({
+    to: data.email,
+    subject: 'Reset your password',
+    text: `Click the link to reset your password: ${resetLink}`,
+    html: `
+      <p>Hello ${user.fullName || 'there'},</p>
+      <p>You can reset your password by clicking the link below:</p>
+      <a href="${resetLink}">Reset Password</a>
+      <p>This link expires in 1 hour.</p>
+    `,
+  });
+
+  return;
 };
 
 /**
