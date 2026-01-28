@@ -41,7 +41,7 @@ export const login = catchAsync(async (req: Request, res: Response) => {
  */
 export const logout = catchAsync(async (req: Request, res: Response) => {
   // Call the service method to logout
-  // await authServices.logout(req.body);
+  await authServices.logout(req);
   // Send a success response indicating logout
   ServerResponse(res, true, 200, 'Logout successful');
 });

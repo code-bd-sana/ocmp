@@ -13,6 +13,7 @@ interface AuthenticatedRequest extends Request {
     email: string;
     role: UserRole;
     isEmailVerified: boolean;
+    loginAt: Date;
   };
 }
 
@@ -29,6 +30,8 @@ const isAuthorized = async (
   next: NextFunction
 ): Promise<Response | void> => {
   try {
+    console.log('isAuthorized middleware called');
+
     // Retrieve the Authorization header from the request or token from cookies
     const authHeader: string | undefined = req.headers['authorization'] || req.cookies?.token;
 
@@ -44,6 +47,8 @@ const isAuthorized = async (
       return ServerResponse(res, false, 401, 'Invalid or expired token');
     }
 
+    console.log(token);
+
     const decodedToken = await DecodeToken(token);
 
     if (!decodedToken) {
@@ -51,7 +56,9 @@ const isAuthorized = async (
     }
 
     // decoded user details
-    const { _id, fullName, email, role, isEmailVerified } = decodedToken as JwtPayload;
+    const { _id, fullName, email, role, isEmailVerified, loginAt } = decodedToken as JwtPayload;
+
+    console.log(req.user);
 
     // Attach user information to the request object
     req.user = {
@@ -60,6 +67,7 @@ const isAuthorized = async (
       email,
       role,
       isEmailVerified,
+      loginAt,
     };
 
     next();

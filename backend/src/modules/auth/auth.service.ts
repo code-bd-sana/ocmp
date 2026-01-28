@@ -2,10 +2,11 @@ import { v4 } from 'uuid';
 import config from '../../config/config';
 import LoginActivity from '../../models/users-accounts/loginActivity.schema';
 import User, { IUser, UserRole } from '../../models/users-accounts/user.schema';
+import compareInfo from '../../utils/bcrypt/compare-info';
 import HashInfo from '../../utils/bcrypt/hash-info';
 import SendEmail from '../../utils/email/send-email';
 import EncodeToken from '../../utils/jwt/encode-token';
-import { setUserToken } from '../../utils/redis/auth/auth';
+import { delUserToken, existsUserToken, setUserToken } from '../../utils/redis/auth/auth';
 import {
   IChangePassword,
   IForgetPassword,
@@ -37,9 +38,7 @@ const login = async (data: ILogin): Promise<ILoginResponse | void> => {
   }
 
   // Match user password
-  const isPasswordValid = await HashInfo(data.password).then((hashed) => {
-    return hashed === user.password;
-  });
+  const isPasswordValid = await compareInfo(data.password, user.password);
 
   // If password is invalid
   if (!isPasswordValid) {
@@ -49,13 +48,16 @@ const login = async (data: ILogin): Promise<ILoginResponse | void> => {
   // generate unique user ID
   const userId = v4();
 
+  const loginAt = new Date();
+
   // generate access token
   const accessToken = await EncodeToken(
     user.email,
     user._id.toString(),
     user.fullName,
     user.role,
-    user.isEmailVerified
+    user.isEmailVerified,
+    loginAt
   );
 
   // Save login activity
@@ -63,7 +65,7 @@ const login = async (data: ILogin): Promise<ILoginResponse | void> => {
     email: data.email,
     ipAddress: data.ipAddress,
     deviceInfo: data.userAgent,
-    loginAt: new Date(),
+    loginAt,
     isSuccessful: true,
   });
 
@@ -74,6 +76,33 @@ const login = async (data: ILogin): Promise<ILoginResponse | void> => {
   return {
     token: userId,
   };
+};
+
+/**
+ * Service function to logout.
+ *
+ * @param {Request} req - The request object.
+ * @returns {Promise<void>} - The logout result.
+ */
+const logout = async (req: any): Promise<void> => {
+  // Retrieve the Authorization header from the request or token from cookies
+  const authHeader: string | undefined = req.headers['authorization'] || req.cookies?.token;
+
+  // Extract the token from the Authorization header
+  const userId = authHeader?.split(' ')[1];
+
+  if (userId) {
+    // Invalidate the token in Redis by deleting it
+    const tokenExists = await existsUserToken(userId);
+
+    if (tokenExists) {
+      await LoginActivity.deleteOne({
+        email: req.user?.email,
+        logoutAt: new Date(req.user.loginAt),
+      });
+      await delUserToken(userId);
+    }
+  }
 };
 
 /**
@@ -199,6 +228,7 @@ const changePassword = async (data: IChangePassword): Promise<void> => {
 
 export const authServices = {
   login,
+  logout,
   register,
   verifyEmail,
   resendVerificationEmail,
