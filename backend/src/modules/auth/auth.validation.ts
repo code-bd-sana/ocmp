@@ -68,6 +68,7 @@ export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
  */
 export const resetPasswordSchema = z
   .object({
+    email: z.email({ message: 'Invalid email format' }).trim().toLowerCase(),
     token: z.string({ message: 'Reset token is required' }),
     password: z
       .string({ message: 'New password is required' })
@@ -114,6 +115,15 @@ export const verifyEmailSchema = z.object({
 export type VerifyEmailInput = z.infer<typeof verifyEmailSchema>;
 
 /**
+ * Zod schema for validating resend verification email data.
+ */
+export const resendVerificationEmailSchema = z.object({
+  email: z.email({ message: 'Invalid email format' }).trim().toLowerCase(),
+});
+
+export type ResendVerificationEmailInput = z.infer<typeof resendVerificationEmailSchema>;
+
+/**
  * Export named validators (as used in your router)
  */
 export const validateLoginAuth = validate(loginSchema);
@@ -122,6 +132,7 @@ export const forgetPasswordAuth = validate(forgotPasswordSchema);
 export const resetPasswordAuth = validate(resetPasswordSchema);
 export const changePasswordAuth = validate(changePasswordSchema);
 export const verifyEmailTokenAuth = validate(verifyEmailSchema);
+export const resendVerificationEmailAuth = validate(resendVerificationEmailSchema);
 
 /**
  * Helper (assuming you have something like this)

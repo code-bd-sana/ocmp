@@ -10,7 +10,6 @@ export enum UserRole {
 // Define and export an interface representing a User document
 export interface IUser extends Document {
   avatar?: mongoose.Types.ObjectId;
-  keyCloakId?: string;
   fullName: string;
   email: string;
   phone?: string;
@@ -20,16 +19,13 @@ export interface IUser extends Document {
   role: UserRole;
   isEmailVerified: boolean;
   emailVerificationToken?: string;
+  emailVerificationTokenExpiry?: Date;
   isActive: boolean;
 }
 
 // Define the User schema
 const UserSchema: Schema<IUser> = new Schema(
   {
-    /* Stores user account information (login, role). */
-    keyCloakId: {
-      type: String,
-    },
     avatar: {
       type: Schema.Types.ObjectId,
       ref: 'Document', // Reference to the Document model
@@ -51,10 +47,10 @@ const UserSchema: Schema<IUser> = new Schema(
     },
     resetToken: {
       type: String,
-    },
+    } /* Password reset token */,
     resetTokenExpiry: {
       type: Date,
-    },
+    } /* Password reset token expiry */,
     role: {
       type: String,
       enum: Object.values(UserRole),
@@ -67,7 +63,10 @@ const UserSchema: Schema<IUser> = new Schema(
     } /* Email verification status */,
     emailVerificationToken: {
       type: String,
-    },
+    } /* Email verification token */,
+    emailVerificationTokenExpiry: {
+      type: Date,
+    } /* Email verification token expiry */,
     isActive: {
       type: Boolean,
       required: true,

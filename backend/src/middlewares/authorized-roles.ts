@@ -13,7 +13,18 @@ import { UserRole } from '../models';
 const authorizedRoles = (roles: UserRole[]) => {
   return (req: Request, res: Response, next: NextFunction): Response | void => {
     try {
-      // Proceed to the next middleware or route handler
+      // Assuming req.user is populated by a previous authentication middleware
+      const user = (req as any).user;
+
+      if (!user || !roles.includes(user.role)) {
+        return ServerResponse(
+          res,
+          false,
+          403,
+          'Forbidden: You do not have the required permissions'
+        );
+      }
+
       next();
     } catch (error) {
       console.error('Authorization error:', error);

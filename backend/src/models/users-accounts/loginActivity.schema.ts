@@ -2,7 +2,8 @@ import mongoose, { Document, Schema } from 'mongoose';
 
 // Define and export an interface representing a LoginActivity document
 export interface ILoginActivity extends Document {
-  userId: mongoose.Types.ObjectId;
+  email: string;
+  loginHash?: string;
   ipAddress?: string;
   deviceInfo?: string;
   browser?: string;
@@ -16,10 +17,12 @@ export interface ILoginActivity extends Document {
 // Define the LoginActivity schema
 const LoginActivitySchema: Schema<ILoginActivity> = new Schema(
   {
-    userId: {
-      type: Schema.Types.ObjectId,
+    email: {
+      type: String,
       required: true,
-      ref: 'User', // Reference to the User model
+    } /* User id from can be Keycloak or local DB */,
+    loginHash: {
+      type: String,
     },
     ipAddress: {
       type: String,
