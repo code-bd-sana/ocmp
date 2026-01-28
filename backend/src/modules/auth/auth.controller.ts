@@ -41,7 +41,7 @@ export const login = catchAsync(async (req: Request, res: Response) => {
  */
 export const logout = catchAsync(async (req: Request, res: Response) => {
   // Call the service method to logout
-  // await authServices.logout(req.body);
+  await authServices.logout(req);
   // Send a success response indicating logout
   ServerResponse(res, true, 200, 'Logout successful');
 });
@@ -76,6 +76,13 @@ export const verifyEmail = catchAsync(async (req: Request, res: Response) => {
   ServerResponse(res, true, 200, 'Email verified successfully');
 });
 
+/** Controller function to handle resending the verification email.
+ *
+ * @param {Request} req - The request object containing email data in the body.
+ * @param {Response} res - The response object used to send the response.
+ * @returns {Promise<void>} - A promise that resolves when the verification email is resent.
+ * @throws {Error} - Throws an error if the resend verification email process fails.
+ */
 export const resendVerificationEmail = catchAsync(async (req: Request, res: Response) => {
   // Call the service method to resend verification email
   await authServices.resendVerificationEmail(req.body);
@@ -123,7 +130,7 @@ export const resetPassword = catchAsync(async (req: Request, res: Response) => {
  */
 export const changePassword = catchAsync(async (req: Request, res: Response) => {
   // Call the service method to change the password
-  const userId = (req as any).user?.id as string;
+  const userId = (req as any).user?._id as string;
   await authServices.changePassword({ userId, ...req.body });
   // Send a success response indicating password change
   ServerResponse(res, true, 200, 'Password changed successfully');

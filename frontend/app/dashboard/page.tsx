@@ -2,8 +2,7 @@
 
 import DashboardHome from "@/components/dashboard/dashboard-home";
 import UniversalTable, {
-  HeaderButton,
-  TableSearch,
+  HeaderActionGroup
 } from "@/components/universal-table/UniversalTable";
 import { Column, TableAction } from "@/components/universal-table/table.types";
 import { Edit, Trash } from "lucide-react";
@@ -29,7 +28,7 @@ const columns: Column<Vehicle>[] = [
   {
     key: "status",
     title: "Status",
-    render: (row) => <span className="font-semibold">{row.status}</span>,
+    render: (row) => <span className='font-semibold'>{row.status}</span>,
   },
 ];
 
@@ -55,74 +54,258 @@ const actions: TableAction<Vehicle>[] = [
  * Sample vehicle data
  */
 const data: Vehicle[] = [
-  { id: "V001", driver: "John Doe", status: "Active" },
+  { id: "V001", driver: "John Doe", status: "Inactive" },
   { id: "V002", driver: "Jane Smith", status: "Idle" },
   { id: "V003", driver: "Bob Johnson", status: "Maintenance" },
   { id: "V004", driver: "Alice Brown", status: "Active" },
 ];
 
-/**
- * Header buttons
- */
-const headerButtons: HeaderButton[] = [
+
+const headerActionGroups: HeaderActionGroup[] = [
   {
-    label: "Add Vehicle",
-    onClick: () => console.log("Header Add"),
-    className: "bg-[#044192] text-white",
-  },
-  {
-    label: "Export CSV",
-    onClick: () => console.log("Header Export"),
-    className: "bg-[#27AE60] text-white",
-  },
+    title: "Header Title",
+    startingActionGroup: [
+      {
+        label: "Add Vehicle",
+        icon: <Trash size={16} />,
+        onClick: () => console.log("Header Add"),
+        className: "bg-[#044192] text-white",
+        variant: "default",
+        size: "default",
+        position: "left",
+        visibility: true,
+        positionIndex: 5,
+      },
+      {
+        label: "Export CSV",
+        onClick: () => console.log("Header Export"),
+        className: "bg-[#27AE60] text-white",
+        variant: "secondary",
+        size: "sm",
+        position: "right",
+        visibility: false,
+        positionIndex: 2,
+      },
+      {
+        label: "Search",
+        onClick: () => console.log("Search Clicked"),
+        inputClassName: "bg-blue-700",
+        variant: "default",
+        size: "sm",
+        position: "center",
+        visibility: true,
+        positionIndex: 0,
+        search: true,
+      },
+      {
+        label: "Filter",
+        onClick: () => console.log("Filter Clicked"),
+        selectTriggerCalssName: "bg-white",
+        selectItemClassName: "bg-red-700",
+        options: ['Active', 'Idle', 'Maintenance', 'Inactive'],
+        visibility: true,
+        positionIndex: 1,
+        filter: true,
+      },
+    ],
+    endActionGroup: [
+      {
+        label: "Add Vehicle",
+        onClick: () => console.log("Header Add"),
+        className: "bg-[#044192] text-white",
+        variant: "default",
+        size: "default",
+        position: "left",
+        visibility: true,
+        positionIndex: 5,
+      },
+      {
+        label: "Export CSV",
+        onClick: () => console.log("Header Export"),
+        className: "bg-[#27AE60] text-white",
+        variant: "secondary",
+        size: "sm",
+        position: "right",
+        visibility: false,
+        positionIndex: 2,
+      },
+      {
+        label: "Search",
+        onClick: () => console.log("Search Clicked"),
+        className: "bg-[#F0F0F0] text-black",
+        inputClassName: "bg-red-700",
+        variant: "default",
+        size: "sm",
+        position: "center",
+        visibility: true,
+        positionIndex: 0,
+        search: true,
+      },
+      {
+        label: "Filter",
+        onClick: () => console.log("Filter Clicked"),
+        selectTriggerCalssName: "bg-white",
+        selectItemClassName: "bg-red-700",
+        variant: "secondary",
+        size: "sm",
+        position: "center",
+        options: ['Active', 'Idle', 'Maintenance', 'Inactive'],
+        visibility: true,
+        positionIndex: 1,
+        filter: true,
+      },
+
+    ]
+  }
 ];
 
-/**
- * Inline buttons (inside table container)
- */
-const inlineButtons: HeaderButton[] = [
+
+const innerActionGroup: HeaderActionGroup[] = [
   {
-    label: "Refresh",
-    onClick: () => console.log("Inline Refresh"),
-    variant: "secondary",
-  },
-  {
-    label: "View All",
-    onClick: () => console.log("Inline View"),
-    variant: "default",
-  },
+    title: "hello Sung",
+    startingActionGroup: [
+      {
+        label: "Refresh",
+        onClick: () => console.log("Refresh Clicked"),
+        className: "bg-[#044192] text-white",
+        variant: "default",
+        size: "default",
+        position: "left",
+        visibility: true,
+        positionIndex: 5,
+      },
+      {
+        label: "View All",
+        onClick: () => console.log("View All Clicked"),
+        className: "bg-[#27AE60] text-white",
+        variant: "secondary",
+        size: "sm",
+        position: "right",
+        visibility: true,
+        positionIndex: 2,
+      },
+      {
+        label: "View All",
+        onClick: () => console.log("View All Clicked"),
+        className: "bg-[#27AE60] text-white",
+        variant: "secondary",
+        size: "sm",
+        position: "right",
+        visibility: true,
+        positionIndex: 2,
+      },
+      {
+        label: "View All",
+        onClick: () => console.log("View All Clicked"),
+        className: "bg-[#27AE60] text-white",
+        variant: "secondary",
+        size: "sm",
+        position: "right",
+        visibility: true,
+        positionIndex: 2,
+      },
+      {
+        label: "View All",
+        onClick: () => console.log("View All Clicked"),
+        className: "bg-[#27AE60] text-white",
+        variant: "secondary",
+        size: "sm",
+        position: "right",
+        visibility: true,
+        positionIndex: 2,
+      },
+      {
+        label: "View All",
+        onClick: () => console.log("View All Clicked"),
+        className: "bg-[#27AE60] text-white",
+        variant: "secondary",
+        size: "sm",
+        position: "right",
+        visibility: true,
+        positionIndex: 2,
+      },
+      {
+        label: "Search",
+        onClick: () => console.log("Search Clicked"),
+        className: "bg-[#F0F0F0] text-black",
+        inputClassName: "bg-blue-700", // Custom input color for search
+        variant: "default",
+        size: "sm",
+        position: "center",
+        visibility: true,
+        positionIndex: 0,
+        search: true,
+      },
+      {
+        label: "Filter",
+        onClick: () => console.log("Filter Clicked"),
+        selectTriggerCalssName: "bg-white",  // Custom background for select trigger
+        selectItemClassName: "bg-red-700",   // Custom background for select items
+        options: ['Active', 'Idle', 'Maintenance', 'Inactive'],
+        visibility: true,
+        positionIndex: 1,
+        filter: true,
+      },
+    ],
+    endActionGroup: [
+      {
+        label: "Refresh",
+        onClick: () => console.log("Refresh Clicked"),
+        className: "bg-[#044192] text-white",
+        variant: "default",
+        size: "default",
+        position: "left",
+        visibility: true,
+        positionIndex: 5,
+      },
+      {
+        label: "View All",
+        onClick: () => console.log("View All Clicked"),
+        className: "bg-[#27AE60] text-white",
+        variant: "secondary",
+        size: "sm",
+        position: "right",
+        visibility: true,
+        positionIndex: 2,
+      },
+      {
+        label: "Search",
+        onClick: () => console.log("Search Clicked"),
+        className: "bg-[#F0F0F0] text-black",
+        inputClassName: "bg-red-700", // Custom input color for search
+        variant: "default",
+        size: "sm",
+        position: "center",
+        visibility: true,
+        positionIndex: 0,
+        search: true,
+      },
+      {
+        label: "Filter",
+        onClick: () => console.log("Filter Clicked"),
+        className: "bg-[#F0F0F0] text-black",
+        selectTriggerCalssName: "bg-white",
+        selectItemClassName: "bg-red-700",
+        options: ['Active', 'Idle', 'Maintenance', 'Inactive'],
+        visibility: true,
+        positionIndex: 1,
+        filter: true,
+      },
+    ]
+  }
 ];
 
-/**
- * Header search configuration
- */
-const headerSearch: TableSearch = {
-  placeholder: "Search header...",
-  onChange: (val) => console.log("Header search:", val),
-  className: "bg-white",
-};
 
-/**
- * Inline search configuration
- */
-const inlineSearch: TableSearch = {
-  placeholder: "Search table...",
-  onChange: (val) => console.log("Inline search:", val),
-  className: "bg-white",
-};
 
-/**
- * Page component
- *
- * Displays the Vehicle Overview table with:
- * - Header + inline search
- * - Header + inline filters
- * - Header + inline buttons
- * - Row actions
- */
+
+
 export default function Page() {
+
+
+
+
   return (
-    <div className="pt-5 bg-white">
+    <div className='pt-5 bg-white'>
       {/* Dashboard header / overview */}
       <DashboardHome />
 
@@ -132,17 +315,8 @@ export default function Page() {
         columns={columns}
         actions={actions}
         rowKey={(row) => row.id}
-        title="Vehicle Overview"
-        /** Filters */
-        filterable
-        filterOptionsHeader={["Active", "Idle"]}
-        filterOptionsInline={["Maintenance"]}
-        /** Buttons */
-        headerButtons={headerButtons}
-        inlineButtons={inlineButtons}
-        /** Search */
-        headerSearch={headerSearch}
-        inlineSearch={inlineSearch}
+        headerActionGroups={headerActionGroups}
+        innerActionGroup={innerActionGroup}
       />
     </div>
   );

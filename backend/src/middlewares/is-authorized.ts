@@ -1,6 +1,4 @@
-import axios from 'axios';
 import { NextFunction, Request, Response } from 'express';
-import config from '../config/config';
 import ServerResponse from '../helpers/responses/custom-response';
 import { UserRole } from '../models';
 import DecodeToken from '../utils/jwt/decode-token';
@@ -14,6 +12,7 @@ interface AuthenticatedRequest extends Request {
     email: string;
     role: UserRole;
     isEmailVerified: boolean;
+    loginHash: string;
   };
 }
 
@@ -38,92 +37,45 @@ const isAuthorized = async (
       return ServerResponse(res, false, 401, 'Authorization header missing or malformed');
     }
 
-    // Extract the token from the Authorization header
-    const token = await getUserToken(authHeader.split(' ')[1]);
+    // Extract the user ID from the Bearer token
+    const accessToken = authHeader.split(' ')[1];
 
+    // Retrieve the actual token from Redis
+    const token = await getUserToken(accessToken);
+
+    // Extract the token from the Authorization header
     if (!token) {
       return ServerResponse(res, false, 401, 'Invalid or expired token');
     }
 
-    return;
+    // Decode the token to get user details
+    const decodedToken = await DecodeToken(token);
 
-    // First, try validating token with Keycloak's userinfo endpoint
-    try {
-      const kcRes = await axios.get(
-        `${config.KEYCLOAK_HOST}/realms/${config.KEYCLOAK_REALM}/protocol/openid-connect/userinfo`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      console.log('Keycloak userinfo:', kcRes);
-
-      const userInfo = kcRes.data || {};
-
-      const _id = userInfo.sub || (userInfo.id as string) || '';
-      const fullName = userInfo.name || userInfo.preferred_username || '';
-      const email = userInfo.email || '';
-      const emailVerified = userInfo.email_verified || false;
-
-      if (emailVerified === false) {
-        return ServerResponse(res, false, 401, 'Email not verified');
-      }
-
-      // Attempt to infer role from Keycloak userinfo (may be absent)
-      // Keycloak often returns roles under `realm_access.roles` when configured
-      const roleFromKc =
-        (userInfo.realm_access && userInfo.realm_access.roles && userInfo.realm_access.roles[0]) ||
-        undefined;
-
-      req.user = {
-        _id,
-        fullName,
-        email,
-        role: (roleFromKc as UserRole) || (UserRole as any).USER,
-        isEmailVerified: emailVerified,
-      };
-    } catch (kcErr) {
-      // If Keycloak validation fails, fallback to local JWT verification
-      console.warn('Keycloak userinfo endpoint failed, falling back to JWT decoding:', kcErr);
-
-      const decoded = await DecodeToken(token);
-
-      // If token decoding fails as well, respond with unauthorized
-      if (!decoded) {
-        return ServerResponse(res, false, 401, 'Unauthorized');
-      }
-
-      const decodedUser = decoded as {
-        sub?: string;
-        email?: string;
-        name?: string;
-        email_verified?: boolean;
-        realm_access?: { roles?: string[] };
-      };
-
-      const _id = decodedUser.sub || '';
-      const email = decodedUser.email || '';
-      const fullName = decodedUser.name || '';
-      const emailVerified = decodedUser.email_verified || false;
-
-      if (emailVerified === false) {
-        return ServerResponse(res, false, 401, 'Email not verified');
-      }
-
-      const roleFromToken =
-        (decodedUser.realm_access &&
-          decodedUser.realm_access.roles &&
-          decodedUser.realm_access.roles[0]) ||
-        undefined;
-
-      req.user = {
-        _id,
-        fullName,
-        email,
-        role: (roleFromToken as UserRole) || (UserRole as any).USER,
-        isEmailVerified: emailVerified,
-      };
+    // Check if decoding was successful
+    if (!decodedToken) {
+      return ServerResponse(res, false, 401, 'Failed to decode token');
     }
 
-    // Proceed to the next middleware or route handler
+    // decoded user details
+    const { _id, fullName, email, role, isEmailVerified, loginHash } = decodedToken as {
+      _id: string;
+      fullName: string;
+      email: string;
+      role: UserRole;
+      isEmailVerified: boolean;
+      loginHash: string;
+    };
+
+    // Attach user information to the request object
+    req.user = {
+      _id,
+      fullName,
+      email,
+      role: role as UserRole,
+      isEmailVerified,
+      loginHash,
+    };
+
     next();
   } catch (error) {
     console.error('Authentication error:', error);
