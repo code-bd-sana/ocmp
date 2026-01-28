@@ -3,10 +3,8 @@ import config from '../../config/config';
 import kcAdmin from '../../config/keycloak';
 import LoginActivity from '../../models/users-accounts/loginActivity.schema';
 import User, { IUser } from '../../models/users-accounts/user.schema';
-import compareInfo from '../../utils/bcrypt/compare-info';
 import HashInfo from '../../utils/bcrypt/hash-info';
 import SendEmail from '../../utils/email/send-email';
-import EncodeToken from '../../utils/jwt/encode-token';
 import { setUserToken } from '../../utils/redis/auth/auth';
 import {
   IChangePassword,
@@ -26,49 +24,26 @@ import { loginUser } from './keycloak.service';
  * @returns {Promise<ILoginResponse|void* >} - The login result.
  */
 const login = async (data: ILogin): Promise<ILoginResponse | void> => {
-  // Implementation for keycloak login service
-  const loginData = await loginUser(data);
+  // Check the requested user from the keycloak is verified
+  const user = await kcAdmin.users.find({
+    realm: config.KEYCLOAK_REALM,
+    username: data.email,
+  });
 
+  if (user.length === 0 || !user[0].emailVerified) {
+    throw new Error('User email is not verified');
+  }
   // Generate a unique user ID for session management
   const userId = v4();
 
-  // If Keycloak did not return an access token, validate against our DB
-  if (!loginData?.access_token) {
-    // Verify user exists in our database
-    const isExist = await User.findOne({ email: data.email });
+  // Authenticate user with Keycloak
+  const loginData = await loginUser(data);
 
-    // If user does not exist, throw an error
-    if (!isExist) {
-      throw new Error('Invalid credentials');
-    }
-
-    // Validate password from DB when Keycloak is unavailable
-    const isValidPassword = await compareInfo(data.password, isExist.password);
-    if (!isValidPassword) {
-      throw new Error('Invalid credentials');
-    }
-
-    // Encode a new JWT token for the user
-    const accessToken = await EncodeToken(isExist.email, isExist._id.toString());
-
-    // Log the login activity
-    await LoginActivity.create({
-      email: data.email,
-      ipAddress: data.ipAddress,
-      deviceInfo: data.userAgent,
-      loginAt: new Date(),
-      isSuccessful: true,
-    });
-
-    // Set the user token in Redis with a TTL of 30 days
-    await setUserToken(userId, accessToken, 30 * 24 * 60 * 60);
-
-    return {
-      token: userId, // Return the unique user ID as the token
-    };
+  if (!loginData) {
+    throw new Error('Invalid credentials');
   }
 
-  // Log the login activity
+  // Log the login activity for the Keycloak login
   await LoginActivity.create({
     email: data.email,
     ipAddress: data.ipAddress,

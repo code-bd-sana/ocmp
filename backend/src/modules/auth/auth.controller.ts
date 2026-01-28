@@ -2,7 +2,6 @@ import { Request, Response } from 'express';
 import ServerResponse from '../../helpers/responses/custom-response';
 import LoginActivity from '../../models/users-accounts/loginActivity.schema';
 import catchAsync from '../../utils/catch-async/catch-async';
-import { IRegister } from './auth.interface';
 import { authServices } from './auth.service';
 
 /**
@@ -16,6 +15,7 @@ import { authServices } from './auth.service';
 export const login = catchAsync(async (req: Request, res: Response) => {
   // Call the service method to create a new auth and get the result
   const result = await authServices.login(req.body);
+
   if (!result) {
     // Log the failed login activity
     await LoginActivity.create({
@@ -25,7 +25,7 @@ export const login = catchAsync(async (req: Request, res: Response) => {
       loginAt: new Date(),
       isSuccessful: false,
     });
-    throw new Error('Failed to create auth');
+    throw new Error('Failed to login');
   }
   // Send a success response with the created auth data
   ServerResponse(res, true, 201, 'Login successful', result);
@@ -41,7 +41,7 @@ export const login = catchAsync(async (req: Request, res: Response) => {
  */
 export const logout = catchAsync(async (req: Request, res: Response) => {
   // Call the service method to logout
-  await authServices.logout(req.body);
+  // await authServices.logout(req.body);
   // Send a success response indicating logout
   ServerResponse(res, true, 200, 'Logout successful');
 });

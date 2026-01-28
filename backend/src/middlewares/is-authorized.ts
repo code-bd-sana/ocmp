@@ -45,6 +45,8 @@ const isAuthorized = async (
       return ServerResponse(res, false, 401, 'Invalid or expired token');
     }
 
+    return;
+
     // First, try validating token with Keycloak's userinfo endpoint
     try {
       const kcRes = await axios.get(
