@@ -82,7 +82,7 @@ export interface IResetPassword {
  * @interface IChangePassword
  */
 export interface IChangePassword {
-  oldPassword: string;
+  userId: string; // User ID
+  currentPassword: string;
   newPassword: string;
-  confirmNewPassword: string;
 }

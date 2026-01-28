@@ -130,7 +130,7 @@ export const resetPassword = catchAsync(async (req: Request, res: Response) => {
  */
 export const changePassword = catchAsync(async (req: Request, res: Response) => {
   // Call the service method to change the password
-  const userId = (req as any).user?.id as string;
+  const userId = (req as any).user?._id as string;
   await authServices.changePassword({ userId, ...req.body });
   // Send a success response indicating password change
   ServerResponse(res, true, 200, 'Password changed successfully');

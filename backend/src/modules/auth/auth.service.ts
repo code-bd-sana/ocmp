@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import { v4 } from 'uuid';
 import config from '../../config/config';
 import LoginActivity from '../../models/users-accounts/loginActivity.schema';
@@ -342,7 +343,40 @@ const resetPassword = async (data: IResetPassword): Promise<void> => {
  * @returns {Promise<void>} - The change password result.
  */
 const changePassword = async (data: IChangePassword): Promise<void> => {
-  // Implementation for change password service
+  const { userId, currentPassword, newPassword } = data;
+
+  // Find user by ID
+  const user = await User.findById(new mongoose.Types.ObjectId(userId));
+
+  // If user not found
+  if (!user) {
+    throw new Error('User not found');
+  }
+
+  // Match old password
+  const isPasswordValid = await compareInfo(currentPassword, user.password);
+
+  const isOldPasswordValid = await compareInfo(currentPassword, user.password);
+
+  // If old password is invalid
+  if (!isOldPasswordValid) {
+    throw new Error('Invalid old password');
+  }
+
+  // Old password should not be the same as new password
+  const isSamePassword = await compareInfo(newPassword, user.password);
+
+  if (isSamePassword) {
+    throw new Error('New password must be different from the old password');
+  }
+
+  // Hash the new password
+  const hashedNewPassword = await HashInfo(newPassword);
+
+  // Update user's password
+  await User.updateOne({ _id: user._id }, { password: hashedNewPassword });
+
+  return;
 };
 
 export const authServices = {
