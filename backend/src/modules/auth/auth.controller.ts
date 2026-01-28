@@ -76,9 +76,16 @@ export const verifyEmail = catchAsync(async (req: Request, res: Response) => {
   ServerResponse(res, true, 200, 'Email verified successfully');
 });
 
+/** Controller function to handle resending the verification email.
+ *
+ * @param {Request} req - The request object containing email data in the body.
+ * @param {Response} res - The response object used to send the response.
+ * @returns {Promise<void>} - A promise that resolves when the verification email is resent.
+ * @throws {Error} - Throws an error if the resend verification email process fails.
+ */
 export const resendVerificationEmail = catchAsync(async (req: Request, res: Response) => {
   // Call the service method to resend verification email
-  await authServices.resendVerificationEmail(req.body);
+  await authServices.resendVerificationEmail(req.body.email);
   // Send a success response indicating email verification
   ServerResponse(res, true, 200, 'Verification email resent successfully');
 });

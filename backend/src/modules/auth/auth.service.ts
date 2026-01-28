@@ -99,10 +99,13 @@ const logout = async (req: any): Promise<void> => {
     const tokenExists = await existsUserToken(userId);
 
     if (tokenExists) {
+      // Delete login activity
       await LoginActivity.deleteOne({
         email: req.user.email,
         loginHash: req.user.loginHash,
       });
+
+      // Delete the user token from Redis
       await delUserToken(userId);
     }
   }
@@ -175,7 +178,50 @@ const register = async (data: IUser): Promise<IUser> => {
  * @returns {Promise<void>} - The resend verification email result.
  */
 const resendVerificationEmail = async (email: string): Promise<void> => {
-  // Check if user already exists in Keycloak
+  // Check if user already exists in Database
+  const user = await User.findOne({ email });
+
+  // If user not found
+  if (!user) {
+    throw new Error('User not found');
+  }
+
+  // If email is already verified
+  if (user.isEmailVerified) {
+    throw new Error('Email is already verified');
+  }
+
+  // Generate new email verification token
+  const emailVerificationToken = v4();
+  const emailVerificationExpiry = new Date(Date.now() + 12 * 60 * 60 * 1000); // 12 hours
+
+  // Update user with new token and expiry
+  await User.updateOne(
+    { email },
+    {
+      emailVerificationToken,
+      emailVerificationTokenExpiry: emailVerificationExpiry,
+    }
+  );
+
+  // Send verification email
+  const verificationLink = `${config.EMAIL_VERIFICATION_REDIRECT_URI}?email=${encodeURIComponent(
+    email
+  )}&token=${emailVerificationToken}`;
+
+  // Send verification email
+  await SendEmail({
+    to: email,
+    subject: 'Verify your email address',
+    text: `Click the link to verify your email: ${verificationLink}`,
+    html: `
+      <p>Hello ${user.fullName || 'there'},</p
+      <p>Please verify your email by clicking the link below:</p>
+      <a href="${verificationLink}">Verify Email</a>
+      <p>This link expires in 12 hours.</p>
+    `,
+  });
+
   return;
 };
 
