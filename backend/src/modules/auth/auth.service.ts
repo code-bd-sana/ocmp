@@ -14,7 +14,6 @@ import {
   IForgetPassword,
   ILogin,
   ILoginResponse,
-  IRegister,
   IResendVerificationEmail,
   IResetPassword,
   IVerifyEmail,

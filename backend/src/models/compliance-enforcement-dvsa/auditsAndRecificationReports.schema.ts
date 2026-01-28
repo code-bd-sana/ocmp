@@ -1,7 +1,7 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
-// Define and export an interface representing a AuditsAndRecificationReports document
-export interface IAuditsAndRecificationReports extends Document {
+// Define and export an interface representing a AuditsAndRectificationReports document
+export interface IAuditsAndRectificationReports extends Document {
   title: string;
   type?: string;
   responsiblePerson?: string;
@@ -9,8 +9,8 @@ export interface IAuditsAndRecificationReports extends Document {
   createdBy: mongoose.Types.ObjectId;
 }
 
-// Define the AuditsAndRecificationReports schema
-const AuditsAndRecificationReportsSchema: Schema<IAuditsAndRecificationReports> = new Schema(
+// Define the AuditsAndRectificationReports schema
+const AuditsAndRectificationReportsSchema: Schema<IAuditsAndRectificationReports> = new Schema(
   {
     title: {
       type: String,
@@ -37,11 +37,11 @@ const AuditsAndRecificationReportsSchema: Schema<IAuditsAndRecificationReports> 
   { timestamps: true, versionKey: false }
 );
 
-// Create the AuditsAndRecificationReports model
-const AuditsAndRecificationReports = mongoose.model<IAuditsAndRecificationReports>(
-  'AuditsAndRecificationReports',
-  AuditsAndRecificationReportsSchema
+// Create the AuditsAndRectificationReports model
+const AuditsAndRectificationReports = mongoose.model<IAuditsAndRectificationReports>(
+  'AuditsAndRectificationReports',
+  AuditsAndRectificationReportsSchema
 );
 
-// Export the AuditsAndRecificationReports model
-export default AuditsAndRecificationReports;
+// Export the AuditsAndRectificationReports model
+export default AuditsAndRectificationReports;

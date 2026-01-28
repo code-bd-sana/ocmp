@@ -17,9 +17,9 @@ export interface IRepositorySettings extends Document {
   contactLog?: boolean;
   GV79DAndMaintenanceProvider?: boolean;
   complianceTimetable?: boolean;
-  auditsAndRecificationReports?: boolean;
+  auditsAndRectificationReports?: boolean;
   fuelUsage?: boolean;
-  wheelREtorquePolicyAndMonitoring?: boolean;
+  wheelRetorquePolicyAndMonitoring?: boolean;
   workingTimeDirective?: boolean;
   policyProcedureReviewTracker?: boolean;
   subcontractorDetails?: boolean;
@@ -74,13 +74,13 @@ const RepositorySettingsSchema: Schema<IRepositorySettings> = new Schema(
     complianceTimetable: {
       type: Boolean,
     },
-    auditsAndRecificationReports: {
+    auditsAndRectificationReports: {
       type: Boolean,
     },
     fuelUsage: {
       type: Boolean,
     },
-    wheelREtorquePolicyAndMonitoring: {
+    wheelRetorquePolicyAndMonitoring: {
       type: Boolean,
     },
     workingTimeDirective: {
