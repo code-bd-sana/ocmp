@@ -7,6 +7,7 @@ import HashInfo from '../../utils/bcrypt/hash-info';
 import SendEmail from '../../utils/email/send-email';
 import EncodeToken from '../../utils/jwt/encode-token';
 import { delUserToken, existsUserToken, setUserToken } from '../../utils/redis/auth/auth';
+import { login } from './auth.controller';
 import {
   IChangePassword,
   IForgetPassword,
@@ -45,8 +46,9 @@ const login = async (data: ILogin): Promise<ILoginResponse | void> => {
     throw new Error('Invalid password');
   }
 
-  // generate unique user ID
+  // generate unique user ID and login hash
   const userId = v4();
+  const loginHash = v4();
 
   const loginAt = new Date();
 
@@ -57,12 +59,13 @@ const login = async (data: ILogin): Promise<ILoginResponse | void> => {
     user.fullName,
     user.role,
     user.isEmailVerified,
-    loginAt
+    loginHash
   );
 
   // Save login activity
   await LoginActivity.create({
     email: data.email,
+    loginHash,
     ipAddress: data.ipAddress,
     deviceInfo: data.userAgent,
     loginAt,
@@ -97,8 +100,8 @@ const logout = async (req: any): Promise<void> => {
 
     if (tokenExists) {
       await LoginActivity.deleteOne({
-        email: req.user?.email,
-        logoutAt: new Date(req.user.loginAt),
+        email: req.user.email,
+        loginHash: req.user.loginHash,
       });
       await delUserToken(userId);
     }

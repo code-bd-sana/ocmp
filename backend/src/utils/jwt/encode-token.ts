@@ -10,7 +10,7 @@ import { UserRole } from '../../models';
  * @param fullName - The user's full name.
  * @param role - The user's role.
  * @param isEmailVerified - Whether the user's email is verified.
- * @param loginAt - The login timestamp.
+ * @param loginHash - The login hash.
  * @returns {Promise<string>} - A promise that resolves to the signed JWT token.
  */
 const EncodeToken = async (
@@ -19,12 +19,12 @@ const EncodeToken = async (
   fullName: string,
   role: UserRole,
   isEmailVerified: boolean,
-  loginAt: Date = new Date()
+  loginHash: string
 ): Promise<string> => {
   const KEY: string = config.JWT_SECRET;
-  const EXPIRE: jwt.SignOptions = { expiresIn: config.JWT_EXPIRATION_TIME };
-  const PAYLOAD = { _id: userId, email, fullName, role, isEmailVerified, loginAt };
-  return jwt.sign(PAYLOAD, KEY, EXPIRE);
+  const EXPIRE = { expiresIn: config.JWT_EXPIRATION_TIME };
+  const PAYLOAD = { _id: userId, email, fullName, role, isEmailVerified, loginHash };
+  return jwt.sign(PAYLOAD, KEY, EXPIRE as jwt.SignOptions);
 };
 
 export default EncodeToken;

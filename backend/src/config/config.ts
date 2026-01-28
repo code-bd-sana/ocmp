@@ -10,7 +10,7 @@ interface Config {
   NODE_ENV: string;
   SALT_ROUNDS: number;
   JWT_SECRET: string;
-  JWT_EXPIRATION_TIME: number;
+  JWT_EXPIRATION_TIME: string;
   EMAIL_HOST: string;
   EMAIL_PORT: number;
   EMAIL_USER: string;
@@ -43,7 +43,7 @@ const config: Config = {
   NODE_ENV: process.env.NODE_ENV as string,
   SALT_ROUNDS: parseInt(process.env.SALT_ROUNDS as string, 10),
   JWT_SECRET: process.env.JWT_SECRET as string,
-  JWT_EXPIRATION_TIME: parseInt(process.env.JWT_EXPIRATION_TIME as string, 10),
+  JWT_EXPIRATION_TIME: process.env.JWT_EXPIRATION_TIME as string,
   EMAIL_HOST: process.env.EMAIL_HOST as string,
   EMAIL_PORT: parseInt(process.env.EMAIL_PORT as string, 10),
   EMAIL_USER: process.env.EMAIL_USER as string,

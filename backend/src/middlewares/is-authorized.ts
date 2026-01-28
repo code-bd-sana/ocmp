@@ -1,5 +1,4 @@
 import { NextFunction, Request, Response } from 'express';
-import { JwtPayload } from 'jsonwebtoken';
 import ServerResponse from '../helpers/responses/custom-response';
 import { UserRole } from '../models';
 import DecodeToken from '../utils/jwt/decode-token';
@@ -13,7 +12,7 @@ interface AuthenticatedRequest extends Request {
     email: string;
     role: UserRole;
     isEmailVerified: boolean;
-    loginAt: Date;
+    loginHash: string;
   };
 }
 
@@ -30,8 +29,6 @@ const isAuthorized = async (
   next: NextFunction
 ): Promise<Response | void> => {
   try {
-    console.log('isAuthorized middleware called');
-
     // Retrieve the Authorization header from the request or token from cookies
     const authHeader: string | undefined = req.headers['authorization'] || req.cookies?.token;
 
@@ -40,14 +37,14 @@ const isAuthorized = async (
       return ServerResponse(res, false, 401, 'Authorization header missing or malformed');
     }
 
-    // Extract the token from the Authorization header
-    const token = await getUserToken(authHeader.split(' ')[1]);
+    const accessToken = authHeader.split(' ')[1];
 
+    const token = await getUserToken(accessToken);
+
+    // Extract the token from the Authorization header
     if (!token) {
       return ServerResponse(res, false, 401, 'Invalid or expired token');
     }
-
-    console.log(token);
 
     const decodedToken = await DecodeToken(token);
 
@@ -56,9 +53,14 @@ const isAuthorized = async (
     }
 
     // decoded user details
-    const { _id, fullName, email, role, isEmailVerified, loginAt } = decodedToken as JwtPayload;
-
-    console.log(req.user);
+    const { _id, fullName, email, role, isEmailVerified, loginHash } = decodedToken as {
+      _id: string;
+      fullName: string;
+      email: string;
+      role: UserRole;
+      isEmailVerified: boolean;
+      loginHash: string;
+    };
 
     // Attach user information to the request object
     req.user = {
@@ -67,7 +69,7 @@ const isAuthorized = async (
       email,
       role,
       isEmailVerified,
-      loginAt,
+      loginHash,
     };
 
     next();
