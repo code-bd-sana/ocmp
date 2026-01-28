@@ -9,7 +9,6 @@ export enum UserRole {
 
 // Define and export an interface representing a User document
 export interface IUser extends Document {
-  keyCloakId: string;
   avatar?: mongoose.Types.ObjectId;
   fullName: string;
   email: string;
@@ -27,12 +26,6 @@ export interface IUser extends Document {
 // Define the User schema
 const UserSchema: Schema<IUser> = new Schema(
   {
-    /* Stores user account information (login, role). */
-    keyCloakId: {
-      type: String,
-      unique: true,
-      required: true,
-    },
     avatar: {
       type: Schema.Types.ObjectId,
       ref: 'Document', // Reference to the Document model
