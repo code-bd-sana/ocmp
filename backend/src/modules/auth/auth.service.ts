@@ -297,7 +297,42 @@ const forgetPassword = async (data: IForgetPassword): Promise<void> => {
  * @returns {Promise<void>} - The reset password result.
  */
 const resetPassword = async (data: IResetPassword): Promise<void> => {
-  // Implementation for reset password service
+  // Find user by email and reset token
+  const user = await User.findOne({
+    email: data.email,
+  });
+
+  // If user not found
+  if (!user) {
+    throw new Error('User not found');
+  }
+
+  // Check if reset token is valid and not expired
+  if (
+    user.resetToken !== data.token ||
+    !user.resetTokenExpiry ||
+    user.resetTokenExpiry < new Date()
+  ) {
+    throw new Error('Invalid or expired reset token');
+  }
+
+  // Old password should not be the same as new password
+  const isSamePassword = await compareInfo(data.password, user.password);
+
+  if (isSamePassword) {
+    throw new Error('New password must be different from the old password');
+  }
+
+  // Hash the new password
+  const hashedPassword = await HashInfo(data.password);
+
+  // Update user's password and clear reset token fields
+  await User.updateOne(
+    { email: data.email },
+    { password: hashedPassword, resetToken: null, resetTokenExpiry: null }
+  );
+
+  return;
 };
 
 /**

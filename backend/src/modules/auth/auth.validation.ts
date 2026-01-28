@@ -68,6 +68,7 @@ export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
  */
 export const resetPasswordSchema = z
   .object({
+    email: z.email({ message: 'Invalid email format' }).trim().toLowerCase(),
     token: z.string({ message: 'Reset token is required' }),
     password: z
       .string({ message: 'New password is required' })
