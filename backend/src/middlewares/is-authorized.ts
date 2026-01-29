@@ -8,10 +8,8 @@ import { getUserToken } from '../utils/redis/auth/auth';
 interface AuthenticatedRequest extends Request {
   user?: {
     _id: string;
-    fullName: string;
     email: string;
     role: UserRole;
-    isEmailVerified: boolean;
     loginHash: string;
   };
 }
@@ -57,22 +55,18 @@ const isAuthorized = async (
     }
 
     // decoded user details
-    const { _id, fullName, email, role, isEmailVerified, loginHash } = decodedToken as {
+    const { _id, email, role, loginHash } = decodedToken as {
       _id: string;
-      fullName: string;
       email: string;
       role: UserRole;
-      isEmailVerified: boolean;
       loginHash: string;
     };
 
     // Attach user information to the request object
     req.user = {
       _id,
-      fullName,
       email,
       role: role as UserRole,
-      isEmailVerified,
       loginHash,
     };
 

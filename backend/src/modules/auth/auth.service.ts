@@ -14,6 +14,7 @@ import {
   IForgetPassword,
   ILogin,
   ILoginResponse,
+  IRegister,
   IResendVerificationEmail,
   IResetPassword,
   IVerifyEmail,
@@ -54,14 +55,7 @@ const login = async (data: ILogin): Promise<ILoginResponse | void> => {
   const loginAt = new Date();
 
   // generate access token
-  const accessToken = await EncodeToken(
-    user.email,
-    user._id.toString(),
-    user.fullName,
-    user.role,
-    user.isEmailVerified,
-    loginHash
-  );
+  const accessToken = await EncodeToken(user._id.toString(), user.email, user.role, loginHash);
 
   // Save login activity
   await LoginActivity.create({
@@ -138,7 +132,7 @@ const logout = async (req: any): Promise<void> => {
  * @param {IRegister} data - The data to register.
  * @returns {Promise<IUser>} - The register result.
  */
-const register = async (data: IUser): Promise<IUser> => {
+const register = async (data: IUser): Promise<IRegister> => {
   // Check if user already exists in Database
   const existingUser = await User.findOne({ email: data.email });
 
@@ -185,11 +179,11 @@ const register = async (data: IUser): Promise<IUser> => {
 
   // Return safe subset of user data
   return {
-    _id: savedUser._id,
+    _id: savedUser._id.toString(),
     fullName: savedUser.fullName,
     email: savedUser.email,
     role: savedUser.role,
-  } as IUser;
+  };
 };
 
 /**
