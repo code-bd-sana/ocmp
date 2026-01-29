@@ -15,7 +15,10 @@ import {
 
 //Import validation from corresponding module
 import isAuthorized from '../../middlewares/is-authorized';
-import { forgetPasswordRateLimiter } from '../../middlewares/rate-limiters/forget-password-rate-limiter';
+import {
+  forgetPasswordRateLimiter,
+  resendEmailVerificationRateLimiter,
+} from '../../middlewares/rate-limiters/auth';
 import { requestMeta } from '../../middlewares/request-meta';
 import {
   changePasswordAuth,
@@ -72,10 +75,16 @@ router.put('/verify-email', verifyEmailTokenAuth, verifyEmail);
  * @route POST /api/v1/auth/resend-verification-email
  * @description Resend email verification token to user's email
  * @access Public
+ * @param {middleware} resendEmailVerificationRateLimiter - ['resendEmailVerificationRateLimiter']
  * @param {function} validation - ['resendVerificationEmailAuth']
  * @param {function} controller - ['resendVerificationEmail']
  */
-router.post('/resend-verification-email', resendVerificationEmailAuth, resendVerificationEmail);
+router.post(
+  '/resend-verification-email',
+  resendEmailVerificationRateLimiter,
+  resendVerificationEmailAuth,
+  resendVerificationEmail
+);
 
 /**
  * @route POST /api/v1/auth/forget-password
