@@ -1,3 +1,5 @@
+import { UserRole } from '../../models';
+
 /**
  * Type definition for Login.
  *
@@ -31,7 +33,7 @@ export interface IRegister {
   _id: string;
   fullName: string;
   email: string;
-  role: 'TRANSPORT_MANAGER' | 'STANDALONE_USER';
+  role: UserRole;
 }
 
 /** Type definition for Resend Verification Email.

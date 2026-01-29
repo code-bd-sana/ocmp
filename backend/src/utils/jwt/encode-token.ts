@@ -14,16 +14,14 @@ import { UserRole } from '../../models';
  * @returns {Promise<string>} - A promise that resolves to the signed JWT token.
  */
 const EncodeToken = async (
+  _id: string,
   email: string,
-  userId: string,
-  fullName: string,
   role: UserRole,
-  isEmailVerified: boolean,
   loginHash: string
 ): Promise<string> => {
   const KEY: string = config.JWT_SECRET;
   const EXPIRE = { expiresIn: config.JWT_EXPIRATION_TIME };
-  const PAYLOAD = { _id: userId, email, fullName, role, isEmailVerified, loginHash };
+  const PAYLOAD = { _id, email, role, loginHash };
   return jwt.sign(PAYLOAD, KEY, EXPIRE as jwt.SignOptions);
 };
 
