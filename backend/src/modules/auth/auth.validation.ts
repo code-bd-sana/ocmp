@@ -1,6 +1,5 @@
-import { NextFunction, Request, Response } from 'express';
 import { z } from 'zod';
-import zodErrorHandler from '../../handlers/zod-error-handler';
+import { validate } from '../../handlers/zod-error-handler';
 
 /**
  * Authentication Validation Schemas and Types
@@ -129,21 +128,3 @@ export const resetPasswordAuth = validate(resetPasswordSchema);
 export const changePasswordAuth = validate(changePasswordSchema);
 export const verifyEmailTokenAuth = validate(verifyEmailSchema);
 export const resendVerificationEmailAuth = validate(resendVerificationEmailSchema);
-
-/**
- * Helper (assuming you have something like this)
- */
-function validate<T extends z.ZodTypeAny>(schema: T) {
-  return (req: Request, res: Response, next: NextFunction) => {
-    const result = schema.safeParse(req.body);
-
-    if (!result.success) {
-      return zodErrorHandler(req, res, result.error);
-    }
-
-    // Optional: attach validated & typed data
-    req.body = result.data;
-
-    next();
-  };
-}

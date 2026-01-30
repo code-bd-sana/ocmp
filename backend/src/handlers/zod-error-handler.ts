@@ -1,5 +1,5 @@
-import { Request, Response } from 'express';
-import { ZodError } from 'zod';
+import { NextFunction, Request, Response } from 'express';
+import z, { ZodError } from 'zod';
 import config from '../config/config';
 import ServerResponse from '../helpers/responses/custom-response';
 
@@ -27,4 +27,22 @@ const zodErrorHandler = (req: Request, res: Response, zodErr: ZodError): Respons
   return ServerResponse(res, false, 400, 'Validation error', null, errors);
 };
 
-export default zodErrorHandler;
+/**
+ * Helper (assuming you have something like this)
+ */
+function validate<T extends z.ZodTypeAny>(schema: T) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const result = schema.safeParse(req.body);
+
+    if (!result.success) {
+      return zodErrorHandler(req, res, result.error);
+    }
+
+    // Optional: attach validated & typed data
+    req.body = result.data;
+
+    next();
+  };
+}
+
+export { validate, zodErrorHandler };
