@@ -1,7 +1,7 @@
-import { Request } from 'express';
 import mongoose from 'mongoose';
 import { v4 } from 'uuid';
 import config from '../../config/config';
+import { AuthenticatedRequest } from '../../middlewares/is-authorized';
 import LoginActivity from '../../models/users-accounts/loginActivity.schema';
 import User, { IUser, UserRole } from '../../models/users-accounts/user.schema';
 import compareInfo from '../../utils/bcrypt/compare-info';
@@ -18,18 +18,6 @@ import {
   ResetPasswordInput,
   VerifyEmailInput,
 } from './auth.validation';
-
-declare global {
-  namespace Express {
-    interface Request {
-      user?: {
-        _id: string;
-        email: string;
-        loginHash: string;
-      };
-    }
-  }
-}
 
 /**
  * Service function to login.
@@ -107,10 +95,10 @@ const login = async (data: ILogin): Promise<ILoginResponse | void> => {
 /**
  * Service function to logout.
  *
- * @param {Request} req - The request object.
+ * @param {AuthenticatedRequest} req - The request object.
  * @returns {Promise<void>} - The logout result.
  */
-const logout = async (req: Request): Promise<void> => {
+const logout = async (req: AuthenticatedRequest): Promise<void> => {
   // Retrieve the Authorization header from the request or token from cookies
   const authHeader: string | undefined = req.headers['authorization'] || req.cookies?.token;
 
@@ -124,15 +112,15 @@ const logout = async (req: Request): Promise<void> => {
     if (tokenExists) {
       // Delete login activity
       await LoginActivity.deleteOne({
-        email: req.user?.email,
-        loginHash: req.user?.loginHash,
+        email: req.user!.email,
+        loginHash: req.user!.loginHash,
       });
 
       // Delete the user token from Redis
       await delUserToken(userId);
 
       // Optionally, you can also clear user data from Redis cache
-      await delUserData(req.user?._id.toString() as string);
+      await delUserData(req.user!._id);
     }
   }
 };

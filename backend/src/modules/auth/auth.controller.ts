@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import ServerResponse from '../../helpers/responses/custom-response';
+import { AuthenticatedRequest } from '../../middlewares/is-authorized';
 import LoginActivity from '../../models/users-accounts/loginActivity.schema';
 import catchAsync from '../../utils/catch-async/catch-async';
 import { IChangePassword, ILogin } from './auth.interface';
@@ -143,9 +144,9 @@ export const resetPassword = catchAsync(async (req: Request, res: Response) => {
  * @returns {Promise<void>} - A promise that resolves when the password is changed.
  * @throws {Error} - Throws an error if the password change process fails.
  */
-export const changePassword = catchAsync(async (req: Request, res: Response) => {
+export const changePassword = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
   // Call the service method to change the password
-  const userId = (req as any).user?._id as string;
+  const userId = req.user!._id;
   await authServices.changePassword({ userId, ...req.body } as IChangePassword);
   // Send a success response indicating password change
   ServerResponse(res, true, 200, 'Password changed successfully');

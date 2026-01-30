@@ -5,7 +5,7 @@ import DecodeToken from '../utils/jwt/decode-token';
 import { getUserToken } from '../utils/redis/auth/auth';
 
 // Extend the Request interface to include a user property
-interface AuthenticatedRequest extends Request {
+export interface AuthenticatedRequest extends Request {
   user?: {
     _id: string;
     email: string;
