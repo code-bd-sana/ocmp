@@ -23,8 +23,6 @@ export const loginSchema = z.object({
   password: z.string({ message: 'Password is required' }).min(1, 'Password is required'),
 });
 
-export type LoginInput = z.infer<typeof loginSchema>;
-
 /**
  * Zod schema for validating registration data.
  */
@@ -47,16 +45,12 @@ export const registerSchema = z.object({
   role: z.enum(['TRANSPORT_MANAGER', 'STANDALONE_USER'] as const),
 });
 
-export type RegisterInput = z.infer<typeof registerSchema>;
-
 /**
  * Zod schema for validating forgot password data.
  */
 export const forgotPasswordSchema = z.object({
   email: z.email({ message: 'Invalid email format' }).trim().toLowerCase(),
 });
-
-export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 
 /**
  * Zod schema for validating reset password data.
@@ -75,8 +69,6 @@ export const resetPasswordSchema = z
     message: "Passwords don't match",
     path: ['confirmPassword'],
   });
-
-export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 
 /**
  * Zod schema for validating change password data.
@@ -97,8 +89,6 @@ export const changePasswordSchema = z
     path: ['confirmNewPassword'],
   });
 
-export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
-
 /**
  * Zod schema for validating email verification data.
  */
@@ -107,16 +97,12 @@ export const verifyEmailSchema = z.object({
   token: z.string({ message: 'Verification token is required' }),
 });
 
-export type VerifyEmailInput = z.infer<typeof verifyEmailSchema>;
-
 /**
  * Zod schema for validating resend verification email data.
  */
 export const resendVerificationEmailSchema = z.object({
   email: z.email({ message: 'Invalid email format' }).trim().toLowerCase(),
 });
-
-export type ResendVerificationEmailInput = z.infer<typeof resendVerificationEmailSchema>;
 
 /**
  * Export named validators (as used in your router)

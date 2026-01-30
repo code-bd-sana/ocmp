@@ -1,112 +1,65 @@
-import { NextFunction, Request, Response } from 'express';
 import { isMongoId } from 'validator';
 import { z } from 'zod';
-import zodErrorHandler from './zod-error-handler';
+import { validate } from './zod-error-handler';
 
 /**
- * Zod schema for validating id and ids.
+ * ID Validation Schemas and Types
+ *
+ * This module defines Zod schemas for validating MongoDB ObjectIds
+ * (single id or array of ids) as well as common search query parameters.
+ * It also exports corresponding TypeScript types and named validator
+ * middleware functions for use in Express routes.
+ */
+
+/**
+ * Zod schema for validating single id or array of ids.
  */
 const zodIdSchema = z
   .object({
     id: z
-      .string({
-        message: 'Id is required',
-      })
-      .refine((id: string) => isMongoId(id), {
-        message: 'Please provide a valid id',
-      }),
+      .string({ message: 'Id is required' })
+      .refine(isMongoId, { message: 'Please provide a valid MongoDB ObjectId' })
+      .optional(),
+
     ids: z
       .array(
-        z.string().refine((id: string) => isMongoId(id), {
+        z.string().refine(isMongoId, {
           message: 'Each ID must be a valid MongoDB ObjectId',
         })
       )
-      .min(1, {
-        message: 'At least one ID must be provided',
-      }),
+      .min(1, { message: 'At least one ID must be provided' })
+      .optional(),
   })
   .strict();
 
 /**
- * Middleware function to validate id using Zod schema.
- * @param {object} req - The request object.
- * @param {object} res - The response object.
- * @param {function} next - The next middleware function.
- * @returns {void}
+ * Zod schema for validating pagination & search query parameters.
  */
-export const validateId = (req: Request, res: Response, next: NextFunction) => {
-  // Validate request params
-  const { error, success } = zodIdSchema.pick({ id: true }).safeParse({ id: req.params.id });
-
-  // Check if validation was successful
-  if (!success) {
-    // If validation failed, use the Zod error handler to send an error response
-    return zodErrorHandler(req, res, error);
-  }
-
-  // If validation passed, proceed to the next middleware function
-  return next();
-};
-
-/**
- * Middleware function to validate ids using Zod schema.
- * @param {object} req - The request object.
- * @param {object} res - The response object.
- * @param {function} next - The next middleware function.
- * @returns {void}
- */
-export const validateIds = (req: Request, res: Response, next: NextFunction) => {
-  // Validate request body
-  const { success, error } = zodIdSchema.pick({ ids: true }).safeParse({ ids: req.body.ids });
-
-  // Check if validation was successful
-  if (!success) {
-    // If validation failed, use the Zod error handler to send an error response
-    return zodErrorHandler(req, res, error);
-  }
-
-  // If validation passed, proceed to the next middleware function
-  return next();
-};
-
-/**
- * Zod schema for validating request search query.
- */
-const zodRequestSearchQuerySchema = z
+const zodSearchQuerySchema = z
   .object({
-    searchKey: z.string({ message: 'Please specify the search key.' }).optional(),
+    searchKey: z.string({ message: 'Please specify the search key' }).optional(),
+
     showPerPage: z
-      .string({ message: 'Please specify the number of items to show per page.' })
+      .string()
       .transform((val) => (val ? parseInt(val, 10) : undefined))
-      .refine((val) => val !== undefined && val > 0, {
-        message: 'Show per page must be a positive number.',
-      }),
+      .refine((val): val is number => val !== undefined && val > 0, {
+        message: 'Show per page must be a positive number',
+      })
+      .optional(),
+
     pageNo: z
-      .string({ message: 'Please specify the page number.' })
+      .string()
       .transform((val) => (val ? parseInt(val, 10) : undefined))
-      .refine((val) => val !== undefined && val > 0, {
-        message: 'Page number must be a positive number.',
-      }),
+      .refine((val): val is number => val !== undefined && val > 0, {
+        message: 'Page number must be a positive number',
+      })
+      .optional(),
   })
   .strict();
 
 /**
- * Middleware function to validate search queries using Zod schema.
- * @param {Request} req - The request object.
- * @param {Response} res - The response object.
- * @param {NextFunction} next - The next middleware function.
- * @returns {void}
- * */
-export const validateSearchQueries = (req: Request, res: Response, next: NextFunction) => {
-  // Validate request query
-  const { success, error } = zodRequestSearchQuerySchema.safeParse(req.query);
-
-  // Check if validation was successful
-  if (!success) {
-    // If validation failed, use the Zod error handler to send an error response
-    return zodErrorHandler(req, res, error);
-  }
-
-  // If validation passed, proceed to the next middleware function
-  return next();
-};
+ * Named validators (to be used in Express routes)
+ */
+export const validateId = validate(zodIdSchema.pick({ id: true }));
+export const validateIds = validate(zodIdSchema.pick({ ids: true }));
+export const validateSearchQueries = validate(zodSearchQuerySchema);

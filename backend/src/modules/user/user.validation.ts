@@ -33,8 +33,6 @@ const zodUpdateUserSchema = z
   })
   .strict();
 
-export type UpdateUserInput = z.infer<typeof zodUpdateUserSchema>;
-
 /**
  * Export named validators (as used in your router)
  */
