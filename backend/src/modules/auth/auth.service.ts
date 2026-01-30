@@ -1,3 +1,4 @@
+import { Request } from 'express';
 import mongoose from 'mongoose';
 import { v4 } from 'uuid';
 import config from '../../config/config';
@@ -9,16 +10,26 @@ import SendEmail from '../../utils/email/send-email';
 import EncodeToken from '../../utils/jwt/encode-token';
 import { delUserToken, existsUserToken, setUserToken } from '../../utils/redis/auth/auth';
 import { delUserData, getUserData, setUserData } from '../../utils/redis/user/user';
+import { IChangePassword, ILogin, ILoginResponse, IRegisterResponse } from './auth.interface';
 import {
-  IChangePassword,
-  IForgetPassword,
-  ILogin,
-  ILoginResponse,
-  IRegister,
-  IResendVerificationEmail,
-  IResetPassword,
-  IVerifyEmail,
-} from './auth.interface';
+  ForgotPasswordInput,
+  RegisterInput,
+  ResendVerificationEmailInput,
+  ResetPasswordInput,
+  VerifyEmailInput,
+} from './auth.validation';
+
+declare global {
+  namespace Express {
+    interface Request {
+      user?: {
+        _id: string;
+        email: string;
+        loginHash: string;
+      };
+    }
+  }
+}
 
 /**
  * Service function to login.
@@ -99,7 +110,7 @@ const login = async (data: ILogin): Promise<ILoginResponse | void> => {
  * @param {Request} req - The request object.
  * @returns {Promise<void>} - The logout result.
  */
-const logout = async (req: any): Promise<void> => {
+const logout = async (req: Request): Promise<void> => {
   // Retrieve the Authorization header from the request or token from cookies
   const authHeader: string | undefined = req.headers['authorization'] || req.cookies?.token;
 
@@ -113,15 +124,15 @@ const logout = async (req: any): Promise<void> => {
     if (tokenExists) {
       // Delete login activity
       await LoginActivity.deleteOne({
-        email: req.user.email,
-        loginHash: req.user.loginHash,
+        email: req.user?.email,
+        loginHash: req.user?.loginHash,
       });
 
       // Delete the user token from Redis
       await delUserToken(userId);
 
       // Optionally, you can also clear user data from Redis cache
-      await delUserData(req.user._id);
+      await delUserData(req.user?._id.toString() as string);
     }
   }
 };
@@ -129,10 +140,10 @@ const logout = async (req: any): Promise<void> => {
 /**
  * Service function to register.
  *
- * @param {IRegister} data - The data to register.
+ * @param {RegisterInput} data - The data to register.
  * @returns {Promise<IUser>} - The register result.
  */
-const register = async (data: IUser): Promise<IRegister> => {
+const register = async (data: RegisterInput): Promise<IRegisterResponse> => {
   // Check if user already exists in Database
   const existingUser = await User.findOne({ email: data.email });
 
@@ -189,10 +200,10 @@ const register = async (data: IUser): Promise<IRegister> => {
 /**
  * Resend verification email service function.
  *
- * @param {IResendVerificationEmail} data - The data to resend verification.
+ * @param {ResendVerificationEmailInput} data - The data to resend verification.
  * @returns {Promise<void>} - The resend verification email result.
  */
-const resendVerificationEmail = async (data: IResendVerificationEmail): Promise<void> => {
+const resendVerificationEmail = async (data: ResendVerificationEmailInput): Promise<void> => {
   // Check if user already exists in Database
   const user = await User.findOne({ email: data.email });
 
@@ -243,10 +254,10 @@ const resendVerificationEmail = async (data: IResendVerificationEmail): Promise<
 /**
  * Service function to verify email.
  *
- * @param {IVerifyEmail} data - The data to verify email.
+ * @param {VerifyEmailInput} data - The data to verify email.
  * @returns {Promise<void>} - The verify email result.
  */
-const verifyEmail = async (data: IVerifyEmail): Promise<void> => {
+const verifyEmail = async (data: VerifyEmailInput): Promise<void> => {
   // Update in remote database
   await User.updateOne(
     {
@@ -263,10 +274,10 @@ const verifyEmail = async (data: IVerifyEmail): Promise<void> => {
 /**
  * Service function to handle forget password.
  *
- * @param {IForgetPassword} data - The data to forget password.
+ * @param {ForgotPasswordInput} data - The data to forget password.
  * @returns {Promise<void>} - The forget password result.
  */
-const forgetPassword = async (data: IForgetPassword): Promise<void> => {
+const forgetPassword = async (data: ForgotPasswordInput): Promise<void> => {
   // Check if user exists
   const user = await User.findOne({ email: data.email });
 
@@ -308,10 +319,10 @@ const forgetPassword = async (data: IForgetPassword): Promise<void> => {
 /**
  *  Service function to reset password.
  *
- * @param {IResetPassword} data - The data to reset password.
+ * @param {ResetPasswordInput} data - The data to reset password.
  * @returns {Promise<void>} - The reset password result.
  */
-const resetPassword = async (data: IResetPassword): Promise<void> => {
+const resetPassword = async (data: ResetPasswordInput): Promise<void> => {
   // Find user by email and reset token
   const user = await User.findOne({
     email: data.email,

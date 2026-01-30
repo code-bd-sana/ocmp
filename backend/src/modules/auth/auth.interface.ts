@@ -9,8 +9,8 @@ import { UserRole } from '../../models';
 export interface ILogin {
   email: string;
   password: string;
-  ipAddress?: string;
-  userAgent?: string;
+  ipAddress: string;
+  userAgent: string;
 }
 
 /**
@@ -26,55 +26,14 @@ export interface ILoginResponse {
 /**
  * Type definition for Register.
  *
- * This type defines the structure of a single register object.
- * @interface IRegister
+ * This type defines the structure of a register response object.
+ * @interface IRegisterResponse
  */
-export interface IRegister {
+export interface IRegisterResponse {
   _id: string;
   fullName: string;
   email: string;
   role: UserRole;
-}
-
-/** Type definition for Resend Verification Email.
- *
- * This type defines the structure of a resend verification email object.
- * @interface IResendVerificationEmail
- */
-export interface IResendVerificationEmail {
-  email: string;
-}
-
-/**
- * Type definition for Verify Email.
- *
- * This type defines the structure of a verify email object.
- * @interface IVerifyEmail
- */
-export interface IVerifyEmail {
-  email: string;
-  token: string;
-}
-
-/**
- * Type definition for Forget Password.
- *
- * This type defines the structure of a forget password object.
- * @interface IForgetPassword
- */
-export interface IForgetPassword extends IResendVerificationEmail {}
-
-/**
- * Type definition for Reset Password.
- *
- * This type defines the structure of a reset password object.
- * @interface IResetPassword
- */
-export interface IResetPassword {
-  email: string;
-  token: string;
-  password: string;
-  confirmPassword: string;
 }
 
 /**

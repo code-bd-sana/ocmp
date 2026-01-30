@@ -2,7 +2,15 @@ import { Request, Response } from 'express';
 import ServerResponse from '../../helpers/responses/custom-response';
 import LoginActivity from '../../models/users-accounts/loginActivity.schema';
 import catchAsync from '../../utils/catch-async/catch-async';
+import { IChangePassword, ILogin } from './auth.interface';
 import { authServices } from './auth.service';
+import {
+  ForgotPasswordInput,
+  LoginInput,
+  RegisterInput,
+  ResendVerificationEmailInput,
+  VerifyEmailInput,
+} from './auth.validation';
 
 /**
  * Controller function to handle the login.
@@ -13,8 +21,15 @@ import { authServices } from './auth.service';
  * @throws {Error} - Throws an error if the auth creation fails.
  */
 export const login = catchAsync(async (req: Request, res: Response) => {
-  // Call the service method to create a new auth and get the result
-  const result = await authServices.login(req.body);
+  // Build the login payload including meta added by `requestMeta` middleware
+  const loginPayload = {
+    ...(req.body as LoginInput),
+    ipAddress: req.body.ipAddress,
+    userAgent: req.body.userAgent,
+  } as ILogin;
+
+  // Call the service method to perform login and get the result
+  const result = await authServices.login(loginPayload);
 
   if (!result) {
     // Log the failed login activity
@@ -55,10 +70,10 @@ export const logout = catchAsync(async (req: Request, res: Response) => {
  * @throws {Error} - Throws an error if the auth creation fails.
  */
 export const register = catchAsync(async (req: Request, res: Response) => {
-  // Call the service method to create a new auth and get the result
-  const savedUser = await authServices.register(req.body);
+  // Call the service method to register a new user
+  await authServices.register(req.body as RegisterInput);
   // Send a success response with the created auth data
-  ServerResponse(res, true, 201, 'Registration successful. Please verify your email.', savedUser);
+  ServerResponse(res, true, 201, 'Registration successful. Please verify your email.');
 });
 
 /**
@@ -71,7 +86,7 @@ export const register = catchAsync(async (req: Request, res: Response) => {
  */
 export const verifyEmail = catchAsync(async (req: Request, res: Response) => {
   // Call the service method to verify email
-  await authServices.verifyEmail(req.body);
+  await authServices.verifyEmail(req.body as VerifyEmailInput);
   // Send a success response indicating email verification
   ServerResponse(res, true, 200, 'Email verified successfully');
 });
@@ -85,7 +100,7 @@ export const verifyEmail = catchAsync(async (req: Request, res: Response) => {
  */
 export const resendVerificationEmail = catchAsync(async (req: Request, res: Response) => {
   // Call the service method to resend verification email
-  await authServices.resendVerificationEmail(req.body);
+  await authServices.resendVerificationEmail(req.body as ResendVerificationEmailInput);
   // Send a success response indicating email verification
   ServerResponse(res, true, 200, 'Verification email resent successfully');
 });
@@ -100,7 +115,7 @@ export const resendVerificationEmail = catchAsync(async (req: Request, res: Resp
  */
 export const forgetPassword = catchAsync(async (req: Request, res: Response) => {
   // Call the service method to initiate forget password process
-  await authServices.forgetPassword(req.body);
+  await authServices.forgetPassword(req.body as ForgotPasswordInput);
   // Send a success response indicating forget password initiation
   ServerResponse(res, true, 200, 'Password reset link sent successfully');
 });
@@ -131,7 +146,7 @@ export const resetPassword = catchAsync(async (req: Request, res: Response) => {
 export const changePassword = catchAsync(async (req: Request, res: Response) => {
   // Call the service method to change the password
   const userId = (req as any).user?._id as string;
-  await authServices.changePassword({ userId, ...req.body });
+  await authServices.changePassword({ userId, ...req.body } as IChangePassword);
   // Send a success response indicating password change
   ServerResponse(res, true, 200, 'Password changed successfully');
 });
