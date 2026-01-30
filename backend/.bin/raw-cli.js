@@ -358,108 +358,81 @@ export default ${capitalizedResourceName};
       const validationDir = path.join(__dirname, '..', 'src', 'modules', args[0]);
       // Create Zod validation schema content
       const validationContent = `
-import { NextFunction, Request, Response } from 'express';
 import { z } from 'zod';
-import zodErrorHandler from '../../handlers/zod-error-handler';
+import { validate } from '../../handlers/zod-error-handler';
 
 /**
- * Zod schema for validating ${resourceName} data during creation.
+ * ${capitalizedResourceName} Validation Schemas and Types
+ *
+ * This module defines Zod schemas for validating ${resourceName}-related
+ * requests such as creation (single + bulk) and updates (single + bulk).
+ * It also exports corresponding TypeScript types inferred from these schemas.
+ * Each schema includes detailed validation rules and custom error messages
+ * to ensure data integrity and provide clear feedback to API consumers.
+ *
+ * Named validator middleware functions are exported for direct use in Express routes.
  */
-const zodCreate${capitalizedResourceName}Schema = z.object({
-  // Define fields required for creating a new ${resourceName}.
-  // Example:
-  // filedName: z.string({ message: 'Please provide a filedName.' }).min(1, "Can't be empty."),
-}).strict();
 
 /**
- * Middleware function to validate ${resourceName} creation data using Zod schema.
- * @param {Request} req - The request object.
- * @param {Response} res - The response object.
- * @param {NextFunction} next - The next middleware function.
- * @returns {void}
+ * Zod schema for validating data when **creating** a single ${resourceName}.
+ * 
+ * → Add all **required** fields here
  */
-export const validateCreate${capitalizedResourceName} = (req: Request, res: Response, next: NextFunction) => {
-  // Validate the request body for creating a new ${resourceName}
-  const parseResult = zodCreate${capitalizedResourceName}Schema.safeParse(req.body);
+const zodCreate${capitalizedResourceName}Schema = z
+  .object({
+    // Example fields — replace / expand as needed:
+    // name: z.string({ message: '${capitalizedResourceName} name is required' }).min(2, 'Name must be at least 2 characters').max(100),
+    // email: z.string().email({ message: 'Invalid email format' }),
+    // age: z.number().int().positive().optional(),
+    // status: z.enum(['active', 'inactive', 'pending']).default('pending'),
+  })
+  .strict();
 
-  // If validation fails, send an error response using the Zod error handler
-  if (!parseResult.success) {
-    return zodErrorHandler(req, res, parseResult.error);
-  }
-
-  // If validation passes, proceed to the next middleware function
-  return next();
-};
+export type Create${capitalizedResourceName}Input = z.infer<typeof zodCreate${capitalizedResourceName}Schema>;
 
 /**
- * Zod schema for validating multiple ${resourceName} data during creation.
+ * Zod schema for validating **bulk creation** (array of ${resourceName} objects).
  */
-const zodCreateMany${capitalizedResourceName}Schema = z.array(zodCreate${capitalizedResourceName}Schema);
+const zodCreateMany${capitalizedResourceName}Schema = z
+  .array(zodCreate${capitalizedResourceName}Schema)
+  .min(1, { message: 'At least one ${resourceName} must be provided for bulk creation' });
+
+export type CreateMany${capitalizedResourceName}Input = z.infer<typeof zodCreateMany${capitalizedResourceName}Schema>;
 
 /**
- * Middleware function to validate multiple ${resourceName} creation data using Zod schema.
- * @param {Request} req - The request object.
- * @param {Response} res - The response object.
- * @param {NextFunction} next - The next middleware function.
- * @returns {void}
+ * Zod schema for validating data when **updating** an existing ${resourceName}.
+ * 
+ * → All fields should usually be .optional()
  */
-export const validateCreateMany${capitalizedResourceName} = (req: Request, res: Response, next: NextFunction) => {
-  const parseResult = zodCreateMany${capitalizedResourceName}Schema.safeParse(req.body);
-  if (!parseResult.success) {
-    return zodErrorHandler(req, res, parseResult.error);
-  }
-  return next();
-};
+const zodUpdate${capitalizedResourceName}Schema = z
+  .object({
+    // Example fields — replace / expand as needed:
+    // name: z.string().min(2, 'Name must be at least 2 characters').max(100).optional(),
+    // email: z.string().email({ message: 'Invalid email format' }).optional(),
+    // age: z.number().int().positive().optional(),
+    // status: z.enum(['active', 'inactive', 'pending']).optional(),
+  })
+  .strict();
+
+export type Update${capitalizedResourceName}Input = z.infer<typeof zodUpdate${capitalizedResourceName}Schema>;
 
 /**
- * Zod schema for validating ${resourceName} data during updates.
+ * Zod schema for validating **bulk updates** (array of partial ${resourceName} objects).
  */
-const zodUpdate${capitalizedResourceName}Schema = z.object({
-  // Define fields required for updating an existing ${resourceName}.
-  // Example:
-  // fieldName: z.string({ message: 'Please provide a filedName.' }).optional(), // Fields can be optional during updates
-}).strict();
+const zodUpdateMany${capitalizedResourceName}Schema = z
+  .array(zodUpdate${capitalizedResourceName}Schema)
+  .min(1, { message: 'At least one ${resourceName} update object must be provided' });
+
+export type UpdateMany${capitalizedResourceName}Input = z.infer<typeof zodUpdateMany${capitalizedResourceName}Schema>;
 
 /**
- * Middleware function to validate ${resourceName} update data using Zod schema.
- * @param {Request} req - The request object.
- * @param {Response} res - The response object.
- * @param {NextFunction} next - The next middleware function.
- * @returns {void}
+ * Named validators — use these directly in your Express routes
  */
-export const validateUpdate${capitalizedResourceName} = (req: Request, res: Response, next: NextFunction) => {
-  // Validate the request body for updating an existing ${resourceName}
-  const parseResult = zodUpdate${capitalizedResourceName}Schema.safeParse(req.body);
+export const validateCreate${capitalizedResourceName} = validate(zodCreate${capitalizedResourceName}Schema);
+export const validateCreateMany${capitalizedResourceName} = validate(zodCreateMany${capitalizedResourceName}Schema);
 
-  // If validation fails, send an error response using the Zod error handler
-  if (!parseResult.success) {
-    return zodErrorHandler(req, res, parseResult.error);
-  }
-
-  // If validation passes, proceed to the next middleware function
-  return next();
-};
-
-/**
- * Zod schema for validating multiple ${resourceName} data during updates.
- */
-const zodUpdateMany${capitalizedResourceName}Schema = z.array(zodUpdate${capitalizedResourceName}Schema);
-
-
-/**
- * Middleware function to validate multiple ${resourceName} update data using Zod schema.
- * @param {Request} req - The request object.
- * @param {Response} res - The response object.
- * @param {NextFunction} next - The next middleware function.
- * @returns {void}
- */
-export const validateUpdateMany${capitalizedResourceName} = (req: Request, res: Response, next: NextFunction) => {
-  const parseResult = zodUpdateMany${capitalizedResourceName}Schema.safeParse(req.body);
-  if (!parseResult.success) {
-    return zodErrorHandler(req, res, parseResult.error);
-  }
-  return next();
-};
+export const validateUpdate${capitalizedResourceName} = validate(zodUpdate${capitalizedResourceName}Schema);
+export const validateUpdateMany${capitalizedResourceName} = validate(zodUpdateMany${capitalizedResourceName}Schema);
     `;
       // Path to the zod validation file
       const validationFilePath = path.join(validationDir, `${args[0]}.validation.ts`);

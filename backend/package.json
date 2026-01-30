@@ -15,7 +15,7 @@
     "resource": "node ./.bin/raw-cli.js resource"
   },
   "bin": {
-    "resource": "./bin/cli.js"
+    "resource": "./bin/raw-cli.js"
   },
   "keywords": [
     "typescript",
