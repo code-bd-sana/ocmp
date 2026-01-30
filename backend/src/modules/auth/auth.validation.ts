@@ -1,6 +1,5 @@
-import { NextFunction, Request, Response } from 'express';
 import { z } from 'zod';
-import zodErrorHandler from '../../handlers/zod-error-handler';
+import { validate } from '../../handlers/zod-error-handler';
 
 /**
  * Authentication Validation Schemas and Types
@@ -24,8 +23,6 @@ export const loginSchema = z.object({
   password: z.string({ message: 'Password is required' }).min(1, 'Password is required'),
 });
 
-export type LoginInput = z.infer<typeof loginSchema>;
-
 /**
  * Zod schema for validating registration data.
  */
@@ -48,16 +45,12 @@ export const registerSchema = z.object({
   role: z.enum(['TRANSPORT_MANAGER', 'STANDALONE_USER'] as const),
 });
 
-export type RegisterInput = z.infer<typeof registerSchema>;
-
 /**
  * Zod schema for validating forgot password data.
  */
 export const forgotPasswordSchema = z.object({
   email: z.email({ message: 'Invalid email format' }).trim().toLowerCase(),
 });
-
-export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 
 /**
  * Zod schema for validating reset password data.
@@ -76,8 +69,6 @@ export const resetPasswordSchema = z
     message: "Passwords don't match",
     path: ['confirmPassword'],
   });
-
-export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 
 /**
  * Zod schema for validating change password data.
@@ -98,8 +89,6 @@ export const changePasswordSchema = z
     path: ['confirmNewPassword'],
   });
 
-export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
-
 /**
  * Zod schema for validating email verification data.
  */
@@ -108,16 +97,12 @@ export const verifyEmailSchema = z.object({
   token: z.string({ message: 'Verification token is required' }),
 });
 
-export type VerifyEmailInput = z.infer<typeof verifyEmailSchema>;
-
 /**
  * Zod schema for validating resend verification email data.
  */
 export const resendVerificationEmailSchema = z.object({
   email: z.email({ message: 'Invalid email format' }).trim().toLowerCase(),
 });
-
-export type ResendVerificationEmailInput = z.infer<typeof resendVerificationEmailSchema>;
 
 /**
  * Export named validators (as used in your router)
@@ -129,21 +114,3 @@ export const resetPasswordAuth = validate(resetPasswordSchema);
 export const changePasswordAuth = validate(changePasswordSchema);
 export const verifyEmailTokenAuth = validate(verifyEmailSchema);
 export const resendVerificationEmailAuth = validate(resendVerificationEmailSchema);
-
-/**
- * Helper (assuming you have something like this)
- */
-function validate<T extends z.ZodTypeAny>(schema: T) {
-  return (req: Request, res: Response, next: NextFunction) => {
-    const result = schema.safeParse(req.body);
-
-    if (!result.success) {
-      return zodErrorHandler(req, res, result.error);
-    }
-
-    // Optional: attach validated & typed data
-    req.body = result.data;
-
-    next();
-  };
-}

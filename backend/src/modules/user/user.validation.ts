@@ -1,6 +1,5 @@
-import { NextFunction, Request, Response } from 'express';
 import { z } from 'zod';
-import zodErrorHandler from '../../handlers/zod-error-handler';
+import { validate } from '../../handlers/zod-error-handler';
 
 /**
  * User Validation Schemas and Types
@@ -21,48 +20,20 @@ import zodErrorHandler from '../../handlers/zod-error-handler';
  */
 const zodUpdateUserSchema = z
   .object({
-    // Define fields required for updating an existing user.
-    // Example:
-    // fieldName: z.string({ message: 'Please provide a filedName.' }).optional(), // Fields can be optional during updates
+    fullName: z
+      .string({ message: 'Full name is required' })
+      .min(2, 'Full name must be at least 2 characters')
+      .max(100, 'Full name is too long')
+      .trim()
+      .optional(),
+    phone: z
+      .string()
+      .regex(/^\+?[1-9]\d{1,14}$/, 'Invalid phone number format')
+      .optional(),
   })
   .strict();
 
 /**
- * Middleware function to validate user update data using Zod schema.
- * @param {Request} req - The request object.
- * @param {Response} res - The response object.
- * @param {NextFunction} next - The next middleware function.
- * @returns {void}
+ * Export named validators (as used in your router)
  */
-export const validateUpdateUser = (req: Request, res: Response, next: NextFunction) => {
-  // Validate the request body for updating an existing user
-  const parseResult = zodUpdateUserSchema.safeParse(req.body);
-
-  // If validation fails, send an error response using the Zod error handler
-  if (!parseResult.success) {
-    return zodErrorHandler(req, res, parseResult.error);
-  }
-
-  // If validation passes, proceed to the next middleware function
-  return next();
-};
-
-/**
- * Zod schema for validating multiple user data during updates.
- */
-const zodUpdateManyUserSchema = z.array(zodUpdateUserSchema);
-
-/**
- * Middleware function to validate multiple user update data using Zod schema.
- * @param {Request} req - The request object.
- * @param {Response} res - The response object.
- * @param {NextFunction} next - The next middleware function.
- * @returns {void}
- */
-export const validateUpdateManyUser = (req: Request, res: Response, next: NextFunction) => {
-  const parseResult = zodUpdateManyUserSchema.safeParse(req.body);
-  if (!parseResult.success) {
-    return zodErrorHandler(req, res, parseResult.error);
-  }
-  return next();
-};
+export const validateUpdateUser = validate(zodUpdateUserSchema);
