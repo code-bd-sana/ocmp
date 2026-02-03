@@ -1,6 +1,6 @@
 import { isMongoId } from 'validator';
 import { z } from 'zod';
-import { validate } from './zod-error-handler';
+import { validateBody, validateParams, validateQuery } from './zod-error-handler';
 
 /**
  * ID Validation Schemas and Types
@@ -64,6 +64,6 @@ export type SearchQueryInput = z.infer<typeof zodSearchQuerySchema>;
 /**
  * Named validators (to be used in Express routes)
  */
-export const validateId = validate(zodIdSchema.pick({ id: true }));
-export const validateIds = validate(zodIdSchema.pick({ ids: true }));
-export const validateSearchQueries = validate(zodSearchQuerySchema);
+export const validateId = validateParams(zodIdSchema.pick({ id: true }));
+export const validateIds = validateBody(zodIdSchema.pick({ ids: true }));
+export const validateSearchQueries = validateQuery(zodSearchQuerySchema);

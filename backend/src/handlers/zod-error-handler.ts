@@ -30,19 +30,61 @@ const zodErrorHandler = (req: Request, res: Response, zodErr: ZodError): Respons
 /**
  * Helper (assuming you have something like this)
  */
-function validate<T extends z.ZodTypeAny>(schema: T) {
+export function validate<T extends z.ZodTypeAny>(
+  schema: T,
+  source: 'body' | 'params' | 'query' | 'mixed' = 'body'
+) {
   return (req: Request, res: Response, next: NextFunction) => {
-    const result = schema.safeParse(req.body);
+    let dataToValidate: any;
+
+    switch (source) {
+      case 'body':
+        dataToValidate = req.body;
+        break;
+      case 'params':
+        dataToValidate = req.params;
+        break;
+      case 'query':
+        dataToValidate = req.query;
+        break;
+      case 'mixed':
+        // Useful when you need both params + body or query + params
+        dataToValidate = { ...req.params, ...req.query, ...req.body };
+        break;
+      default:
+        dataToValidate = req.body;
+    }
+
+    const result = schema.safeParse(dataToValidate);
 
     if (!result.success) {
       return zodErrorHandler(req, res, result.error);
     }
 
-    // Optional: attach validated & typed data
-    req.body = result.data;
+    // Attach validated data to the appropriate request property
+    // This makes it type-safe and convenient in controllers
+    switch (source) {
+      case 'body':
+        req.body = result.data;
+        break;
+      case 'params':
+        req.params = result.data as any; // careful with types if needed
+        break;
+      case 'query':
+        req.query = result.data as any;
+        break;
+      case 'mixed':
+        // For mixed, you usually want to spread into req
+        Object.assign(req, { validated: result.data });
+        break;
+    }
 
     next();
   };
 }
 
-export { validate, zodErrorHandler };
+export const validateBody = <T extends z.ZodTypeAny>(schema: T) => validate(schema, 'body');
+
+export const validateParams = <T extends z.ZodTypeAny>(schema: T) => validate(schema, 'params');
+
+export const validateQuery = <T extends z.ZodTypeAny>(schema: T) => validate(schema, 'query');
