@@ -250,7 +250,6 @@ const getManySubscriptionDuration = async (
     .skip(skipItems)
     .limit(showPerPage)
     .select(''); // Keep/Exclude any field if needed
-
   return { subscriptionDurations, totalData, totalPages };
 };
 
