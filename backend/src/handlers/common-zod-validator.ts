@@ -32,6 +32,8 @@ const zodIdSchema = z
   })
   .strict();
 
+export type IdOrIdsInput = z.infer<typeof zodIdSchema>;
+
 /**
  * Zod schema for validating pagination & search query parameters.
  */
@@ -56,6 +58,8 @@ const zodSearchQuerySchema = z
       .optional(),
   })
   .strict();
+
+export type SearchQueryInput = z.infer<typeof zodSearchQuerySchema>;
 
 /**
  * Named validators (to be used in Express routes)

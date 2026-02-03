@@ -1,30 +1,36 @@
+import mongoose from 'mongoose';
+import { IdOrIdsInput } from '../../handlers/common-zod-validator';
 import SubscriptionDuration, {
   ISubscriptionDuration,
 } from '../../models/subscription-billing/subscriptionDuration.schema';
+import {
+  CreateSubscriptionDurationInput,
+  UpdateSubscriptionDurationInput,
+} from './subscription-duration.validation';
 
 /**
  * Service function to create a new subscriptionDuration.
  *
- * @param {Partial<ISubscriptionDuration>} data - The data to create a new subscriptionDuration.
+ * @param {CreateSubscriptionDurationInput} data - The data to create a new subscriptionDuration.
  * @returns {Promise<Partial<ISubscriptionDuration>>} - The created subscriptionDuration.
  */
 const createSubscriptionDuration = async (
-  data: Partial<ISubscriptionDuration>
+  data: CreateSubscriptionDurationInput
 ): Promise<Partial<ISubscriptionDuration>> => {
-  // Call the service method to create a new subscription-duration and get the result
-  //  !`createdBy` will be derived from the authorization
-
   // Check if a subscription duration with the same name and duration already exists
   const existingDuration = await SubscriptionDuration.findOne({
-    name: data.name,
-    durationInDays: data.durationInDays,
+    $or: [
+      {
+        name: new RegExp(`^${data.name}$`, 'i'), // case insensitive
+      },
+      { durationInDays: data.durationInDays },
+    ],
   });
-
   // Prevent duplicate subscription durations
   if (existingDuration) {
     throw new Error('A subscription duration with the same name and duration already exists.');
   }
-
+  // Create and save the new subscription duration
   const newSubscriptionDuration = new SubscriptionDuration(data);
   const savedSubscriptionDuration = await newSubscriptionDuration.save();
   return savedSubscriptionDuration;
@@ -33,12 +39,28 @@ const createSubscriptionDuration = async (
 /**
  * Service function to create multiple subscriptionDuration.
  *
- * @param {Partial<ISubscriptionDuration>[]} data - An array of data to create multiple subscriptionDuration.
+ * @param {CreateSubscriptionDurationInput[]} data - An array of data to create multiple subscriptionDuration.
  * @returns {Promise<Partial<ISubscriptionDuration>[]>} - The created subscriptionDuration.
  */
 const createManySubscriptionDuration = async (
-  data: Partial<ISubscriptionDuration>[]
+  data: CreateSubscriptionDurationInput[]
 ): Promise<Partial<ISubscriptionDuration>[]> => {
+  // Check for existing subscription durations with the same name or durationInDays
+  const existingDurations = await SubscriptionDuration.find({
+    $or: data.map((item) => ({
+      $or: [
+        { name: new RegExp(`^${item.name}$`, 'i') }, // case insensitive
+        { durationInDays: item.durationInDays },
+      ],
+    })),
+  });
+  // Prevent duplicate subscription durations
+  if (existingDurations.length > 0) {
+    throw new Error(
+      'One or more subscription durations with the same name or duration already exist.'
+    );
+  }
+  // Create and save the new subscription durations
   const createdSubscriptionDuration = await SubscriptionDuration.insertMany(data);
   return createdSubscriptionDuration;
 };
@@ -47,12 +69,12 @@ const createManySubscriptionDuration = async (
  * Service function to update a single subscriptionDuration by ID.
  *
  * @param {string} id - The ID of the subscriptionDuration to update.
- * @param {Partial<ISubscriptionDuration>} data - The updated data for the subscriptionDuration.
+ * @param {UpdateSubscriptionDurationInput} data - The updated data for the subscriptionDuration.
  * @returns {Promise<Partial<ISubscriptionDuration>>} - The updated subscriptionDuration.
  */
 const updateSubscriptionDuration = async (
   id: string,
-  data: Partial<ISubscriptionDuration>
+  data: UpdateSubscriptionDurationInput
 ): Promise<Partial<ISubscriptionDuration | null>> => {
   // ! Update Guard: Restrict modification of subscription duration when it is in active use.
 
@@ -61,22 +83,19 @@ const updateSubscriptionDuration = async (
   // TODO: If users exist, prevent updating core duration fields (e.g., name, durationInDays).
   // TODO: Allow updating only the status field (isActive) regardless of usage.
 
-  if (data.name && data.durationInDays) {
-    // Check if a subscription with the same name and duration already exists
-    const isExist = await SubscriptionDuration.findOne({
-      name: data.name,
-      durationInDays: data.durationInDays,
-    });
-
-    // If it exists, throw an error to prevent duplicates
-    if (isExist) {
-      throw new Error('A subscription with this name and duration already exists');
-    }
+  // Check for duplicate name and durationInDays combination
+  const existingDuration = await SubscriptionDuration.findOne({
+    _id: { $ne: id }, // Exclude the current document
+    $or: [
+      { name: new RegExp(`^${data.name}$`, 'i') }, // case insensitive
+      { durationInDays: data.durationInDays },
+    ],
+  });
+  // Prevent duplicate subscription durations
+  if (existingDuration) {
+    throw new Error('A subscription duration with the same name or duration already exists.');
   }
-
-  // Proceed to update the subscription
-  // Example: assuming you have an id to update
-
+  // Proceed to update the subscription duration
   const updatedSubscriptionDuration = await SubscriptionDuration.findByIdAndUpdate(id, data, {
     new: true,
   });
@@ -86,21 +105,60 @@ const updateSubscriptionDuration = async (
 /**
  * Service function to update multiple subscriptionDuration.
  *
- * @param {Array<{ id: string, updates: Partial<ISubscriptionDuration> }>} data - An array of data to update multiple subscriptionDuration.
+ * @param {Array<{ id: string, updates: UpdateSubscriptionDurationInput }>} data - An array of data to update multiple subscriptionDuration.
  * @returns {Promise<Partial<ISubscriptionDuration>[]>} - The updated subscriptionDuration.
  */
-const updateManySubscriptionDuration = async (
-  data: Array<{ id: string; updates: Partial<ISubscriptionDuration> }>
+export const updateManySubscriptionDuration = async (
+  data: Array<{ id: string; updates: UpdateSubscriptionDurationInput }>
 ): Promise<Partial<ISubscriptionDuration>[]> => {
-  const updatePromises = data.map(({ id, updates }) =>
-    SubscriptionDuration.findByIdAndUpdate(id, updates, { new: true })
-  );
-  const updatedSubscriptionDuration = await Promise.all(updatePromises);
-  // Filter out null values
-  const validUpdatedSubscriptionDuration = updatedSubscriptionDuration.filter(
-    (item) => item !== null
-  ) as ISubscriptionDuration[];
-  return validUpdatedSubscriptionDuration;
+  // Early return if no data provided
+  if (data.length === 0) {
+    return [];
+  }
+  // Convert string ids to ObjectId (for safety)
+  const objectIds = data.map((item) => new mongoose.Types.ObjectId(item.id));
+  // Check for duplicates (name or durationInDays) excluding the documents being updated
+  const existingDurations = await SubscriptionDuration.find({
+    _id: { $nin: objectIds }, // Exclude documents being updated
+    $or: data.flatMap((item) => [
+      { name: new RegExp(`^${item.updates.name}$`, 'i') }, // case insensitive
+      { durationInDays: item.updates.durationInDays },
+    ]),
+  }).lean();
+  // If any duplicates found, throw error
+  if (existingDurations.length > 0) {
+    throw new Error(
+      'Duplicate detected: One or more subscription durations with the same name (case-insensitive) or durationInDays already exist.'
+    );
+  }
+  // Prepare bulk operations
+  const operations = data.map((item) => ({
+    updateOne: {
+      filter: { _id: new mongoose.Types.ObjectId(item.id) },
+      update: { $set: item.updates },
+      upsert: false,
+    },
+  }));
+  // Execute bulk update
+  const bulkResult = await SubscriptionDuration.bulkWrite(operations, {
+    ordered: true, // keep order of operations
+  });
+  // check if all succeeded
+  if (bulkResult.matchedCount !== data.length) {
+    throw new Error('Some documents were not found or updated');
+  }
+  // Fetch the freshly updated documents
+  const updatedDocs = await SubscriptionDuration.find({ _id: { $in: objectIds } })
+    .lean()
+    .exec();
+  // Map back to original input order
+  const resultMap = new Map<string, any>(updatedDocs.map((doc) => [doc._id.toString(), doc]));
+  // Ensure the result array matches the input order
+  const orderedResults = data.map((item) => {
+    const updated = resultMap.get(item.id);
+    return updated || { _id: item.id };
+  });
+  return orderedResults as Partial<ISubscriptionDuration>[];
 };
 
 /**
@@ -118,6 +176,7 @@ const deleteSubscriptionDuration = async (
   // TODO: * Second, check if any user has taken this subscription
   // TODO: * If taken by any user, throw a thorough error: 'This duration is already assigned to a user's subscription'
 
+  // Proceed to delete the subscription duration
   const deletedSubscriptionDuration = await SubscriptionDuration.findByIdAndDelete(id);
   return deletedSubscriptionDuration;
 };
@@ -129,11 +188,15 @@ const deleteSubscriptionDuration = async (
  * @returns {Promise<Partial<ISubscriptionDuration>[]>} - The deleted subscriptionDuration.
  */
 const deleteManySubscriptionDuration = async (
-  ids: string[]
+  ids: IdOrIdsInput['ids']
 ): Promise<Partial<ISubscriptionDuration>[]> => {
+  // ! If these durations are implemented in any subscription and that subscription is used by any user, do not allow deletion
+
+  // Proceed to delete the subscription durations
   const subscriptionDurationToDelete = await SubscriptionDuration.find({ _id: { $in: ids } });
   if (!subscriptionDurationToDelete.length)
     throw new Error('No subscriptionDuration found to delete');
+  // Delete the subscription durations
   await SubscriptionDuration.deleteMany({ _id: { $in: ids } });
   return subscriptionDurationToDelete;
 };
@@ -145,8 +208,9 @@ const deleteManySubscriptionDuration = async (
  * @returns {Promise<Partial<ISubscriptionDuration>>} - The retrieved subscriptionDuration.
  */
 const getSubscriptionDurationById = async (
-  id: string
+  id: IdOrIdsInput['id']
 ): Promise<Partial<ISubscriptionDuration | null>> => {
+  // Find the subscription duration by ID
   const subscriptionDuration = await SubscriptionDuration.findById(id);
   return subscriptionDuration;
 };
@@ -205,4 +269,3 @@ export const subscriptionDurationServices = {
   getSubscriptionDurationById,
   getManySubscriptionDuration,
 };
-

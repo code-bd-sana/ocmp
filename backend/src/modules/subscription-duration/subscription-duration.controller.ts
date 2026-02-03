@@ -1,7 +1,9 @@
 import { Request, Response } from 'express';
-import { subscriptionDurationServices } from './subscription-duration.service';
+import mongoose from 'mongoose';
 import ServerResponse from '../../helpers/responses/custom-response';
+import { AuthenticatedRequest } from '../../middlewares/is-authorized';
 import catchAsync from '../../utils/catch-async/catch-async';
+import { subscriptionDurationServices } from './subscription-duration.service';
 
 /**
  * Controller function to handle the creation of a single SubscriptionDuration.
@@ -11,12 +13,18 @@ import catchAsync from '../../utils/catch-async/catch-async';
  * @returns {Promise<Partial<ISubscriptionDuration>>} - The created subscriptionDuration.
  * @throws {Error} - Throws an error if the subscriptionDuration creation fails.
  */
-export const createSubscriptionDuration = catchAsync(async (req: Request, res: Response) => {
-  const result = await subscriptionDurationServices.createSubscriptionDuration(req.body);
-  if (!result) throw new Error('Failed to create subscriptionDuration');
-  // Send a success response with the created subscriptionDuration data
-  ServerResponse(res, true, 201, 'SubscriptionDuration created successfully', result);
-});
+export const createSubscriptionDuration = catchAsync(
+  async (req: AuthenticatedRequest, res: Response) => {
+    // Use the authenticated user's ID as the creator
+    const userId = req.user!._id;
+    // Request body assignment for createdBy field
+    req.body.createdBy = new mongoose.Types.ObjectId(userId);
+    const result = await subscriptionDurationServices.createSubscriptionDuration(req.body);
+    if (!result) throw new Error('Failed to create subscription duration');
+    // Send a success response with the created subscriptionDuration data
+    ServerResponse(res, true, 201, 'Subscription duration created successfully', result);
+  }
+);
 
 /**
  * Controller function to handle the creation of multiple subscription-durations.
@@ -26,13 +34,22 @@ export const createSubscriptionDuration = catchAsync(async (req: Request, res: R
  * @returns {Promise<Partial<ISubscriptionDuration>[]>} - The created subscriptionDurations.
  * @throws {Error} - Throws an error if the subscriptionDurations creation fails.
  */
-export const createManySubscriptionDuration = catchAsync(async (req: Request, res: Response) => {
-  // Call the service method to create multiple subscriptionDurations and get the result
-  const result = await subscriptionDurationServices.createManySubscriptionDuration(req.body);
-  if (!result) throw new Error('Failed to create multiple subscriptionDurations');
-  // Send a success response with the created subscription-durations data
-  ServerResponse(res, true, 201, 'SubscriptionDurations created successfully', result);
-});
+export const createManySubscriptionDuration = catchAsync(
+  async (req: AuthenticatedRequest, res: Response) => {
+    // Use the authenticated user's ID as the creator for each item
+    const userId = req.user!._id;
+    // Request body assignment for createdBy field for each item
+    req.body = req.body.map((item: any) => ({
+      ...item,
+      createdBy: new mongoose.Types.ObjectId(userId),
+    }));
+    // Call the service method to create multiple subscriptionDurations and get the result
+    const result = await subscriptionDurationServices.createManySubscriptionDuration(req.body);
+    if (!result) throw new Error('Failed to create multiple subscription durations');
+    // Send a success response with the created subscription-durations data
+    ServerResponse(res, true, 201, 'Subscription durations created successfully', result);
+  }
+);
 
 /**
  * Controller function to handle the update operation for a single subscription-duration.
@@ -49,9 +66,9 @@ export const updateSubscriptionDuration = catchAsync(async (req: Request, res: R
     id as string,
     req.body
   );
-  if (!result) throw new Error('Failed to update subscriptionDuration');
+  if (!result) throw new Error('Failed to update subscription duration');
   // Send a success response with the updated subscription-duration data
-  ServerResponse(res, true, 200, 'SubscriptionDuration updated successfully', result);
+  ServerResponse(res, true, 200, 'Subscription duration updated successfully', result);
 });
 
 /**
@@ -65,9 +82,9 @@ export const updateSubscriptionDuration = catchAsync(async (req: Request, res: R
 export const updateManySubscriptionDuration = catchAsync(async (req: Request, res: Response) => {
   // Call the service method to update multiple subscription-durations and get the result
   const result = await subscriptionDurationServices.updateManySubscriptionDuration(req.body);
-  if (!result.length) throw new Error('Failed to update multiple subscriptionDurations');
+  if (!result.length) throw new Error('Failed to update multiple subscription durations');
   // Send a success response with the updated subscription-durations data
-  ServerResponse(res, true, 200, 'SubscriptionDurations updated successfully', result);
+  ServerResponse(res, true, 200, 'Subscription durations updated successfully', result);
 });
 
 /**
@@ -82,9 +99,9 @@ export const deleteSubscriptionDuration = catchAsync(async (req: Request, res: R
   const { id } = req.params;
   // Call the service method to delete the subscription-duration by ID
   const result = await subscriptionDurationServices.deleteSubscriptionDuration(id as string);
-  if (!result) throw new Error('Failed to delete subscriptionDuration');
+  if (!result) throw new Error('Failed to delete subscription duration');
   // Send a success response confirming the deletion
-  ServerResponse(res, true, 200, 'SubscriptionDuration deleted successfully');
+  ServerResponse(res, true, 200, 'Subscription duration deleted successfully');
 });
 
 /**
@@ -98,9 +115,9 @@ export const deleteSubscriptionDuration = catchAsync(async (req: Request, res: R
 export const deleteManySubscriptionDuration = catchAsync(async (req: Request, res: Response) => {
   // Call the service method to delete multiple subscription-durations and get the result
   const result = await subscriptionDurationServices.deleteManySubscriptionDuration(req.body);
-  if (!result) throw new Error('Failed to delete multiple subscriptionDurations');
+  if (!result) throw new Error('Failed to delete multiple subscription durations');
   // Send a success response confirming the deletions
-  ServerResponse(res, true, 200, 'SubscriptionDurations deleted successfully');
+  ServerResponse(res, true, 200, 'Subscription durations deleted successfully');
 });
 
 /**
@@ -115,9 +132,9 @@ export const getSubscriptionDurationById = catchAsync(async (req: Request, res: 
   const { id } = req.params;
   // Call the service method to get the subscription-duration by ID and get the result
   const result = await subscriptionDurationServices.getSubscriptionDurationById(id as string);
-  if (!result) throw new Error('SubscriptionDuration not found');
+  if (!result) throw new Error('Subscription duration not found');
   // Send a success response with the retrieved resource data
-  ServerResponse(res, true, 200, 'SubscriptionDuration retrieved successfully', result);
+  ServerResponse(res, true, 200, 'Subscription duration retrieved successfully', result);
 });
 
 /**
@@ -130,16 +147,19 @@ export const getSubscriptionDurationById = catchAsync(async (req: Request, res: 
  */
 export const getManySubscriptionDuration = catchAsync(async (req: Request, res: Response) => {
   // Type assertion for query parameters
-  const query = req.query as unknown as { searchKey?: string; showPerPage: number; pageNo: number };
+  const query = req.query as unknown as {
+    searchKey?: string;
+    showPerPage: number;
+    pageNo: number;
+  };
   // Call the service method to get multiple subscription-durations based on query parameters and get the result
   const { subscriptionDurations, totalData, totalPages } =
     await subscriptionDurationServices.getManySubscriptionDuration(query);
-  if (!subscriptionDurations) throw new Error('Failed to retrieve subscriptionDurations');
+  if (!subscriptionDurations) throw new Error('Failed to retrieve subscription durations');
   // Send a success response with the retrieved subscription-durations data
-  ServerResponse(res, true, 200, 'SubscriptionDurations retrieved successfully', {
+  ServerResponse(res, true, 200, 'Subscription durations retrieved successfully', {
     subscriptionDurations,
     totalData,
     totalPages,
   });
 });
-

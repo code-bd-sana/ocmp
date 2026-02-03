@@ -14,6 +14,8 @@ const SubscriptionDurationSchema: Schema<ISubscriptionDuration> = new Schema(
     name: {
       type: String,
       required: true,
+      uppercase: true,
+      trim: true,
     },
     durationInDays: {
       type: Number,

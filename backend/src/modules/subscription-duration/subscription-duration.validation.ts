@@ -1,148 +1,69 @@
-import { NextFunction, Request, Response } from 'express';
 import { z } from 'zod';
-import zodErrorHandler from '../../handlers/zod-error-handler';
+import { validate } from '../../handlers/zod-error-handler';
+
+/**
+ * Subscription Duration Validation Schemas and Types
+ *
+ * This module defines Zod schemas for validating subscription duration-related
+ * requests such as creating and updating subscription durations.
+ * It also exports corresponding TypeScript types inferred from these schemas.
+ * Each schema includes detailed validation rules and custom error messages
+ * to ensure data integrity and provide clear feedback to API consumers.
+ *
+ * Additionally, named validator middleware functions are exported for use
+ * in Express routes to validate incoming requests against the defined schemas.
+ */
 
 /**
  * Zod schema for validating subscriptionDuration data during creation.
  */
-const zodCreateSubscriptionDurationSchema = z
+export const zodCreateSubscriptionDurationSchema = z
   .object({
-    // Subscription duration display name (e.g., Monthly, Weekly)
     name: z
       .string({ message: 'Subscription duration name is required.' })
       .min(1, 'Subscription duration name cannot be empty.'),
 
-    // Duration length in days (e.g., 30, 15, 7)
     durationInDays: z
       .number({ message: 'Duration in days must be a valid number.' })
       .positive('Duration in days must be greater than 0.'),
 
-    // Indicates whether the duration is active
-    isActive: z.boolean({
-      message: 'isActive must be a boolean value (true or false).',
-    }),
-
-    createdBy: z.string({
-      message: 'Please provide a valid creator user ID.',
-    }),
+    isActive: z.boolean({ message: 'isActive must be a boolean value (true or false).' }),
   })
   .strict();
 
-/**
- * Middleware function to validate subscriptionDuration creation data using Zod schema.
- * @param {Request} req - The request object.
- * @param {Response} res - The response object.
- * @param {NextFunction} next - The next middleware function.
- * @returns {void}
- */
-export const validateCreateSubscriptionDuration = (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  // Validate the request body for creating a new subscriptionDuration
-  const parseResult = zodCreateSubscriptionDurationSchema.safeParse(req.body);
+export type CreateSubscriptionDurationInput = z.infer<typeof zodCreateSubscriptionDurationSchema>;
 
-  // If validation fails, send an error response using the Zod error handler
-  if (!parseResult.success) {
-    return zodErrorHandler(req, res, parseResult.error);
-  }
-
-  // If validation passes, proceed to the next middleware function
-  return next();
-};
-
-/**
- * Zod schema for validating multiple subscriptionDuration data during creation.
- */
-const zodCreateManySubscriptionDurationSchema = z.array(zodCreateSubscriptionDurationSchema);
-
-/**
- * Middleware function to validate multiple subscriptionDuration creation data using Zod schema.
- * @param {Request} req - The request object.
- * @param {Response} res - The response object.
- * @param {NextFunction} next - The next middleware function.
- * @returns {void}
- */
-export const validateCreateManySubscriptionDuration = (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  const parseResult = zodCreateManySubscriptionDurationSchema.safeParse(req.body);
-  if (!parseResult.success) {
-    return zodErrorHandler(req, res, parseResult.error);
-  }
-  return next();
-};
+export const zodCreateManySubscriptionDurationSchema = z.array(zodCreateSubscriptionDurationSchema);
 
 /**
  * Zod schema for validating subscriptionDuration data during updates.
  */
-const zodUpdateSubscriptionDurationSchema = z
+export const zodUpdateSubscriptionDurationSchema = z
   .object({
-    // Name of the subscription duration
     name: z
-      .string({ message: 'Subscription duration name is required.' }) // Ensure it's a string
-      .min(1, 'Subscription duration name cannot be empty.'), // Must not be empty
+      .string({ message: 'Subscription duration name is required.' })
+      .min(1, 'Subscription duration name cannot be empty.'),
 
-    // Duration in days for the subscription
     durationInDays: z
-      .number({ message: 'Duration in days must be a valid number.' }) // Ensure it's a number
-      .positive('Duration in days must be greater than 0.'), // Must be positive
+      .number({ message: 'Duration in days must be a valid number.' })
+      .positive('Duration in days must be greater than 0.'),
 
-    // Whether the subscription is active or not
-    isActive: z.boolean({
-      message: 'isActive must be a boolean value (true or false).', // Must be a boolean
-    }),
+    isActive: z.boolean({ message: 'isActive must be a boolean value (true or false).' }),
   })
-  .strict(); // Disallow extra fields not defined in the schema
+  .strict();
+
+export type UpdateSubscriptionDurationInput = z.infer<typeof zodUpdateSubscriptionDurationSchema>;
+
+export const zodUpdateManySubscriptionDurationSchema = z.array(zodUpdateSubscriptionDurationSchema);
 
 /**
- * Middleware function to validate subscriptionDuration update data using Zod schema.
- * @param {Request} req - The request object.
- * @param {Response} res - The response object.
- * @param {NextFunction} next - The next middleware function.
- * @returns {void}
+ * Export named validators (express middleware creators) for use in routes.
  */
-export const validateUpdateSubscriptionDuration = (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  // Validate the request body for updating an existing subscriptionDuration
-  const parseResult = zodUpdateSubscriptionDurationSchema.safeParse(req.body);
-
-  // If validation fails, send an error response using the Zod error handler
-  if (!parseResult.success) {
-    return zodErrorHandler(req, res, parseResult.error);
-  }
-
-  // If validation passes, proceed to the next middleware function
-  return next();
-};
-
-/**
- * Zod schema for validating multiple subscriptionDuration data during updates.
- */
-const zodUpdateManySubscriptionDurationSchema = z.array(zodUpdateSubscriptionDurationSchema);
-
-/**
- * Middleware function to validate multiple subscriptionDuration update data using Zod schema.
- * @param {Request} req - The request object.
- * @param {Response} res - The response object.
- * @param {NextFunction} next - The next middleware function.
- * @returns {void}
- */
-export const validateUpdateManySubscriptionDuration = (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  const parseResult = zodUpdateManySubscriptionDurationSchema.safeParse(req.body);
-  if (!parseResult.success) {
-    return zodErrorHandler(req, res, parseResult.error);
-  }
-  return next();
-};
-
+export const validateCreateSubscriptionDuration = validate(zodCreateSubscriptionDurationSchema);
+export const validateCreateManySubscriptionDuration = validate(
+  zodCreateManySubscriptionDurationSchema
+);
+export const validateUpdateSubscriptionDuration = validate(zodUpdateSubscriptionDurationSchema);
+export const validateUpdateManySubscriptionDuration = validate(
+  zodUpdateManySubscriptionDurationSchema
+);
