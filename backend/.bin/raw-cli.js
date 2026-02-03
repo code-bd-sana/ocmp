@@ -361,7 +361,7 @@ export default ${capitalizedResourceName};
       const validationContent = `
 import { isMongoId } from 'validator';
 import { z } from 'zod';
-import { validate } from '../../handlers/zod-error-handler';
+import { validateBody } from '../../handlers/zod-error-handler';
 
 /**
  * ${capitalizedResourceName} Validation Schemas and Types
@@ -441,10 +441,10 @@ export type UpdateMany${capitalizedResourceName}Input = z.infer<typeof zodUpdate
 /**
  * Named validators — use these directly in your Express routes
  */
-export const validateCreate${capitalizedResourceName} = validate(zodCreate${capitalizedResourceName}Schema);
-export const validateCreateMany${capitalizedResourceName} = validate(zodCreateMany${capitalizedResourceName}Schema);
-export const validateUpdate${capitalizedResourceName} = validate(zodUpdate${capitalizedResourceName}Schema);
-export const validateUpdateMany${capitalizedResourceName} = validate(zodUpdateMany${capitalizedResourceName}Schema);
+export const validateCreate${capitalizedResourceName} = validateBody(zodCreate${capitalizedResourceName}Schema);
+export const validateCreateMany${capitalizedResourceName} = validateBody(zodCreateMany${capitalizedResourceName}Schema);
+export const validateUpdate${capitalizedResourceName} = validateBody(zodUpdate${capitalizedResourceName}Schema);
+export const validateUpdateMany${capitalizedResourceName} = validateBody(zodUpdateMany${capitalizedResourceName}Schema);
     `;
       // Path to the zod validation file
       const validationFilePath = path.join(validationDir, `${args[0]}.validation.ts`);

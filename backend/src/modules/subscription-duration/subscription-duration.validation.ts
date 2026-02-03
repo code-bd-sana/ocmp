@@ -1,6 +1,6 @@
 import { isMongoId } from 'validator';
 import { z } from 'zod';
-import { validate } from '../../handlers/zod-error-handler';
+import { validateBody } from '../../handlers/zod-error-handler';
 
 /**
  * Subscription Duration Validation Schemas and Types
@@ -92,11 +92,11 @@ export type UpdateManySubscriptionDurationInput = z.infer<
 /**
  * Export named validators (express middleware creators) for use in routes.
  */
-export const validateCreateSubscriptionDuration = validate(zodCreateSubscriptionDurationSchema);
-export const validateCreateManySubscriptionDuration = validate(
+export const validateCreateSubscriptionDuration = validateBody(zodCreateSubscriptionDurationSchema);
+export const validateCreateManySubscriptionDuration = validateBody(
   zodCreateManySubscriptionDurationSchema
 );
-export const validateUpdateSubscriptionDuration = validate(zodUpdateSubscriptionDurationSchema);
-export const validateUpdateManySubscriptionDuration = validate(
+export const validateUpdateSubscriptionDuration = validateBody(zodUpdateSubscriptionDurationSchema);
+export const validateUpdateManySubscriptionDuration = validateBody(
   zodUpdateManySubscriptionDurationSchema
 );

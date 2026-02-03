@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { validate } from '../../handlers/zod-error-handler';
+import { validateBody } from '../../handlers/zod-error-handler';
 
 /**
  * Authentication Validation Schemas and Types
@@ -121,10 +121,10 @@ export type ResendVerificationEmailInput = z.infer<typeof resendVerificationEmai
 /**
  * Export named validators (as used in your router)
  */
-export const validateLoginAuth = validate(loginSchema);
-export const validateRegisterAuth = validate(registerSchema);
-export const forgetPasswordAuth = validate(forgotPasswordSchema);
-export const resetPasswordAuth = validate(resetPasswordSchema);
-export const changePasswordAuth = validate(changePasswordSchema);
-export const verifyEmailTokenAuth = validate(verifyEmailSchema);
-export const resendVerificationEmailAuth = validate(resendVerificationEmailSchema);
+export const validateLoginAuth = validateBody(loginSchema);
+export const validateRegisterAuth = validateBody(registerSchema);
+export const forgetPasswordAuth = validateBody(forgotPasswordSchema);
+export const resetPasswordAuth = validateBody(resetPasswordSchema);
+export const changePasswordAuth = validateBody(changePasswordSchema);
+export const verifyEmailTokenAuth = validateBody(verifyEmailSchema);
+export const resendVerificationEmailAuth = validateBody(resendVerificationEmailSchema);
