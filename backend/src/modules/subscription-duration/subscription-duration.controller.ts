@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import mongoose from 'mongoose';
+import { SearchQueryInput } from '../../handlers/common-zod-validator';
 import ServerResponse from '../../helpers/responses/custom-response';
 import { AuthenticatedRequest } from '../../middlewares/is-authorized';
 import catchAsync from '../../utils/catch-async/catch-async';
@@ -147,11 +148,7 @@ export const getSubscriptionDurationById = catchAsync(async (req: Request, res: 
  */
 export const getManySubscriptionDuration = catchAsync(async (req: Request, res: Response) => {
   // Type assertion for query parameters
-  const query = req.query as unknown as {
-    searchKey?: string;
-    showPerPage: number;
-    pageNo: number;
-  };
+  const query = req.query as SearchQueryInput;
   // Call the service method to get multiple subscription-durations based on query parameters and get the result
   const { subscriptionDurations, totalData, totalPages } =
     await subscriptionDurationServices.getManySubscriptionDuration(query);

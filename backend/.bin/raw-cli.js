@@ -162,6 +162,7 @@ module.exports = router;
       const controllerContent = `
 import { Request, Response } from 'express';
 import { ${resourceName}Services } from './${args[0]}.service';
+import { SearchQueryInput } from '../../handlers/common-zod-validator';
 import ServerResponse from '../../helpers/responses/custom-response';
 import catchAsync from '../../utils/catch-async/catch-async';
 
@@ -290,7 +291,7 @@ export const get${capitalizedResourceName}ById = catchAsync(async (req: Request,
  */
 export const getMany${capitalizedResourceName} = catchAsync(async (req: Request, res: Response) => {
   // Type assertion for query parameters 
-  const query = req.query as unknown as { searchKey?: string, showPerPage: number, pageNo: number };
+  const query = req.query as SearchQueryInput;
   // Call the service method to get multiple ${args[0]}s based on query parameters and get the result
   const { ${resourceName}s, totalData, totalPages } = await ${resourceName}Services.getMany${capitalizedResourceName}(query);
   if (!${resourceName}s) throw new Error('Failed to retrieve ${resourceName}s');
