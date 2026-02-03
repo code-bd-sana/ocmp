@@ -1,3 +1,4 @@
+import { isMongoId } from 'validator';
 import { z } from 'zod';
 import { validate } from '../../handlers/zod-error-handler';
 
@@ -22,18 +23,24 @@ export const zodCreateSubscriptionDurationSchema = z
     name: z
       .string({ message: 'Subscription duration name is required.' })
       .min(1, 'Subscription duration name cannot be empty.'),
-
     durationInDays: z
       .number({ message: 'Duration in days must be a valid number.' })
       .positive('Duration in days must be greater than 0.'),
-
     isActive: z.boolean({ message: 'isActive must be a boolean value (true or false).' }),
   })
   .strict();
 
 export type CreateSubscriptionDurationInput = z.infer<typeof zodCreateSubscriptionDurationSchema>;
 
-export const zodCreateManySubscriptionDurationSchema = z.array(zodCreateSubscriptionDurationSchema);
+export const zodCreateManySubscriptionDurationSchema = z
+  .array(zodCreateSubscriptionDurationSchema)
+  .min(1, {
+    message: 'At least one subscription duration must be provided for bulk creation',
+  });
+
+export type CreateManySubscriptionDurationInput = z.infer<
+  typeof zodCreateManySubscriptionDurationSchema
+>;
 
 /**
  * Zod schema for validating subscriptionDuration data during updates.
@@ -42,19 +49,45 @@ export const zodUpdateSubscriptionDurationSchema = z
   .object({
     name: z
       .string({ message: 'Subscription duration name is required.' })
-      .min(1, 'Subscription duration name cannot be empty.'),
-
+      .min(1, 'Subscription duration name cannot be empty.')
+      .optional(),
     durationInDays: z
       .number({ message: 'Duration in days must be a valid number.' })
-      .positive('Duration in days must be greater than 0.'),
-
-    isActive: z.boolean({ message: 'isActive must be a boolean value (true or false).' }),
+      .positive('Duration in days must be greater than 0.')
+      .optional(),
+    isActive: z
+      .boolean({ message: 'isActive must be a boolean value (true or false).' })
+      .optional(),
   })
-  .strict();
+  .strict()
+  .refine((data) => Object.keys(data).length > 0, {
+    message: 'At least one field must be provided for update.',
+  });
 
 export type UpdateSubscriptionDurationInput = z.infer<typeof zodUpdateSubscriptionDurationSchema>;
 
-export const zodUpdateManySubscriptionDurationSchema = z.array(zodUpdateSubscriptionDurationSchema);
+/**
+ * Zod schema for validating multiple subscriptionDuration updates.
+ * Each object in the array must include an 'id' field along with at least one other field to update.
+ */
+export const zodUpdateSubscriptionDurationForBulkSchema = zodUpdateSubscriptionDurationSchema
+  .extend({
+    id: z.string().refine(isMongoId, { message: 'Please provide a valid MongoDB ObjectId' }),
+  })
+  .refine((data) => Object.keys(data).length > 1, {
+    message: 'At least one field besides id must be provided for update.',
+  });
+
+/**
+ * Zod schema for validating an array of multiple subscriptionDuration updates.
+ */
+export const zodUpdateManySubscriptionDurationSchema = z
+  .array(zodUpdateSubscriptionDurationForBulkSchema)
+  .min(1, { message: 'At least one subscription duration update object must be provided' });
+
+export type UpdateManySubscriptionDurationInput = z.infer<
+  typeof zodUpdateManySubscriptionDurationSchema
+>;
 
 /**
  * Export named validators (express middleware creators) for use in routes.

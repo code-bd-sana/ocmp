@@ -358,6 +358,7 @@ export default ${capitalizedResourceName};
       const validationDir = path.join(__dirname, '..', 'src', 'modules', args[0]);
       // Create Zod validation schema content
       const validationContent = `
+import { isMongoId } from 'validator';
 import { z } from 'zod';
 import { validate } from '../../handlers/zod-error-handler';
 
@@ -417,10 +418,21 @@ const zodUpdate${capitalizedResourceName}Schema = z
 export type Update${capitalizedResourceName}Input = z.infer<typeof zodUpdate${capitalizedResourceName}Schema>;
 
 /**
- * Zod schema for validating **bulk updates** (array of partial ${resourceName} objects).
+ * Zod schema for validating bulk updates (array of partial ${resourceName} objects).
+ */
+const zodUpdateMany${capitalizedResourceName}ForBulkSchema = zodUpdate${capitalizedResourceName}Schema
+  .extend({
+    id: z.string().refine(isMongoId, { message: 'Please provide a valid MongoDB ObjectId' }),
+  })
+  .refine((data) => Object.keys(data).length > 1, {
+    message: 'At least one field to update must be provided',
+  });
+
+/**
+ * Zod schema for validating an array of multiple ${resourceName} updates.
  */
 const zodUpdateMany${capitalizedResourceName}Schema = z
-  .array(zodUpdate${capitalizedResourceName}Schema)
+  .array(zodUpdateMany${capitalizedResourceName}ForBulkSchema)
   .min(1, { message: 'At least one ${resourceName} update object must be provided' });
 
 export type UpdateMany${capitalizedResourceName}Input = z.infer<typeof zodUpdateMany${capitalizedResourceName}Schema>;
@@ -430,7 +442,6 @@ export type UpdateMany${capitalizedResourceName}Input = z.infer<typeof zodUpdate
  */
 export const validateCreate${capitalizedResourceName} = validate(zodCreate${capitalizedResourceName}Schema);
 export const validateCreateMany${capitalizedResourceName} = validate(zodCreateMany${capitalizedResourceName}Schema);
-
 export const validateUpdate${capitalizedResourceName} = validate(zodUpdate${capitalizedResourceName}Schema);
 export const validateUpdateMany${capitalizedResourceName} = validate(zodUpdateMany${capitalizedResourceName}Schema);
     `;
@@ -442,11 +453,14 @@ export const validateUpdateMany${capitalizedResourceName} = validate(zodUpdateMa
       // Create service content
       const serviceContent = `
 // Import the model
+import mongoose from 'mongoose';
 import ${capitalizedResourceName}Model, { I${capitalizedResourceName} } from './${args[0]}.model';
 import { IdOrIdsInput, SearchQueryInput } from '../../handlers/common-zod-validator';
 import {
   Create${capitalizedResourceName}Input,
+  CreateMany${capitalizedResourceName}Input,
   Update${capitalizedResourceName}Input,
+  UpdateMany${capitalizedResourceName}Input,
 } from './${args[0]}.validation';
 
 /**
@@ -464,10 +478,10 @@ const create${capitalizedResourceName} = async (data: Create${capitalizedResourc
 /**
  * Service function to create multiple ${resourceName}.
  *
- * @param {Create${capitalizedResourceName}Input[]} data - An array of data to create multiple ${resourceName}.
+ * @param {CreateMany${capitalizedResourceName}Input} data - An array of data to create multiple ${resourceName}.
  * @returns {Promise<Partial<I${capitalizedResourceName}>[]>} - The created ${resourceName}.
  */
-const createMany${capitalizedResourceName} = async (data: Create${capitalizedResourceName}Input[]): Promise<Partial<I${capitalizedResourceName}>[]> => {
+const createMany${capitalizedResourceName} = async (data: CreateMany${capitalizedResourceName}Input): Promise<Partial<I${capitalizedResourceName}>[]> => {
   const created${capitalizedResourceName} = await ${capitalizedResourceName}Model.insertMany(data);
   return created${capitalizedResourceName};
 };
@@ -487,17 +501,57 @@ const update${capitalizedResourceName} = async (id: IdOrIdsInput['id'], data: Up
 /**
  * Service function to update multiple ${resourceName}.
  *
- * @param {Array<{ id: IdOrIdsInput['id'], updates: Update${capitalizedResourceName}Input }>} data - An array of data to update multiple ${resourceName}.
+ * @param {UpdateMany${capitalizedResourceName}Input} data - An array of data to update multiple ${resourceName}.
  * @returns {Promise<Partial<I${capitalizedResourceName}>[]>} - The updated ${resourceName}.
  */
-const updateMany${capitalizedResourceName} = async (data: Array<{ id: IdOrIdsInput['id'], updates: Update${capitalizedResourceName}Input }>): Promise<Partial<I${capitalizedResourceName}>[]> => {
-  const updatePromises = data.map(({ id, updates }) =>
-    ${capitalizedResourceName}Model.findByIdAndUpdate(id, updates, { new: true })
-  );
-  const updated${capitalizedResourceName} = await Promise.all(updatePromises);
-  // Filter out null values
-  const validUpdated${capitalizedResourceName} = updated${capitalizedResourceName}.filter(item => item !== null) as I${capitalizedResourceName}[];
-  return validUpdated${capitalizedResourceName};
+const updateMany${capitalizedResourceName} = async (data: UpdateMany${capitalizedResourceName}Input): Promise<Partial<I${capitalizedResourceName}>[]> => {
+// Early return if no data provided
+  if (data.length === 0) {
+    return [];
+  }
+  // Convert string ids to ObjectId (for safety)
+  const objectIds = data.map((item) => new mongoose.Types.ObjectId(item.id));
+  // Check for duplicates (name or durationInDays) excluding the documents being updated
+  const existing${capitalizedResourceName} = await ${capitalizedResourceName}Model.find({
+    _id: { $nin: objectIds }, // Exclude documents being updated
+    $or: data.flatMap((item) => [
+      // { filedName: item.filedName, $options: 'i' }, // case insensitive
+    ]),
+  }).lean();
+  // If any duplicates found, throw error
+  if (existing${capitalizedResourceName}.length > 0) {
+    throw new Error(
+      'Duplicate detected: One or more ${resourceName} with the same fieldName already exist.'
+    );
+  }
+  // Prepare bulk operations
+  const operations = data.map((item) => ({
+    updateOne: {
+      filter: { _id: new mongoose.Types.ObjectId(item.id) },
+      update: { $set: item },
+      upsert: false,
+    },
+  }));
+  // Execute bulk update
+  const bulkResult = await ${capitalizedResourceName}Model.bulkWrite(operations, {
+    ordered: true, // keep order of operations
+  });
+  // check if all succeeded
+  if (bulkResult.matchedCount !== data.length) {
+    throw new Error('Some documents were not found or updated');
+  }
+  // Fetch the freshly updated documents
+  const updatedDocs = await ${capitalizedResourceName}Model.find({ _id: { $in: objectIds } })
+    .lean()
+    .exec();
+  // Map back to original input order
+  const resultMap = new Map<string, any>(updatedDocs.map((doc) => [doc._id.toString(), doc]));
+  // Ensure the result array matches the input order
+  const orderedResults = data.map((item) => {
+    const updated = resultMap.get(item.id);
+    return updated || { _id: item.id };
+  });
+  return orderedResults as Partial<I${capitalizedResourceName}>[];
 };
 
 /**
@@ -546,8 +600,7 @@ const getMany${capitalizedResourceName} = async (query: SearchQueryInput): Promi
   // Build the search filter based on the search key
   const searchFilter = {
     $or: [
-      { fieldName: { $regex: searchKey, $options: 'i' } },
-      { fieldName: { $regex: searchKey, $options: 'i' } },
+      // { fieldName: { $regex: searchKey, $options: 'i' } },
       // Add more fields as needed
     ],
   };

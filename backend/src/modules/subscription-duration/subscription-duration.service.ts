@@ -1,10 +1,12 @@
 import mongoose from 'mongoose';
-import { IdOrIdsInput } from '../../handlers/common-zod-validator';
+import { IdOrIdsInput, SearchQueryInput } from '../../handlers/common-zod-validator';
 import SubscriptionDuration, {
   ISubscriptionDuration,
 } from '../../models/subscription-billing/subscriptionDuration.schema';
 import {
+  CreateManySubscriptionDurationInput,
   CreateSubscriptionDurationInput,
+  UpdateManySubscriptionDurationInput,
   UpdateSubscriptionDurationInput,
 } from './subscription-duration.validation';
 
@@ -21,7 +23,8 @@ const createSubscriptionDuration = async (
   const existingDuration = await SubscriptionDuration.findOne({
     $or: [
       {
-        name: new RegExp(`^${data.name}$`, 'i'), // case insensitive
+        name: data.name,
+        $options: 'i', // case insensitive
       },
       { durationInDays: data.durationInDays },
     ],
@@ -39,17 +42,17 @@ const createSubscriptionDuration = async (
 /**
  * Service function to create multiple subscriptionDuration.
  *
- * @param {CreateSubscriptionDurationInput[]} data - An array of data to create multiple subscriptionDuration.
+ * @param {CreateManySubscriptionDurationInput} data - An array of data to create multiple subscriptionDuration.
  * @returns {Promise<Partial<ISubscriptionDuration>[]>} - The created subscriptionDuration.
  */
 const createManySubscriptionDuration = async (
-  data: CreateSubscriptionDurationInput[]
+  data: CreateManySubscriptionDurationInput
 ): Promise<Partial<ISubscriptionDuration>[]> => {
   // Check for existing subscription durations with the same name or durationInDays
   const existingDurations = await SubscriptionDuration.find({
     $or: data.map((item) => ({
       $or: [
-        { name: new RegExp(`^${item.name}$`, 'i') }, // case insensitive
+        { name: item.name, $options: 'i' }, // case insensitive
         { durationInDays: item.durationInDays },
       ],
     })),
@@ -68,12 +71,12 @@ const createManySubscriptionDuration = async (
 /**
  * Service function to update a single subscriptionDuration by ID.
  *
- * @param {string} id - The ID of the subscriptionDuration to update.
+ * @param {IdOrIdsInput['id']} id - The ID of the subscriptionDuration to update.
  * @param {UpdateSubscriptionDurationInput} data - The updated data for the subscriptionDuration.
  * @returns {Promise<Partial<ISubscriptionDuration>>} - The updated subscriptionDuration.
  */
 const updateSubscriptionDuration = async (
-  id: string,
+  id: IdOrIdsInput['id'],
   data: UpdateSubscriptionDurationInput
 ): Promise<Partial<ISubscriptionDuration | null>> => {
   // ! Update Guard: Restrict modification of subscription duration when it is in active use.
@@ -87,7 +90,7 @@ const updateSubscriptionDuration = async (
   const existingDuration = await SubscriptionDuration.findOne({
     _id: { $ne: id }, // Exclude the current document
     $or: [
-      { name: new RegExp(`^${data.name}$`, 'i') }, // case insensitive
+      { name: data.name, $options: 'i' }, // case insensitive
       { durationInDays: data.durationInDays },
     ],
   });
@@ -105,11 +108,11 @@ const updateSubscriptionDuration = async (
 /**
  * Service function to update multiple subscriptionDuration.
  *
- * @param {Array<{ id: string, updates: UpdateSubscriptionDurationInput }>} data - An array of data to update multiple subscriptionDuration.
+ * @param {UpdateManySubscriptionDurationInput} data - An array of data to update multiple subscriptionDuration.
  * @returns {Promise<Partial<ISubscriptionDuration>[]>} - The updated subscriptionDuration.
  */
-export const updateManySubscriptionDuration = async (
-  data: Array<{ id: string; updates: UpdateSubscriptionDurationInput }>
+const updateManySubscriptionDuration = async (
+  data: UpdateManySubscriptionDurationInput
 ): Promise<Partial<ISubscriptionDuration>[]> => {
   // Early return if no data provided
   if (data.length === 0) {
@@ -121,21 +124,21 @@ export const updateManySubscriptionDuration = async (
   const existingDurations = await SubscriptionDuration.find({
     _id: { $nin: objectIds }, // Exclude documents being updated
     $or: data.flatMap((item) => [
-      { name: new RegExp(`^${item.updates.name}$`, 'i') }, // case insensitive
-      { durationInDays: item.updates.durationInDays },
+      { name: item.name, $options: 'i' }, // case insensitive
+      { durationInDays: item.durationInDays },
     ]),
   }).lean();
   // If any duplicates found, throw error
   if (existingDurations.length > 0) {
     throw new Error(
-      'Duplicate detected: One or more subscription durations with the same name (case-insensitive) or durationInDays already exist.'
+      'Duplicate detected: One or more subscription durations with the same name or durationInDays already exist.'
     );
   }
   // Prepare bulk operations
   const operations = data.map((item) => ({
     updateOne: {
       filter: { _id: new mongoose.Types.ObjectId(item.id) },
-      update: { $set: item.updates },
+      update: { $set: item },
       upsert: false,
     },
   }));
@@ -164,11 +167,11 @@ export const updateManySubscriptionDuration = async (
 /**
  * Service function to delete a single subscriptionDuration by ID.
  *
- * @param {string} id - The ID of the subscriptionDuration to delete.
+ * @param {IdOrIdsInput['id']} id - The ID of the subscriptionDuration to delete.
  * @returns {Promise<Partial<ISubscriptionDuration>>} - The deleted subscriptionDuration.
  */
 const deleteSubscriptionDuration = async (
-  id: string
+  id: IdOrIdsInput['id']
 ): Promise<Partial<ISubscriptionDuration | null>> => {
   // ! If this duration is implemented in any subscription and that subscription is used by any user, do not allow deletion
 
@@ -184,7 +187,7 @@ const deleteSubscriptionDuration = async (
 /**
  * Service function to delete multiple subscriptionDuration.
  *
- * @param {string[]} ids - An array of IDs of subscriptionDuration to delete.
+ * @param {IdOrIdsInput['ids']} ids - An array of IDs of subscriptionDuration to delete.
  * @returns {Promise<Partial<ISubscriptionDuration>[]>} - The deleted subscriptionDuration.
  */
 const deleteManySubscriptionDuration = async (
@@ -204,7 +207,7 @@ const deleteManySubscriptionDuration = async (
 /**
  * Service function to retrieve a single subscriptionDuration by ID.
  *
- * @param {string} id - The ID of the subscriptionDuration to retrieve.
+ * @param {IdOrIdsInput['id']} id - The ID of the subscriptionDuration to retrieve.
  * @returns {Promise<Partial<ISubscriptionDuration>>} - The retrieved subscriptionDuration.
  */
 const getSubscriptionDurationById = async (
@@ -218,38 +221,30 @@ const getSubscriptionDurationById = async (
 /**
  * Service function to retrieve multiple subscriptionDuration based on query parameters.
  *
- * @param {object} query - The query parameters for filtering subscriptionDuration.
+ * @param {SearchQueryInput} query - The query parameters for filtering subscriptionDuration.
  * @returns {Promise<Partial<ISubscriptionDuration>[]>} - The retrieved subscriptionDuration
  */
-const getManySubscriptionDuration = async (query: {
-  searchKey?: string;
-  showPerPage: number;
-  pageNo: number;
-}): Promise<{
+const getManySubscriptionDuration = async (
+  query: SearchQueryInput
+): Promise<{
   subscriptionDurations: Partial<ISubscriptionDuration>[];
   totalData: number;
   totalPages: number;
 }> => {
-  const { searchKey = '', showPerPage, pageNo } = query;
-
+  const { searchKey = '', showPerPage = 10, pageNo = 1 } = query;
   // Build the search filter based on the search key
   const searchFilter = {
     $or: [
       { name: { $regex: searchKey, $options: 'i' } }, // string search
       { durationInDays: Number(searchKey) || -1 }, // convert searchKey to number
-      // If searchKey is not a number, -1 will ensure no match
     ],
   };
-
   // Calculate the number of items to skip based on the page number
   const skipItems = (pageNo - 1) * showPerPage;
-
   // Find the total count of matching subscriptionDuration
   const totalData = await SubscriptionDuration.countDocuments(searchFilter);
-
   // Calculate the total number of pages
   const totalPages = Math.ceil(totalData / showPerPage);
-
   // Find subscriptionDuration based on the search filter with pagination
   const subscriptionDurations = await SubscriptionDuration.find(searchFilter)
     .skip(skipItems)
