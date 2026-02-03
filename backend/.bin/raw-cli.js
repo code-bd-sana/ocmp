@@ -94,23 +94,23 @@ router.post("/create-${args[0]}", validateCreate${capitalizedResourceName}, crea
 router.post("/create-${args[0]}/many", validateCreateMany${capitalizedResourceName}, createMany${capitalizedResourceName});
 
 /**
- * @route PATCH /api/v1/${args[0]}/update-${args[0]}/many
+ * @route PUT /api/v1/${args[0]}/update-${args[0]}/many
  * @description Update multiple ${args[0]}s information
  * @access Public
  * @param {function} validation - ['validateIds', 'validateUpdateMany${capitalizedResourceName}']
  * @param {function} controller - ['updateMany${capitalizedResourceName}']
  */
-router.patch("/update-${args[0]}/many", validateIds, validateUpdateMany${capitalizedResourceName}, updateMany${capitalizedResourceName});
+router.put("/update-${args[0]}/many", validateIds, validateUpdateMany${capitalizedResourceName}, updateMany${capitalizedResourceName});
 
 /**
- * @route PATCH /api/v1/${args[0]}/update-${args[0]}/:id
+ * @route PUT /api/v1/${args[0]}/update-${args[0]}/:id
  * @description Update ${args[0]} information
- * @param {string} id - The ID of the ${args[0]} to update
  * @access Public
+ * @param {IdOrIdsInput['id']} id - The ID of the ${args[0]} to update
  * @param {function} validation - ['validateId', 'validateUpdate${capitalizedResourceName}']
  * @param {function} controller - ['update${capitalizedResourceName}']
  */
-router.patch("/update-${args[0]}/:id", validateId, validateUpdate${capitalizedResourceName}, update${capitalizedResourceName});
+router.put("/update-${args[0]}/:id", validateId, validateUpdate${capitalizedResourceName}, update${capitalizedResourceName});
 
 /**
  * @route DELETE /api/v1/${args[0]}/delete-${args[0]}/many
@@ -124,8 +124,8 @@ router.delete("/delete-${args[0]}/many", validateIds, deleteMany${capitalizedRes
 /**
  * @route DELETE /api/v1/${args[0]}/delete-${args[0]}/:id
  * @description Delete a ${args[0]}
- * @param {string} id - The ID of the ${args[0]} to delete
  * @access Public
+ * @param {IdOrIdsInput['id']} id - The ID of the ${args[0]} to delete
  * @param {function} validation - ['validateId']
  * @param {function} controller - ['delete${capitalizedResourceName}']
  */
@@ -143,8 +143,8 @@ router.get("/get-${args[0]}/many", validateSearchQueries, getMany${capitalizedRe
 /**
  * @route GET /api/v1/${args[0]}/get-${args[0]}/:id
  * @description Get a ${args[0]} by ID
- * @param {string} id - The ID of the ${args[0]} to retrieve
  * @access Public
+ * @param {IdOrIdsInput['id']} id - The ID of the ${args[0]} to retrieve
  * @param {function} validation - ['validateId']
  * @param {function} controller - ['get${capitalizedResourceName}ById']
  */
@@ -443,14 +443,19 @@ export const validateUpdateMany${capitalizedResourceName} = validate(zodUpdateMa
       const serviceContent = `
 // Import the model
 import ${capitalizedResourceName}Model, { I${capitalizedResourceName} } from './${args[0]}.model';
+import { IdOrIdsInput, SearchQueryInput } from '../../handlers/common-zod-validator';
+import {
+  Create${capitalizedResourceName}Input,
+  Update${capitalizedResourceName}Input,
+} from './${args[0]}.validation';
 
 /**
  * Service function to create a new ${resourceName}.
  *
- * @param {Partial<I${capitalizedResourceName}>} data - The data to create a new ${resourceName}.
+ * @param {Create${capitalizedResourceName}Input} data - The data to create a new ${resourceName}.
  * @returns {Promise<Partial<I${capitalizedResourceName}>>} - The created ${resourceName}.
  */
-const create${capitalizedResourceName} = async (data: Partial<I${capitalizedResourceName}>): Promise<Partial<I${capitalizedResourceName}>> => {
+const create${capitalizedResourceName} = async (data: Create${capitalizedResourceName}Input): Promise<Partial<I${capitalizedResourceName}>> => {
   const new${capitalizedResourceName} = new ${capitalizedResourceName}Model(data);
   const saved${capitalizedResourceName} = await new${capitalizedResourceName}.save();
   return saved${capitalizedResourceName};
@@ -459,10 +464,10 @@ const create${capitalizedResourceName} = async (data: Partial<I${capitalizedReso
 /**
  * Service function to create multiple ${resourceName}.
  *
- * @param {Partial<I${capitalizedResourceName}>[]} data - An array of data to create multiple ${resourceName}.
+ * @param {Create${capitalizedResourceName}Input[]} data - An array of data to create multiple ${resourceName}.
  * @returns {Promise<Partial<I${capitalizedResourceName}>[]>} - The created ${resourceName}.
  */
-const createMany${capitalizedResourceName} = async (data: Partial<I${capitalizedResourceName}>[]): Promise<Partial<I${capitalizedResourceName}>[]> => {
+const createMany${capitalizedResourceName} = async (data: Create${capitalizedResourceName}Input[]): Promise<Partial<I${capitalizedResourceName}>[]> => {
   const created${capitalizedResourceName} = await ${capitalizedResourceName}Model.insertMany(data);
   return created${capitalizedResourceName};
 };
@@ -470,11 +475,11 @@ const createMany${capitalizedResourceName} = async (data: Partial<I${capitalized
 /**
  * Service function to update a single ${resourceName} by ID.
  *
- * @param {string} id - The ID of the ${resourceName} to update.
- * @param {Partial<I${capitalizedResourceName}>} data - The updated data for the ${resourceName}.
+ * @param {IdOrIdsInput['id']} id - The ID of the ${resourceName} to update.
+ * @param {Update${capitalizedResourceName}Input} data - The updated data for the ${resourceName}.
  * @returns {Promise<Partial<I${capitalizedResourceName}>>} - The updated ${resourceName}.
  */
-const update${capitalizedResourceName} = async (id: string, data: Partial<I${capitalizedResourceName}>): Promise<Partial<I${capitalizedResourceName} | null>> => {
+const update${capitalizedResourceName} = async (id: IdOrIdsInput['id'], data: Update${capitalizedResourceName}Input): Promise<Partial<I${capitalizedResourceName} | null>> => {
   const updated${capitalizedResourceName} = await ${capitalizedResourceName}Model.findByIdAndUpdate(id, data, { new: true });
   return updated${capitalizedResourceName};
 };
@@ -482,10 +487,10 @@ const update${capitalizedResourceName} = async (id: string, data: Partial<I${cap
 /**
  * Service function to update multiple ${resourceName}.
  *
- * @param {Array<{ id: string, updates: Partial<I${capitalizedResourceName}> }>} data - An array of data to update multiple ${resourceName}.
+ * @param {Array<{ id: IdOrIdsInput['id'], updates: Update${capitalizedResourceName}Input }>} data - An array of data to update multiple ${resourceName}.
  * @returns {Promise<Partial<I${capitalizedResourceName}>[]>} - The updated ${resourceName}.
  */
-const updateMany${capitalizedResourceName} = async (data: Array<{ id: string, updates: Partial<I${capitalizedResourceName}> }>): Promise<Partial<I${capitalizedResourceName}>[]> => {
+const updateMany${capitalizedResourceName} = async (data: Array<{ id: IdOrIdsInput['id'], updates: Update${capitalizedResourceName}Input }>): Promise<Partial<I${capitalizedResourceName}>[]> => {
   const updatePromises = data.map(({ id, updates }) =>
     ${capitalizedResourceName}Model.findByIdAndUpdate(id, updates, { new: true })
   );
@@ -498,10 +503,10 @@ const updateMany${capitalizedResourceName} = async (data: Array<{ id: string, up
 /**
  * Service function to delete a single ${resourceName} by ID.
  *
- * @param {string} id - The ID of the ${resourceName} to delete.
+ * @param {IdOrIdsInput['id']} id - The ID of the ${resourceName} to delete.
  * @returns {Promise<Partial<I${capitalizedResourceName}>>} - The deleted ${resourceName}.
  */
-const delete${capitalizedResourceName} = async (id: string): Promise<Partial<I${capitalizedResourceName} | null>> => {
+const delete${capitalizedResourceName} = async (id: IdOrIdsInput['id']): Promise<Partial<I${capitalizedResourceName} | null>> => {
   const deleted${capitalizedResourceName} = await ${capitalizedResourceName}Model.findByIdAndDelete(id);
   return deleted${capitalizedResourceName};
 };
@@ -509,10 +514,10 @@ const delete${capitalizedResourceName} = async (id: string): Promise<Partial<I${
 /**
  * Service function to delete multiple ${resourceName}.
  *
- * @param {string[]} ids - An array of IDs of ${resourceName} to delete.
+ * @param {IdOrIdsInput['ids']} ids - An array of IDs of ${resourceName} to delete.
  * @returns {Promise<Partial<I${capitalizedResourceName}>[]>} - The deleted ${resourceName}.
  */
-const deleteMany${capitalizedResourceName} = async (ids: string[]): Promise<Partial<I${capitalizedResourceName}>[]> => {
+const deleteMany${capitalizedResourceName} = async (ids: IdOrIdsInput['ids']): Promise<Partial<I${capitalizedResourceName}>[]> => {
   const ${resourceName}ToDelete = await ${capitalizedResourceName}Model.find({ _id: { $in: ids } });
   if (!${resourceName}ToDelete.length) throw new Error('No ${resourceName} found to delete');
   await ${capitalizedResourceName}Model.deleteMany({ _id: { $in: ids } });
@@ -522,10 +527,10 @@ const deleteMany${capitalizedResourceName} = async (ids: string[]): Promise<Part
 /**
  * Service function to retrieve a single ${resourceName} by ID.
  *
- * @param {string} id - The ID of the ${resourceName} to retrieve.
+ * @param {IdOrIdsInput['id']} id - The ID of the ${resourceName} to retrieve.
  * @returns {Promise<Partial<I${capitalizedResourceName}>>} - The retrieved ${resourceName}.
  */
-const get${capitalizedResourceName}ById = async (id: string): Promise<Partial<I${capitalizedResourceName} | null>> => {
+const get${capitalizedResourceName}ById = async (id: IdOrIdsInput['id']): Promise<Partial<I${capitalizedResourceName} | null>> => {
   const ${resourceName} = await ${capitalizedResourceName}Model.findById(id);
   return ${resourceName};
 };
@@ -533,16 +538,11 @@ const get${capitalizedResourceName}ById = async (id: string): Promise<Partial<I$
 /**
  * Service function to retrieve multiple ${resourceName} based on query parameters.
  *
- * @param {object} query - The query parameters for filtering ${resourceName}.
+ * @param {SearchQueryInput} query - The query parameters for filtering ${resourceName}.
  * @returns {Promise<Partial<I${capitalizedResourceName}>[]>} - The retrieved ${resourceName}
  */
-const getMany${capitalizedResourceName} = async (query: {
-  searchKey?: string;
-  showPerPage: number;
-  pageNo: number;
-}): Promise<{ ${resourceName}s: Partial<I${capitalizedResourceName}>[]; totalData: number; totalPages: number }> => {
-  const { searchKey = '', showPerPage, pageNo } = query;
-
+const getMany${capitalizedResourceName} = async (query: SearchQueryInput): Promise<{ ${resourceName}s: Partial<I${capitalizedResourceName}>[]; totalData: number; totalPages: number }> => {
+  const { searchKey = '', showPerPage = 10, pageNo = 1 } = query;
   // Build the search filter based on the search key
   const searchFilter = {
     $or: [
@@ -551,22 +551,17 @@ const getMany${capitalizedResourceName} = async (query: {
       // Add more fields as needed
     ],
   };
-
   // Calculate the number of items to skip based on the page number
   const skipItems = (pageNo - 1) * showPerPage;
-
   // Find the total count of matching ${resourceName}
   const totalData = await ${capitalizedResourceName}Model.countDocuments(searchFilter);
-
   // Calculate the total number of pages
   const totalPages = Math.ceil(totalData / showPerPage);
-
   // Find ${resourceName} based on the search filter with pagination
   const ${resourceName}s = await ${capitalizedResourceName}Model.find(searchFilter)
     .skip(skipItems)
     .limit(showPerPage)
     .select(''); // Keep/Exclude any field if needed
-
   return { ${resourceName}s, totalData, totalPages };
 };
 

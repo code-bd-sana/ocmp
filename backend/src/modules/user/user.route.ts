@@ -37,6 +37,7 @@ router.get('/me', isAuthorized, getUserProfile);
  * @route GET /api/v1/user/:id
  * @description Get user by ID
  * @access Private
+ * @param {IdOrIdsInput['id']} id - The ID of the user to update
  * @param {middleware} isAuthorized - ['isAuthorized']
  * @param {function} controller - ['getUserById']
  */
