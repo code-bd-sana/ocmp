@@ -11,10 +11,10 @@ import {
 } from './subscription-duration.validation';
 
 /**
- * Service function to create a new subscriptionDuration.
+ * Service function to create a new subscription duration.
  *
- * @param {CreateSubscriptionDurationInput} data - The data to create a new subscriptionDuration.
- * @returns {Promise<Partial<ISubscriptionDuration>>} - The created subscriptionDuration.
+ * @param {CreateSubscriptionDurationInput} data - The data to create a new subscription duration.
+ * @returns {Promise<Partial<ISubscriptionDuration>>} - The created subscription duration.
  */
 const createSubscriptionDuration = async (
   data: CreateSubscriptionDurationInput
@@ -40,10 +40,10 @@ const createSubscriptionDuration = async (
 };
 
 /**
- * Service function to create multiple subscriptionDuration.
+ * Service function to create multiple subscription durations.
  *
- * @param {CreateManySubscriptionDurationInput} data - An array of data to create multiple subscriptionDuration.
- * @returns {Promise<Partial<ISubscriptionDuration>[]>} - The created subscriptionDuration.
+ * @param {CreateManySubscriptionDurationInput} data - An array of data to create multiple subscription durations.
+ * @returns {Promise<Partial<ISubscriptionDuration>[]>} - The created subscription durations.
  */
 const createManySubscriptionDuration = async (
   data: CreateManySubscriptionDurationInput
@@ -69,11 +69,11 @@ const createManySubscriptionDuration = async (
 };
 
 /**
- * Service function to update a single subscriptionDuration by ID.
+ * Service function to update a single subscription duration by ID.
  *
- * @param {IdOrIdsInput['id']} id - The ID of the subscriptionDuration to update.
- * @param {UpdateSubscriptionDurationInput} data - The updated data for the subscriptionDuration.
- * @returns {Promise<Partial<ISubscriptionDuration>>} - The updated subscriptionDuration.
+ * @param {IdOrIdsInput['id']} id - The ID of the subscription duration to update.
+ * @param {UpdateSubscriptionDurationInput} data - The updated data for the subscription duration.
+ * @returns {Promise<Partial<ISubscriptionDuration>>} - The updated subscription duration.
  */
 const updateSubscriptionDuration = async (
   id: IdOrIdsInput['id'],
@@ -106,10 +106,10 @@ const updateSubscriptionDuration = async (
 };
 
 /**
- * Service function to update multiple subscriptionDuration.
+ * Service function to update multiple subscription durations.
  *
- * @param {UpdateManySubscriptionDurationInput} data - An array of data to update multiple subscriptionDuration.
- * @returns {Promise<Partial<ISubscriptionDuration>[]>} - The updated subscriptionDuration.
+ * @param {UpdateManySubscriptionDurationInput} data - An array of data to update multiple subscription durations.
+ * @returns {Promise<Partial<ISubscriptionDuration>[]>} - The updated subscription durations.
  */
 const updateManySubscriptionDuration = async (
   data: UpdateManySubscriptionDurationInput
@@ -165,10 +165,10 @@ const updateManySubscriptionDuration = async (
 };
 
 /**
- * Service function to delete a single subscriptionDuration by ID.
+ * Service function to delete a single subscription duration by ID.
  *
- * @param {IdOrIdsInput['id']} id - The ID of the subscriptionDuration to delete.
- * @returns {Promise<Partial<ISubscriptionDuration>>} - The deleted subscriptionDuration.
+ * @param {IdOrIdsInput['id']} id - The ID of the subscription duration to delete.
+ * @returns {Promise<Partial<ISubscriptionDuration>>} - The deleted subscription duration.
  */
 const deleteSubscriptionDuration = async (
   id: IdOrIdsInput['id']
@@ -185,10 +185,10 @@ const deleteSubscriptionDuration = async (
 };
 
 /**
- * Service function to delete multiple subscriptionDuration.
+ * Service function to delete multiple subscription durations.
  *
- * @param {IdOrIdsInput['ids']} ids - An array of IDs of subscriptionDuration to delete.
- * @returns {Promise<Partial<ISubscriptionDuration>[]>} - The deleted subscriptionDuration.
+ * @param {IdOrIdsInput['ids']} ids - An array of IDs of subscription durations to delete.
+ * @returns {Promise<Partial<ISubscriptionDuration>[]>} - The deleted subscription durations.
  */
 const deleteManySubscriptionDuration = async (
   ids: IdOrIdsInput['ids']
@@ -205,10 +205,10 @@ const deleteManySubscriptionDuration = async (
 };
 
 /**
- * Service function to retrieve a single subscriptionDuration by ID.
+ * Service function to retrieve a single subscription duration by ID.
  *
- * @param {IdOrIdsInput['id']} id - The ID of the subscriptionDuration to retrieve.
- * @returns {Promise<Partial<ISubscriptionDuration>>} - The retrieved subscriptionDuration.
+ * @param {IdOrIdsInput['id']} id - The ID of the subscription duration to retrieve.
+ * @returns {Promise<Partial<ISubscriptionDuration>>} - The retrieved subscription duration.
  */
 const getSubscriptionDurationById = async (
   id: IdOrIdsInput['id']
@@ -219,10 +219,10 @@ const getSubscriptionDurationById = async (
 };
 
 /**
- * Service function to retrieve multiple subscriptionDuration based on query parameters.
+ * Service function to retrieve multiple subscription durations based on query parameters.
  *
- * @param {SearchQueryInput} query - The query parameters for filtering subscriptionDuration.
- * @returns {Promise<Partial<ISubscriptionDuration>[]>} - The retrieved subscriptionDuration
+ * @param {SearchQueryInput} query - The query parameters for filtering subscription duration.
+ * @returns {Promise<Partial<ISubscriptionDuration>[]>} - The retrieved subscription duration.
  */
 const getManySubscriptionDuration = async (
   query: SearchQueryInput
@@ -241,11 +241,11 @@ const getManySubscriptionDuration = async (
   };
   // Calculate the number of items to skip based on the page number
   const skipItems = (pageNo - 1) * showPerPage;
-  // Find the total count of matching subscriptionDuration
+  // Find the total count of matching subscription durations
   const totalData = await SubscriptionDuration.countDocuments(searchFilter);
   // Calculate the total number of pages
   const totalPages = Math.ceil(totalData / showPerPage);
-  // Find subscriptionDuration based on the search filter with pagination
+  // Find subscription durations based on the search filter with pagination
   const subscriptionDurations = await SubscriptionDuration.find(searchFilter)
     .skip(skipItems)
     .limit(showPerPage)
