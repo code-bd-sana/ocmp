@@ -16,7 +16,7 @@ import { validate } from '../../handlers/zod-error-handler';
  */
 
 /**
- * Zod schema for validating subscriptionDuration data during creation.
+ * Zod schema for validating subscription duration data during creation.
  */
 export const zodCreateSubscriptionDurationSchema = z
   .object({
@@ -43,7 +43,7 @@ export type CreateManySubscriptionDurationInput = z.infer<
 >;
 
 /**
- * Zod schema for validating subscriptionDuration data during updates.
+ * Zod schema for validating subscription duration data during updates.
  */
 export const zodUpdateSubscriptionDurationSchema = z
   .object({
@@ -67,7 +67,7 @@ export const zodUpdateSubscriptionDurationSchema = z
 export type UpdateSubscriptionDurationInput = z.infer<typeof zodUpdateSubscriptionDurationSchema>;
 
 /**
- * Zod schema for validating multiple subscriptionDuration updates.
+ * Zod schema for validating multiple subscription duration updates.
  * Each object in the array must include an 'id' field along with at least one other field to update.
  */
 export const zodUpdateSubscriptionDurationForBulkSchema = zodUpdateSubscriptionDurationSchema
@@ -79,7 +79,7 @@ export const zodUpdateSubscriptionDurationForBulkSchema = zodUpdateSubscriptionD
   });
 
 /**
- * Zod schema for validating an array of multiple subscriptionDuration updates.
+ * Zod schema for validating an array of multiple subscription duration updates.
  */
 export const zodUpdateManySubscriptionDurationSchema = z
   .array(zodUpdateSubscriptionDurationForBulkSchema)
