@@ -225,7 +225,9 @@
 				"ff8ce586-fc6d-4904-b79e-8ba4196c2418",
 				"03346086-a00f-4efa-ba7b-48a9a0a4b9fe",
 				"0628e5a5-8176-4f4a-b447-9f81c6a41f92",
-				"f11a7c02-273f-40cb-be00-0cd71918d609"
+				"f11a7c02-273f-40cb-be00-0cd71918d609",
+				"8d25dc18-53a0-4dbe-956b-c42249992239",
+				"1f02c2a8-7218-4159-8136-ea69978f1ace"
 			],
 			"lines": [
 				"9ec968f8-7bda-4f97-983b-07e0bd0f0382"
@@ -3900,6 +3902,20 @@
 					"estimatedSize": ""
 				},
 				{
+					"id": "35a4aa5d-8214-428a-a9b9-a4fb9edde9b0",
+					"name": "ownedBy",
+					"datatype": "ObjectId",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": true,
+					"comment": "Which Standalone or client own this card",
+					"data": "",
+					"options": "",
+					"estimatedSize": ""
+				},
+				{
 					"id": "dcecc402-c2e0-4ecf-98ef-ccbfc367ccf4",
 					"name": "createdBy",
 					"datatype": "ObjectId",
@@ -3950,7 +3966,8 @@
 				"8ad9eaa2-bf5d-42a2-9fc4-972d421568f6",
 				"284b9111-341f-4336-ad75-d02784671145",
 				"e68ffb7e-9bc4-4379-931e-aca3195f3e15",
-				"1bca0953-cbad-433a-8dc7-f375b627c13f"
+				"1bca0953-cbad-433a-8dc7-f375b627c13f",
+				"8d25dc18-53a0-4dbe-956b-c42249992239"
 			],
 			"lines": [
 				"c5180c13-a7eb-4fb0-88e7-4bf0d611a6fa"
@@ -4207,6 +4224,20 @@
 					"estimatedSize": ""
 				},
 				{
+					"id": "1b8b2bfa-9d7d-497a-89ff-e4c2f3b73a96",
+					"name": "employedBy",
+					"datatype": "ObjectId",
+					"param": "",
+					"pk": false,
+					"nn": true,
+					"list": false,
+					"fk": true,
+					"comment": "// Which Standalone or client employed this driver",
+					"data": "",
+					"options": "",
+					"estimatedSize": ""
+				},
+				{
 					"id": "bcea6714-6a4f-48c7-b044-35003eeb7575",
 					"name": "createdBy",
 					"datatype": "ObjectId",
@@ -4253,7 +4284,8 @@
 				"7aebae33-0157-4ca6-ad54-63d7fe14d911",
 				"5eb6a6e5-c08f-44b3-b230-2a098fa64003",
 				"014588f4-d15c-4531-99ec-363bacdcbdb3",
-				"635d4071-3096-4b22-9a42-af6fba8c3d81"
+				"635d4071-3096-4b22-9a42-af6fba8c3d81",
+				"1f02c2a8-7218-4159-8136-ea69978f1ace"
 			],
 			"lines": [],
 			"keys": [
@@ -8554,6 +8586,60 @@
 			"customCode": "",
 			"relationColor": "transparent",
 			"linegraphics": "default"
+		},
+		"8d25dc18-53a0-4dbe-956b-c42249992239": {
+			"id": "8d25dc18-53a0-4dbe-956b-c42249992239",
+			"name": "_id_ownedBy",
+			"desc": "",
+			"type": "identifying",
+			"parent_key": "27389b97-73cb-4e2a-839a-7a9b74588e63",
+			"parent": "cf734b24-8386-4172-a8fb-34bd9ac99df9",
+			"child": "e57155c1-2405-4ebe-b612-3a9b495dd731",
+			"c_mp": "true",
+			"c_mch": "true",
+			"c_p": "one",
+			"c_ch": "many",
+			"c_cp": "",
+			"c_cch": "",
+			"cols": [
+				{
+					"id": "67e32bc1-83f7-44cb-a3c8-4c86ef154693",
+					"parentcol": "139ced92-715f-47e9-8a4e-1fd937e9aaba",
+					"childcol": "35a4aa5d-8214-428a-a9b9-a4fb9edde9b0"
+				}
+			],
+			"generate": true,
+			"generateCustomCode": true,
+			"customCode": "",
+			"relationColor": "transparent",
+			"linegraphics": "default"
+		},
+		"1f02c2a8-7218-4159-8136-ea69978f1ace": {
+			"id": "1f02c2a8-7218-4159-8136-ea69978f1ace",
+			"name": "_id_driver",
+			"desc": "",
+			"type": "identifying",
+			"parent_key": "27389b97-73cb-4e2a-839a-7a9b74588e63",
+			"parent": "cf734b24-8386-4172-a8fb-34bd9ac99df9",
+			"child": "f23585dd-1439-4659-86ed-3f6a3f95b984",
+			"c_mp": "true",
+			"c_mch": "true",
+			"c_p": "one",
+			"c_ch": "many",
+			"c_cp": "",
+			"c_cch": "",
+			"cols": [
+				{
+					"id": "753f263d-5a35-4569-b5c0-4b11c819fde4",
+					"parentcol": "139ced92-715f-47e9-8a4e-1fd937e9aaba",
+					"childcol": "1b8b2bfa-9d7d-497a-89ff-e4c2f3b73a96"
+				}
+			],
+			"generate": true,
+			"generateCustomCode": true,
+			"customCode": "",
+			"relationColor": "transparent",
+			"linegraphics": "default"
 		}
 	},
 	"notes": {
@@ -8616,7 +8702,7 @@
 		"b1652831-3025-45a1-aaea-a72c736fabdb": {
 			"id": "b1652831-3025-45a1-aaea-a72c736fabdb",
 			"visible": true,
-			"name": "Vehicle & Transport Core Schemas1",
+			"name": "Compliance, Enforcement & DVSA Schemas",
 			"desc": "<h2 class=\"ql-align-center\"><strong style=\"color: rgb(0, 0, 0);\">Compliance, Enforcement &amp; DVSA Schemas</strong></h2>",
 			"lines": [],
 			"type": "Note"
@@ -8632,7 +8718,7 @@
 		"1cb32b75-d39b-4b49-a55d-8cccf8a569aa": {
 			"id": "1cb32b75-d39b-4b49-a55d-8cccf8a569aa",
 			"visible": true,
-			"name": "Vehicle & Transport Core Schemas2",
+			"name": "Compliance, Enforcement & DVSA Schemas",
 			"desc": "<h2 class=\"ql-align-center\"><strong style=\"color: rgb(0, 0, 0);\">Compliance, Enforcement &amp; DVSA Schemas</strong></h2>",
 			"lines": [],
 			"type": "Note"
@@ -8640,7 +8726,7 @@
 		"d5e06100-a58d-415e-9be9-87acdac359f6": {
 			"id": "d5e06100-a58d-415e-9be9-87acdac359f6",
 			"visible": true,
-			"name": "Tracks retorque compliance",
+			"name": "Training & Competency Schemas",
 			"desc": "",
 			"lines": [],
 			"type": "SubjectArea"
@@ -8648,8 +8734,8 @@
 		"88a8b8a4-eeb6-4820-a3d5-43d00bc18832": {
 			"id": "88a8b8a4-eeb6-4820-a3d5-43d00bc18832",
 			"visible": true,
-			"name": "Vehicle & Transport Core Schemas3",
-			"desc": "<h2 class=\"ql-align-center\"><strong style=\"color: rgb(0, 0, 0);\">Tracks retorque compliance</strong></h2>",
+			"name": "Training & Competency Schemas",
+			"desc": "<h2 class=\"ql-align-center\"><strong style=\"color: rgb(0, 0, 0);\">Training &amp; Competency Schemas</strong></h2><h2 class=\"ql-align-center\"><br></h2>",
 			"lines": [],
 			"type": "Note"
 		}
@@ -8771,7 +8857,7 @@
 		"companyUrl": "",
 		"def_coltopk": true,
 		"def_others": "",
-		"lastSaved": 1768901240217,
+		"lastSaved": 1769168043629,
 		"modelPdfReportPath": "C:\\Users\\joysa\\Desktop\\Tim-Tim.pdf"
 	},
 	"otherObjects": {
@@ -9039,7 +9125,7 @@
 			"id": "783677cf-fcfe-475f-b793-1e3d16fb66e5",
 			"keysgraphics": true,
 			"linegraphics": "detailed",
-			"zoom": 0.9,
+			"zoom": 0.7,
 			"background": "transparent",
 			"lineColor": "transparent",
 			"isOpen": true,
@@ -9541,10 +9627,10 @@
 				},
 				"e57155c1-2405-4ebe-b612-3a9b495dd731": {
 					"referencedItemId": "e57155c1-2405-4ebe-b612-3a9b495dd731",
-					"x": 1918,
-					"y": 1333,
-					"gHeight": 291,
-					"gWidth": 385,
+					"x": 1921,
+					"y": 1332,
+					"gHeight": 309,
+					"gWidth": 388,
 					"color": "#ffffff",
 					"background": "#03a9f4",
 					"resized": true,
@@ -9581,8 +9667,8 @@
 				"f23585dd-1439-4659-86ed-3f6a3f95b984": {
 					"referencedItemId": "f23585dd-1439-4659-86ed-3f6a3f95b984",
 					"x": 1932,
-					"y": 2233,
-					"gHeight": 369,
+					"y": 2220,
+					"gHeight": 387,
 					"gWidth": 340,
 					"color": "#ffffff",
 					"background": "#03a9f4",
@@ -9778,7 +9864,7 @@
 					"x": 2651,
 					"y": 2430,
 					"gHeight": 207,
-					"gWidth": 300,
+					"gWidth": 267,
 					"color": "#ffffff",
 					"background": "#03a9f4",
 					"resized": false,
@@ -9830,7 +9916,7 @@
 					"x": 3268,
 					"y": 1572,
 					"gHeight": 171,
-					"gWidth": 252,
+					"gWidth": 246,
 					"color": "#ffffff",
 					"background": "#03a9f4",
 					"resized": false,
@@ -9882,7 +9968,7 @@
 					"x": 3283,
 					"y": 2149,
 					"gHeight": 225,
-					"gWidth": 269,
+					"gWidth": 249,
 					"color": "#ffffff",
 					"background": "#03a9f4",
 					"resized": false,
@@ -9892,8 +9978,8 @@
 				},
 				"d5e06100-a58d-415e-9be9-87acdac359f6": {
 					"referencedItemId": "d5e06100-a58d-415e-9be9-87acdac359f6",
-					"x": 3886,
-					"y": 986,
+					"x": 3871,
+					"y": 984,
 					"gHeight": 1472,
 					"gWidth": 509,
 					"color": "#ffffff",
@@ -9905,8 +9991,8 @@
 				},
 				"88a8b8a4-eeb6-4820-a3d5-43d00bc18832": {
 					"referencedItemId": "88a8b8a4-eeb6-4820-a3d5-43d00bc18832",
-					"x": 3951,
-					"y": 1061,
+					"x": 3936,
+					"y": 1059,
 					"gHeight": 71,
 					"gWidth": 375,
 					"color": "#000000",
