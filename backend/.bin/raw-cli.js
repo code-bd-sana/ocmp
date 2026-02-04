@@ -516,7 +516,7 @@ const updateMany${capitalizedResourceName} = async (data: UpdateMany${capitalize
   const existing${capitalizedResourceName} = await ${capitalizedResourceName}Model.find({
     _id: { $nin: objectIds }, // Exclude documents being updated
     $or: data.flatMap((item) => [
-      // { filedName: item.filedName, $options: 'i' }, // case insensitive
+      // { filedName: item.filedName },
     ]),
   }).lean();
   // If any duplicates found, throw error

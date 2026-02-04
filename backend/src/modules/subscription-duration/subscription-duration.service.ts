@@ -21,13 +21,7 @@ const createSubscriptionDuration = async (
 ): Promise<Partial<ISubscriptionDuration>> => {
   // Check if a subscription duration with the same name and duration already exists
   const existingDuration = await SubscriptionDuration.findOne({
-    $or: [
-      {
-        name: data.name,
-        $options: 'i', // case insensitive
-      },
-      { durationInDays: data.durationInDays },
-    ],
+    $or: [{ name: data.name.toUpperCase() }, { durationInDays: data.durationInDays }],
   });
   // Prevent duplicate subscription durations
   if (existingDuration) {
@@ -50,12 +44,10 @@ const createManySubscriptionDuration = async (
 ): Promise<Partial<ISubscriptionDuration>[]> => {
   // Check for existing subscription durations with the same name or durationInDays
   const existingDurations = await SubscriptionDuration.find({
-    $or: data.map((item) => ({
-      $or: [
-        { name: item.name, $options: 'i' }, // case insensitive
-        { durationInDays: item.durationInDays },
-      ],
-    })),
+    $or: data.flatMap((item) => [
+      { name: item.name.toUpperCase() },
+      { durationInDays: item.durationInDays },
+    ]),
   });
   // Prevent duplicate subscription durations
   if (existingDurations.length > 0) {
@@ -89,10 +81,7 @@ const updateSubscriptionDuration = async (
   // Check for duplicate name and durationInDays combination
   const existingDuration = await SubscriptionDuration.findOne({
     _id: { $ne: id }, // Exclude the current document
-    $or: [
-      { name: data.name, $options: 'i' }, // case insensitive
-      { durationInDays: data.durationInDays },
-    ],
+    $or: [{ name: data.name?.toUpperCase() }, { durationInDays: data.durationInDays }],
   });
   // Prevent duplicate subscription durations
   if (existingDuration) {
@@ -124,7 +113,7 @@ const updateManySubscriptionDuration = async (
   const existingDurations = await SubscriptionDuration.find({
     _id: { $nin: objectIds }, // Exclude documents being updated
     $or: data.flatMap((item) => [
-      { name: item.name, $options: 'i' }, // case insensitive
+      { name: item.name?.toUpperCase() },
       { durationInDays: item.durationInDays },
     ]),
   }).lean();
