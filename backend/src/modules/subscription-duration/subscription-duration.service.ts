@@ -83,7 +83,7 @@ const updateSubscriptionDuration = async (
     _id: { $ne: id }, // Exclude the current document
     $or: [{ name: data.name?.toUpperCase() }, { durationInDays: data.durationInDays }],
   });
-  // Prevent duplicate subscription durations
+  // Prevent duplicate updates
   if (existingDuration) {
     throw new Error('A subscription duration with the same name or duration already exists.');
   }

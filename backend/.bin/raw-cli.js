@@ -495,6 +495,16 @@ const createMany${capitalizedResourceName} = async (data: CreateMany${capitalize
  * @returns {Promise<Partial<I${capitalizedResourceName}>>} - The updated ${resourceName}.
  */
 const update${capitalizedResourceName} = async (id: IdOrIdsInput['id'], data: Update${capitalizedResourceName}Input): Promise<Partial<I${capitalizedResourceName} | null>> => {
+  // Check for duplicate (filed) combination
+  const existing${capitalizedResourceName} = await ${capitalizedResourceName}Model.findOne({
+    _id: { $ne: id }, // Exclude the current document
+    $or: [{ /* filedName: data.filedName, */ }],
+  }).lean();
+  // Prevent duplicate updates
+  if (existing${capitalizedResourceName}) {
+    throw new Error('Duplicate detected: Another ${resourceName} with the same fieldName already exists.');
+  }
+  // Proceed to update the ${resourceName}
   const updated${capitalizedResourceName} = await ${capitalizedResourceName}Model.findByIdAndUpdate(id, data, { new: true });
   return updated${capitalizedResourceName};
 };
@@ -512,7 +522,7 @@ const updateMany${capitalizedResourceName} = async (data: UpdateMany${capitalize
   }
   // Convert string ids to ObjectId (for safety)
   const objectIds = data.map((item) => new mongoose.Types.ObjectId(item.id));
-  // Check for duplicates (name or durationInDays) excluding the documents being updated
+  // Check for duplicates (filedName) excluding the documents being updated
   const existing${capitalizedResourceName} = await ${capitalizedResourceName}Model.find({
     _id: { $nin: objectIds }, // Exclude documents being updated
     $or: data.flatMap((item) => [
