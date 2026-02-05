@@ -63,7 +63,7 @@ router.patch(
 
 /**
  * @route DELETE /api/v1/subscription-pricing/delete-subscription-pricing/many
- * @description Delete multiple subscription-pricings
+ * @description Delete multiple subscription-pricing(s)
  * @access Public
  * @param {function} validation - ['validateIds']
  * @param {function} controller - ['deleteManySubscriptionPricing']
@@ -94,7 +94,7 @@ router.delete(
 
 /**
  * @route GET /api/v1/subscription-pricing/get-subscription-pricing/many
- * @description Get multiple subscription-pricings
+ * @description Get multiple subscription-pricing(s)
  * @access Public
  * @param {function} validation - ['validateSearchQueries']
  * @param {function} controller - ['getManySubscriptionPricing']

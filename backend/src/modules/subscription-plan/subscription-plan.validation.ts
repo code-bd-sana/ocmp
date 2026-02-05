@@ -1,11 +1,10 @@
-import { isMongoId } from 'validator';
 import { z } from 'zod';
 import { validateBody } from '../../handlers/zod-error-handler';
 
 /**
  * SubscriptionPlan Validation Schemas and Types
  *
- * This module defines Zod schemas for validating subscriptionPlan-related
+ * This module defines Zod schemas for validating subscription-plan related
  * requests such as creation (single + bulk) and updates (single + bulk).
  * It also exports corresponding TypeScript types inferred from these schemas.
  * Each schema includes detailed validation rules and custom error messages
@@ -15,7 +14,7 @@ import { validateBody } from '../../handlers/zod-error-handler';
  */
 
 /**
- * Zod schema for validating data when **creating** a single subscriptionPlan.
+ * Zod schema for validating data when **creating** a single subscription-plan.
  *
  * → Add all **required** fields here
  */
@@ -48,7 +47,7 @@ const zodCreateSubscriptionPlanSchema = z
 export type CreateSubscriptionPlanInput = z.infer<typeof zodCreateSubscriptionPlanSchema>;
 
 /**
- * Zod schema for validating data when **updating** an existing subscriptionPlan.
+ * Zod schema for validating data when **updating** an existing subscription-plan.
  *
  * → All fields should usually be .optional()
  */
@@ -90,4 +89,3 @@ export type UpdateSubscriptionPlanInput = z.infer<typeof zodUpdateSubscriptionPl
  */
 export const validateCreateSubscriptionPlan = validateBody(zodCreateSubscriptionPlanSchema);
 export const validateUpdateSubscriptionPlan = validateBody(zodUpdateSubscriptionPlanSchema);
-

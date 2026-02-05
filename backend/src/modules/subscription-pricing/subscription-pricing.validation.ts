@@ -5,7 +5,7 @@ import { validateBody } from '../../handlers/zod-error-handler';
 /**
  * SubscriptionPricing Validation Schemas and Types
  *
- * This module defines Zod schemas for validating subscriptionPricing-related
+ * This module defines Zod schemas for validating subscription-pricing related
  * requests such as creation (single + bulk) and updates (single + bulk).
  * It also exports corresponding TypeScript types inferred from these schemas.
  * Each schema includes detailed validation rules and custom error messages
@@ -15,7 +15,7 @@ import { validateBody } from '../../handlers/zod-error-handler';
  */
 
 /**
- * Zod schema for validating data when **creating** a single subscriptionPricing.
+ * Zod schema for validating data when **creating** a single subscription-pricing.
  *
  * → Add all **required** fields here
  */
@@ -51,7 +51,7 @@ const zodCreateSubscriptionPricingSchema = z
 export type CreateSubscriptionPricingInput = z.infer<typeof zodCreateSubscriptionPricingSchema>;
 
 /**
- * Zod schema for validating data when **updating** an existing subscriptionPricing.
+ * Zod schema for validating data when **updating** an existing subscription-pricing.
  *
  * → All fields should usually be .optional()
  */
@@ -99,4 +99,3 @@ export type UpdateSubscriptionPricingInput = z.infer<typeof zodUpdateSubscriptio
  */
 export const validateCreateSubscriptionPricing = validateBody(zodCreateSubscriptionPricingSchema);
 export const validateUpdateSubscriptionPricing = validateBody(zodUpdateSubscriptionPricingSchema);
-

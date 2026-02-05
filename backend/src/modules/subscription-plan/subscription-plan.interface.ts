@@ -1,7 +1,7 @@
 /**
- * Type definition for SubscriptionPlan.
+ * Type definition for subscription-plan.
  *
- * This type defines the structure of a single subscriptionPlan object.
+ * This type defines the structure of a single subscription-plan object.
  * @interface TSubscriptionPlan
  */
 export interface TSubscriptionPlan {

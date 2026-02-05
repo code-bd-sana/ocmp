@@ -13,57 +13,51 @@ import {
 } from './subscription-pricing.validation';
 
 /**
- * Service function to create a new subscriptionPricing.
+ * Service function to create a new subscription-pricing.
  *
- * @param {CreateSubscriptionPricingInput} data - The data to create a new subscriptionPricing.
- * @returns {Promise<Partial<ISubscriptionPricing>>} - The created subscriptionPricing.
+ * @param {CreateSubscriptionPricingInput} data - The data to create a new subscription-pricing.
+ * @returns {Promise<Partial<ISubscriptionPricing>>} - The created subscription-pricing.
  */
 const createSubscriptionPricing = async (
   data: CreateSubscriptionPricingInput
 ): Promise<Partial<ISubscriptionPricing>> => {
   // Extract subscription plan and duration IDs from validated data
   const { subscriptionPlanId, subscriptionDurationId } = data;
-
   // Check if the subscription plan exists
   const isSubscriptionPlanAvailable = await SubscriptionPlan.findOne({
     _id: subscriptionPlanId,
   });
-
   // Check if the subscription duration exists
   const isSubscriptionDurationAvailable = await SubscriptionDuration.findOne({
     _id: subscriptionDurationId,
   });
-
   // Throw error if subscription plan is not found
   if (!isSubscriptionPlanAvailable) {
-    throw new Error('Subscription plan not found');
+    throw new Error('Subscription-plan not found');
   }
-
   // Throw error if subscription duration is not found
   if (!isSubscriptionDurationAvailable) {
-    throw new Error('Subscription duration not found');
+    throw new Error('Subscription-duration not found');
   }
   // Check if a pricing entry already exists for the given subscription plan and duration
   const isExistingPricing = await SubscriptionPricing.findOne({
     subscriptionPlanId,
     subscriptionDurationId,
   });
-
   if (isExistingPricing) {
-    throw new Error('Subscription pricing already exists for the selected plan and duration');
+    throw new Error('Subscription-pricing already exists for the selected plan and duration');
   }
-
   const newSubscriptionPricing = new SubscriptionPricing(data);
   const savedSubscriptionPricing = await newSubscriptionPricing.save();
   return savedSubscriptionPricing;
 };
 
 /**
- * Service function to update a single subscriptionPricing by ID.
+ * Service function to update a single subscription-pricing by ID.
  *
- * @param {IdOrIdsInput['id']} id - The ID of the subscriptionPricing to update.
- * @param {UpdateSubscriptionPricingInput} data - The updated data for the subscriptionPricing.
- * @returns {Promise<Partial<ISubscriptionPricing>>} - The updated subscriptionPricing.
+ * @param {IdOrIdsInput['id']} id - The ID of the subscription-pricing to update.
+ * @param {UpdateSubscriptionPricingInput} data - The updated data for the subscription-pricing.
+ * @returns {Promise<Partial<ISubscriptionPricing>>} - The updated subscription-pricing.
  */
 const updateSubscriptionPricing = async (
   id: IdOrIdsInput['id'],
@@ -71,17 +65,16 @@ const updateSubscriptionPricing = async (
 ): Promise<Partial<ISubscriptionPricing | null>> => {
   // Check for duplicate (filed) combination
   const existingSubscriptionPricing = await SubscriptionPricing.findOne({
-    /* filedName: data.filedName, */
     subscriptionPlanId: data.subscriptionPlanId,
     subscriptionDurationId: data.subscriptionDurationId,
   });
   // Prevent duplicate updates
   if (existingSubscriptionPricing) {
     throw new Error(
-      'Duplicate detected: Another subscriptionPricing with the same fieldName already exists.'
+      'Duplicate detected: Another subscription-pricing with the same fieldName already exists.'
     );
   }
-  // Proceed to update the subscriptionPricing
+  // Proceed to update the subscription-pricing
   const updatedSubscriptionPricing = await SubscriptionPricing.findByIdAndUpdate(id, data, {
     new: true,
   });
@@ -89,10 +82,10 @@ const updateSubscriptionPricing = async (
 };
 
 /**
- * Service function to delete a single subscriptionPricing by ID.
+ * Service function to delete a single subscription-pricing by ID.
  *
- * @param {IdOrIdsInput['id']} id - The ID of the subscriptionPricing to delete.
- * @returns {Promise<Partial<ISubscriptionPricing>>} - The deleted subscriptionPricing.
+ * @param {IdOrIdsInput['id']} id - The ID of the subscription-pricing to delete.
+ * @returns {Promise<Partial<ISubscriptionPricing>>} - The deleted subscription-pricing.
  */
 const deleteSubscriptionPricing = async (
   id: IdOrIdsInput['id']
@@ -102,26 +95,26 @@ const deleteSubscriptionPricing = async (
 };
 
 /**
- * Service function to delete multiple subscriptionPricing.
+ * Service function to delete multiple subscription-pricing(s).
  *
- * @param {IdOrIdsInput['ids']} ids - An array of IDs of subscriptionPricing to delete.
- * @returns {Promise<Partial<ISubscriptionPricing>[]>} - The deleted subscriptionPricing.
+ * @param {IdOrIdsInput['ids']} ids - An array of IDs of subscription-pricing to delete.
+ * @returns {Promise<Partial<ISubscriptionPricing>[]>} - The deleted subscription-pricing(s).
  */
 const deleteManySubscriptionPricing = async (
   ids: IdOrIdsInput['ids']
 ): Promise<Partial<ISubscriptionPricing>[]> => {
   const subscriptionPricingToDelete = await SubscriptionPricing.find({ _id: { $in: ids } });
   if (!subscriptionPricingToDelete.length)
-    throw new Error('No subscriptionPricing found to delete');
+    throw new Error('No subscription-pricing found to delete');
   await SubscriptionPricing.deleteMany({ _id: { $in: ids } });
   return subscriptionPricingToDelete;
 };
 
 /**
- * Service function to retrieve a single subscriptionPricing by ID.
+ * Service function to retrieve a single subscription-pricing by ID.
  *
- * @param {IdOrIdsInput['id']} id - The ID of the subscriptionPricing to retrieve.
- * @returns {Promise<Partial<ISubscriptionPricing>>} - The retrieved subscriptionPricing.
+ * @param {IdOrIdsInput['id']} id - The ID of the subscription-pricing to retrieve.
+ * @returns {Promise<Partial<ISubscriptionPricing>>} - The retrieved subscription-pricing.
  */
 const getSubscriptionPricingById = async (
   id: string
@@ -130,20 +123,17 @@ const getSubscriptionPricingById = async (
   if (!mongoose.Types.ObjectId.isValid(id)) {
     throw new Error('Invalid ID format');
   }
-
   const objectId = new mongoose.Types.ObjectId(id);
-
   // Search by _id OR subscriptionPlanId OR subscriptionDurationId
   const subscriptionPricing = await SubscriptionPricing.findById(objectId);
-
   return subscriptionPricing;
 };
 
 /**
- * Service function to retrieve multiple subscriptionPricing based on query parameters.
+ * Service function to retrieve multiple subscription-pricing based on query parameters.
  *
- * @param {SearchQueryInput} query - The query parameters for filtering subscriptionPricing.
- * @returns {Promise<Partial<ISubscriptionPricing>[]>} - The retrieved subscriptionPricing
+ * @param {SearchQueryInput} query - The query parameters for filtering subscription-pricing.
+ * @returns {Promise<Partial<ISubscriptionPricing>[]>} - The retrieved subscription-pricing
  */
 const getManySubscriptionPricing = async (
   query: SearchQueryInput
@@ -155,16 +145,11 @@ const getManySubscriptionPricing = async (
   const { searchKey = '', showPerPage = 10, pageNo = 1 } = query;
   // Build the search filter based on the search key
   const searchFilter = {
-    $or: [
-      // { fieldName: { $regex: searchKey, $options: 'i' } },
-      // Add more fields as needed
-
-      { currency: { $regex: searchKey, $options: 'i' } },
-    ],
+    $or: [{ currency: { $regex: searchKey, $options: 'i' } }],
   };
   // Calculate the number of items to skip based on the page number
   const skipItems = (pageNo - 1) * showPerPage;
-  // Find the total count of matching subscriptionPricing
+  // Find the total count of matching subscription-pricing
   const totalData = await SubscriptionPricing.countDocuments(searchFilter);
   // Calculate the total number of pages
   const totalPages = Math.ceil(totalData / showPerPage);
