@@ -56,7 +56,7 @@ const updateSubscriptionPlan = async (
     );
   }
 
-  //! If This subscirption e already kono user niye thake thaole name paln type applicableAccountType isActive update kora jabe na  -- > only allow update description
+  // ! If this subscription plan is already purchased by any user then not allow to update name, planType, applicableAccountType
 
   // TODO:First chcekc if any user purches this subscirption price
   // TODO: if(!purches) => then name, plantype applicableaccount not allow to update4
