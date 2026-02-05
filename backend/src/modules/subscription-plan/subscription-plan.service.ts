@@ -20,6 +20,14 @@ import {
 const createSubscriptionPlan = async (
   data: CreateSubscriptionPlanInput
 ): Promise<Partial<ISubscriptionPlan>> => {
+  // Check if a subscription-plan with the same name and duration already exists
+  const existingPlan = await SubscriptionPlan.findOne({
+    name: data.name.toUpperCase(),
+  });
+  // Prevent duplicate subscription-plan
+  if (existingPlan) {
+    throw new Error('Duplicate detected: A subscription-plan with the same name already exists.');
+  }
   const newSubscriptionPlan = new SubscriptionPlan(data);
   const savedSubscriptionPlan = await newSubscriptionPlan.save();
   return savedSubscriptionPlan;
@@ -36,19 +44,22 @@ const updateSubscriptionPlan = async (
   id: IdOrIdsInput['id'],
   data: UpdateSubscriptionPlanInput
 ): Promise<Partial<ISubscriptionPlan | null>> => {
-  // Check for duplicate (filed) combination
+  // ! Update Guard: Restrict modification of subscription-plan when it is in active use.
+
+  // TODO: Check whether this plan is referenced by any subscription.
+  // TODO: If referenced, verify whether any users have purchased that subscription.
+  // TODO: If users exist, prevent updating core plan fields (e.g., name, planType and applicableAccountType).
+  // TODO: Allow updating only the status(isActive) and description(description) field regardless of usage.
+
+  // Check for duplicate name combination
   const existingSubscriptionPlan = await SubscriptionPlan.findOne({
     _id: { $ne: id }, // Exclude the current document
-    $or: [
-      {
-        /* filedName: data.filedName, */
-      },
-    ],
+    name: data.name ? data.name.toUpperCase() : undefined,
   }).lean();
   // Prevent duplicate updates
   if (existingSubscriptionPlan) {
     throw new Error(
-      'Duplicate detected: Another subscription-plan with the same fieldName already exists.'
+      'Duplicate detected: Another subscription-plan with the same name already exists.'
     );
   }
   // Proceed to update the subscriptionPlan
@@ -65,23 +76,32 @@ const updateSubscriptionPlan = async (
 const updateManySubscriptionPlan = async (
   data: UpdateManySubscriptionPlanInput
 ): Promise<Partial<ISubscriptionPlan>[]> => {
+  // ! Update Guard: Restrict modification of subscription-plans when they are in active use.
+
+  // TODO: Check whether these plans are referenced by any subscription.
+  // TODO: If referenced, verify whether any users have purchased those subscriptions.
+  // TODO: If users exist, prevent updating core plan fields (e.g., name, planType and applicableAccountType).
+  // TODO: Allow updating only the status(isActive) and description(description) field regardless of usage.
+
   // Early return if no data provided
   if (data.length === 0) {
     return [];
   }
   // Convert string ids to ObjectId (for safety)
   const objectIds = data.map((item) => new mongoose.Types.ObjectId(item.id));
-  // Check for duplicates (filedName) excluding the documents being updated
+  // Check for duplicates (name) excluding the documents being updated
   const existingSubscriptionPlan = await SubscriptionPlan.find({
     _id: { $nin: objectIds }, // Exclude documents being updated
-    $or: data.flatMap((item) => [
-      // { filedName: item.filedName },
-    ]),
+    name: {
+      $in: data
+        .filter((item) => item.name) // only items with name to update
+        .map((item) => item.name!.toUpperCase()), // get the names in uppercase
+    },
   }).lean();
   // If any duplicates found, throw error
   if (existingSubscriptionPlan.length > 0) {
     throw new Error(
-      'Duplicate detected: One or more subscription-plan with the same fieldName already exist.'
+      'Duplicate detected: One or more subscription-plan with the same name already exist.'
     );
   }
   // Prepare bulk operations
@@ -123,6 +143,12 @@ const updateManySubscriptionPlan = async (
 const deleteSubscriptionPlan = async (
   id: IdOrIdsInput['id']
 ): Promise<Partial<ISubscriptionPlan | null>> => {
+  // ! If this plan is implemented in any subscription and that subscription is used by any user, do not allow deletion
+
+  // TODO: * First, check if this plan exists in any subscription
+  // TODO: * Second, check if any user has taken this subscription
+  // TODO: * If taken by any user, throw a thorough error: 'This plan is already assigned to a user's subscription'
+
   const deletedSubscriptionPlan = await SubscriptionPlan.findByIdAndDelete(id);
   return deletedSubscriptionPlan;
 };
@@ -136,6 +162,12 @@ const deleteSubscriptionPlan = async (
 const deleteManySubscriptionPlan = async (
   ids: IdOrIdsInput['ids']
 ): Promise<Partial<ISubscriptionPlan>[]> => {
+  // ! If these plans are implemented in any subscription and that subscription is used by any user, do not allow deletion
+
+  // TODO: * First, check if these plans exist in any subscription
+  // TODO: * Second, check if any user has taken these subscriptions
+  // TODO: * If taken by any user, throw a thorough error: 'One or more plans are already assigned to a user's subscription'
+
   const subscriptionPlanToDelete = await SubscriptionPlan.find({ _id: { $in: ids } });
   if (!subscriptionPlanToDelete.length) throw new Error('No subscription-plan found to delete');
   await SubscriptionPlan.deleteMany({ _id: { $in: ids } });

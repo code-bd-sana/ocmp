@@ -71,7 +71,7 @@ const updateSubscriptionDuration = async (
   id: IdOrIdsInput['id'],
   data: UpdateSubscriptionDurationInput
 ): Promise<Partial<ISubscriptionDuration | null>> => {
-  // ! Update Guard: Restrict modification of subscription duration when it is in active use.
+  // ! Update Guard: Restrict modification of subscription-duration when it is in active use.
 
   // TODO: Check whether this duration is referenced by any subscription.
   // TODO: If referenced, verify whether any users have purchased that subscription.
@@ -103,6 +103,13 @@ const updateSubscriptionDuration = async (
 const updateManySubscriptionDuration = async (
   data: UpdateManySubscriptionDurationInput
 ): Promise<Partial<ISubscriptionDuration>[]> => {
+  // ! Update Guard: Restrict modification of subscription durations when they are in active use.
+
+  // TODO: Check whether these durations are referenced by any subscription.
+  // TODO: If referenced, verify whether any users have purchased those subscriptions.
+  // TODO: If users exist, prevent updating core duration fields (e.g., name, durationInDays).
+  // TODO: Allow updating only the status field (isActive) regardless of usage.
+
   // Early return if no data provided
   if (data.length === 0) {
     return [];
@@ -168,7 +175,6 @@ const deleteSubscriptionDuration = async (
   // TODO: * Second, check if any user has taken this subscription
   // TODO: * If taken by any user, throw a thorough error: 'This duration is already assigned to a user's subscription'
 
-  // Proceed to delete the subscription duration
   const deletedSubscriptionDuration = await SubscriptionDuration.findByIdAndDelete(id);
   return deletedSubscriptionDuration;
 };
@@ -183,6 +189,10 @@ const deleteManySubscriptionDuration = async (
   ids: IdOrIdsInput['ids']
 ): Promise<Partial<ISubscriptionDuration>[]> => {
   // ! If these durations are implemented in any subscription and that subscription is used by any user, do not allow deletion
+
+  // TODO: * First, check if these durations exist in any subscription
+  // TODO: * Second, check if any user has taken these subscriptions
+  // TODO: * If taken by any user, throw a thorough error: 'One or more durations are already assigned to a user's subscription'
 
   // Proceed to delete the subscription durations
   const subscriptionDurationToDelete = await SubscriptionDuration.find({ _id: { $in: ids } });
@@ -202,7 +212,6 @@ const deleteManySubscriptionDuration = async (
 const getSubscriptionDurationById = async (
   id: IdOrIdsInput['id']
 ): Promise<Partial<ISubscriptionDuration | null>> => {
-  // Find the subscription duration by ID
   const subscriptionDuration = await SubscriptionDuration.findById(id);
   return subscriptionDuration;
 };
