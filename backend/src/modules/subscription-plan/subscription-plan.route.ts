@@ -28,7 +28,7 @@ const router = Router();
 
 // Define route handlers
 /**
- * @route POST /api/v1/subscription-plan/create-subscription-plan
+ * @route POST /api/v1/subscription-plan
  * @description Create a new subscription-plan
  * @access Public
  * @param {function} validation - ['validateCreateSubscriptionPlan']
@@ -37,7 +37,7 @@ const router = Router();
 router.post('/', validateCreateSubscriptionPlan, isAuthorized, createSubscriptionPlan);
 
 /**
- * @route PATCH /api/v1/subscription-plan/update-subscription-plan/:id
+ * @route PATCH /api/v1/subscription-plan/:id
  * @description Update subscription-plan information
  * @access Public
  * @param {IdOrIdsInput['id']} id - The ID of the subscription-plan to update
@@ -47,26 +47,26 @@ router.post('/', validateCreateSubscriptionPlan, isAuthorized, createSubscriptio
 router.patch('/:id', validateId, validateUpdateSubscriptionPlan, updateSubscriptionPlan);
 
 /**
- * @route DELETE /api/v1/subscription-plan/delete-subscription-plan/many
+ * @route DELETE /api/v1/subscription-plan/many
  * @description Delete multiple subscription-plans
  * @access Public
  * @param {function} validation - ['validateIds']
  * @param {function} controller - ['deleteManySubscriptionPlan']
  */
-router.delete('/delete-subscription-plan/many', validateIds, deleteManySubscriptionPlan);
+router.delete('/many', validateIds, deleteManySubscriptionPlan);
 
 /**
- * @route DELETE /api/v1/subscription-plan/delete-subscription-plan/:id
+ * @route DELETE /api/v1/subscription-plan/:id
  * @description Delete a subscription-plan
  * @access Public
  * @param {IdOrIdsInput['id']} id - The ID of the subscription-plan to delete
  * @param {function} validation - ['validateId']
  * @param {function} controller - ['deleteSubscriptionPlan']
  */
-router.delete('/delete-subscription-plan/:id', validateId, deleteSubscriptionPlan);
+router.delete('/:id', validateId, deleteSubscriptionPlan);
 
 /**
- * @route GET /api/v1/subscription-plan/get-subscription-plan/many
+ * @route GET /api/v1/subscription-plan
  * @description Get multiple subscription-plans
  * @access Public
  * @param {function} validation - ['validateSearchQueries']
