@@ -1,4 +1,3 @@
-import mongoose from 'mongoose';
 import { IdOrIdsInput, SearchQueryInput } from '../../handlers/common-zod-validator';
 import SubscriptionDuration, {
   ISubscriptionDuration,
@@ -9,10 +8,10 @@ import {
 } from './subscription-duration.validation';
 
 /**
- * Service function to create a new subscription duration.
+ * Service function to create a new subscription-duration.
  *
- * @param {CreateSubscriptionDurationInput} data - The data to create a new subscription duration.
- * @returns {Promise<Partial<ISubscriptionDuration>>} - The created subscription duration.
+ * @param {CreateSubscriptionDurationInput} data - The data to create a new subscription-duration.
+ * @returns {Promise<Partial<ISubscriptionDuration>>} - The created subscription-duration.
  */
 const createSubscriptionDuration = async (
   data: CreateSubscriptionDurationInput
@@ -23,26 +22,26 @@ const createSubscriptionDuration = async (
   });
   // Prevent duplicate subscription durations
   if (existingDuration) {
-    throw new Error('A subscription duration with the same name and duration already exists.');
+    throw new Error('A subscription-duration with the same name and duration already exists.');
   }
-  // Create and save the new subscription duration
+  // Create and save the new subscription-duration
   const newSubscriptionDuration = new SubscriptionDuration(data);
   const savedSubscriptionDuration = await newSubscriptionDuration.save();
   return savedSubscriptionDuration;
 };
 
 /**
- * Service function to update a single subscription duration by ID.
+ * Service function to update a single subscription-duration by ID.
  *
- * @param {IdOrIdsInput['id']} id - The ID of the subscription duration to update.
- * @param {UpdateSubscriptionDurationInput} data - The updated data for the subscription duration.
- * @returns {Promise<Partial<ISubscriptionDuration>>} - The updated subscription duration.
+ * @param {IdOrIdsInput['id']} id - The ID of the subscription-duration to update.
+ * @param {UpdateSubscriptionDurationInput} data - The updated data for the subscription-duration.
+ * @returns {Promise<Partial<ISubscriptionDuration>>} - The updated subscription-duration.
  */
 const updateSubscriptionDuration = async (
   id: IdOrIdsInput['id'],
   data: UpdateSubscriptionDurationInput
 ): Promise<Partial<ISubscriptionDuration | null>> => {
-  // ! Update Guard: Restrict modification of subscription duration when it is in active use.
+  // ! Update Guard: Restrict modification of subscription-duration when it is in active use.
 
   // TODO: Check whether this duration is referenced by any subscription.
   // TODO: If referenced, verify whether any users have purchased that subscription.
@@ -56,9 +55,9 @@ const updateSubscriptionDuration = async (
   });
   // Prevent duplicate updates
   if (existingDuration) {
-    throw new Error('A subscription duration with the same name or duration already exists.');
+    throw new Error('A subscription-duration with the same name or duration already exists.');
   }
-  // Proceed to update the subscription duration
+  // Proceed to update the subscription-duration
   const updatedSubscriptionDuration = await SubscriptionDuration.findByIdAndUpdate(id, data, {
     new: true,
   });
@@ -66,10 +65,10 @@ const updateSubscriptionDuration = async (
 };
 
 /**
- * Service function to delete a single subscription duration by ID.
+ * Service function to delete a single subscription-duration by ID.
  *
- * @param {IdOrIdsInput['id']} id - The ID of the subscription duration to delete.
- * @returns {Promise<Partial<ISubscriptionDuration>>} - The deleted subscription duration.
+ * @param {IdOrIdsInput['id']} id - The ID of the subscription-duration to delete.
+ * @returns {Promise<Partial<ISubscriptionDuration>>} - The deleted subscription-duration.
  */
 const deleteSubscriptionDuration = async (
   id: IdOrIdsInput['id']
@@ -80,50 +79,50 @@ const deleteSubscriptionDuration = async (
   // TODO: * Second, check if any user has taken this subscription
   // TODO: * If taken by any user, throw a thorough error: 'This duration is already assigned to a user's subscription'
 
-  // Proceed to delete the subscription duration
+  // Proceed to delete the subscription-duration
   const deletedSubscriptionDuration = await SubscriptionDuration.findByIdAndDelete(id);
   return deletedSubscriptionDuration;
 };
 
 /**
- * Service function to delete multiple subscription durations.
+ * Service function to delete multiple subscription-durations.
  *
- * @param {IdOrIdsInput['ids']} ids - An array of IDs of subscription durations to delete.
- * @returns {Promise<Partial<ISubscriptionDuration>[]>} - The deleted subscription durations.
+ * @param {IdOrIdsInput['ids']} ids - An array of IDs of subscription-durations to delete.
+ * @returns {Promise<Partial<ISubscriptionDuration>[]>} - The deleted subscription-durations.
  */
 const deleteManySubscriptionDuration = async (
   ids: IdOrIdsInput['ids']
 ): Promise<Partial<ISubscriptionDuration>[]> => {
   // ! If these durations are implemented in any subscription and that subscription is used by any user, do not allow deletion
 
-  // Proceed to delete the subscription durations
+  // Proceed to delete the subscription-durations
   const subscriptionDurationToDelete = await SubscriptionDuration.find({ _id: { $in: ids } });
   if (!subscriptionDurationToDelete.length)
-    throw new Error('No subscriptionDuration found to delete');
-  // Delete the subscription durations
+    throw new Error('No subscription-duration found to delete');
+  // Delete the subscription-durations
   await SubscriptionDuration.deleteMany({ _id: { $in: ids } });
   return subscriptionDurationToDelete;
 };
 
 /**
- * Service function to retrieve a single subscription duration by ID.
+ * Service function to retrieve a single subscription-duration by ID.
  *
- * @param {IdOrIdsInput['id']} id - The ID of the subscription duration to retrieve.
- * @returns {Promise<Partial<ISubscriptionDuration>>} - The retrieved subscription duration.
+ * @param {IdOrIdsInput['id']} id - The ID of the subscription-duration to retrieve.
+ * @returns {Promise<Partial<ISubscriptionDuration>>} - The retrieved subscription-duration.
  */
 const getSubscriptionDurationById = async (
   id: IdOrIdsInput['id']
 ): Promise<Partial<ISubscriptionDuration | null>> => {
-  // Find the subscription duration by ID
+  // Find the subscription-duration by ID
   const subscriptionDuration = await SubscriptionDuration.findById(id);
   return subscriptionDuration;
 };
 
 /**
- * Service function to retrieve multiple subscription durations based on query parameters.
+ * Service function to retrieve multiple subscription-durations based on query parameters.
  *
- * @param {SearchQueryInput} query - The query parameters for filtering subscription duration.
- * @returns {Promise<Partial<ISubscriptionDuration>[]>} - The retrieved subscription duration.
+ * @param {SearchQueryInput} query - The query parameters for filtering subscription-duration.
+ * @returns {Promise<Partial<ISubscriptionDuration>[]>} - The retrieved subscription-duration.
  */
 const getManySubscriptionDuration = async (
   query: SearchQueryInput

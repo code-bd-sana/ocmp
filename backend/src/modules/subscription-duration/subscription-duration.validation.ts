@@ -5,8 +5,8 @@ import { validateBody } from '../../handlers/zod-error-handler';
 /**
  * Subscription Duration Validation Schemas and Types
  *
- * This module defines Zod schemas for validating subscription duration-related
- * requests such as creating and updating subscription durations.
+ * This module defines Zod schemas for validating subscription-duration related
+ * requests such as creating and updating subscription-durations.
  * It also exports corresponding TypeScript types inferred from these schemas.
  * Each schema includes detailed validation rules and custom error messages
  * to ensure data integrity and provide clear feedback to API consumers.
@@ -16,7 +16,7 @@ import { validateBody } from '../../handlers/zod-error-handler';
  */
 
 /**
- * Zod schema for validating subscription duration data during creation.
+ * Zod schema for validating subscription-duration data during creation.
  */
 export const zodCreateSubscriptionDurationSchema = z
   .object({
@@ -33,7 +33,7 @@ export const zodCreateSubscriptionDurationSchema = z
 export type CreateSubscriptionDurationInput = z.infer<typeof zodCreateSubscriptionDurationSchema>;
 
 /**
- * Zod schema for validating subscription duration data during updates.
+ * Zod schema for validating subscription-duration data during updates.
  */
 export const zodUpdateSubscriptionDurationSchema = z
   .object({
@@ -57,7 +57,7 @@ export const zodUpdateSubscriptionDurationSchema = z
 export type UpdateSubscriptionDurationInput = z.infer<typeof zodUpdateSubscriptionDurationSchema>;
 
 /**
- * Zod schema for validating multiple subscription duration updates.
+ * Zod schema for validating multiple subscription-duration updates.
  * Each object in the array must include an 'id' field along with at least one other field to update.
  */
 export const zodUpdateSubscriptionDurationForBulkSchema = zodUpdateSubscriptionDurationSchema
