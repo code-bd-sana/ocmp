@@ -7,25 +7,24 @@ import catchAsync from '../../utils/catch-async/catch-async';
 import { subscriptionPlanServices } from './subscription-plan.service';
 
 /**
- * Controller function to handle the creation of a single SubscriptionPlan.
+ * Controller function to handle the creation of a single subscription-plan.
  *
  * @param {Request} req - The request object containing subscription-plan data in the body.
  * @param {Response} res - The response object used to send the response.
- * @returns {Promise<Partial<ISubscriptionPlan>>} - The created subscriptionPlan.
- * @throws {Error} - Throws an error if the subscriptionPlan creation fails.
+ * @returns {Promise<Partial<ISubscriptionPlan>>} - The created subscription-plan.
+ * @throws {Error} - Throws an error if the subscription-plan creation fails.
  */
 export const createSubscriptionPlan = catchAsync(
   async (req: AuthenticatedRequest, res: Response) => {
-    // Call the service method to create a new subscription-plan and get the result
-
     // Use the authenticated user's ID as the creator
     const userId = req.user!._id;
     // Request body assignment for createdBy field
     req.body.createdBy = new mongoose.Types.ObjectId(userId);
+    // Call the service method to create a new subscription-plan and get the result
     const result = await subscriptionPlanServices.createSubscriptionPlan(req.body);
-    if (!result) throw new Error('Failed to create subscriptionPlan');
-    // Send a success response with the created subscriptionPlan data
-    ServerResponse(res, true, 201, 'SubscriptionPlan created successfully', result);
+    if (!result) throw new Error('Failed to create subscription-plan');
+    // Send a success response with the created subscription-plan data
+    ServerResponse(res, true, 201, 'Subscription-plan created successfully', result);
   }
 );
 
@@ -34,8 +33,8 @@ export const createSubscriptionPlan = catchAsync(
  *
  * @param {Request} req - The request object containing the ID of the subscription-plan to update in URL parameters and the updated data in the body.
  * @param {Response} res - The response object used to send the response.
- * @returns {Promise<Partial<ISubscriptionPlan>>} - The updated subscriptionPlan.
- * @throws {Error} - Throws an error if the subscriptionPlan update fails.
+ * @returns {Promise<Partial<ISubscriptionPlan>>} - The updated subscription-plan.
+ * @throws {Error} - Throws an error if the subscription-plan update fails.
  */
 export const updateSubscriptionPlan = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params;
@@ -51,8 +50,8 @@ export const updateSubscriptionPlan = catchAsync(async (req: Request, res: Respo
  *
  * @param {Request} req - The request object containing the ID of the subscription-plan to delete in URL parameters.
  * @param {Response} res - The response object used to send the response.
- * @returns {Promise<Partial<ISubscriptionPlan>>} - The deleted subscriptionPlan.
- * @throws {Error} - Throws an error if the subscriptionPlan deletion fails.
+ * @returns {Promise<Partial<ISubscriptionPlan>>} - The deleted subscription-plan.
+ * @throws {Error} - Throws an error if the subscription-plan deletion fails.
  */
 export const deleteSubscriptionPlan = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params;
@@ -68,8 +67,8 @@ export const deleteSubscriptionPlan = catchAsync(async (req: Request, res: Respo
  *
  * @param {Request} req - The request object containing an array of IDs of subscription-plan to delete in the body.
  * @param {Response} res - The response object used to send the response.
- * @returns {Promise<Partial<ISubscriptionPlan>[]>} - The deleted subscriptionPlans.
- * @throws {Error} - Throws an error if the subscriptionPlan deletion fails.
+ * @returns {Promise<Partial<ISubscriptionPlan>[]>} - The deleted subscription-plans.
+ * @throws {Error} - Throws an error if the subscription-plan deletion fails.
  */
 export const deleteManySubscriptionPlan = catchAsync(async (req: Request, res: Response) => {
   // Extract ids from request body
@@ -86,7 +85,7 @@ export const deleteManySubscriptionPlan = catchAsync(async (req: Request, res: R
  *
  * @param {Request} req - The request object containing the ID of the subscription-plan to retrieve in URL parameters.
  * @param {Response} res - The response object used to send the response.
- * @returns {Promise<Partial<ISubscriptionPlan>>} - The retrieved subscriptionPlan.
+ * @returns {Promise<Partial<ISubscriptionPlan>>} - The retrieved subscription-plan.
  * @throws {Error} - Throws an error if the subscriptionPlan retrieval fails.
  */
 export const getSubscriptionPlanById = catchAsync(async (req: Request, res: Response) => {
@@ -103,13 +102,12 @@ export const getSubscriptionPlanById = catchAsync(async (req: Request, res: Resp
  *
  * @param {Request} req - The request object containing query parameters for filtering.
  * @param {Response} res - The response object used to send the response.
- * @returns {Promise<Partial<ISubscriptionPlan>[]>} - The retrieved subscriptionPlans.
- * @throws {Error} - Throws an error if the subscriptionPlans retrieval fails.
+ * @returns {Promise<Partial<ISubscriptionPlan>[]>} - The retrieved subscription-plans.
+ * @throws {Error} - Throws an error if the subscription-plans retrieval fails.
  */
 export const getManySubscriptionPlan = catchAsync(async (req: Request, res: Response) => {
   // Type assertion for query parameters
   const query = req.query as SearchQueryInput;
-  console.log(query, 'query chcek');
   // Call the service method to get multiple subscription-plans based on query parameters and get the result
   const { subscriptionPlans, totalData, totalPages } =
     await subscriptionPlanServices.getManySubscriptionPlan(query);

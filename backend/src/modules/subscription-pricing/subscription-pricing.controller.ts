@@ -16,13 +16,11 @@ import { subscriptionPricingServices } from './subscription-pricing.service';
  */
 export const createSubscriptionPricing = catchAsync(
   async (req: AuthenticatedRequest, res: Response) => {
-    // Call the service method to create a new subscription-pricing and get the result
-    // Call the service method to create a new subscription-plan and get the result
-
     // Use the authenticated user's ID as the creator
     const userId = req.user!._id;
     // Request body assignment for createdBy field
     req.body.createdBy = new mongoose.Types.ObjectId(userId);
+    // Call the service method to create the subscription-pricing and get the result
     const result = await subscriptionPricingServices.createSubscriptionPricing(req.body);
     if (!result) throw new Error('Failed to create subscriptionPricing');
     // Send a success response with the created subscriptionPricing data
@@ -103,7 +101,7 @@ export const getSubscriptionPricingById = catchAsync(async (req: Request, res: R
 });
 
 /**
- * Controller function to handle the retrieval of multiple subscription-pricings.
+ * Controller function to handle the retrieval of multiple subscription-pricing(s).
  *
  * @param {Request} req - The request object containing query parameters for filtering.
  * @param {Response} res - The response object used to send the response.

@@ -21,34 +21,24 @@ import { validateBody } from '../../handlers/zod-error-handler';
  */
 const zodCreateSubscriptionPricingSchema = z
   .object({
-    // Example fields — replace / expand as needed:
-    // name: z.string({ message: 'SubscriptionPricing name is required' }).min(2, 'Name must be at least 2 characters').max(100),
-    // email: z.string().email({ message: 'Invalid email format' }),
-    // age: z.number().int().positive().optional(),
-    // status: z.enum(['active', 'inactive', 'pending']).default('pending'),
-
     // Subscription Plan ID — must be a valid MongoDB ObjectId
     subscriptionPlanId: z.string().refine((val) => mongoose.Types.ObjectId.isValid(val), {
       message: 'Subscription Plan ID is invalid',
     }),
-
     // Subscription Duration ID — must be a valid MongoDB ObjectId
     subscriptionDurationId: z.string().refine((val) => mongoose.Types.ObjectId.isValid(val), {
       message: 'Subscription Duration ID is invalid',
     }),
-
     // Price of the subscription — must be a number
     price: z.number({
       message: 'Price must be a number',
     }),
-
     // Currency code — must be a string (e.g., USD, GBP)
     currency: z
       .string({
         message: 'Currency is required',
       })
       .optional(),
-
     // Status — true if active, false if inactive
     isActive: z
       .boolean({
@@ -67,19 +57,13 @@ export type CreateSubscriptionPricingInput = z.infer<typeof zodCreateSubscriptio
  */
 const zodUpdateSubscriptionPricingSchema = z
   .object({
-    // Example fields — replace / expand as needed:
-    // name: z.string().min(2, 'Name must be at least 2 characters').max(100).optional(),
-    // email: z.string().email({ message: 'Invalid email format' }).optional(),
-    // age: z.number().int().positive().optional(),
-    // status: z.enum(['active', 'inactive', 'pending']).optional(),
-
+    // Subscription Plan ID — must be a valid MongoDB ObjectId
     subscriptionPlanId: z
       .string()
       .refine((val) => mongoose.Types.ObjectId.isValid(val), {
         message: 'Subscription Plan ID is invalid',
       })
       .optional(),
-
     // Subscription Duration ID — must be a valid MongoDB ObjectId
     subscriptionDurationId: z
       .string()
@@ -87,21 +71,18 @@ const zodUpdateSubscriptionPricingSchema = z
         message: 'Subscription Duration ID is invalid',
       })
       .optional(),
-
     // Price of the subscription — must be a number
     price: z
       .number({
         message: 'Price must be a number',
       })
       .optional(),
-
     // Currency code — must be a string (e.g., USD, GBP)
     currency: z
       .string({
         message: 'Currency is required',
       })
       .optional(),
-
     // Status — true if active, false if inactive
     isActive: z
       .boolean({
