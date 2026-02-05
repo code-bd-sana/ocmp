@@ -98,13 +98,13 @@ router.delete('/many', validateIds, deleteManySubscriptionDuration);
 router.delete('/:id', validateId, deleteSubscriptionDuration);
 
 /**
- * @route GET /api/v1/subscription-duration/many
+ * @route GET /api/v1/subscription-duration
  * @description Get multiple subscription-durations
  * @access Private
  * @param {function} validation - ['validateSearchQueries']
  * @param {function} controller - ['getManySubscriptionDuration']
  */
-router.get('/many', validateSearchQueries, getManySubscriptionDuration);
+router.get('/', validateSearchQueries, getManySubscriptionDuration);
 
 /**
  * @route GET /api/v1/subscription-duration/:id
