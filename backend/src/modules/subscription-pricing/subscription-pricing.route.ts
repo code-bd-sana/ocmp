@@ -95,7 +95,7 @@ router.delete(
 /**
  * @route GET /api/v1/subscription-pricing/get-subscription-pricing/many
  * @description Get multiple subscription-pricings
- * @access Private
+ * @access Public
  * @param {function} validation - ['validateSearchQueries']
  * @param {function} controller - ['getManySubscriptionPricing']
  */

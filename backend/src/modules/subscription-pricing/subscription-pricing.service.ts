@@ -110,6 +110,7 @@ const deleteSubscriptionPricing = async (
 const deleteManySubscriptionPricing = async (
   ids: IdOrIdsInput['ids']
 ): Promise<Partial<ISubscriptionPricing>[]> => {
+  console.log(ids);
   const subscriptionPricingToDelete = await SubscriptionPricing.find({ _id: { $in: ids } });
   if (!subscriptionPricingToDelete.length)
     throw new Error('No subscriptionPricing found to delete');
