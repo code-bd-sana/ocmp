@@ -68,12 +68,18 @@ router.patch(
  * @param {function} validation - ['validateIds']
  * @param {function} controller - ['deleteManySubscriptionPricing']
  */
-router.delete('/many', validateIds, deleteManySubscriptionPricing);
+router.delete(
+  '/many',
+  validateIds,
+  isAuthorized,
+  authorizedRoles([UserRole.SUPER_ADMIN]),
+  deleteManySubscriptionPricing
+);
 
 /**
  * @route DELETE /api/v1/subscription-pricing/delete-subscription-pricing/:id
  * @description Delete a subscription-pricing
- * @access Public
+ * @access Private
  * @param {IdOrIdsInput['id']} id - The ID of the subscription-pricing to delete
  * @param {function} validation - ['validateId']
  * @param {function} controller - ['deleteSubscriptionPricing']
@@ -89,7 +95,7 @@ router.delete(
 /**
  * @route GET /api/v1/subscription-pricing/get-subscription-pricing/many
  * @description Get multiple subscription-pricings
- * @access Public
+ * @access Private
  * @param {function} validation - ['validateSearchQueries']
  * @param {function} controller - ['getManySubscriptionPricing']
  */
