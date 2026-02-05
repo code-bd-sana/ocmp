@@ -28,10 +28,8 @@ export const login = catchAsync(async (req: Request, res: Response) => {
     ipAddress: req.body.ipAddress,
     userAgent: req.body.userAgent,
   } as ILogin;
-
   // Call the service method to perform login and get the result
   const result = await authServices.login(loginPayload);
-
   if (!result) {
     // Log the failed login activity
     await LoginActivity.create({

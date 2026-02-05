@@ -4,7 +4,7 @@ import { validateBody } from '../../handlers/zod-error-handler';
 /**
  * Authentication Validation Schemas and Types
  *
- * This module defines Zod schemas for validating authentication-related
+ * This module defines Zod schemas for validating authentication related
  * requests such as login, registration, password reset, and email verification.
  * It also exports corresponding TypeScript types inferred from these schemas.
  *

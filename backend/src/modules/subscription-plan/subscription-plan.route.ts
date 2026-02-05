@@ -8,13 +8,20 @@ import {
   deleteSubscriptionPlan,
   getManySubscriptionPlan,
   getSubscriptionPlanById,
-  updateSubscriptionPlan
+  updateSubscriptionPlan,
 } from './subscription-plan.controller';
 
 //Import validation from corresponding module
-import { validateId, validateIds, validateSearchQueries } from '../../handlers/common-zod-validator';
+import {
+  validateId,
+  validateIds,
+  validateSearchQueries,
+} from '../../handlers/common-zod-validator';
 import isAuthorized from '../../middlewares/is-authorized';
-import { validateCreateSubscriptionPlan, validateUpdateSubscriptionPlan } from './subscription-plan.validation';
+import {
+  validateCreateSubscriptionPlan,
+  validateUpdateSubscriptionPlan,
+} from './subscription-plan.validation';
 
 // Initialize router
 const router = Router();
@@ -27,18 +34,17 @@ const router = Router();
  * @param {function} validation - ['validateCreateSubscriptionPlan']
  * @param {function} controller - ['createSubscriptionPlan']
  */
-router.post("/", validateCreateSubscriptionPlan,isAuthorized, createSubscriptionPlan);
-
+router.post('/', validateCreateSubscriptionPlan, isAuthorized, createSubscriptionPlan);
 
 /**
- * @route PUT /api/v1/subscription-plan/update-subscription-plan/:id
+ * @route PATCH /api/v1/subscription-plan/update-subscription-plan/:id
  * @description Update subscription-plan information
  * @access Public
  * @param {IdOrIdsInput['id']} id - The ID of the subscription-plan to update
  * @param {function} validation - ['validateId', 'validateUpdateSubscriptionPlan']
  * @param {function} controller - ['updateSubscriptionPlan']
  */
-router.patch("/:id", validateId, validateUpdateSubscriptionPlan, updateSubscriptionPlan);
+router.patch('/:id', validateId, validateUpdateSubscriptionPlan, updateSubscriptionPlan);
 
 /**
  * @route DELETE /api/v1/subscription-plan/delete-subscription-plan/many
@@ -47,7 +53,7 @@ router.patch("/:id", validateId, validateUpdateSubscriptionPlan, updateSubscript
  * @param {function} validation - ['validateIds']
  * @param {function} controller - ['deleteManySubscriptionPlan']
  */
-router.delete("/delete-subscription-plan/many", validateIds, deleteManySubscriptionPlan);
+router.delete('/delete-subscription-plan/many', validateIds, deleteManySubscriptionPlan);
 
 /**
  * @route DELETE /api/v1/subscription-plan/delete-subscription-plan/:id
@@ -57,7 +63,7 @@ router.delete("/delete-subscription-plan/many", validateIds, deleteManySubscript
  * @param {function} validation - ['validateId']
  * @param {function} controller - ['deleteSubscriptionPlan']
  */
-router.delete("/delete-subscription-plan/:id", validateId, deleteSubscriptionPlan);
+router.delete('/delete-subscription-plan/:id', validateId, deleteSubscriptionPlan);
 
 /**
  * @route GET /api/v1/subscription-plan/get-subscription-plan/many
@@ -66,7 +72,7 @@ router.delete("/delete-subscription-plan/:id", validateId, deleteSubscriptionPla
  * @param {function} validation - ['validateSearchQueries']
  * @param {function} controller - ['getManySubscriptionPlan']
  */
-router.get("/", validateSearchQueries, getManySubscriptionPlan);
+router.get('/', validateSearchQueries, getManySubscriptionPlan);
 
 /**
  * @route GET /api/v1/subscription-plan/get-subscription-plan/:id
@@ -76,7 +82,7 @@ router.get("/", validateSearchQueries, getManySubscriptionPlan);
  * @param {function} validation - ['validateId']
  * @param {function} controller - ['getSubscriptionPlanById']
  */
-router.get("/:id", validateId, getSubscriptionPlanById);
+router.get('/:id', validateId, getSubscriptionPlanById);
 
 // Export the router
 module.exports = router;

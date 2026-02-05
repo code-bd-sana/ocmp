@@ -55,13 +55,13 @@ router.post('/', validateCreateSubscriptionDuration, createSubscriptionDuration)
 router.post('/many', validateCreateManySubscriptionDuration, createManySubscriptionDuration);
 
 /**
- * @route PUT /api/v1/subscription-duration/many
+ * @route PATCH /api/v1/subscription-duration/many
  * @description Update multiple subscription-durations information
  * @access Private
  * @param {function} validation - ['validateIds', 'validateUpdateManySubscriptionDuration']
  * @param {function} controller - ['updateManySubscriptionDuration']
  */
-router.put(
+router.patch(
   '/many',
   validateIds,
   validateUpdateManySubscriptionDuration,
@@ -69,14 +69,14 @@ router.put(
 );
 
 /**
- * @route PUT /api/v1/subscription-duration/:id
+ * @route PATCH /api/v1/subscription-duration/:id
  * @description Update subscription-duration information
  * @param {string} id - The ID of the subscription-duration to update
  * @access Private
  * @param {function} validation - ['validateId', 'validateUpdateSubscriptionDuration']
  * @param {function} controller - ['updateSubscriptionDuration']
  */
-router.put('/:id', validateId, validateUpdateSubscriptionDuration, updateSubscriptionDuration);
+router.patch('/:id', validateId, validateUpdateSubscriptionDuration, updateSubscriptionDuration);
 
 /**
  * @route DELETE /api/v1/subscription-duration/many
