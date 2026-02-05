@@ -7,7 +7,7 @@ import catchAsync from '../../utils/catch-async/catch-async';
 import { subscriptionDurationServices } from './subscription-duration.service';
 
 /**
- * Controller function to handle the creation of a single SubscriptionDuration.
+ * Controller function to handle the creation of a single subscription-duration.
  *
  * @param {Request} req - The request object containing subscription-duration data in the body.
  * @param {Response} res - The response object used to send the response.
@@ -21,7 +21,7 @@ export const createSubscriptionDuration = catchAsync(
     // Request body assignment for createdBy field
     req.body.createdBy = new mongoose.Types.ObjectId(userId);
     const result = await subscriptionDurationServices.createSubscriptionDuration(req.body);
-    if (!result) throw new Error('Failed to create Subscription-duration');
+    if (!result) throw new Error('Failed to create subscription-duration');
     // Send a success response with the created subscription-duration data
     ServerResponse(res, true, 201, 'Subscription-duration created successfully', result);
   }
@@ -42,7 +42,7 @@ export const updateSubscriptionDuration = catchAsync(async (req: Request, res: R
     id as string,
     req.body
   );
-  if (!result) throw new Error('Failed to update Subscription-duration');
+  if (!result) throw new Error('Failed to update subscription-duration');
   // Send a success response with the updated subscription-duration data
   ServerResponse(res, true, 200, 'Subscription-duration updated successfully', result);
 });
@@ -59,7 +59,7 @@ export const deleteSubscriptionDuration = catchAsync(async (req: Request, res: R
   const { id } = req.params;
   // Call the service method to delete the subscription-duration by ID
   const result = await subscriptionDurationServices.deleteSubscriptionDuration(id as string);
-  if (!result) throw new Error('Failed to delete Subscription-duration');
+  if (!result) throw new Error('Failed to delete subscription-duration');
   // Send a success response confirming the deletion
   ServerResponse(res, true, 200, 'Subscription-duration deleted successfully');
 });
@@ -77,7 +77,7 @@ export const deleteManySubscriptionDuration = catchAsync(async (req: Request, re
   const { ids } = req.body;
   // Call the service method to delete multiple subscription-durations and get the result
   const result = await subscriptionDurationServices.deleteManySubscriptionDuration(ids);
-  if (!result) throw new Error('Failed to delete multiple Subscription-durations');
+  if (!result) throw new Error('Failed to delete multiple subscription-durations');
   // Send a success response confirming the deletions
   ServerResponse(res, true, 200, 'Subscription-durations deleted successfully');
 });
@@ -113,7 +113,7 @@ export const getManySubscriptionDuration = catchAsync(async (req: Request, res: 
   // Call the service method to get multiple subscription-durations based on query parameters and get the result
   const { subscriptionDurations, totalData, totalPages } =
     await subscriptionDurationServices.getManySubscriptionDuration(query);
-  if (!subscriptionDurations) throw new Error('Failed to retrieve Subscription-durations');
+  if (!subscriptionDurations) throw new Error('Failed to retrieve subscription-durations');
   // Send a success response with the retrieved subscription-durations data
   ServerResponse(res, true, 200, 'Subscription-durations retrieved successfully', {
     subscriptionDurations,

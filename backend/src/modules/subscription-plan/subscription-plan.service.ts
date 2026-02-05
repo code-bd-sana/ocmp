@@ -61,7 +61,7 @@ const updateSubscriptionPlan = async (
   // TODO:First chcekc if any user purches this subscirption price
   // TODO: if(!purches) => then name, plantype applicableaccount not allow to update4
 
-  // Proceed to update the subscriptionPlan
+  // Proceed to update the subscription-plan
   const updatedSubscriptionPlan = await SubscriptionPlan.findByIdAndUpdate(id, data, { new: true });
   return updatedSubscriptionPlan;
 };
@@ -75,9 +75,9 @@ const updateSubscriptionPlan = async (
 const deleteSubscriptionPlan = async (
   id: IdOrIdsInput['id']
 ): Promise<Partial<ISubscriptionPlan | null>> => {
-  // ! if any user purchesd this plan already then not allowd to delete this plan
-  // TODO: First chcek any user purched!
-  // TODO: if alrady purched then 500 not allowed
+  // ! if any user purchased this plan already then not allowed to delete this plan
+  // TODO: First check any user purchased!
+  // TODO: if already purchased then 500 not allowed
   const deletedSubscriptionPlan = await SubscriptionPlan.findByIdAndDelete(id);
   return deletedSubscriptionPlan;
 };
@@ -134,11 +134,11 @@ const getManySubscriptionPlan = async (
   };
   // Calculate the number of items to skip based on the page number
   const skipItems = (pageNo - 1) * showPerPage;
-  // Find the total count of matching subscriptionPlan
+  // Find the total count of matching subscription-plan
   const totalData = await SubscriptionPlan.countDocuments(searchFilter);
   // Calculate the total number of pages
   const totalPages = Math.ceil(totalData / showPerPage);
-  // Find subscriptionPlan based on the search filter with pagination
+  // Find subscription-plans based on the search filter with pagination
   const subscriptionPlans = await SubscriptionPlan.find(searchFilter)
     .skip(skipItems)
     .limit(showPerPage)

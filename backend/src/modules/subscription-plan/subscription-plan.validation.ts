@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { validateBody } from '../../handlers/zod-error-handler';
 
 /**
- * SubscriptionPlan Validation Schemas and Types
+ * Subscription-plan Validation Schemas and Types
  *
  * This module defines Zod schemas for validating subscription-plan related
  * requests such as creation (single + bulk) and updates (single + bulk).

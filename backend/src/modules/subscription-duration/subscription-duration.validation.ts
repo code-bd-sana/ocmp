@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { validateBody } from '../../handlers/zod-error-handler';
 
 /**
- * Subscription Duration Validation Schemas and Types
+ * Subscription-duration Validation Schemas and Types
  *
  * This module defines Zod schemas for validating subscription-duration related
  * requests such as creating and updating subscription-durations.

@@ -16,11 +16,11 @@ import {
 const createSubscriptionDuration = async (
   data: CreateSubscriptionDurationInput
 ): Promise<Partial<ISubscriptionDuration>> => {
-  // Check if a subscription duration with the same name and duration already exists
+  // Check if a subscription-duration with the same name and duration already exists
   const existingDuration = await SubscriptionDuration.findOne({
     $or: [{ name: data.name.toUpperCase() }, { durationInDays: data.durationInDays }],
   });
-  // Prevent duplicate subscription durations
+  // Prevent duplicate subscription-durations
   if (existingDuration) {
     throw new Error('A subscription-duration with the same name and duration already exists.');
   }
@@ -141,11 +141,11 @@ const getManySubscriptionDuration = async (
   };
   // Calculate the number of items to skip based on the page number
   const skipItems = (pageNo - 1) * showPerPage;
-  // Find the total count of matching subscription durations
+  // Find the total count of matching subscription-durations
   const totalData = await SubscriptionDuration.countDocuments(searchFilter);
   // Calculate the total number of pages
   const totalPages = Math.ceil(totalData / showPerPage);
-  // Find subscription durations based on the search filter with pagination
+  // Find subscription-durations based on the search filter with pagination
   const subscriptionDurations = await SubscriptionDuration.find(searchFilter)
     .skip(skipItems)
     .limit(showPerPage)
