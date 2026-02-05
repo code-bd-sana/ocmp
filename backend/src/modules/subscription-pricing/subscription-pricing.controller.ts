@@ -1,8 +1,10 @@
 import { Request, Response } from 'express';
-import { subscriptionPricingServices } from './subscription-pricing.service';
+import mongoose from 'mongoose';
 import { SearchQueryInput } from '../../handlers/common-zod-validator';
 import ServerResponse from '../../helpers/responses/custom-response';
+import { AuthenticatedRequest } from '../../middlewares/is-authorized';
 import catchAsync from '../../utils/catch-async/catch-async';
+import { subscriptionPricingServices } from './subscription-pricing.service';
 
 /**
  * Controller function to handle the creation of a single SubscriptionPricing.
@@ -12,29 +14,21 @@ import catchAsync from '../../utils/catch-async/catch-async';
  * @returns {Promise<Partial<ISubscriptionPricing>>} - The created subscriptionPricing.
  * @throws {Error} - Throws an error if the subscriptionPricing creation fails.
  */
-export const createSubscriptionPricing = catchAsync(async (req: Request, res: Response) => {
-  // Call the service method to create a new subscription-pricing and get the result
-  const result = await subscriptionPricingServices.createSubscriptionPricing(req.body);
-  if (!result) throw new Error('Failed to create subscriptionPricing');
-  // Send a success response with the created subscriptionPricing data
-  ServerResponse(res, true, 201, 'SubscriptionPricing created successfully', result);
-});
+export const createSubscriptionPricing = catchAsync(
+  async (req: AuthenticatedRequest, res: Response) => {
+    // Call the service method to create a new subscription-pricing and get the result
+    // Call the service method to create a new subscription-plan and get the result
 
-/**
- * Controller function to handle the creation of multiple subscription-pricings.
- *
- * @param {Request} req - The request object containing an array of subscription-pricing data in the body.
- * @param {Response} res - The response object used to send the response.
- * @returns {Promise<Partial<ISubscriptionPricing>[]>} - The created subscriptionPricings.
- * @throws {Error} - Throws an error if the subscriptionPricings creation fails.
- */
-export const createManySubscriptionPricing = catchAsync(async (req: Request, res: Response) => {
-  // Call the service method to create multiple subscriptionPricings and get the result
-  const result = await subscriptionPricingServices.createManySubscriptionPricing(req.body);
-  if (!result) throw new Error('Failed to create multiple subscriptionPricings');
-  // Send a success response with the created subscription-pricings data
-  ServerResponse(res, true, 201, 'SubscriptionPricings created successfully', result);
-});
+    // Use the authenticated user's ID as the creator
+    const userId = req.user!._id;
+    // Request body assignment for createdBy field
+    req.body.createdBy = new mongoose.Types.ObjectId(userId);
+    const result = await subscriptionPricingServices.createSubscriptionPricing(req.body);
+    if (!result) throw new Error('Failed to create subscriptionPricing');
+    // Send a success response with the created subscriptionPricing data
+    ServerResponse(res, true, 201, 'SubscriptionPricing created successfully', result);
+  }
+);
 
 /**
  * Controller function to handle the update operation for a single subscription-pricing.
@@ -47,26 +41,13 @@ export const createManySubscriptionPricing = catchAsync(async (req: Request, res
 export const updateSubscriptionPricing = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params;
   // Call the service method to update the subscription-pricing by ID and get the result
-  const result = await subscriptionPricingServices.updateSubscriptionPricing(id as string, req.body);
+  const result = await subscriptionPricingServices.updateSubscriptionPricing(
+    id as string,
+    req.body
+  );
   if (!result) throw new Error('Failed to update subscriptionPricing');
   // Send a success response with the updated subscription-pricing data
   ServerResponse(res, true, 200, 'SubscriptionPricing updated successfully', result);
-});
-
-/**
- * Controller function to handle the update operation for multiple subscription-pricings.
- *
- * @param {Request} req - The request object containing an array of subscription-pricing data in the body.
- * @param {Response} res - The response object used to send the response.
- * @returns {Promise<Partial<ISubscriptionPricing>[]>} - The updated subscriptionPricings.
- * @throws {Error} - Throws an error if the subscriptionPricings update fails.
- */
-export const updateManySubscriptionPricing = catchAsync(async (req: Request, res: Response) => {
-  // Call the service method to update multiple subscription-pricings and get the result
-  const result = await subscriptionPricingServices.updateManySubscriptionPricing(req.body);
-  if (!result.length) throw new Error('Failed to update multiple subscriptionPricings');
-  // Send a success response with the updated subscription-pricings data
-  ServerResponse(res, true, 200, 'SubscriptionPricings updated successfully', result);
 });
 
 /**
@@ -128,11 +109,17 @@ export const getSubscriptionPricingById = catchAsync(async (req: Request, res: R
  * @throws {Error} - Throws an error if the subscriptionPricings retrieval fails.
  */
 export const getManySubscriptionPricing = catchAsync(async (req: Request, res: Response) => {
-  // Type assertion for query parameters 
+  // Type assertion for query parameters
   const query = req.query as SearchQueryInput;
   // Call the service method to get multiple subscription-pricings based on query parameters and get the result
-  const { subscriptionPricings, totalData, totalPages } = await subscriptionPricingServices.getManySubscriptionPricing(query);
+  const { subscriptionPricings, totalData, totalPages } =
+    await subscriptionPricingServices.getManySubscriptionPricing(query);
   if (!subscriptionPricings) throw new Error('Failed to retrieve subscriptionPricings');
   // Send a success response with the retrieved subscription-pricings data
-  ServerResponse(res, true, 200, 'SubscriptionPricings retrieved successfully', { subscriptionPricings, totalData, totalPages });
+  ServerResponse(res, true, 200, 'SubscriptionPricings retrieved successfully', {
+    subscriptionPricings,
+    totalData,
+    totalPages,
+  });
 });
+

@@ -1,4 +1,4 @@
-import { isMongoId } from 'validator';
+import mongoose from 'mongoose';
 import { z } from 'zod';
 import { validateBody } from '../../handlers/zod-error-handler';
 
@@ -16,7 +16,7 @@ import { validateBody } from '../../handlers/zod-error-handler';
 
 /**
  * Zod schema for validating data when **creating** a single subscriptionPricing.
- * 
+ *
  * → Add all **required** fields here
  */
 const zodCreateSubscriptionPricingSchema = z
@@ -26,23 +26,43 @@ const zodCreateSubscriptionPricingSchema = z
     // email: z.string().email({ message: 'Invalid email format' }),
     // age: z.number().int().positive().optional(),
     // status: z.enum(['active', 'inactive', 'pending']).default('pending'),
+
+    // Subscription Plan ID — must be a valid MongoDB ObjectId
+    subscriptionPlanId: z.string().refine((val) => mongoose.Types.ObjectId.isValid(val), {
+      message: 'Subscription Plan ID is invalid',
+    }),
+
+    // Subscription Duration ID — must be a valid MongoDB ObjectId
+    subscriptionDurationId: z.string().refine((val) => mongoose.Types.ObjectId.isValid(val), {
+      message: 'Subscription Duration ID is invalid',
+    }),
+
+    // Price of the subscription — must be a number
+    price: z.number({
+      message: 'Price must be a number',
+    }),
+
+    // Currency code — must be a string (e.g., USD, GBP)
+    currency: z
+      .string({
+        message: 'Currency is required',
+      })
+      .optional(),
+
+    // Status — true if active, false if inactive
+    isActive: z
+      .boolean({
+        message: 'Status is required',
+      })
+      .optional(),
   })
   .strict();
 
 export type CreateSubscriptionPricingInput = z.infer<typeof zodCreateSubscriptionPricingSchema>;
 
 /**
- * Zod schema for validating **bulk creation** (array of subscriptionPricing objects).
- */
-const zodCreateManySubscriptionPricingSchema = z
-  .array(zodCreateSubscriptionPricingSchema)
-  .min(1, { message: 'At least one subscriptionPricing must be provided for bulk creation' });
-
-export type CreateManySubscriptionPricingInput = z.infer<typeof zodCreateManySubscriptionPricingSchema>;
-
-/**
  * Zod schema for validating data when **updating** an existing subscriptionPricing.
- * 
+ *
  * → All fields should usually be .optional()
  */
 const zodUpdateSubscriptionPricingSchema = z
@@ -52,35 +72,50 @@ const zodUpdateSubscriptionPricingSchema = z
     // email: z.string().email({ message: 'Invalid email format' }).optional(),
     // age: z.number().int().positive().optional(),
     // status: z.enum(['active', 'inactive', 'pending']).optional(),
+
+    subscriptionPlanId: z
+      .string()
+      .refine((val) => mongoose.Types.ObjectId.isValid(val), {
+        message: 'Subscription Plan ID is invalid',
+      })
+      .optional(),
+
+    // Subscription Duration ID — must be a valid MongoDB ObjectId
+    subscriptionDurationId: z
+      .string()
+      .refine((val) => mongoose.Types.ObjectId.isValid(val), {
+        message: 'Subscription Duration ID is invalid',
+      })
+      .optional(),
+
+    // Price of the subscription — must be a number
+    price: z
+      .number({
+        message: 'Price must be a number',
+      })
+      .optional(),
+
+    // Currency code — must be a string (e.g., USD, GBP)
+    currency: z
+      .string({
+        message: 'Currency is required',
+      })
+      .optional(),
+
+    // Status — true if active, false if inactive
+    isActive: z
+      .boolean({
+        message: 'Status is required',
+      })
+      .optional(),
   })
   .strict();
 
 export type UpdateSubscriptionPricingInput = z.infer<typeof zodUpdateSubscriptionPricingSchema>;
 
 /**
- * Zod schema for validating bulk updates (array of partial subscriptionPricing objects).
- */
-const zodUpdateManySubscriptionPricingForBulkSchema = zodUpdateSubscriptionPricingSchema
-  .extend({
-    id: z.string().refine(isMongoId, { message: 'Please provide a valid MongoDB ObjectId' }),
-  })
-  .refine((data) => Object.keys(data).length > 1, {
-    message: 'At least one field to update must be provided',
-  });
-
-/**
- * Zod schema for validating an array of multiple subscriptionPricing updates.
- */
-const zodUpdateManySubscriptionPricingSchema = z
-  .array(zodUpdateManySubscriptionPricingForBulkSchema)
-  .min(1, { message: 'At least one subscriptionPricing update object must be provided' });
-
-export type UpdateManySubscriptionPricingInput = z.infer<typeof zodUpdateManySubscriptionPricingSchema>;
-
-/**
  * Named validators — use these directly in your Express routes
  */
 export const validateCreateSubscriptionPricing = validateBody(zodCreateSubscriptionPricingSchema);
-export const validateCreateManySubscriptionPricing = validateBody(zodCreateManySubscriptionPricingSchema);
 export const validateUpdateSubscriptionPricing = validateBody(zodUpdateSubscriptionPricingSchema);
-export const validateUpdateManySubscriptionPricing = validateBody(zodUpdateManySubscriptionPricingSchema);
+

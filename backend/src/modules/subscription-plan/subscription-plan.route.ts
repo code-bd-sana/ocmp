@@ -17,7 +17,9 @@ import {
   validateIds,
   validateSearchQueries,
 } from '../../handlers/common-zod-validator';
+import authorizedRoles from '../../middlewares/authorized-roles';
 import isAuthorized from '../../middlewares/is-authorized';
+import { UserRole } from '../../models';
 import {
   validateCreateSubscriptionPlan,
   validateUpdateSubscriptionPlan,
@@ -30,11 +32,17 @@ const router = Router();
 /**
  * @route POST /api/v1/subscription-plan
  * @description Create a new subscription-plan
- * @access Public
+ * @access Private
  * @param {function} validation - ['validateCreateSubscriptionPlan']
  * @param {function} controller - ['createSubscriptionPlan']
  */
-router.post('/', validateCreateSubscriptionPlan, isAuthorized, createSubscriptionPlan);
+router.post(
+  '/',
+  validateCreateSubscriptionPlan,
+  isAuthorized,
+  authorizedRoles([UserRole.SUPER_ADMIN]),
+  createSubscriptionPlan
+);
 
 /**
  * @route PATCH /api/v1/subscription-plan/:id

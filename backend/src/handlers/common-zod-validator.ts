@@ -61,9 +61,26 @@ const zodSearchQuerySchema = z
 
 export type SearchQueryInput = z.infer<typeof zodSearchQuerySchema>;
 
+const zodPlanIdSchema = z
+  .object({
+    planId: zodIdSchema.pick({ id: true }),
+  })
+  .strict();
+
+const zodDurationIdSchema = z
+  .object({
+    durationId: zodIdSchema.pick({ id: true }),
+  })
+  .strict();
+
+export type PlanIdInput = z.infer<typeof zodPlanIdSchema>;
+export type DurationInput = z.infer<typeof zodDurationIdSchema>;
+
 /**
  * Named validators (to be used in Express routes)
  */
 export const validateId = validateParams(zodIdSchema.pick({ id: true }));
+export const validPlanId = validateParams(zodPlanIdSchema.pick({ planId: true }));
 export const validateIds = validateBody(zodIdSchema.pick({ ids: true }));
+export const validDurationId = validateParams(zodDurationIdSchema.pick({ durationId: true }));
 export const validateSearchQueries = validateQuery(zodSearchQuerySchema);

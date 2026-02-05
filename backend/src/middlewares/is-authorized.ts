@@ -66,7 +66,7 @@ const isAuthorized = async (
     req.user = {
       _id,
       email,
-      role:/*  role as UserRole, */ UserRole.SUPER_ADMIN,
+      role: /*  role as UserRole, */ UserRole.SUPER_ADMIN, // ! TODO:- Roles are currently static and will be made dynamic in a future update
       loginHash,
     };
 

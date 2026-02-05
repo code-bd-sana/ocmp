@@ -2,20 +2,28 @@
 import { Router } from 'express';
 
 // Import controller from corresponding module
-import { 
+import {
   createSubscriptionPricing,
-  createManySubscriptionPricing,
-  updateSubscriptionPricing,
-  updateManySubscriptionPricing,
-  deleteSubscriptionPricing,
   deleteManySubscriptionPricing,
+  deleteSubscriptionPricing,
+  getManySubscriptionPricing,
   getSubscriptionPricingById,
-  getManySubscriptionPricing
+  updateSubscriptionPricing,
 } from './subscription-pricing.controller';
 
 //Import validation from corresponding module
-import { validateCreateSubscriptionPricing, validateCreateManySubscriptionPricing, validateUpdateSubscriptionPricing, validateUpdateManySubscriptionPricing} from './subscription-pricing.validation';
-import { validateId, validateIds, validateSearchQueries } from '../../handlers/common-zod-validator';
+import {
+  validateId,
+  validateIds,
+  validateSearchQueries,
+} from '../../handlers/common-zod-validator';
+import authorizedRoles from '../../middlewares/authorized-roles';
+import isAuthorized from '../../middlewares/is-authorized';
+import { UserRole } from '../../models';
+import {
+  validateCreateSubscriptionPricing,
+  validateUpdateSubscriptionPricing,
+} from './subscription-pricing.validation';
 
 // Initialize router
 const router = Router();
@@ -24,39 +32,34 @@ const router = Router();
 /**
  * @route POST /api/v1/subscription-pricing/create-subscription-pricing
  * @description Create a new subscription-pricing
- * @access Public
+ * @access Private
  * @param {function} validation - ['validateCreateSubscriptionPricing']
  * @param {function} controller - ['createSubscriptionPricing']
  */
-router.post("/create-subscription-pricing", validateCreateSubscriptionPricing, createSubscriptionPricing);
-
-/**
- * @route POST /api/v1/subscription-pricing/create-subscription-pricing/many
- * @description Create multiple subscription-pricings
- * @access Public
- * @param {function} validation - ['validateCreateManySubscriptionPricing']
- * @param {function} controller - ['createManySubscriptionPricing']
- */
-router.post("/create-subscription-pricing/many", validateCreateManySubscriptionPricing, createManySubscriptionPricing);
-
-/**
- * @route PUT /api/v1/subscription-pricing/update-subscription-pricing/many
- * @description Update multiple subscription-pricings information
- * @access Public
- * @param {function} validation - ['validateIds', 'validateUpdateManySubscriptionPricing']
- * @param {function} controller - ['updateManySubscriptionPricing']
- */
-router.put("/update-subscription-pricing/many", validateIds, validateUpdateManySubscriptionPricing, updateManySubscriptionPricing);
+router.post(
+  '/',
+  validateCreateSubscriptionPricing,
+  isAuthorized,
+  authorizedRoles([UserRole.SUPER_ADMIN]),
+  createSubscriptionPricing
+);
 
 /**
  * @route PUT /api/v1/subscription-pricing/update-subscription-pricing/:id
  * @description Update subscription-pricing information
- * @access Public
+ * @access Private
  * @param {IdOrIdsInput['id']} id - The ID of the subscription-pricing to update
  * @param {function} validation - ['validateId', 'validateUpdateSubscriptionPricing']
  * @param {function} controller - ['updateSubscriptionPricing']
  */
-router.put("/update-subscription-pricing/:id", validateId, validateUpdateSubscriptionPricing, updateSubscriptionPricing);
+router.patch(
+  '/:id',
+  validateId,
+  isAuthorized,
+  authorizedRoles([UserRole.SUPER_ADMIN]),
+  validateUpdateSubscriptionPricing,
+  updateSubscriptionPricing
+);
 
 /**
  * @route DELETE /api/v1/subscription-pricing/delete-subscription-pricing/many
@@ -65,7 +68,7 @@ router.put("/update-subscription-pricing/:id", validateId, validateUpdateSubscri
  * @param {function} validation - ['validateIds']
  * @param {function} controller - ['deleteManySubscriptionPricing']
  */
-router.delete("/delete-subscription-pricing/many", validateIds, deleteManySubscriptionPricing);
+router.delete('/many', validateIds, deleteManySubscriptionPricing);
 
 /**
  * @route DELETE /api/v1/subscription-pricing/delete-subscription-pricing/:id
@@ -75,7 +78,13 @@ router.delete("/delete-subscription-pricing/many", validateIds, deleteManySubscr
  * @param {function} validation - ['validateId']
  * @param {function} controller - ['deleteSubscriptionPricing']
  */
-router.delete("/delete-subscription-pricing/:id", validateId, deleteSubscriptionPricing);
+router.delete(
+  '/:id',
+  validateId,
+  isAuthorized,
+  authorizedRoles([UserRole.SUPER_ADMIN]),
+  deleteSubscriptionPricing
+);
 
 /**
  * @route GET /api/v1/subscription-pricing/get-subscription-pricing/many
@@ -84,7 +93,7 @@ router.delete("/delete-subscription-pricing/:id", validateId, deleteSubscription
  * @param {function} validation - ['validateSearchQueries']
  * @param {function} controller - ['getManySubscriptionPricing']
  */
-router.get("/get-subscription-pricing/many", validateSearchQueries, getManySubscriptionPricing);
+router.get('/', validateSearchQueries, getManySubscriptionPricing);
 
 /**
  * @route GET /api/v1/subscription-pricing/get-subscription-pricing/:id
@@ -94,7 +103,8 @@ router.get("/get-subscription-pricing/many", validateSearchQueries, getManySubsc
  * @param {function} validation - ['validateId']
  * @param {function} controller - ['getSubscriptionPricingById']
  */
-router.get("/get-subscription-pricing/:id", validateId, getSubscriptionPricingById);
+router.get('/:id', validateId, getSubscriptionPricingById); // (Main _id)
 
 // Export the router
 module.exports = router;
+
