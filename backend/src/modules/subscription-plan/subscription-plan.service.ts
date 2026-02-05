@@ -34,12 +34,21 @@ const updateSubscriptionPlan = async (id: IdOrIdsInput['id'], data: UpdateSubscr
   // Check for duplicate (filed) combination
   const existingSubscriptionPlan = await SubscriptionPlan.findOne({
     _id: { $ne: id }, // Exclude the current document
-    $or: [{ /* filedName: data.filedName, */ }],
+    $or: [{ /* filedName: data.filedName, */
+      name:data.name,
+     }],
   }).lean();
   // Prevent duplicate updates
   if (existingSubscriptionPlan) {
     throw new Error('Duplicate detected: Another subscriptionPlan with the same fieldName already exists.');
   }
+
+  //! If This subscirption e already kono user niye thake thaole name paln type applicableAccountType isActive update kora jabe na  -- > only allow update description
+
+  // TODO:First chcekc if any user purches this subscirption price
+  // TODO: if(!purches) => then name, plantype applicableaccount not allow to update4
+
+
   // Proceed to update the subscriptionPlan
   const updatedSubscriptionPlan = await SubscriptionPlan.findByIdAndUpdate(id, data, { new: true });
   return updatedSubscriptionPlan;
@@ -108,6 +117,11 @@ const updateManySubscriptionPlan = async (data: UpdateManySubscriptionPlanInput)
  * @returns {Promise<Partial<ISubscriptionPlan>>} - The deleted subscriptionPlan.
  */
 const deleteSubscriptionPlan = async (id: IdOrIdsInput['id']): Promise<Partial<ISubscriptionPlan | null>> => {
+
+
+  // ! if any user purchesd this plan already then not allowd to delete this plan
+  // TODO: First chcek any user purched!
+  // TODO: if alrady purched then 500 not allowed 
   const deletedSubscriptionPlan = await SubscriptionPlan.findByIdAndDelete(id);
   return deletedSubscriptionPlan;
 };

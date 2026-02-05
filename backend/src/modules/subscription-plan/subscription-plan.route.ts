@@ -57,7 +57,7 @@ router.delete("/delete-subscription-plan/many", validateIds, deleteManySubscript
  * @param {function} validation - ['validateId']
  * @param {function} controller - ['deleteSubscriptionPlan']
  */
-router.delete("/delete-subscription-plan/:id", validateId, deleteSubscriptionPlan);
+router.delete("/:id", validateId, deleteSubscriptionPlan);
 
 /**
  * @route GET /api/v1/subscription-plan/get-subscription-plan/many
