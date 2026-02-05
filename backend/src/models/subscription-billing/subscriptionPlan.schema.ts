@@ -22,10 +22,12 @@ const SubscriptionPlanSchema: Schema<ISubscriptionPlan> = new Schema(
       type: String,
       enum: ['FREE', 'PAID', 'CUSTOM'],
       required: true,
+      set: (v: string) => v.toUpperCase(),
     },
     applicableAccountType: {
       type: String,
       enum: ['STANDALONE', 'TRANSPORT_MANAGER', 'BOTH'],
+      set: (v: string) => v.toUpperCase(),
     },
     description: {
       type: String,
