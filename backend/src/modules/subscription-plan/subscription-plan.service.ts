@@ -12,10 +12,10 @@ import {
 } from './subscription-plan.validation';
 
 /**
- * Service function to create a new subscriptionPlan.
+ * Service function to create a new subscription-plan.
  *
- * @param {CreateSubscriptionPlanInput} data - The data to create a new subscriptionPlan.
- * @returns {Promise<Partial<ISubscriptionPlan>>} - The created subscriptionPlan.
+ * @param {CreateSubscriptionPlanInput} data - The data to create a new subscription-plan.
+ * @returns {Promise<Partial<ISubscriptionPlan>>} - The created subscription-plan.
  */
 const createSubscriptionPlan = async (
   data: CreateSubscriptionPlanInput
@@ -26,11 +26,11 @@ const createSubscriptionPlan = async (
 };
 
 /**
- * Service function to update a single subscriptionPlan by ID.
+ * Service function to update a single subscription-plan by ID.
  *
- * @param {IdOrIdsInput['id']} id - The ID of the subscriptionPlan to update.
- * @param {UpdateSubscriptionPlanInput} data - The updated data for the subscriptionPlan.
- * @returns {Promise<Partial<ISubscriptionPlan>>} - The updated subscriptionPlan.
+ * @param {IdOrIdsInput['id']} id - The ID of the subscription-plan to update.
+ * @param {UpdateSubscriptionPlanInput} data - The updated data for the subscription-plan.
+ * @returns {Promise<Partial<ISubscriptionPlan>>} - The updated subscription-plan.
  */
 const updateSubscriptionPlan = async (
   id: IdOrIdsInput['id'],
@@ -48,7 +48,7 @@ const updateSubscriptionPlan = async (
   // Prevent duplicate updates
   if (existingSubscriptionPlan) {
     throw new Error(
-      'Duplicate detected: Another subscriptionPlan with the same fieldName already exists.'
+      'Duplicate detected: Another subscription-plan with the same fieldName already exists.'
     );
   }
   // Proceed to update the subscriptionPlan
@@ -57,10 +57,10 @@ const updateSubscriptionPlan = async (
 };
 
 /**
- * Service function to update multiple subscriptionPlan.
+ * Service function to update multiple subscription-plan.
  *
- * @param {UpdateManySubscriptionPlanInput} data - An array of data to update multiple subscriptionPlan.
- * @returns {Promise<Partial<ISubscriptionPlan>[]>} - The updated subscriptionPlan.
+ * @param {UpdateManySubscriptionPlanInput} data - An array of data to update multiple subscription-plan.
+ * @returns {Promise<Partial<ISubscriptionPlan>[]>} - The updated subscription-plan.
  */
 const updateManySubscriptionPlan = async (
   data: UpdateManySubscriptionPlanInput
@@ -81,7 +81,7 @@ const updateManySubscriptionPlan = async (
   // If any duplicates found, throw error
   if (existingSubscriptionPlan.length > 0) {
     throw new Error(
-      'Duplicate detected: One or more subscriptionPlan with the same fieldName already exist.'
+      'Duplicate detected: One or more subscription-plan with the same fieldName already exist.'
     );
   }
   // Prepare bulk operations
@@ -115,10 +115,10 @@ const updateManySubscriptionPlan = async (
 };
 
 /**
- * Service function to delete a single subscriptionPlan by ID.
+ * Service function to delete a single subscription-plan by ID.
  *
- * @param {IdOrIdsInput['id']} id - The ID of the subscriptionPlan to delete.
- * @returns {Promise<Partial<ISubscriptionPlan>>} - The deleted subscriptionPlan.
+ * @param {IdOrIdsInput['id']} id - The ID of the subscription-plan to delete.
+ * @returns {Promise<Partial<ISubscriptionPlan>>} - The deleted subscription-plan.
  */
 const deleteSubscriptionPlan = async (
   id: IdOrIdsInput['id']
@@ -128,25 +128,25 @@ const deleteSubscriptionPlan = async (
 };
 
 /**
- * Service function to delete multiple subscriptionPlan.
+ * Service function to delete multiple subscription-plan.
  *
- * @param {IdOrIdsInput['ids']} ids - An array of IDs of subscriptionPlan to delete.
- * @returns {Promise<Partial<ISubscriptionPlan>[]>} - The deleted subscriptionPlan.
+ * @param {IdOrIdsInput['ids']} ids - An array of IDs of subscription-plan to delete.
+ * @returns {Promise<Partial<ISubscriptionPlan>[]>} - The deleted subscription-plan.
  */
 const deleteManySubscriptionPlan = async (
   ids: IdOrIdsInput['ids']
 ): Promise<Partial<ISubscriptionPlan>[]> => {
   const subscriptionPlanToDelete = await SubscriptionPlan.find({ _id: { $in: ids } });
-  if (!subscriptionPlanToDelete.length) throw new Error('No subscriptionPlan found to delete');
+  if (!subscriptionPlanToDelete.length) throw new Error('No subscription-plan found to delete');
   await SubscriptionPlan.deleteMany({ _id: { $in: ids } });
   return subscriptionPlanToDelete;
 };
 
 /**
- * Service function to retrieve a single subscriptionPlan by ID.
+ * Service function to retrieve a single subscription-plan by ID.
  *
- * @param {IdOrIdsInput['id']} id - The ID of the subscriptionPlan to retrieve.
- * @returns {Promise<Partial<ISubscriptionPlan>>} - The retrieved subscriptionPlan.
+ * @param {IdOrIdsInput['id']} id - The ID of the subscription-plan to retrieve.
+ * @returns {Promise<Partial<ISubscriptionPlan>>} - The retrieved subscription-plan.
  */
 const getSubscriptionPlanById = async (
   id: IdOrIdsInput['id']
@@ -156,10 +156,10 @@ const getSubscriptionPlanById = async (
 };
 
 /**
- * Service function to retrieve multiple subscriptionPlan based on query parameters.
+ * Service function to retrieve multiple subscription-plan based on query parameters.
  *
- * @param {SearchQueryInput} query - The query parameters for filtering subscriptionPlan.
- * @returns {Promise<Partial<ISubscriptionPlan>[]>} - The retrieved subscriptionPlan
+ * @param {SearchQueryInput} query - The query parameters for filtering subscription-plan.
+ * @returns {Promise<Partial<ISubscriptionPlan>[]>} - The retrieved subscription-plan
  */
 const getManySubscriptionPlan = async (
   query: SearchQueryInput
@@ -179,11 +179,11 @@ const getManySubscriptionPlan = async (
   };
   // Calculate the number of items to skip based on the page number
   const skipItems = (pageNo - 1) * showPerPage;
-  // Find the total count of matching subscriptionPlan
+  // Find the total count of matching subscription-plan
   const totalData = await SubscriptionPlan.countDocuments(searchFilter);
   // Calculate the total number of pages
   const totalPages = Math.ceil(totalData / showPerPage);
-  // Find subscriptionPlan based on the search filter with pagination
+  // Find subscription-plan based on the search filter with pagination
   const subscriptionPlans = await SubscriptionPlan.find(searchFilter)
     .skip(skipItems)
     .limit(showPerPage)
