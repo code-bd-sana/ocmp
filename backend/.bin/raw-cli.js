@@ -257,8 +257,10 @@ export const delete${capitalizedResourceName} = catchAsync(async (req: Request, 
  * @throws {Error} - Throws an error if the ${resourceName} deletion fails.
  */
 export const deleteMany${capitalizedResourceName} = catchAsync(async (req: Request, res: Response) => {
+  // Extract ids from request body
+  const { ids } = req.body;
   // Call the service method to delete multiple ${args[0]}s and get the result
-  const result = await ${resourceName}Services.deleteMany${capitalizedResourceName}(req.body);
+  const result = await ${resourceName}Services.deleteMany${capitalizedResourceName}(ids);
   if (!result) throw new Error('Failed to delete multiple ${resourceName}s');
   // Send a success response confirming the deletions
   ServerResponse(res, true, 200, '${capitalizedResourceName}s deleted successfully');

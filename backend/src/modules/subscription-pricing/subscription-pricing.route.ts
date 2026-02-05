@@ -109,8 +109,7 @@ router.get('/', validateSearchQueries, getManySubscriptionPricing);
  * @param {function} validation - ['validateId']
  * @param {function} controller - ['getSubscriptionPricingById']
  */
-router.get('/:id', validateId, getSubscriptionPricingById); // (Main _id)
+router.get('/:id', validateId, getSubscriptionPricingById);
 
 // Export the router
 module.exports = router;
-

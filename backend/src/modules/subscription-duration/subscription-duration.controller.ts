@@ -73,8 +73,10 @@ export const deleteSubscriptionDuration = catchAsync(async (req: Request, res: R
  * @throws {Error} - Throws an error if the subscriptionDuration deletion fails.
  */
 export const deleteManySubscriptionDuration = catchAsync(async (req: Request, res: Response) => {
+  // Extract ids from request body
+  const { ids } = req.body;
   // Call the service method to delete multiple subscription-durations and get the result
-  const result = await subscriptionDurationServices.deleteManySubscriptionDuration(req.body);
+  const result = await subscriptionDurationServices.deleteManySubscriptionDuration(ids);
   if (!result) throw new Error('Failed to delete multiple subscription durations');
   // Send a success response confirming the deletions
   ServerResponse(res, true, 200, 'Subscription durations deleted successfully');

@@ -72,8 +72,10 @@ export const deleteSubscriptionPlan = catchAsync(async (req: Request, res: Respo
  * @throws {Error} - Throws an error if the subscriptionPlan deletion fails.
  */
 export const deleteManySubscriptionPlan = catchAsync(async (req: Request, res: Response) => {
+  // Extract ids from request body
+  const { ids } = req.body;
   // Call the service method to delete multiple subscription-plans and get the result
-  const result = await subscriptionPlanServices.deleteManySubscriptionPlan(req.body);
+  const result = await subscriptionPlanServices.deleteManySubscriptionPlan(ids);
   if (!result) throw new Error('Failed to delete multiple subscriptionPlans');
   // Send a success response confirming the deletions
   ServerResponse(res, true, 200, 'SubscriptionPlans deleted successfully');

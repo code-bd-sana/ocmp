@@ -76,8 +76,10 @@ export const deleteSubscriptionPricing = catchAsync(async (req: Request, res: Re
  * @throws {Error} - Throws an error if the subscriptionPricing deletion fails.
  */
 export const deleteManySubscriptionPricing = catchAsync(async (req: Request, res: Response) => {
+  // Extract ids from request body
+  const { ids } = req.body;
   // Call the service method to delete multiple subscription-pricings and get the result
-  const result = await subscriptionPricingServices.deleteManySubscriptionPricing(req.body);
+  const result = await subscriptionPricingServices.deleteManySubscriptionPricing(ids);
   if (!result) throw new Error('Failed to delete multiple subscriptionPricings');
   // Send a success response confirming the deletions
   ServerResponse(res, true, 200, 'SubscriptionPricings deleted successfully');
@@ -122,4 +124,3 @@ export const getManySubscriptionPricing = catchAsync(async (req: Request, res: R
     totalPages,
   });
 });
-
