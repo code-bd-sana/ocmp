@@ -32,16 +32,6 @@ export const zodCreateSubscriptionDurationSchema = z
 
 export type CreateSubscriptionDurationInput = z.infer<typeof zodCreateSubscriptionDurationSchema>;
 
-export const zodCreateManySubscriptionDurationSchema = z
-  .array(zodCreateSubscriptionDurationSchema)
-  .min(1, {
-    message: 'At least one subscription duration must be provided for bulk creation',
-  });
-
-export type CreateManySubscriptionDurationInput = z.infer<
-  typeof zodCreateManySubscriptionDurationSchema
->;
-
 /**
  * Zod schema for validating subscription duration data during updates.
  */
@@ -79,24 +69,7 @@ export const zodUpdateSubscriptionDurationForBulkSchema = zodUpdateSubscriptionD
   });
 
 /**
- * Zod schema for validating an array of multiple subscription duration updates.
- */
-export const zodUpdateManySubscriptionDurationSchema = z
-  .array(zodUpdateSubscriptionDurationForBulkSchema)
-  .min(1, { message: 'At least one subscription duration update object must be provided' });
-
-export type UpdateManySubscriptionDurationInput = z.infer<
-  typeof zodUpdateManySubscriptionDurationSchema
->;
-
-/**
  * Export named validators (express middleware creators) for use in routes.
  */
 export const validateCreateSubscriptionDuration = validateBody(zodCreateSubscriptionDurationSchema);
-export const validateCreateManySubscriptionDuration = validateBody(
-  zodCreateManySubscriptionDurationSchema
-);
 export const validateUpdateSubscriptionDuration = validateBody(zodUpdateSubscriptionDurationSchema);
-export const validateUpdateManySubscriptionDuration = validateBody(
-  zodUpdateManySubscriptionDurationSchema
-);

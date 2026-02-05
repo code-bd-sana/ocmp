@@ -28,31 +28,6 @@ export const createSubscriptionDuration = catchAsync(
 );
 
 /**
- * Controller function to handle the creation of multiple subscription-durations.
- *
- * @param {Request} req - The request object containing an array of subscription-duration data in the body.
- * @param {Response} res - The response object used to send the response.
- * @returns {Promise<Partial<ISubscriptionDuration>[]>} - The created subscriptionDurations.
- * @throws {Error} - Throws an error if the subscriptionDurations creation fails.
- */
-export const createManySubscriptionDuration = catchAsync(
-  async (req: AuthenticatedRequest, res: Response) => {
-    // Use the authenticated user's ID as the creator for each item
-    const userId = req.user!._id;
-    // Request body assignment for createdBy field for each item
-    req.body = req.body.map((item: any) => ({
-      ...item,
-      createdBy: new mongoose.Types.ObjectId(userId),
-    }));
-    // Call the service method to create multiple subscriptionDurations and get the result
-    const result = await subscriptionDurationServices.createManySubscriptionDuration(req.body);
-    if (!result) throw new Error('Failed to create multiple subscription durations');
-    // Send a success response with the created subscription-durations data
-    ServerResponse(res, true, 201, 'Subscription durations created successfully', result);
-  }
-);
-
-/**
  * Controller function to handle the update operation for a single subscription-duration.
  *
  * @param {Request} req - The request object containing the ID of the subscription-duration to update in URL parameters and the updated data in the body.
@@ -70,22 +45,6 @@ export const updateSubscriptionDuration = catchAsync(async (req: Request, res: R
   if (!result) throw new Error('Failed to update subscription duration');
   // Send a success response with the updated subscription-duration data
   ServerResponse(res, true, 200, 'Subscription duration updated successfully', result);
-});
-
-/**
- * Controller function to handle the update operation for multiple subscription-durations.
- *
- * @param {Request} req - The request object containing an array of subscription-duration data in the body.
- * @param {Response} res - The response object used to send the response.
- * @returns {Promise<Partial<ISubscriptionDuration>[]>} - The updated subscriptionDurations.
- * @throws {Error} - Throws an error if the subscriptionDurations update fails.
- */
-export const updateManySubscriptionDuration = catchAsync(async (req: Request, res: Response) => {
-  // Call the service method to update multiple subscription-durations and get the result
-  const result = await subscriptionDurationServices.updateManySubscriptionDuration(req.body);
-  if (!result.length) throw new Error('Failed to update multiple subscription durations');
-  // Send a success response with the updated subscription-durations data
-  ServerResponse(res, true, 200, 'Subscription durations updated successfully', result);
 });
 
 /**

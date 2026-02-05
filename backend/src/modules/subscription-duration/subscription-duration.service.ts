@@ -4,9 +4,7 @@ import SubscriptionDuration, {
   ISubscriptionDuration,
 } from '../../models/subscription-billing/subscriptionDuration.schema';
 import {
-  CreateManySubscriptionDurationInput,
   CreateSubscriptionDurationInput,
-  UpdateManySubscriptionDurationInput,
   UpdateSubscriptionDurationInput,
 } from './subscription-duration.validation';
 
@@ -31,33 +29,6 @@ const createSubscriptionDuration = async (
   const newSubscriptionDuration = new SubscriptionDuration(data);
   const savedSubscriptionDuration = await newSubscriptionDuration.save();
   return savedSubscriptionDuration;
-};
-
-/**
- * Service function to create multiple subscription durations.
- *
- * @param {CreateManySubscriptionDurationInput} data - An array of data to create multiple subscription durations.
- * @returns {Promise<Partial<ISubscriptionDuration>[]>} - The created subscription durations.
- */
-const createManySubscriptionDuration = async (
-  data: CreateManySubscriptionDurationInput
-): Promise<Partial<ISubscriptionDuration>[]> => {
-  // Check for existing subscription durations with the same name or durationInDays
-  const existingDurations = await SubscriptionDuration.find({
-    $or: data.flatMap((item) => [
-      { name: item.name.toUpperCase() },
-      { durationInDays: item.durationInDays },
-    ]),
-  });
-  // Prevent duplicate subscription durations
-  if (existingDurations.length > 0) {
-    throw new Error(
-      'One or more subscription durations with the same name or duration already exist.'
-    );
-  }
-  // Create and save the new subscription durations
-  const createdSubscriptionDuration = await SubscriptionDuration.insertMany(data);
-  return createdSubscriptionDuration;
 };
 
 /**
@@ -92,65 +63,6 @@ const updateSubscriptionDuration = async (
     new: true,
   });
   return updatedSubscriptionDuration;
-};
-
-/**
- * Service function to update multiple subscription durations.
- *
- * @param {UpdateManySubscriptionDurationInput} data - An array of data to update multiple subscription durations.
- * @returns {Promise<Partial<ISubscriptionDuration>[]>} - The updated subscription durations.
- */
-const updateManySubscriptionDuration = async (
-  data: UpdateManySubscriptionDurationInput
-): Promise<Partial<ISubscriptionDuration>[]> => {
-  // Early return if no data provided
-  if (data.length === 0) {
-    return [];
-  }
-  // Convert string ids to ObjectId (for safety)
-  const objectIds = data.map((item) => new mongoose.Types.ObjectId(item.id));
-  // Check for duplicates (name or durationInDays) excluding the documents being updated
-  const existingDurations = await SubscriptionDuration.find({
-    _id: { $nin: objectIds }, // Exclude documents being updated
-    $or: data.flatMap((item) => [
-      { name: item.name?.toUpperCase() },
-      { durationInDays: item.durationInDays },
-    ]),
-  }).lean();
-  // If any duplicates found, throw error
-  if (existingDurations.length > 0) {
-    throw new Error(
-      'Duplicate detected: One or more subscription durations with the same name or durationInDays already exist.'
-    );
-  }
-  // Prepare bulk operations
-  const operations = data.map((item) => ({
-    updateOne: {
-      filter: { _id: new mongoose.Types.ObjectId(item.id) },
-      update: { $set: item },
-      upsert: false,
-    },
-  }));
-  // Execute bulk update
-  const bulkResult = await SubscriptionDuration.bulkWrite(operations, {
-    ordered: true, // keep order of operations
-  });
-  // check if all succeeded
-  if (bulkResult.matchedCount !== data.length) {
-    throw new Error('Some documents were not found or updated');
-  }
-  // Fetch the freshly updated documents
-  const updatedDocs = await SubscriptionDuration.find({ _id: { $in: objectIds } })
-    .lean()
-    .exec();
-  // Map back to original input order
-  const resultMap = new Map<string, any>(updatedDocs.map((doc) => [doc._id.toString(), doc]));
-  // Ensure the result array matches the input order
-  const orderedResults = data.map((item) => {
-    const updated = resultMap.get(item.id);
-    return updated || { _id: item.id };
-  });
-  return orderedResults as Partial<ISubscriptionDuration>[];
 };
 
 /**
@@ -244,9 +156,7 @@ const getManySubscriptionDuration = async (
 
 export const subscriptionDurationServices = {
   createSubscriptionDuration,
-  createManySubscriptionDuration,
   updateSubscriptionDuration,
-  updateManySubscriptionDuration,
   deleteSubscriptionDuration,
   deleteManySubscriptionDuration,
   getSubscriptionDurationById,

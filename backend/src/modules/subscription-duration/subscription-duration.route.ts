@@ -3,13 +3,11 @@ import { Router } from 'express';
 
 // Import controller from corresponding module
 import {
-  createManySubscriptionDuration,
   createSubscriptionDuration,
   deleteManySubscriptionDuration,
   deleteSubscriptionDuration,
   getManySubscriptionDuration,
   getSubscriptionDurationById,
-  updateManySubscriptionDuration,
   updateSubscriptionDuration,
 } from './subscription-duration.controller';
 
@@ -23,9 +21,7 @@ import authorizedRoles from '../../middlewares/authorized-roles';
 import isAuthorized from '../../middlewares/is-authorized';
 import { UserRole } from '../../models';
 import {
-  validateCreateManySubscriptionDuration,
   validateCreateSubscriptionDuration,
-  validateUpdateManySubscriptionDuration,
   validateUpdateSubscriptionDuration,
 } from './subscription-duration.validation';
 
@@ -44,29 +40,6 @@ router.use(authorizedRoles([UserRole.SUPER_ADMIN]));
  * @param {function} controller - ['createSubscriptionDuration']
  */
 router.post('/', validateCreateSubscriptionDuration, createSubscriptionDuration);
-
-/**
- * @route POST /api/v1/subscription-duration/many
- * @description Create multiple subscription-durations
- * @access Private
- * @param {function} validation - ['validateCreateManySubscriptionDuration']
- * @param {function} controller - ['createManySubscriptionDuration']
- */
-router.post('/many', validateCreateManySubscriptionDuration, createManySubscriptionDuration);
-
-/**
- * @route PUT /api/v1/subscription-duration/many
- * @description Update multiple subscription-durations information
- * @access Private
- * @param {function} validation - ['validateIds', 'validateUpdateManySubscriptionDuration']
- * @param {function} controller - ['updateManySubscriptionDuration']
- */
-router.put(
-  '/many',
-  validateIds,
-  validateUpdateManySubscriptionDuration,
-  updateManySubscriptionDuration
-);
 
 /**
  * @route PUT /api/v1/subscription-duration/:id
