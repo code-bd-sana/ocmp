@@ -35,6 +35,11 @@ function toCamelCase(str) {
     .join(''); // Join all words together without hyphens
 }
 
+// If the name is kind of this then convert into this format: "hello-world" to "Hello-World"
+function formatResourceName(name) {
+  return name ? name.replace(/^([a-z])/, (_, letter) => letter.toUpperCase()) : name;
+}
+
 if (command === 'resource') {
   // Command-line options setup
   program
@@ -47,6 +52,7 @@ if (command === 'resource') {
         : toCamelCase(args[0]);
 
       const capitalizedResourceName = capitalize(resourceName);
+      const formattedResourceName = formatResourceName(args[0]);
 
       // Path to the route directory
       const routeDir = path.join(__dirname, '..', 'src', 'modules', args[0]);
@@ -167,19 +173,19 @@ import ServerResponse from '../../helpers/responses/custom-response';
 import catchAsync from '../../utils/catch-async/catch-async';
 
 /**
- * Controller function to handle the creation of a single ${capitalizedResourceName}.
+ * Controller function to handle the creation of a single ${args[0]}.
  *
  * @param {Request} req - The request object containing ${args[0]} data in the body.
  * @param {Response} res - The response object used to send the response.
- * @returns {Promise<Partial<I${capitalizedResourceName}>>} - The created ${resourceName}.
- * @throws {Error} - Throws an error if the ${resourceName} creation fails.
+ * @returns {Promise<Partial<I${capitalizedResourceName}>>} - The created ${args[0]}.
+ * @throws {Error} - Throws an error if the ${args[0]} creation fails.
  */
 export const create${capitalizedResourceName} = catchAsync(async (req: Request, res: Response) => {
   // Call the service method to create a new ${args[0]} and get the result
   const result = await ${resourceName}Services.create${capitalizedResourceName}(req.body);
-  if (!result) throw new Error('Failed to create ${resourceName}');
-  // Send a success response with the created ${resourceName} data
-  ServerResponse(res, true, 201, '${capitalizedResourceName} created successfully', result);
+  if (!result) throw new Error('Failed to create ${formattedResourceName}');
+  // Send a success response with the created ${args[0]} data
+  ServerResponse(res, true, 201, '${formattedResourceName} created successfully', result);
 });
 
 /**
@@ -187,15 +193,15 @@ export const create${capitalizedResourceName} = catchAsync(async (req: Request, 
  *
  * @param {Request} req - The request object containing an array of ${args[0]} data in the body.
  * @param {Response} res - The response object used to send the response.
- * @returns {Promise<Partial<I${capitalizedResourceName}>[]>} - The created ${resourceName}s.
- * @throws {Error} - Throws an error if the ${resourceName}s creation fails.
+ * @returns {Promise<Partial<I${capitalizedResourceName}>[]>} - The created ${args[0]}s.
+ * @throws {Error} - Throws an error if the ${args[0]}s creation fails.
  */
 export const createMany${capitalizedResourceName} = catchAsync(async (req: Request, res: Response) => {
-  // Call the service method to create multiple ${resourceName}s and get the result
+  // Call the service method to create multiple ${args[0]}s and get the result
   const result = await ${resourceName}Services.createMany${capitalizedResourceName}(req.body);
-  if (!result) throw new Error('Failed to create multiple ${resourceName}s');
+  if (!result) throw new Error('Failed to create multiple ${formattedResourceName}s');
   // Send a success response with the created ${args[0]}s data
-  ServerResponse(res, true, 201, '${capitalizedResourceName}s created successfully', result);
+  ServerResponse(res, true, 201, '${formattedResourceName}s created successfully', result);
 });
 
 /**
@@ -203,16 +209,16 @@ export const createMany${capitalizedResourceName} = catchAsync(async (req: Reque
  *
  * @param {Request} req - The request object containing the ID of the ${args[0]} to update in URL parameters and the updated data in the body.
  * @param {Response} res - The response object used to send the response.
- * @returns {Promise<Partial<I${capitalizedResourceName}>>} - The updated ${resourceName}.
- * @throws {Error} - Throws an error if the ${resourceName} update fails.
+ * @returns {Promise<Partial<I${capitalizedResourceName}>>} - The updated ${args[0]}.
+ * @throws {Error} - Throws an error if the ${args[0]} update fails.
  */
 export const update${capitalizedResourceName} = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params;
   // Call the service method to update the ${args[0]} by ID and get the result
   const result = await ${resourceName}Services.update${capitalizedResourceName}(id as string, req.body);
-  if (!result) throw new Error('Failed to update ${resourceName}');
+  if (!result) throw new Error('Failed to update ${formattedResourceName}');
   // Send a success response with the updated ${args[0]} data
-  ServerResponse(res, true, 200, '${capitalizedResourceName} updated successfully', result);
+  ServerResponse(res, true, 200, '${formattedResourceName} updated successfully', result);
 });
 
 /**
@@ -220,15 +226,15 @@ export const update${capitalizedResourceName} = catchAsync(async (req: Request, 
  *
  * @param {Request} req - The request object containing an array of ${args[0]} data in the body.
  * @param {Response} res - The response object used to send the response.
- * @returns {Promise<Partial<I${capitalizedResourceName}>[]>} - The updated ${resourceName}s.
- * @throws {Error} - Throws an error if the ${resourceName}s update fails.
+ * @returns {Promise<Partial<I${capitalizedResourceName}>[]>} - The updated ${args[0]}s.
+ * @throws {Error} - Throws an error if the ${args[0]}s update fails.
  */
 export const updateMany${capitalizedResourceName} = catchAsync(async (req: Request, res: Response) => {
   // Call the service method to update multiple ${args[0]}s and get the result
   const result = await ${resourceName}Services.updateMany${capitalizedResourceName}(req.body);
-  if (!result.length) throw new Error('Failed to update multiple ${resourceName}s');
+  if (!result.length) throw new Error('Failed to update multiple ${formattedResourceName}s');
   // Send a success response with the updated ${args[0]}s data
-  ServerResponse(res, true, 200, '${capitalizedResourceName}s updated successfully', result);
+  ServerResponse(res, true, 200, '${formattedResourceName}s updated successfully', result);
 });
 
 /**
@@ -236,16 +242,16 @@ export const updateMany${capitalizedResourceName} = catchAsync(async (req: Reque
  *
  * @param {Request} req - The request object containing the ID of the ${args[0]} to delete in URL parameters.
  * @param {Response} res - The response object used to send the response.
- * @returns {Promise<Partial<I${capitalizedResourceName}>>} - The deleted ${resourceName}.
- * @throws {Error} - Throws an error if the ${resourceName} deletion fails.
+ * @returns {Promise<Partial<I${capitalizedResourceName}>>} - The deleted ${args[0]}.
+ * @throws {Error} - Throws an error if the ${args[0]} deletion fails.
  */
 export const delete${capitalizedResourceName} = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params;
   // Call the service method to delete the ${args[0]} by ID
   const result = await ${resourceName}Services.delete${capitalizedResourceName}(id as string);
-  if (!result) throw new Error('Failed to delete ${resourceName}');
+  if (!result) throw new Error('Failed to delete ${formattedResourceName}');
   // Send a success response confirming the deletion
-  ServerResponse(res, true, 200, '${capitalizedResourceName} deleted successfully');
+  ServerResponse(res, true, 200, '${formattedResourceName} deleted successfully');
 });
 
 /**
@@ -253,15 +259,15 @@ export const delete${capitalizedResourceName} = catchAsync(async (req: Request, 
  *
  * @param {Request} req - The request object containing an array of IDs of ${args[0]} to delete in the body.
  * @param {Response} res - The response object used to send the response.
- * @returns {Promise<Partial<I${capitalizedResourceName}>[]>} - The deleted ${resourceName}s.
- * @throws {Error} - Throws an error if the ${resourceName} deletion fails.
+ * @returns {Promise<Partial<I${capitalizedResourceName}>[]>} - The deleted ${args[0]}s.
+ * @throws {Error} - Throws an error if the ${args[0]}s deletion fails.
  */
 export const deleteMany${capitalizedResourceName} = catchAsync(async (req: Request, res: Response) => {
   // Call the service method to delete multiple ${args[0]}s and get the result
   const result = await ${resourceName}Services.deleteMany${capitalizedResourceName}(req.body);
-  if (!result) throw new Error('Failed to delete multiple ${resourceName}s');
+  if (!result) throw new Error('Failed to delete multiple ${formattedResourceName}s');
   // Send a success response confirming the deletions
-  ServerResponse(res, true, 200, '${capitalizedResourceName}s deleted successfully');
+  ServerResponse(res, true, 200, '${formattedResourceName}s deleted successfully');
 });
 
 /**
@@ -269,16 +275,16 @@ export const deleteMany${capitalizedResourceName} = catchAsync(async (req: Reque
  *
  * @param {Request} req - The request object containing the ID of the ${args[0]} to retrieve in URL parameters.
  * @param {Response} res - The response object used to send the response.
- * @returns {Promise<Partial<I${capitalizedResourceName}>>} - The retrieved ${resourceName}.
- * @throws {Error} - Throws an error if the ${resourceName} retrieval fails.
+ * @returns {Promise<Partial<I${capitalizedResourceName}>>} - The retrieved ${args[0]}.
+ * @throws {Error} - Throws an error if the ${args[0]} retrieval fails.
  */
 export const get${capitalizedResourceName}ById = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params;
   // Call the service method to get the ${args[0]} by ID and get the result
   const result = await ${resourceName}Services.get${capitalizedResourceName}ById(id as string);
-  if (!result) throw new Error('${capitalizedResourceName} not found');
-  // Send a success response with the retrieved resource data
-  ServerResponse(res, true, 200, '${capitalizedResourceName} retrieved successfully', result);
+  if (!result) throw new Error('${formattedResourceName} not found');
+  // Send a success response with the retrieved ${args[0]} data
+  ServerResponse(res, true, 200, '${formattedResourceName} retrieved successfully', result);
 });
 
 /**
@@ -286,17 +292,17 @@ export const get${capitalizedResourceName}ById = catchAsync(async (req: Request,
  *
  * @param {Request} req - The request object containing query parameters for filtering.
  * @param {Response} res - The response object used to send the response.
- * @returns {Promise<Partial<I${capitalizedResourceName}>[]>} - The retrieved ${resourceName}s.
- * @throws {Error} - Throws an error if the ${resourceName}s retrieval fails.
+ * @returns {Promise<Partial<I${capitalizedResourceName}>[]>} - The retrieved ${args[0]}s.
+ * @throws {Error} - Throws an error if the ${args[0]}s retrieval fails.
  */
 export const getMany${capitalizedResourceName} = catchAsync(async (req: Request, res: Response) => {
   // Type assertion for query parameters 
   const query = req.query as SearchQueryInput;
   // Call the service method to get multiple ${args[0]}s based on query parameters and get the result
   const { ${resourceName}s, totalData, totalPages } = await ${resourceName}Services.getMany${capitalizedResourceName}(query);
-  if (!${resourceName}s) throw new Error('Failed to retrieve ${resourceName}s');
+  if (!${resourceName}s) throw new Error('Failed to retrieve ${formattedResourceName}s');
   // Send a success response with the retrieved ${args[0]}s data
-  ServerResponse(res, true, 200, '${capitalizedResourceName}s retrieved successfully', { ${resourceName}s, totalData, totalPages });
+  ServerResponse(res, true, 200, '${formattedResourceName}s retrieved successfully', { ${resourceName}s, totalData, totalPages });
 });
     `;
       // Path to the controller file
@@ -307,9 +313,9 @@ export const getMany${capitalizedResourceName} = catchAsync(async (req: Request,
       // Create interface file content
       const interfaceContent = `
 /**
- * Type definition for ${capitalizedResourceName}.
+ * Type definition for ${args[0]}.
  *
- * This type defines the structure of a single ${resourceName} object.
+ * This type defines the structure of a single ${args[0]} object.
  * @interface T${capitalizedResourceName}
  */
 export interface T${capitalizedResourceName} {
@@ -325,7 +331,7 @@ export interface T${capitalizedResourceName} {
       const modelContent = `
 import mongoose, { Document, Schema } from 'mongoose';
 
-// Define and export an interface representing a ${capitalizedResourceName} document
+// Define and export an interface representing a ${args[0]} document
 export interface I${capitalizedResourceName} extends Document {
   // Define the schema fields with their types
   // Example fields (replace with actual fields)
@@ -366,7 +372,7 @@ import { validateBody } from '../../handlers/zod-error-handler';
 /**
  * ${capitalizedResourceName} Validation Schemas and Types
  *
- * This module defines Zod schemas for validating ${resourceName}-related
+ * This module defines Zod schemas for validating ${args[0]} related
  * requests such as creation (single + bulk) and updates (single + bulk).
  * It also exports corresponding TypeScript types inferred from these schemas.
  * Each schema includes detailed validation rules and custom error messages
@@ -376,14 +382,14 @@ import { validateBody } from '../../handlers/zod-error-handler';
  */
 
 /**
- * Zod schema for validating data when **creating** a single ${resourceName}.
+ * Zod schema for validating data when **creating** a single ${args[0]}.
  * 
  * → Add all **required** fields here
  */
 const zodCreate${capitalizedResourceName}Schema = z
   .object({
     // Example fields — replace / expand as needed:
-    // name: z.string({ message: '${capitalizedResourceName} name is required' }).min(2, 'Name must be at least 2 characters').max(100),
+    // name: z.string({ message: 'Name is required' }).min(2, 'Name must be at least 2 characters').max(100),
     // email: z.string().email({ message: 'Invalid email format' }),
     // age: z.number().int().positive().optional(),
     // status: z.enum(['active', 'inactive', 'pending']).default('pending'),
@@ -393,16 +399,16 @@ const zodCreate${capitalizedResourceName}Schema = z
 export type Create${capitalizedResourceName}Input = z.infer<typeof zodCreate${capitalizedResourceName}Schema>;
 
 /**
- * Zod schema for validating **bulk creation** (array of ${resourceName} objects).
+ * Zod schema for validating **bulk creation** (array of ${args[0]} objects).
  */
 const zodCreateMany${capitalizedResourceName}Schema = z
   .array(zodCreate${capitalizedResourceName}Schema)
-  .min(1, { message: 'At least one ${resourceName} must be provided for bulk creation' });
+  .min(1, { message: 'At least one ${args[0]} must be provided for bulk creation' });
 
 export type CreateMany${capitalizedResourceName}Input = z.infer<typeof zodCreateMany${capitalizedResourceName}Schema>;
 
 /**
- * Zod schema for validating data when **updating** an existing ${resourceName}.
+ * Zod schema for validating data when **updating** an existing ${args[0]}.
  * 
  * → All fields should usually be .optional()
  */
@@ -419,7 +425,7 @@ const zodUpdate${capitalizedResourceName}Schema = z
 export type Update${capitalizedResourceName}Input = z.infer<typeof zodUpdate${capitalizedResourceName}Schema>;
 
 /**
- * Zod schema for validating bulk updates (array of partial ${resourceName} objects).
+ * Zod schema for validating bulk updates (array of partial ${args[0]} objects).
  */
 const zodUpdateMany${capitalizedResourceName}ForBulkSchema = zodUpdate${capitalizedResourceName}Schema
   .extend({
@@ -430,11 +436,11 @@ const zodUpdateMany${capitalizedResourceName}ForBulkSchema = zodUpdate${capitali
   });
 
 /**
- * Zod schema for validating an array of multiple ${resourceName} updates.
+ * Zod schema for validating an array of multiple ${args[0]} updates.
  */
 const zodUpdateMany${capitalizedResourceName}Schema = z
   .array(zodUpdateMany${capitalizedResourceName}ForBulkSchema)
-  .min(1, { message: 'At least one ${resourceName} update object must be provided' });
+  .min(1, { message: 'At least one ${args[0]} update object must be provided' });
 
 export type UpdateMany${capitalizedResourceName}Input = z.infer<typeof zodUpdateMany${capitalizedResourceName}Schema>;
 
@@ -465,10 +471,10 @@ import {
 } from './${args[0]}.validation';
 
 /**
- * Service function to create a new ${resourceName}.
+ * Service function to create a new ${args[0]}.
  *
- * @param {Create${capitalizedResourceName}Input} data - The data to create a new ${resourceName}.
- * @returns {Promise<Partial<I${capitalizedResourceName}>>} - The created ${resourceName}.
+ * @param {Create${capitalizedResourceName}Input} data - The data to create a new ${args[0]}.
+ * @returns {Promise<Partial<I${capitalizedResourceName}>>} - The created ${args[0]}.
  */
 const create${capitalizedResourceName} = async (data: Create${capitalizedResourceName}Input): Promise<Partial<I${capitalizedResourceName}>> => {
   const new${capitalizedResourceName} = new ${capitalizedResourceName}Model(data);
@@ -477,10 +483,10 @@ const create${capitalizedResourceName} = async (data: Create${capitalizedResourc
 };
 
 /**
- * Service function to create multiple ${resourceName}.
+ * Service function to create multiple ${args[0]}s.
  *
- * @param {CreateMany${capitalizedResourceName}Input} data - An array of data to create multiple ${resourceName}.
- * @returns {Promise<Partial<I${capitalizedResourceName}>[]>} - The created ${resourceName}.
+ * @param {CreateMany${capitalizedResourceName}Input} data - An array of data to create multiple ${args[0]}s.
+ * @returns {Promise<Partial<I${capitalizedResourceName}>[]>} - The created ${args[0]}s.
  */
 const createMany${capitalizedResourceName} = async (data: CreateMany${capitalizedResourceName}Input): Promise<Partial<I${capitalizedResourceName}>[]> => {
   const created${capitalizedResourceName} = await ${capitalizedResourceName}Model.insertMany(data);
@@ -488,11 +494,11 @@ const createMany${capitalizedResourceName} = async (data: CreateMany${capitalize
 };
 
 /**
- * Service function to update a single ${resourceName} by ID.
+ * Service function to update a single ${args[0]} by ID.
  *
- * @param {IdOrIdsInput['id']} id - The ID of the ${resourceName} to update.
- * @param {Update${capitalizedResourceName}Input} data - The updated data for the ${resourceName}.
- * @returns {Promise<Partial<I${capitalizedResourceName}>>} - The updated ${resourceName}.
+ * @param {IdOrIdsInput['id']} id - The ID of the ${args[0]} to update.
+ * @param {Update${capitalizedResourceName}Input} data - The updated data for the ${args[0]}.
+ * @returns {Promise<Partial<I${capitalizedResourceName}>>} - The updated ${args[0]}.
  */
 const update${capitalizedResourceName} = async (id: IdOrIdsInput['id'], data: Update${capitalizedResourceName}Input): Promise<Partial<I${capitalizedResourceName} | null>> => {
   // Check for duplicate (filed) combination
@@ -502,18 +508,18 @@ const update${capitalizedResourceName} = async (id: IdOrIdsInput['id'], data: Up
   }).lean();
   // Prevent duplicate updates
   if (existing${capitalizedResourceName}) {
-    throw new Error('Duplicate detected: Another ${resourceName} with the same fieldName already exists.');
+    throw new Error('Duplicate detected: Another ${args[0]} with the same fieldName already exists.');
   }
-  // Proceed to update the ${resourceName}
+  // Proceed to update the ${args[0]}
   const updated${capitalizedResourceName} = await ${capitalizedResourceName}Model.findByIdAndUpdate(id, data, { new: true });
   return updated${capitalizedResourceName};
 };
 
 /**
- * Service function to update multiple ${resourceName}.
+ * Service function to update multiple ${args[0]}s.
  *
- * @param {UpdateMany${capitalizedResourceName}Input} data - An array of data to update multiple ${resourceName}.
- * @returns {Promise<Partial<I${capitalizedResourceName}>[]>} - The updated ${resourceName}.
+ * @param {UpdateMany${capitalizedResourceName}Input} data - An array of data to update multiple ${args[0]}s.
+ * @returns {Promise<Partial<I${capitalizedResourceName}>[]>} - The updated ${args[0]}s.
  */
 const updateMany${capitalizedResourceName} = async (data: UpdateMany${capitalizedResourceName}Input): Promise<Partial<I${capitalizedResourceName}>[]> => {
 // Early return if no data provided
@@ -532,7 +538,7 @@ const updateMany${capitalizedResourceName} = async (data: UpdateMany${capitalize
   // If any duplicates found, throw error
   if (existing${capitalizedResourceName}.length > 0) {
     throw new Error(
-      'Duplicate detected: One or more ${resourceName} with the same fieldName already exist.'
+      'Duplicate detected: One or more ${args[0]} with the same fieldName already exist.'
     );
   }
   // Prepare bulk operations
@@ -566,10 +572,10 @@ const updateMany${capitalizedResourceName} = async (data: UpdateMany${capitalize
 };
 
 /**
- * Service function to delete a single ${resourceName} by ID.
+ * Service function to delete a single ${args[0]} by ID.
  *
- * @param {IdOrIdsInput['id']} id - The ID of the ${resourceName} to delete.
- * @returns {Promise<Partial<I${capitalizedResourceName}>>} - The deleted ${resourceName}.
+ * @param {IdOrIdsInput['id']} id - The ID of the ${args[0]} to delete.
+ * @returns {Promise<Partial<I${capitalizedResourceName}>>} - The deleted ${args[0]}.
  */
 const delete${capitalizedResourceName} = async (id: IdOrIdsInput['id']): Promise<Partial<I${capitalizedResourceName} | null>> => {
   const deleted${capitalizedResourceName} = await ${capitalizedResourceName}Model.findByIdAndDelete(id);
@@ -577,23 +583,23 @@ const delete${capitalizedResourceName} = async (id: IdOrIdsInput['id']): Promise
 };
 
 /**
- * Service function to delete multiple ${resourceName}.
+ * Service function to delete multiple ${args[0]}s.
  *
- * @param {IdOrIdsInput['ids']} ids - An array of IDs of ${resourceName} to delete.
- * @returns {Promise<Partial<I${capitalizedResourceName}>[]>} - The deleted ${resourceName}.
+ * @param {IdOrIdsInput['ids']} ids - An array of IDs of ${args[0]}s to delete.
+ * @returns {Promise<Partial<I${capitalizedResourceName}>[]>} - The deleted ${args[0]}s.
  */
 const deleteMany${capitalizedResourceName} = async (ids: IdOrIdsInput['ids']): Promise<Partial<I${capitalizedResourceName}>[]> => {
   const ${resourceName}ToDelete = await ${capitalizedResourceName}Model.find({ _id: { $in: ids } });
-  if (!${resourceName}ToDelete.length) throw new Error('No ${resourceName} found to delete');
+  if (!${resourceName}ToDelete.length) throw new Error('No ${formattedResourceName} found to delete');
   await ${capitalizedResourceName}Model.deleteMany({ _id: { $in: ids } });
   return ${resourceName}ToDelete; 
 };
 
 /**
- * Service function to retrieve a single ${resourceName} by ID.
+ * Service function to retrieve a single ${args[0]} by ID.
  *
- * @param {IdOrIdsInput['id']} id - The ID of the ${resourceName} to retrieve.
- * @returns {Promise<Partial<I${capitalizedResourceName}>>} - The retrieved ${resourceName}.
+ * @param {IdOrIdsInput['id']} id - The ID of the ${args[0]} to retrieve.
+ * @returns {Promise<Partial<I${capitalizedResourceName}>>} - The retrieved ${args[0]}.
  */
 const get${capitalizedResourceName}ById = async (id: IdOrIdsInput['id']): Promise<Partial<I${capitalizedResourceName} | null>> => {
   const ${resourceName} = await ${capitalizedResourceName}Model.findById(id);
@@ -601,10 +607,10 @@ const get${capitalizedResourceName}ById = async (id: IdOrIdsInput['id']): Promis
 };
 
 /**
- * Service function to retrieve multiple ${resourceName} based on query parameters.
+ * Service function to retrieve multiple ${args[0]} based on query parameters.
  *
- * @param {SearchQueryInput} query - The query parameters for filtering ${resourceName}.
- * @returns {Promise<Partial<I${capitalizedResourceName}>[]>} - The retrieved ${resourceName}
+ * @param {SearchQueryInput} query - The query parameters for filtering ${args[0]}.
+ * @returns {Promise<Partial<I${capitalizedResourceName}>[]>} - The retrieved ${args[0]}s.
  */
 const getMany${capitalizedResourceName} = async (query: SearchQueryInput): Promise<{ ${resourceName}s: Partial<I${capitalizedResourceName}>[]; totalData: number; totalPages: number }> => {
   const { searchKey = '', showPerPage = 10, pageNo = 1 } = query;
@@ -617,11 +623,11 @@ const getMany${capitalizedResourceName} = async (query: SearchQueryInput): Promi
   };
   // Calculate the number of items to skip based on the page number
   const skipItems = (pageNo - 1) * showPerPage;
-  // Find the total count of matching ${resourceName}
+  // Find the total count of matching ${args[0]}s
   const totalData = await ${capitalizedResourceName}Model.countDocuments(searchFilter);
   // Calculate the total number of pages
   const totalPages = Math.ceil(totalData / showPerPage);
-  // Find ${resourceName} based on the search filter with pagination
+  // Find ${args[0]}s based on the search filter with pagination
   const ${resourceName}s = await ${capitalizedResourceName}Model.find(searchFilter)
     .skip(skipItems)
     .limit(showPerPage)
