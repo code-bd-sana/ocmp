@@ -28,66 +28,112 @@ import {
 // Initialize router
 const router = Router();
 
-router.use(isAuthorized);
-router.use(authorizedRoles([UserRole.SUPER_ADMIN]));
-
 // Define route handlers
 /**
  * @route POST /api/v1/subscription-duration
  * @description Create a new subscription-duration
  * @access Private
+ * @param {function} isAuthorized - Middleware to check if the user is authenticated
+ * @param {function} authorizedRoles - Middleware to check if the user has the required role(s) (SUPER_ADMIN)
  * @param {function} validation - ['validateCreateSubscriptionDuration']
  * @param {function} controller - ['createSubscriptionDuration']
  */
-router.post('/', validateCreateSubscriptionDuration, createSubscriptionDuration);
+router.post(
+  '/',
+  isAuthorized,
+  authorizedRoles([UserRole.SUPER_ADMIN]),
+  validateCreateSubscriptionDuration,
+  createSubscriptionDuration
+);
 
 /**
  * @route PUT /api/v1/subscription-duration/:id
  * @description Update subscription-duration information
  * @param {string} id - The ID of the subscription-duration to update
  * @access Private
+ * @param {function} isAuthorized - Middleware to check if the user is authenticated
+ * @param {function} authorizedRoles - Middleware to check if the user has the required role(s)
  * @param {function} validation - ['validateId', 'validateUpdateSubscriptionDuration']
  * @param {function} controller - ['updateSubscriptionDuration']
  */
-router.put('/:id', validateId, validateUpdateSubscriptionDuration, updateSubscriptionDuration);
+router.put(
+  '/:id',
+  isAuthorized,
+  authorizedRoles([UserRole.SUPER_ADMIN]),
+  validateId,
+  validateUpdateSubscriptionDuration,
+  updateSubscriptionDuration
+);
 
 /**
  * @route DELETE /api/v1/subscription-duration/many
  * @description Delete multiple subscription-durations
  * @access Private
+ * @param {function} isAuthorized - Middleware to check if the user is authenticated
+ * @param {function} authorizedRoles - Middleware to check if the user has the required role(s)
  * @param {function} validation - ['validateIds']
  * @param {function} controller - ['deleteManySubscriptionDuration']
  */
-router.delete('/many', validateIds, deleteManySubscriptionDuration);
+router.delete(
+  '/many',
+  isAuthorized,
+  authorizedRoles([UserRole.SUPER_ADMIN]),
+  validateIds,
+  deleteManySubscriptionDuration
+);
 
 /**
  * @route DELETE /api/v1/subscription-duration/:id
  * @description Delete a subscription-duration
  * @param {string} id - The ID of the subscription-duration to delete
  * @access Private
+ * @param {function} isAuthorized - Middleware to check if the user is authenticated
+ * @param {function} authorizedRoles - Middleware to check if the user has the required role(s)
  * @param {function} validation - ['validateId']
  * @param {function} controller - ['deleteSubscriptionDuration']
  */
-router.delete('/:id', validateId, deleteSubscriptionDuration);
+router.delete(
+  '/:id',
+  isAuthorized,
+  authorizedRoles([UserRole.SUPER_ADMIN]),
+  validateId,
+  deleteSubscriptionDuration
+);
 
 /**
  * @route GET /api/v1/subscription-duration
  * @description Get multiple subscription-durations
  * @access Private
+ * @param {function} isAuthorized - Middleware to check if the user is authenticated
+ * @param {function} authorizedRoles - Middleware to check if the user has the required role(s) (SUPER_ADMIN)
  * @param {function} validation - ['validateSearchQueries']
  * @param {function} controller - ['getManySubscriptionDuration']
  */
-router.get('/', validateSearchQueries, getManySubscriptionDuration);
+router.get(
+  '/',
+  isAuthorized,
+  authorizedRoles([UserRole.SUPER_ADMIN]),
+  validateSearchQueries,
+  getManySubscriptionDuration
+);
 
 /**
  * @route GET /api/v1/subscription-duration/:id
  * @description Get a subscription-duration by ID
  * @param {string} id - The ID of the subscription-duration to retrieve
  * @access Private
+ * @param {function} isAuthorized - Middleware to check if the user is authenticated
+ * @param {function} authorizedRoles - Middleware to check if the user has the required role(s) (SUPER_ADMIN)
  * @param {function} validation - ['validateId']
  * @param {function} controller - ['getSubscriptionDurationById']
  */
-router.get('/:id', validateId, getSubscriptionDurationById);
+router.get(
+  '/:id',
+  isAuthorized,
+  authorizedRoles([UserRole.SUPER_ADMIN]),
+  validateId,
+  getSubscriptionDurationById
+);
 
 // Export the router
 module.exports = router;
