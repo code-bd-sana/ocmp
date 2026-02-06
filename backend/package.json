@@ -7,6 +7,8 @@
     "build": "tsc",
     "start": "node dist/app.js",
     "dev": "ts-node-dev --respawn --transpile-only src/app.ts",
+    "seed": "ts-node-dev --respawn=false src/utils/seed/run-seed.ts",
+    "seed:prod": "ts-node src/utils/seed/run-seed.ts",
     "lint": "eslint . --ext .ts,.tsx",
     "lint:fix": "eslint . --ext .ts,.tsx --fix",
     "prettier": "prettier --check 'src/**/*.{ts,tsx}'",

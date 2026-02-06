@@ -29,7 +29,6 @@ export type LoginInput = z.infer<typeof loginSchema>;
  * Zod schema for validating registration data.
  */
 export const registerSchema = z.object({
-  keyCloakId: z.string().optional(),
   fullName: z
     .string({ message: 'Full name is required' })
     .min(2, 'Full name must be at least 2 characters')
