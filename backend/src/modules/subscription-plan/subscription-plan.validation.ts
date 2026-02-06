@@ -80,7 +80,10 @@ const zodUpdateSubscriptionPlanSchema = z
     // Plan status: true if active, false if inactive
     isActive: z.boolean({ message: 'isActive must be a boolean value' }).optional(),
   })
-  .strict();
+  .strict()
+  .refine((data) => Object.keys(data).length > 0, {
+    message: 'At least one field must be provided for update',
+  });
 
 export type UpdateSubscriptionPlanInput = z.infer<typeof zodUpdateSubscriptionPlanSchema>;
 
