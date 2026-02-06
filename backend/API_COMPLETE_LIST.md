@@ -30,7 +30,7 @@ This document contains **ALL** APIs required for the complete Tim Tim transport 
 | Method | Endpoint                       | Description                         | Access                       |
 | ------ | ------------------------------ | ----------------------------------- | ---------------------------- |
 | GET    | `/api/v1/users`                | Get all users (paginated, filtered) | Admin/Transport Manager      |
-| POST   | `/api/v1/users`                | Create new user(STAFF)              | Admin                        |
+| POST   | `/api/v1/users`                | Create new user(STAFF/OTHERS)       | Admin                        |
 | PATCH  | `/api/v1/users/me`             | Update logged in user               | Self                         |
 | Get    | `/api/v1/users/me`             | Get logged in user profile          | Self                         |
 | GET    | `/api/v1/users/:userId`        | Get user by ID                      | Admin/Transport Manager/Self |

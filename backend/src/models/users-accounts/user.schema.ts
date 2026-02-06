@@ -5,6 +5,7 @@ export enum UserRole {
   TRANSPORT_MANAGER = 'TRANSPORT_MANAGER',
   STANDALONE_USER = 'STANDALONE_USER',
   STAFF = 'STAFF',
+  OTHERS = 'OTHERS',
 }
 
 // Define and export an interface representing a User document
