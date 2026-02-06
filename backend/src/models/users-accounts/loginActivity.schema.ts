@@ -20,7 +20,7 @@ const LoginActivitySchema: Schema<ILoginActivity> = new Schema(
     email: {
       type: String,
       required: true,
-    } /* User id from can be Keycloak or local DB */,
+    },
     loginHash: {
       type: String,
     },
