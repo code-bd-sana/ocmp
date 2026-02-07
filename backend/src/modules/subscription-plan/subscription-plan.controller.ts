@@ -106,8 +106,8 @@ export const getSubscriptionPlanById = catchAsync(async (req: Request, res: Resp
  * @throws {Error} - Throws an error if the subscription-plans retrieval fails.
  */
 export const getManySubscriptionPlan = catchAsync(async (req: Request, res: Response) => {
-  // Type assertion for query parameters
-  const query = req.query as SearchQueryInput;
+  // Use the validated and transformed query from Zod middleware
+  const query = (req as any).validatedQuery as SearchQueryInput;
   // Call the service method to get multiple subscription-plans based on query parameters and get the result
   const { subscriptionPlans, totalData, totalPages } =
     await subscriptionPlanServices.getManySubscriptionPlan(query);

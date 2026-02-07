@@ -109,8 +109,8 @@ export const getSubscriptionPricingById = catchAsync(async (req: Request, res: R
  * @throws {Error} - Throws an error if the subscription-pricing(s) retrieval fails.
  */
 export const getManySubscriptionPricing = catchAsync(async (req: Request, res: Response) => {
-  // Type assertion for query parameters
-  const query = req.query as SearchQueryInput;
+  // Use the validated and transformed query from Zod middleware
+  const query = (req as any).validatedQuery as SearchQueryInput;
   // Call the service method to get multiple subscription-pricings based on query parameters and get the result
   const { subscriptionPricings, totalData, totalPages } =
     await subscriptionPricingServices.getManySubscriptionPricing(query);

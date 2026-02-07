@@ -294,8 +294,8 @@ export const get${capitalizedResourceName}ById = catchAsync(async (req: Request,
  * @throws {Error} - Throws an error if the ${args[0].toLowerCase()}s retrieval fails.
  */
 export const getMany${capitalizedResourceName} = catchAsync(async (req: Request, res: Response) => {
-  // Type assertion for query parameters 
-  const query = req.query as SearchQueryInput;
+  // Use the validated and transformed query from Zod middleware
+  const query = (req as any).validatedQuery as SearchQueryInput;
   // Call the service method to get multiple ${args[0].toLowerCase()}s based on query parameters and get the result
   const { ${resourceName}s, totalData, totalPages } = await ${resourceName}Services.getMany${capitalizedResourceName}(query);
   if (!${resourceName}s) throw new Error('Failed to retrieve ${args[0].toLowerCase()}s');

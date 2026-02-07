@@ -108,8 +108,8 @@ export const getSubscriptionDurationById = catchAsync(async (req: Request, res: 
  * @throws {Error} - Throws an error if the subscription-durations retrieval fails.
  */
 export const getManySubscriptionDuration = catchAsync(async (req: Request, res: Response) => {
-  // Type assertion for query parameters
-  const query = req.query as SearchQueryInput;
+  // Use the validated and transformed query from Zod middleware
+  const query = (req as any).validatedQuery as SearchQueryInput;
   // Call the service method to get multiple subscription-durations based on query parameters and get the result
   const { subscriptionDurations, totalData, totalPages } =
     await subscriptionDurationServices.getManySubscriptionDuration(query);

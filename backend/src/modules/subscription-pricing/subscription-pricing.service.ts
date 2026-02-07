@@ -133,31 +133,80 @@ const getSubscriptionPricingById = async (
  * Service function to retrieve multiple subscription-pricing based on query parameters.
  *
  * @param {SearchQueryInput} query - The query parameters for filtering subscription-pricing.
- * @returns {Promise<Partial<ISubscriptionPricing>[]>} - The retrieved subscription-pricing
+ * @returns {Promise<Partial<ISubscriptionPricing & { subscriptionPlanName: string; subscriptionDuration: string }>[]>} - The retrieved subscription-pricing
  */
-const getManySubscriptionPricing = async (
+export const getManySubscriptionPricing = async (
   query: SearchQueryInput
 ): Promise<{
-  subscriptionPricings: Partial<ISubscriptionPricing>[];
+  subscriptionPricings: Partial<
+    ISubscriptionPricing & { subscriptionPlanName: string; subscriptionDuration: number }
+  >[];
   totalData: number;
   totalPages: number;
 }> => {
   const { searchKey = '', showPerPage = 10, pageNo = 1 } = query;
-  // Build the search filter based on the search key
-  const searchFilter = {
-    $or: [{ currency: { $regex: searchKey, $options: 'i' } }],
-  };
-  // Calculate the number of items to skip based on the page number
   const skipItems = (pageNo - 1) * showPerPage;
-  // Find the total count of matching subscription-pricing
-  const totalData = await SubscriptionPricing.countDocuments(searchFilter);
-  // Calculate the total number of pages
+  // Build the match stage based on searchKey (here searching by currency)
+  const matchStage = {
+    $match: {
+      $or: [
+        { currency: { $regex: searchKey, $options: 'i' } },
+        { price: isNaN(Number(searchKey)) ? undefined : Number(searchKey) }, // optional numeric search
+      ].filter(Boolean),
+    },
+  };
+  // Aggregation pipeline
+  const aggregationPipeline = [
+    matchStage,
+    // Lookup subscription plan
+    {
+      $lookup: {
+        from: 'subscriptionplans', // collection name in MongoDB
+        localField: 'subscriptionPlanId',
+        foreignField: '_id',
+        as: 'subscriptionPlan',
+      },
+    },
+    { $unwind: { path: '$subscriptionPlan', preserveNullAndEmptyArrays: true } },
+    // Lookup subscription duration
+    {
+      $lookup: {
+        from: 'subscriptiondurations', // collection name in MongoDB
+        localField: 'subscriptionDurationId',
+        foreignField: '_id',
+        as: 'subscriptionDuration',
+      },
+    },
+    { $unwind: { path: '$subscriptionDuration', preserveNullAndEmptyArrays: true } },
+    // Sort by createdAt desc (optional)
+    { $sort: { createdAt: -1 } },
+    // Pagination
+    { $skip: skipItems },
+    { $limit: showPerPage },
+    // Project the fields you want
+    {
+      $project: {
+        _id: 1,
+        subscriptionPlanName: '$subscriptionPlan.name',
+        subscriptionDuration: '$subscriptionDuration.durationInDays',
+        price: 1,
+        currency: 1,
+        isActive: 1,
+        createdBy: 1,
+        createdAt: 1,
+        updatedAt: 1,
+      },
+    },
+  ];
+  // Execute aggregation
+  const subscriptionPricings = await SubscriptionPricing.aggregate(
+    aggregationPipeline as mongoose.PipelineStage[]
+  );
+  // Get total count for pagination
+  const totalDataPipeline = [matchStage, { $count: 'count' }];
+  const totalCountResult = await SubscriptionPricing.aggregate(totalDataPipeline);
+  const totalData = totalCountResult[0]?.count || 0;
   const totalPages = Math.ceil(totalData / showPerPage);
-  // Find subscriptionPricing based on the search filter with pagination
-  const subscriptionPricings = await SubscriptionPricing.find(searchFilter)
-    .skip(skipItems)
-    .limit(showPerPage)
-    .select(''); // Keep/Exclude any field if needed
   return { subscriptionPricings, totalData, totalPages };
 };
 
