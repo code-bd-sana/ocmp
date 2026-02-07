@@ -103,22 +103,7 @@ This document contains **ALL** APIs required for the complete Tim Tim transport 
 
 ---
 
-## 7. Document Management APIs
-
-| Method | Endpoint                                | Description               | Access         |
-| ------ | --------------------------------------- | ------------------------- | -------------- |
-| GET    | `/api/v1/document`                      | Get all documents         | User           |
-| GET    | `/api/v1/document/:documentId`          | Get document by ID        | User           |
-| POST   | `/api/v1/document/upload`               | Upload document           | User           |
-| POST   | `/api/v1/document/bulk-upload`          | Upload multiple documents | User           |
-| PUT    | `/api/v1/document/:documentId`          | Update document metadata  | Uploader/Admin |
-| DELETE | `/api/v1/document/:documentId`          | Delete document           | Uploader/Admin |
-| GET    | `/api/v1/document/uploader/:uploaderId` | Get documents by uploader | User           |
-| GET    | `/api/v1/document/download/:documentId` | Download document         | User           |
-
----
-
-## 8. Subscription Plan APIs
+## 7. Subscription Plan APIs
 
 | Method | Endpoint                                              | Description               | Access |
 | ------ | ----------------------------------------------------- | ------------------------- | ------ |
@@ -133,7 +118,7 @@ This document contains **ALL** APIs required for the complete Tim Tim transport 
 
 ---
 
-## 9. Subscription Duration APIs
+## 8. Subscription Duration APIs
 
 | Method | Endpoint                                           | Description         | Access |
 | ------ | -------------------------------------------------- | ------------------- | ------ |
@@ -146,7 +131,7 @@ This document contains **ALL** APIs required for the complete Tim Tim transport 
 
 ---
 
-## 10. Subscription Pricing APIs
+## 9. Subscription Pricing APIs
 
 | Method | Endpoint                                                         | Description            | Access |
 | ------ | ---------------------------------------------------------------- | ---------------------- | ------ |
@@ -161,7 +146,7 @@ This document contains **ALL** APIs required for the complete Tim Tim transport 
 
 ---
 
-## 11. Subscription Feature APIs
+## 10. Subscription Feature APIs
 
 | Method | Endpoint                                  | Description         | Access |
 | ------ | ----------------------------------------- | ------------------- | ------ |
@@ -175,7 +160,7 @@ This document contains **ALL** APIs required for the complete Tim Tim transport 
 
 ---
 
-## 12. User Subscription APIs
+## 11. User Subscription APIs
 
 | Method | Endpoint                                               | Description                    | Access     |
 | ------ | ------------------------------------------------------ | ------------------------------ | ---------- |
@@ -194,7 +179,7 @@ This document contains **ALL** APIs required for the complete Tim Tim transport 
 
 ---
 
-## 13. Subscription Customization APIs
+## 12. Subscription Customization APIs
 
 | Method | Endpoint                                                          | Description                 | Access     |
 | ------ | ----------------------------------------------------------------- | --------------------------- | ---------- |
@@ -206,7 +191,7 @@ This document contains **ALL** APIs required for the complete Tim Tim transport 
 
 ---
 
-## 14. Subscription Trial APIs
+## 13. Subscription Trial APIs
 
 | Method | Endpoint                                           | Description             | Access      |
 | ------ | -------------------------------------------------- | ----------------------- | ----------- |
@@ -218,7 +203,7 @@ This document contains **ALL** APIs required for the complete Tim Tim transport 
 
 ---
 
-## 15. Subscription Exemption APIs
+## 14. Subscription Exemption APIs
 
 | Method | Endpoint                                      | Description        | Access |
 | ------ | --------------------------------------------- | ------------------ | ------ |
@@ -230,7 +215,7 @@ This document contains **ALL** APIs required for the complete Tim Tim transport 
 
 ---
 
-## 16. Subscription History APIs
+## 15. Subscription History APIs
 
 | Method | Endpoint                                      | Description       | Access     |
 | ------ | --------------------------------------------- | ----------------- | ---------- |
@@ -240,7 +225,7 @@ This document contains **ALL** APIs required for the complete Tim Tim transport 
 
 ---
 
-## 17. Subscription Invoice APIs
+## 16. Subscription Invoice APIs
 
 | Method | Endpoint                                                    | Description               | Access       |
 | ------ | ----------------------------------------------------------- | ------------------------- | ------------ |
@@ -257,7 +242,7 @@ This document contains **ALL** APIs required for the complete Tim Tim transport 
 
 ---
 
-## 18. Subscription Payment APIs
+## 17. Subscription Payment APIs
 
 | Method | Endpoint                                          | Description          | Access      |
 | ------ | ------------------------------------------------- | -------------------- | ----------- |
@@ -270,7 +255,7 @@ This document contains **ALL** APIs required for the complete Tim Tim transport 
 
 ---
 
-## 19. Subscription Status Log APIs
+## 18. Subscription Status Log APIs
 
 | Method | Endpoint                                                       | Description           | Access     |
 | ------ | -------------------------------------------------------------- | --------------------- | ---------- |
@@ -280,7 +265,7 @@ This document contains **ALL** APIs required for the complete Tim Tim transport 
 
 ---
 
-## 20. Subscription Usage Log APIs
+## 19. Subscription Usage Log APIs
 
 | Method | Endpoint                                                      | Description             | Access     |
 | ------ | ------------------------------------------------------------- | ----------------------- | ---------- |
@@ -292,7 +277,7 @@ This document contains **ALL** APIs required for the complete Tim Tim transport 
 
 ---
 
-## 21. Subscription Change Request APIs
+## 20. Subscription Change Request APIs
 
 | Method | Endpoint                                                 | Description           | Access     |
 | ------ | -------------------------------------------------------- | --------------------- | ---------- |
@@ -307,7 +292,7 @@ This document contains **ALL** APIs required for the complete Tim Tim transport 
 
 ---
 
-## 22. Subscription Refund APIs
+## 21. Subscription Refund APIs
 
 | Method | Endpoint                                                            | Description              | Access       |
 | ------ | ------------------------------------------------------------------- | ------------------------ | ------------ |
@@ -323,7 +308,7 @@ This document contains **ALL** APIs required for the complete Tim Tim transport 
 
 ---
 
-## 23. Vehicle Management APIs
+## 22. Vehicle Management APIs
 
 | Method | Endpoint                                             | Description                          | Access                 |
 | ------ | ---------------------------------------------------- | ------------------------------------ | ---------------------- |
@@ -345,7 +330,7 @@ This document contains **ALL** APIs required for the complete Tim Tim transport 
 
 ---
 
-## 24. Driver Management APIs
+## 23. Driver Management APIs
 
 | Method | Endpoint                                           | Description                       | Access                 |
 | ------ | -------------------------------------------------- | --------------------------------- | ---------------------- |
@@ -368,7 +353,7 @@ This document contains **ALL** APIs required for the complete Tim Tim transport 
 
 ---
 
-## 25. Driver Tachograph APIs
+## 24. Driver Tachograph APIs
 
 | Method | Endpoint                                       | Description                | Access     |
 | ------ | ---------------------------------------------- | -------------------------- | ---------- |
@@ -385,7 +370,7 @@ This document contains **ALL** APIs required for the complete Tim Tim transport 
 
 ---
 
-## 26. Fuel Usage APIs
+## 25. Fuel Usage APIs
 
 | Method | Endpoint                                      | Description                  | Access     |
 | ------ | --------------------------------------------- | ---------------------------- | ---------- |
@@ -402,7 +387,7 @@ This document contains **ALL** APIs required for the complete Tim Tim transport 
 
 ---
 
-## 27. Subcontractor APIs
+## 26. Subcontractor APIs
 
 | Method | Endpoint                                   | Description               | Access     |
 | ------ | ------------------------------------------ | ------------------------- | ---------- |
@@ -418,7 +403,7 @@ This document contains **ALL** APIs required for the complete Tim Tim transport 
 
 ---
 
-## 28. Spot Check APIs
+## 27. Spot Check APIs
 
 | Method | Endpoint                                      | Description                | Access     |
 | ------ | --------------------------------------------- | -------------------------- | ---------- |
@@ -435,7 +420,7 @@ This document contains **ALL** APIs required for the complete Tim Tim transport 
 
 ---
 
-## 29. PG9 & PG13 Plan APIs
+## 28. PG9 & PG13 Plan APIs
 
 | Method | Endpoint                                   | Description                 | Access     |
 | ------ | ------------------------------------------ | --------------------------- | ---------- |
@@ -452,7 +437,7 @@ This document contains **ALL** APIs required for the complete Tim Tim transport 
 
 ---
 
-## 30. ORS Plan APIs
+## 29. ORS Plan APIs
 
 | Method | Endpoint                                         | Description       | Access     |
 | ------ | ------------------------------------------------ | ----------------- | ---------- |
@@ -466,7 +451,7 @@ This document contains **ALL** APIs required for the complete Tim Tim transport 
 
 ---
 
-## 31. Traffic Commissioner Communication APIs
+## 30. Traffic Commissioner Communication APIs
 
 | Method | Endpoint                                                                  | Description            | Access     |
 | ------ | ------------------------------------------------------------------------- | ---------------------- | ---------- |
@@ -480,7 +465,7 @@ This document contains **ALL** APIs required for the complete Tim Tim transport 
 
 ---
 
-## 32. Renewal Tracker APIs
+## 31. Renewal Tracker APIs
 
 | Method | Endpoint                                      | Description           | Access     |
 | ------ | --------------------------------------------- | --------------------- | ---------- |
@@ -497,7 +482,7 @@ This document contains **ALL** APIs required for the complete Tim Tim transport 
 
 ---
 
-## 33. Audit & Rectification Report APIs
+## 32. Audit & Rectification Report APIs
 
 | Method | Endpoint                                                    | Description      | Access     |
 | ------ | ----------------------------------------------------------- | ---------------- | ---------- |
@@ -511,7 +496,7 @@ This document contains **ALL** APIs required for the complete Tim Tim transport 
 
 ---
 
-## 34. Wheel Retorque Policy Monitoring APIs
+## 33. Wheel Retorque Policy Monitoring APIs
 
 | Method | Endpoint                                                   | Description           | Access     |
 | ------ | ---------------------------------------------------------- | --------------------- | ---------- |
@@ -527,7 +512,7 @@ This document contains **ALL** APIs required for the complete Tim Tim transport 
 
 ---
 
-## 35. Compliance Timetable APIs
+## 34. Compliance Timetable APIs
 
 | Method | Endpoint                                      | Description        | Access     |
 | ------ | --------------------------------------------- | ------------------ | ---------- |
@@ -543,7 +528,7 @@ This document contains **ALL** APIs required for the complete Tim Tim transport 
 
 ---
 
-## 36. Dashboard & Analytics APIs
+## 35. Dashboard & Analytics APIs
 
 | Method | Endpoint                                | Description            | Access     |
 | ------ | --------------------------------------- | ---------------------- | ---------- |
@@ -559,7 +544,7 @@ This document contains **ALL** APIs required for the complete Tim Tim transport 
 
 ---
 
-## 37. Reports & Export APIs
+## 36. Reports & Export APIs
 
 | Method | Endpoint                             | Description                | Access     |
 | ------ | ------------------------------------ | -------------------------- | ---------- |
@@ -577,7 +562,7 @@ This document contains **ALL** APIs required for the complete Tim Tim transport 
 
 ---
 
-## 38. Admin Management APIs
+## 37. Admin Management APIs
 
 | Method | Endpoint                                            | Description                 | Access |
 | ------ | --------------------------------------------------- | --------------------------- | ------ |
@@ -592,7 +577,7 @@ This document contains **ALL** APIs required for the complete Tim Tim transport 
 
 ---
 
-## 39. Subscription Request & Approval APIs (NEW)
+## 38. Subscription Request & Approval APIs (NEW)
 
 | Method | Endpoint                                          | Description          | Access     |
 | ------ | ------------------------------------------------- | -------------------- | ---------- |
@@ -608,7 +593,7 @@ This document contains **ALL** APIs required for the complete Tim Tim transport 
 
 ---
 
-## 40. Transport Manager - Client Limit APIs (NEW)
+## 39. Transport Manager - Client Limit APIs (NEW)
 
 | Method | Endpoint                                                  | Description              | Access        |
 | ------ | --------------------------------------------------------- | ------------------------ | ------------- |
@@ -632,7 +617,6 @@ This document contains **ALL** APIs required for the complete Tim Tim transport 
 - **Notifications**: 8 endpoints
 - **Activity Logs**: 6 endpoints
 - **Login Activities**: 5 endpoints
-- **Documents**: 8 endpoints
 - **Subscription Plans**: 8 endpoints
 - **Subscription Durations**: 6 endpoints
 - **Subscription Pricing**: 8 endpoints
