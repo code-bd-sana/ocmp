@@ -26,7 +26,6 @@ const UserSubscriptionSchema: Schema<IUserSubscription> = new Schema(
     },
     subscriptionPlanId: {
       type: Schema.Types.ObjectId,
-      required: true,
       ref: 'SubscriptionPlan', // Reference to the SubscriptionPlan model
     },
     subscriptionDurationId: {
@@ -47,7 +46,7 @@ const UserSubscriptionSchema: Schema<IUserSubscription> = new Schema(
       type: Date,
     },
     endDate: {
-      type: Date,
+      type: Date, //auto
     },
     autoRenew: {
       type: Boolean,

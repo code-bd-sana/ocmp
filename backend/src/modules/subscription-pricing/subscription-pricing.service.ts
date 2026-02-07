@@ -2,6 +2,7 @@
 
 import mongoose from 'mongoose';
 import { IdOrIdsInput, SearchQueryInput } from '../../handlers/common-zod-validator';
+import { UserRole } from '../../models';
 import SubscriptionDuration from '../../models/subscription-billing/subscriptionDuration.schema';
 import SubscriptionPlan from '../../models/subscription-billing/subscriptionPlan.schema';
 import SubscriptionPricing, {
@@ -114,18 +115,27 @@ const deleteManySubscriptionPricing = async (
  * Service function to retrieve a single subscription-pricing by ID.
  *
  * @param {IdOrIdsInput['id']} id - The ID of the subscription-pricing to retrieve.
+ * @param {UserRole} userRole - Optional user role to determine filtering (SUPER_ADMIN sees all, others see only active)
  * @returns {Promise<Partial<ISubscriptionPricing>>} - The retrieved subscription-pricing.
  */
 const getSubscriptionPricingById = async (
-  id: string
+  id: string,
+  userRole?: UserRole
 ): Promise<Partial<ISubscriptionPricing> | null> => {
   // Check if valid ObjectId
   if (!mongoose.Types.ObjectId.isValid(id)) {
     throw new Error('Invalid ID format');
   }
   const objectId = new mongoose.Types.ObjectId(id);
-  // Search by _id OR subscriptionPlanId OR subscriptionDurationId
-  const subscriptionPricing = await SubscriptionPricing.findById(objectId);
+  // Determine if user is super admin (has access to all pricing)
+  const isSuperAdmin = userRole === UserRole.SUPER_ADMIN;
+  // Build query - filter by isActive if not super admin
+  const query: any = { _id: objectId };
+  if (!isSuperAdmin) {
+    query.isActive = true;
+  }
+  // Search by _id with optional isActive filter
+  const subscriptionPricing = await SubscriptionPricing.findOne(query);
   return subscriptionPricing;
 };
 
@@ -133,14 +143,21 @@ const getSubscriptionPricingById = async (
  * Service function to retrieve multiple subscription-pricing based on query parameters.
  *
  * @param {SearchQueryInput} query - The query parameters for filtering subscription-pricing.
+ * @param {UserRole} userRole - Optional user role to determine filtering (SUPER_ADMIN sees all, others see only active)
  * @returns {Promise<Partial<ISubscriptionPricing & { subscriptionPlanName: string; subscriptionDuration: string }>[]>} - The retrieved subscription-pricing
  */
-const getManySubscriptionPricing = async (query: SearchQueryInput) => {
+const getManySubscriptionPricing = async (query: SearchQueryInput, userRole?: UserRole) => {
   const { searchKey = '', showPerPage = 10, pageNo = 1 } = query;
   const skipItems = (pageNo - 1) * showPerPage;
   // Convert searchKey to number if possible
   const numericSearch = !isNaN(Number(searchKey)) ? Number(searchKey) : null;
+  // Determine if user is super admin (has access to all pricing)
+  console.log(userRole, 'user role');
+  const isSuperAdmin = userRole === UserRole.SUPER_ADMIN;
+
   const aggregationPipeline: mongoose.PipelineStage[] = [
+    // Filter by isActive status if not super admin
+    ...(!isSuperAdmin ? [{ $match: { isActive: true } }] : []),
     // Lookup subscription plan
     {
       $lookup: {
@@ -184,6 +201,12 @@ const getManySubscriptionPricing = async (query: SearchQueryInput) => {
       $project: {
         _id: 1,
         subscriptionPlanName: '$subscriptionPlan.name',
+        subscriptionPlanType: '$subscriptionPlan.planType',
+        applicableAccountType: '$subscriptionPlan.applicableAccountType',
+        subscriptionPlanDescription: '$subscriptionPlan.description',
+        subscriptionPlanStatus: '$subscriptionPlan.isActive',
+        subscriptionDurationStatus: '$subscriptionDuration.isActive',
+        subscriptionName: '$subscriptionDuration.name',
         subscriptionDuration: '$subscriptionDuration.durationInDays',
         price: 1,
         currency: 1,
@@ -197,6 +220,8 @@ const getManySubscriptionPricing = async (query: SearchQueryInput) => {
   const subscriptionPricings = await SubscriptionPricing.aggregate(aggregationPipeline);
   // Total count
   const totalDataPipeline: mongoose.PipelineStage[] = [
+    // Filter by isActive status if not super admin
+    ...(!isSuperAdmin ? [{ $match: { isActive: true } }] : []),
     {
       $lookup: {
         from: 'subscriptionplans',
@@ -221,7 +246,9 @@ const getManySubscriptionPricing = async (query: SearchQueryInput) => {
           { currency: { $regex: searchKey, $options: 'i' } },
           { 'subscriptionPlan.name': { $regex: searchKey, $options: 'i' } },
           ...(numericSearch !== null ? [{ price: numericSearch }] : []),
-          ...(numericSearch !== null ? [{ 'subscriptionDuration.durationInDays': numericSearch }] : []),
+          ...(numericSearch !== null
+            ? [{ 'subscriptionDuration.durationInDays': numericSearch }]
+            : []),
         ],
       },
     },

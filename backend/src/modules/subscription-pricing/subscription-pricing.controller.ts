@@ -91,14 +91,21 @@ export const deleteManySubscriptionPricing = catchAsync(async (req: Request, res
  * @returns {Promise<Partial<ISubscriptionPricing>>} - The retrieved subscription-pricing.
  * @throws {Error} - Throws an error if the subscription-pricing retrieval fails.
  */
-export const getSubscriptionPricingById = catchAsync(async (req: Request, res: Response) => {
-  const { id } = req.params;
-  // Call the service method to get the subscription-pricing by ID and get the result
-  const result = await subscriptionPricingServices.getSubscriptionPricingById(id as string);
-  if (!result) throw new Error('Subscription-pricing not found');
-  // Send a success response with the retrieved resource data
-  ServerResponse(res, true, 200, 'Subscription-pricing retrieved successfully', result);
-});
+export const getSubscriptionPricingById = catchAsync(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const { id } = req.params;
+    // Extract user role if authenticated
+    const userRole = req.user?.role;
+    // Call the service method to get the subscription-pricing by ID and get the result
+    const result = await subscriptionPricingServices.getSubscriptionPricingById(
+      id as string,
+      userRole
+    );
+    if (!result) throw new Error('Subscription-pricing not found');
+    // Send a success response with the retrieved resource data
+    ServerResponse(res, true, 200, 'Subscription-pricing retrieved successfully', result);
+  }
+);
 
 /**
  * Controller function to handle the retrieval of multiple subscription-pricing(s).
@@ -108,17 +115,21 @@ export const getSubscriptionPricingById = catchAsync(async (req: Request, res: R
  * @returns {Promise<Partial<ISubscriptionPricing>[]>} - The retrieved subscription-pricing(s).
  * @throws {Error} - Throws an error if the subscription-pricing(s) retrieval fails.
  */
-export const getManySubscriptionPricing = catchAsync(async (req: Request, res: Response) => {
-  // Use the validated and transformed query from Zod middleware
-  const query = (req as any).validatedQuery as SearchQueryInput;
-  // Call the service method to get multiple subscription-pricings based on query parameters and get the result
-  const { subscriptionPricings, totalData, totalPages } =
-    await subscriptionPricingServices.getManySubscriptionPricing(query);
-  if (!subscriptionPricings) throw new Error('Failed to retrieve subscription-pricing(s)');
-  // Send a success response with the retrieved subscription-pricing(s) data
-  ServerResponse(res, true, 200, 'Subscription-pricing(s) retrieved successfully', {
-    subscriptionPricings,
-    totalData,
-    totalPages,
-  });
-});
+export const getManySubscriptionPricing = catchAsync(
+  async (req: AuthenticatedRequest, res: Response) => {
+    // Use the validated and transformed query from Zod middleware
+    const query = (req as any).validatedQuery as SearchQueryInput;
+    // Extract user role if authenticated
+    const userRole = req.user?.role;
+    // Call the service method to get multiple subscription-pricings based on query parameters and get the result
+    const { subscriptionPricings, totalData, totalPages } =
+      await subscriptionPricingServices.getManySubscriptionPricing(query, userRole);
+    if (!subscriptionPricings) throw new Error('Failed to retrieve subscription-pricing(s)');
+    // Send a success response with the retrieved subscription-pricing(s) data
+    ServerResponse(res, true, 200, 'Subscription-pricing(s) retrieved successfully', {
+      subscriptionPricings,
+      totalData,
+      totalPages,
+    });
+  }
+);

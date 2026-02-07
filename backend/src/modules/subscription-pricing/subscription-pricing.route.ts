@@ -19,6 +19,7 @@ import {
 } from '../../handlers/common-zod-validator';
 import authorizedRoles from '../../middlewares/authorized-roles';
 import isAuthorized from '../../middlewares/is-authorized';
+import isOptionallyAuthorized from '../../middlewares/is-optionally-authorized';
 import { UserRole } from '../../models';
 import {
   validateCreateSubscriptionPricing,
@@ -95,21 +96,21 @@ router.delete(
 /**
  * @route GET /api/v1/subscription-pricing/get-subscription-pricing/many
  * @description Get multiple subscription-pricing(s)
- * @access Public
- * @param {function} validation - ['validateSearchQueries']
+ * @access Public (with optional authentication)
+ * @param {function} middleware - ['validateSearchQueries', 'isOptionallyAuthorized']
  * @param {function} controller - ['getManySubscriptionPricing']
  */
-router.get('/', validateSearchQueries, getManySubscriptionPricing);
+router.get('/', validateSearchQueries, isOptionallyAuthorized, getManySubscriptionPricing);
 
 /**
  * @route GET /api/v1/subscription-pricing/get-subscription-pricing/:id
  * @description Get a subscription-pricing by ID
- * @access Public
+ * @access Public (with optional authentication)
  * @param {IdOrIdsInput['id']} id - The ID of the subscription-pricing to retrieve
- * @param {function} validation - ['validateId']
+ * @param {function} middleware - ['validateId', 'isOptionallyAuthorized']
  * @param {function} controller - ['getSubscriptionPricingById']
  */
-router.get('/:id', validateId, getSubscriptionPricingById);
+router.get('/:id', validateId, isOptionallyAuthorized, getSubscriptionPricingById);
 
 // Export the router
 module.exports = router;
