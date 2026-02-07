@@ -1,5 +1,13 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
+export enum SubscriptionStatus {
+  TRIAL = 'TRIAL',
+  ACTIVE = 'ACTIVE',
+  EXPIRED = 'EXPIRED',
+  CANCELLED = 'CANCELLED',
+  SUSPENDED = 'SUSPENDED',
+}
+
 // Define and export an interface representing a UserSubscription document
 export interface IUserSubscription extends Document {
   userId: mongoose.Types.ObjectId;
@@ -38,7 +46,7 @@ const UserSubscriptionSchema: Schema<IUserSubscription> = new Schema(
     },
     status: {
       type: String,
-      enum: ['TRIAL', 'ACTIVE', 'EXPIRED', 'CANCELLED', 'SUSPENDED'],
+      enum: Object.values(SubscriptionStatus),
       required: true,
       default: 'ACTIVE',
     },
