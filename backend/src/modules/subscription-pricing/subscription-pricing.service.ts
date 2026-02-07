@@ -135,33 +135,16 @@ const getSubscriptionPricingById = async (
  * @param {SearchQueryInput} query - The query parameters for filtering subscription-pricing.
  * @returns {Promise<Partial<ISubscriptionPricing & { subscriptionPlanName: string; subscriptionDuration: string }>[]>} - The retrieved subscription-pricing
  */
-export const getManySubscriptionPricing = async (
-  query: SearchQueryInput
-): Promise<{
-  subscriptionPricings: Partial<
-    ISubscriptionPricing & { subscriptionPlanName: string; subscriptionDuration: number }
-  >[];
-  totalData: number;
-  totalPages: number;
-}> => {
+const getManySubscriptionPricing = async (query: SearchQueryInput) => {
   const { searchKey = '', showPerPage = 10, pageNo = 1 } = query;
   const skipItems = (pageNo - 1) * showPerPage;
-  // Build the match stage based on searchKey (here searching by currency)
-  const matchStage = {
-    $match: {
-      $or: [
-        { currency: { $regex: searchKey, $options: 'i' } },
-        { price: isNaN(Number(searchKey)) ? undefined : Number(searchKey) }, // optional numeric search
-      ].filter(Boolean),
-    },
-  };
-  // Aggregation pipeline
-  const aggregationPipeline = [
-    matchStage,
+  // Convert searchKey to number if possible
+  const numericSearch = !isNaN(Number(searchKey)) ? Number(searchKey) : null;
+  const aggregationPipeline: mongoose.PipelineStage[] = [
     // Lookup subscription plan
     {
       $lookup: {
-        from: 'subscriptionplans', // collection name in MongoDB
+        from: 'subscriptionplans',
         localField: 'subscriptionPlanId',
         foreignField: '_id',
         as: 'subscriptionPlan',
@@ -171,19 +154,32 @@ export const getManySubscriptionPricing = async (
     // Lookup subscription duration
     {
       $lookup: {
-        from: 'subscriptiondurations', // collection name in MongoDB
+        from: 'subscriptiondurations',
         localField: 'subscriptionDurationId',
         foreignField: '_id',
         as: 'subscriptionDuration',
       },
     },
     { $unwind: { path: '$subscriptionDuration', preserveNullAndEmptyArrays: true } },
-    // Sort by createdAt desc (optional)
+    // Match search key across multiple fields
+    {
+      $match: {
+        $or: [
+          { currency: { $regex: searchKey, $options: 'i' } },
+          { 'subscriptionPlan.name': { $regex: searchKey, $options: 'i' } },
+          ...(numericSearch !== null ? [{ price: numericSearch }] : []),
+          ...(numericSearch !== null
+            ? [{ 'subscriptionDuration.durationInDays': numericSearch }]
+            : []),
+        ],
+      },
+    },
+    // Sort by createdAt desc
     { $sort: { createdAt: -1 } },
     // Pagination
     { $skip: skipItems },
     { $limit: showPerPage },
-    // Project the fields you want
+    // Project final fields
     {
       $project: {
         _id: 1,
@@ -198,12 +194,40 @@ export const getManySubscriptionPricing = async (
       },
     },
   ];
-  // Execute aggregation
-  const subscriptionPricings = await SubscriptionPricing.aggregate(
-    aggregationPipeline as mongoose.PipelineStage[]
-  );
-  // Get total count for pagination
-  const totalDataPipeline = [matchStage, { $count: 'count' }];
+  const subscriptionPricings = await SubscriptionPricing.aggregate(aggregationPipeline);
+  // Total count
+  const totalDataPipeline: mongoose.PipelineStage[] = [
+    {
+      $lookup: {
+        from: 'subscriptionplans',
+        localField: 'subscriptionPlanId',
+        foreignField: '_id',
+        as: 'subscriptionPlan',
+      },
+    },
+    { $unwind: { path: '$subscriptionPlan', preserveNullAndEmptyArrays: true } },
+    {
+      $lookup: {
+        from: 'subscriptiondurations',
+        localField: 'subscriptionDurationId',
+        foreignField: '_id',
+        as: 'subscriptionDuration',
+      },
+    },
+    { $unwind: { path: '$subscriptionDuration', preserveNullAndEmptyArrays: true } },
+    {
+      $match: {
+        $or: [
+          { currency: { $regex: searchKey, $options: 'i' } },
+          { 'subscriptionPlan.name': { $regex: searchKey, $options: 'i' } },
+          ...(numericSearch !== null ? [{ price: numericSearch }] : []),
+          ...(numericSearch !== null ? [{ 'subscriptionDuration.durationInDays': numericSearch }] : []),
+        ],
+      },
+    },
+    { $count: 'count' },
+  ];
+
   const totalCountResult = await SubscriptionPricing.aggregate(totalDataPipeline);
   const totalData = totalCountResult[0]?.count || 0;
   const totalPages = Math.ceil(totalData / showPerPage);
