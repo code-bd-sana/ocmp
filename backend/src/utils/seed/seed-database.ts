@@ -208,157 +208,107 @@ async function seedDocuments() {
 async function seedRepositorySettings() {
   console.log('⚙️  Seeding repository settings...');
 
-  const settings = await RepositorySettings.create([
-    {
-      vehicleList: true,
-      spotChecks: true,
-      driverDetailsLicenceAndDoc: true,
-      driverTachoGraphAndWTDInfringements: true,
-      trainingAndToolboxTalks: false,
-      renewalsTracker: true,
-      OCRSChecksAndRectification: true,
-      trafficCommissionerCommunicate: true,
-      transportManager: true,
-      selfServiceAndLogin: true,
-      Planner: false,
-      PG9sPG13FGClearanceInvesting: true,
-      contactLog: false,
-      GV79DAndMaintenanceProvider: true,
-      complianceTimetable: true,
-      auditsAndRectificationReports: true,
-      fuelUsage: true,
-      wheelRetorquePolicyAndMonitoring: true,
-      workingTimeDirective: false,
-      policyProcedureReviewTracker: false,
-      subcontractorDetails: true,
-      userId: ids.users[1]._id,
-    },
-    {
-      vehicleList: true,
-      spotChecks: false,
-      driverDetailsLicenceAndDoc: true,
-      renewalsTracker: true,
-      userId: ids.users[2]._id,
-    },
-  ]);
-
-  ids.repositorySettings = settings;
-  console.log(`✓ Created ${settings.length} repository settings\n`);
+  const settings = [];
+  for (let i = 0; i < 100; i++) {
+    settings.push({
+      vehicleList: i % 2 === 0,
+      spotChecks: i % 3 !== 0,
+      driverDetailsLicenceAndDoc: i % 4 !== 0,
+      driverTachoGraphAndWTDInfringements: i % 5 !== 0,
+      trainingAndToolboxTalks: i % 2 === 1,
+      renewalsTracker: i % 3 === 0,
+      OCRSChecksAndRectification: i % 2 === 0,
+      trafficCommissionerCommunicate: i % 4 === 0,
+      transportManager: i % 2 === 0,
+      selfServiceAndLogin: i % 3 !== 0,
+      Planner: i % 2 === 1,
+      PG9sPG13FGClearanceInvesting: i % 5 !== 0,
+      contactLog: i % 2 === 0,
+      GV79DAndMaintenanceProvider: i % 3 === 0,
+      complianceTimetable: i % 2 === 0,
+      auditsAndRectificationReports: i % 4 !== 0,
+      fuelUsage: i % 2 === 0,
+      wheelRetorquePolicyAndMonitoring: i % 3 !== 0,
+      workingTimeDirective: i % 2 === 1,
+      policyProcedureReviewTracker: i % 3 === 0,
+      subcontractorDetails: i % 2 === 0,
+      userId: ids.users[i % ids.users.length]._id,
+    });
+  }
+  const createdSettings = await RepositorySettings.create(settings);
+  ids.repositorySettings = createdSettings;
+  console.log(`✓ Created ${createdSettings.length} repository settings\n`);
 }
 
 async function seedNotifications() {
   console.log('🔔 Seeding notifications...');
 
-  const notifications = await Notification.create([
-    {
-      userId: ids.users[1]._id,
-      title: 'Subscription Expiring Soon',
-      message:
-        'Your subscription will expire in 7 days. Please renew to continue using all features.',
-      type: 'SUBSCRIPTION',
-      isRead: false,
-    },
-    {
-      userId: ids.users[1]._id,
-      title: 'License Verification Required',
-      message: 'Driver license verification is due for John Smith.',
-      type: 'SYSTEM',
-      isRead: true,
-      readAt: new Date('2026-02-05'),
-    },
-    {
-      userId: ids.users[2]._id,
-      title: 'Payment Successful',
-      message: 'Your payment of £199.99 has been processed successfully.',
-      type: 'BILLING',
-      isRead: true,
-      readAt: new Date('2026-02-01'),
-    },
-    {
-      userId: ids.users[0]._id,
-      title: 'Security Alert',
-      message: 'New login detected from unrecognized device.',
-      type: 'SECURITY',
-      isRead: false,
-    },
-  ]);
-
-  ids.notifications = notifications;
-  console.log(`✓ Created ${notifications.length} notifications\n`);
+  const types = ['SUBSCRIPTION', 'SYSTEM', 'BILLING', 'SECURITY'];
+  const notifications = [];
+  for (let i = 0; i < 120; i++) {
+    const isRead = i % 2 === 0;
+    notifications.push({
+      userId: ids.users[i % ids.users.length]._id,
+      title: `Notification Title #${i + 1}`,
+      message: `Notification message #${i + 1} for user ${i % ids.users.length}`,
+      type: types[i % types.length],
+      isRead,
+      readAt: isRead ? new Date(Date.now() - i * 1000 * 60 * 60) : undefined,
+      createdAt: new Date(Date.now() - i * 1000 * 60 * 60),
+    });
+  }
+  const createdNotifications = await Notification.create(notifications);
+  ids.notifications = createdNotifications;
+  console.log(`✓ Created ${createdNotifications.length} notifications\n`);
 }
 
 async function seedLoginActivities() {
   console.log('🔐 Seeding login activities...');
 
-  const activities = await LoginActivity.create([
-    {
-      email: ids.users[0].email,
+  const browsers = ['Chrome 120', 'Safari 17', 'Firefox 110', 'Edge 119', 'Opera 105'];
+  const osList = ['Windows 11', 'macOS 14', 'Linux', 'Android 13', 'iOS 17'];
+  const locations = ['London, UK', 'Manchester, UK', 'Birmingham, UK', 'Leeds, UK', 'Glasgow, UK'];
+  const activities = [];
+  for (let i = 0; i < 100; i++) {
+    activities.push({
+      email: ids.users[i % ids.users.length].email,
       loginHash: 'hash_' + Math.random().toString(36).substr(2, 9),
-      ipAddress: '192.168.1.100',
-      deviceInfo: 'Mozilla/5.0 Windows NT 10.0',
-      browser: 'Chrome 120',
-      os: 'Windows 11',
-      location: 'London, UK',
-      loginAt: new Date('2026-02-06T08:30:00'),
-      isSuccessful: true,
-    },
-    {
-      email: ids.users[1].email,
-      loginHash: 'hash_' + Math.random().toString(36).substr(2, 9),
-      ipAddress: '192.168.1.101',
-      deviceInfo: 'Mozilla/5.0 Macintosh',
-      browser: 'Safari 17',
-      os: 'macOS 14',
-      location: 'Manchester, UK',
-      loginAt: new Date('2026-02-06T09:15:00'),
-      logoutAt: new Date('2026-02-06T17:30:00'),
-      isSuccessful: true,
-    },
-    {
-      email: 'unknown@example.com',
-      ipAddress: '203.0.113.42',
-      deviceInfo: 'Unknown',
-      loginAt: new Date('2026-02-05T23:45:00'),
-      isSuccessful: false,
-    },
-  ]);
-
-  ids.loginActivities = activities;
-  console.log(`✓ Created ${activities.length} login activities\n`);
+      ipAddress: `192.168.${i % 255}.${(i * 7) % 255}`,
+      deviceInfo: `Mozilla/5.0 (${osList[i % osList.length]})`,
+      browser: browsers[i % browsers.length],
+      os: osList[i % osList.length],
+      location: locations[i % locations.length],
+      loginAt: new Date(Date.now() - i * 1000 * 60 * 60 * 2),
+      logoutAt: i % 3 === 0 ? new Date(Date.now() - i * 1000 * 60 * 60) : undefined,
+      isSuccessful: i % 4 !== 0,
+    });
+  }
+  const createdActivities = await LoginActivity.create(activities);
+  ids.loginActivities = createdActivities;
+  console.log(`✓ Created ${createdActivities.length} login activities\n`);
 }
 
 async function seedActivityLogs() {
   console.log('📋 Seeding activity logs...');
 
-  const logs = await ActivityLog.create([
-    {
-      userId: ids.users[1]._id,
-      action: 'CREATE',
-      module: 'VEHICLE',
-      entityType: 'Vehicle',
-      entityId: 'pending',
-      description: 'Created new vehicle entry',
-    },
-    {
-      userId: ids.users[1]._id,
-      action: 'UPDATE',
-      module: 'DRIVER',
-      entityType: 'Driver',
-      entityId: 'pending',
-      description: 'Updated driver license information',
-    },
-    {
-      userId: ids.users[0]._id,
-      action: 'DELETE',
-      module: 'SUBSCRIPTION',
-      entityType: 'UserSubscription',
-      entityId: 'pending',
-      description: 'Cancelled user subscription',
-    },
-  ]);
-
-  ids.activityLogs = logs;
-  console.log(`✓ Created ${logs.length} activity logs\n`);
+  const actions = ['CREATE', 'UPDATE', 'DELETE', 'LOGIN', 'LOGOUT', 'UPLOAD', 'DOWNLOAD'];
+  const modules = ['VEHICLE', 'DRIVER', 'SUBSCRIPTION', 'DOCUMENT', 'USER', 'NOTIFICATION'];
+  const logs = [];
+  for (let i = 0; i < 100; i++) {
+    logs.push({
+      userId: ids.users[i % ids.users.length]._id,
+      action: actions[i % actions.length],
+      module: modules[i % modules.length],
+      entityType:
+        modules[i % modules.length].charAt(0) + modules[i % modules.length].slice(1).toLowerCase(),
+      entityId: `entity_${i + 1}`,
+      description: `Activity log #${i + 1} for action ${actions[i % actions.length]}`,
+      timestamp: new Date(Date.now() - i * 1000 * 60 * 30),
+    });
+  }
+  const createdLogs = await ActivityLog.create(logs);
+  ids.activityLogs = createdLogs;
+  console.log(`✓ Created ${createdLogs.length} activity logs\n`);
 }
 
 // ==================== SUBSCRIPTION BILLING ====================
@@ -366,133 +316,92 @@ async function seedActivityLogs() {
 async function seedSubscriptionPlans() {
   console.log('📦 Seeding subscription plans...');
 
-  const plans = await SubscriptionPlan.create([
-    {
-      name: 'FREE TRIAL',
-      planType: 'FREE',
-      applicableAccountType: 'BOTH',
-      description: '7-day free trial with basic features',
+  const planTypes = ['FREE', 'BASIC', 'PROFESSIONAL', 'ENTERPRISE', 'CUSTOM'];
+  const billingCycles = ['TRIAL', 'MONTHLY', 'QUARTERLY', 'SEMI-ANNUAL', 'ANNUAL'];
+  const accountTypes = ['BOTH', 'STANDALONE', 'TRANSPORT_MANAGER'];
+  const plans = [];
+  for (let i = 0; i < 120; i++) {
+    const type = planTypes[i % planTypes.length];
+    const cycle = billingCycles[i % billingCycles.length];
+    const accType = accountTypes[i % accountTypes.length];
+    let name = '';
+    if (type === 'FREE') {
+      name = 'FREE TRIAL';
+    } else if (type === 'CUSTOM') {
+      name = `CUSTOM PLAN ${cycle}`;
+    } else {
+      name = `${type} ${cycle}`;
+    }
+    plans.push({
+      name,
+      planType: type === 'FREE' ? 'FREE' : type === 'CUSTOM' ? 'CUSTOM' : 'PAID',
+      applicableAccountType: accType,
+      description: `${name} for ${accType.toLowerCase().replace('_', ' ')} users`,
       isActive: true,
       createdBy: ids.users[0]._id,
-    },
-    {
-      name: 'BASIC MONTHLY',
-      planType: 'PAID',
-      applicableAccountType: 'STANDALONE',
-      description: 'Basic plan for standalone users',
-      isActive: true,
-      createdBy: ids.users[0]._id,
-    },
-    {
-      name: 'PROFESSIONAL MONTHLY',
-      planType: 'PAID',
-      applicableAccountType: 'TRANSPORT_MANAGER',
-      description: 'Professional plan for transport managers',
-      isActive: true,
-      createdBy: ids.users[0]._id,
-    },
-    {
-      name: 'ENTERPRISE ANNUAL',
-      planType: 'PAID',
-      applicableAccountType: 'BOTH',
-      description: 'Enterprise plan with all features',
-      isActive: true,
-      createdBy: ids.users[0]._id,
-    },
-    {
-      name: 'CUSTOM PLAN',
-      planType: 'CUSTOM',
-      applicableAccountType: 'BOTH',
-      description: 'Custom plan negotiated with client',
-      isActive: true,
-      createdBy: ids.users[0]._id,
-    },
-  ]);
-
-  ids.subscriptionPlans = plans;
-  console.log(`✓ Created ${plans.length} subscription plans\n`);
+    });
+  }
+  const createdPlans = await SubscriptionPlan.create(plans);
+  ids.subscriptionPlans = createdPlans;
+  console.log(`\u2713 Created ${createdPlans.length} subscription plans\n`);
 }
 
 async function seedSubscriptionDurations() {
   console.log('⏱️  Seeding subscription durations...');
 
-  const durations = await SubscriptionDuration.create([
-    {
-      name: 'TRIAL',
-      durationInDays: 7,
+  const baseDurations = [
+    { name: 'Trial', days: 7 },
+    { name: 'Weekly', days: 7 },
+    { name: 'Bi-Weekly', days: 14 },
+    { name: 'Monthly', days: 30 },
+    { name: 'Quarterly', days: 90 },
+    { name: 'Semi-Annual', days: 180 },
+    { name: 'Annual', days: 365 },
+  ];
+  const durations = [];
+  // Add base durations first
+  for (const d of baseDurations) {
+    durations.push({
+      name: d.name,
+      durationInDays: d.days,
       isActive: true,
       createdBy: ids.users[0]._id,
-    },
-    {
-      name: 'MONTHLY',
-      durationInDays: 30,
+    });
+  }
+  // Add custom durations
+  for (let i = baseDurations.length; i < 100; i++) {
+    const days = 7 + i * 7;
+    durations.push({
+      name: `Custom ${days} Days`,
+      durationInDays: days,
       isActive: true,
       createdBy: ids.users[0]._id,
-    },
-    {
-      name: 'QUARTERLY',
-      durationInDays: 90,
-      isActive: true,
-      createdBy: ids.users[0]._id,
-    },
-    {
-      name: 'SEMI-ANNUAL',
-      durationInDays: 180,
-      isActive: true,
-      createdBy: ids.users[0]._id,
-    },
-    {
-      name: 'ANNUAL',
-      durationInDays: 365,
-      isActive: true,
-      createdBy: ids.users[0]._id,
-    },
-  ]);
-
-  ids.subscriptionDurations = durations;
-  console.log(`✓ Created ${durations.length} subscription durations\n`);
+    });
+  }
+  const createdDurations = await SubscriptionDuration.create(durations);
+  ids.subscriptionDurations = createdDurations;
+  console.log(`\u2713 Created ${createdDurations.length} subscription durations\n`);
 }
 
 async function seedSubscriptionPricings() {
   console.log('💰 Seeding subscription pricings...');
 
-  const pricings = await SubscriptionPricing.create([
-    {
-      subscriptionPlanId: ids.subscriptionPlans[0]._id,
-      subscriptionDurationId: ids.subscriptionDurations[0]._id,
-      price: 0,
+  const pricings = [];
+  const planCount = ids.subscriptionPlans.length;
+  const durationCount = ids.subscriptionDurations.length;
+  for (let i = 0; i < 300; i++) {
+    pricings.push({
+      subscriptionPlanId: ids.subscriptionPlans[i % planCount]._id,
+      subscriptionDurationId: ids.subscriptionDurations[i % durationCount]._id,
+      price: Math.round(Math.random() * 1000 * 100) / 100,
       currency: 'GBP',
       isActive: true,
       createdBy: ids.users[0]._id,
-    },
-    {
-      subscriptionPlanId: ids.subscriptionPlans[1]._id,
-      subscriptionDurationId: ids.subscriptionDurations[1]._id,
-      price: 49.99,
-      currency: 'GBP',
-      isActive: true,
-      createdBy: ids.users[0]._id,
-    },
-    {
-      subscriptionPlanId: ids.subscriptionPlans[2]._id,
-      subscriptionDurationId: ids.subscriptionDurations[1]._id,
-      price: 99.99,
-      currency: 'GBP',
-      isActive: true,
-      createdBy: ids.users[0]._id,
-    },
-    {
-      subscriptionPlanId: ids.subscriptionPlans[3]._id,
-      subscriptionDurationId: ids.subscriptionDurations[4]._id,
-      price: 999.99,
-      currency: 'GBP',
-      isActive: true,
-      createdBy: ids.users[0]._id,
-    },
-  ]);
-
-  ids.subscriptionPricings = pricings;
-  console.log(`✓ Created ${pricings.length} subscription pricings\n`);
+    });
+  }
+  const createdPricings = await SubscriptionPricing.create(pricings);
+  ids.subscriptionPricings = createdPricings;
+  console.log(`\u2713 Created ${createdPricings.length} subscription pricings\n`);
 }
 
 async function seedSubscriptionFeatures() {
@@ -878,151 +787,70 @@ async function seedSubscriptionRefunds() {
 async function seedDrivers() {
   console.log('🚗 Seeding drivers...');
 
-  const drivers = await Driver.create([
-    {
-      fullName: 'James Wilson',
-      licenseNumber: 'WILSO123456JW7HG',
-      postCode: 'M1 1AA',
-      niNumber: 'AB123456C',
-      licenseExpiry: new Date('2028-06-15'),
-      licenseExpiryDTC: new Date('2027-12-31'),
-      cpcExpiry: new Date('2029-03-20'),
-      points: 0,
-      endorsementCodes: [],
-      lastChecked: new Date('2026-01-15'),
-      checkFrequencyDays: 90,
-      nextCheckDueDate: new Date('2026-04-15'),
-      employed: true,
-      checkStatus: 'Okay',
-      attachments: [ids.documents[0]._id],
-      employedBy: ids.users[1]._id,
-      createdBy: ids.users[1]._id,
-    },
-    {
-      fullName: 'Sarah Johnson',
-      licenseNumber: 'JOHNSO789012SJ3CD',
-      postCode: 'L2 3BB',
-      niNumber: 'CD789012D',
-      licenseExpiry: new Date('2027-09-20'),
-      licenseExpiryDTC: new Date('2027-06-15'),
-      cpcExpiry: new Date('2028-11-10'),
-      points: 3,
-      endorsementCodes: ['SP30'],
-      lastChecked: new Date('2026-02-01'),
-      checkFrequencyDays: 60,
-      nextCheckDueDate: new Date('2026-04-02'),
-      employed: true,
-      checkStatus: 'Okay',
-      employedBy: ids.users[1]._id,
-      createdBy: ids.users[1]._id,
-    },
-    {
-      fullName: 'Robert Brown',
-      licenseNumber: 'BROWN456789RB5EF',
-      postCode: 'B3 2CC',
-      niNumber: 'EF345678E',
-      licenseExpiry: new Date('2026-03-10'),
-      licenseExpiryDTC: new Date('2026-12-31'),
-      cpcExpiry: new Date('2027-08-15'),
-      points: 0,
-      endorsementCodes: [],
-      lastChecked: new Date('2025-12-20'),
-      checkFrequencyDays: 90,
-      nextCheckDueDate: new Date('2026-03-20'),
-      employed: false,
-      checkStatus: 'Due',
-      employedBy: ids.users[2]._id,
-      createdBy: ids.users[2]._id,
-    },
-  ]);
-
-  ids.drivers = drivers;
-  console.log(`✓ Created ${drivers.length} drivers\n`);
+  const drivers = [];
+  for (let i = 0; i < 120; i++) {
+    drivers.push({
+      fullName: `Driver ${i + 1}`,
+      licenseNumber: `LIC${100000 + i}`,
+      postCode: `P${i % 10} ${i % 10}${i % 10}AA`,
+      niNumber: `NI${i}${i}${i}${i}${i}${i}${i}${i}${i}${i}`.slice(0, 9),
+      licenseExpiry: new Date(2028, i % 12, 1 + (i % 28)),
+      licenseExpiryDTC: new Date(2027, i % 12, 1 + (i % 28)),
+      cpcExpiry: new Date(2029, i % 12, 1 + (i % 28)),
+      points: i % 7,
+      endorsementCodes: i % 5 === 0 ? ['SP30'] : [],
+      lastChecked: new Date(2026, i % 12, 1 + (i % 28)),
+      checkFrequencyDays: 30 + (i % 90),
+      nextCheckDueDate: new Date(2026, (i + 1) % 12, 1 + (i % 28)),
+      employed: i % 2 === 0,
+      checkStatus: i % 3 === 0 ? 'Due' : 'Okay',
+      attachments: [ids.documents[i % ids.documents.length]?._id],
+      employedBy: ids.users[i % ids.users.length]._id,
+      createdBy: ids.users[i % ids.users.length]._id,
+    });
+  }
+  const createdDrivers = await Driver.create(drivers);
+  ids.drivers = createdDrivers;
+  console.log(`✓ Created ${createdDrivers.length} drivers\n`);
 }
 
 async function seedVehicles() {
   console.log('🚛 Seeding vehicles...');
 
-  const vehicles = await Vehicle.create([
-    {
-      vehicleRegId: 'ABC123',
-      vehicleType: 'HGV Class 1',
-      licensePlate: 'AB12 CDE',
-      status: 'ACTIVE',
+  const types = ['HGV Class 1', 'HGV Class 2', 'Van', 'Car', 'Minibus'];
+  const statuses = ['PENDING', 'ACTIVE', 'INACTIVE'];
+  const vehicles = [];
+  for (let i = 0; i < 120; i++) {
+    vehicles.push({
+      vehicleRegId: `REG${1000 + i}`,
+      vehicleType: types[i % types.length],
+      licensePlate: `LP${i + 1000} AB${i % 26}`,
+      status: statuses[i % statuses.length],
       additionalDetails: {
-        lastServiceDate: new Date('2025-12-15'),
-        nextServiceDate: new Date('2026-06-15'),
-        grossPlatedWeight: 44000,
-        ownerShipStatus: 'Company/Business_Ownership',
-        diskNumber: new Date('2025-01-01'),
-        chassisNumber: 'VF1AB12CD34567890',
-        keysAvailable: 2,
-        v5InName: true,
-        plantingCertificate: true,
-        vedExpiry: new Date('2026-12-31'),
-        insuranceExpiry: new Date('2026-08-15'),
-        serviceDueDate: new Date('2026-06-15'),
+        lastServiceDate: new Date(2025, i % 12, 1 + (i % 28)),
+        nextServiceDate: new Date(2026, i % 12, 1 + (i % 28)),
+        grossPlatedWeight: 3500 + (i % 10) * 1000,
+        ownerShipStatus: i % 2 === 0 ? 'Company/Business_Ownership' : 'Leased/Financed',
+        diskNumber: new Date(2025, i % 12, 1 + (i % 28)),
+        chassisNumber: `CHS${100000 + i}`,
+        keysAvailable: 1 + (i % 3),
+        v5InName: i % 2 === 0,
+        plantingCertificate: i % 2 === 0,
+        vedExpiry: new Date(2026, i % 12, 1 + (i % 28)),
+        insuranceExpiry: new Date(2026, (i + 1) % 12, 1 + (i % 28)),
+        serviceDueDate: new Date(2026, (i + 2) % 12, 1 + (i % 28)),
       },
-      driverPack: true,
-      notes: 'Regular maintenance schedule. Good condition.',
-      driverId: ids.drivers[0]._id,
-      clientId: ids.users[1]._id,
-      attachments: [ids.documents[1]._id],
-      createdBy: ids.users[1]._id,
-    },
-    {
-      vehicleRegId: 'XYZ789',
-      vehicleType: 'Van',
-      licensePlate: 'XY78 ZAB',
-      status: 'ACTIVE',
-      additionalDetails: {
-        lastServiceDate: new Date('2026-01-10'),
-        nextServiceDate: new Date('2026-07-10'),
-        grossPlatedWeight: 3500,
-        ownerShipStatus: 'Leased/Financed',
-        diskNumber: new Date('2025-06-01'),
-        chassisNumber: 'WF2XY78ZA98765432',
-        keysAvailable: 1,
-        v5InName: false,
-        plantingCertificate: false,
-        vedExpiry: new Date('2026-05-31'),
-        insuranceExpiry: new Date('2026-11-30'),
-        serviceDueDate: new Date('2026-07-10'),
-      },
-      driverPack: false,
-      notes: 'Leased vehicle - check lease terms before modifications',
-      driverId: ids.drivers[1]._id,
-      clientId: ids.users[1]._id,
-      createdBy: ids.users[1]._id,
-    },
-    {
-      vehicleRegId: 'DEF456',
-      vehicleType: 'HGV Class 2',
-      licensePlate: 'DE45 FGH',
-      status: 'INACTIVE',
-      additionalDetails: {
-        lastServiceDate: new Date('2025-09-20'),
-        grossPlatedWeight: 18000,
-        ownerShipStatus: 'Individual_Ownership',
-        diskNumber: new Date('2025-03-01'),
-        dateLeft: new Date('2026-01-31'),
-        chassisNumber: 'YF3DE45FG12345678',
-        keysAvailable: 2,
-        v5InName: true,
-        plantingCertificate: true,
-        vedExpiry: new Date('2026-02-28'),
-        insuranceExpiry: new Date('2026-02-28'),
-      },
-      driverPack: true,
-      notes: 'Vehicle retired from active service',
-      driverId: ids.drivers[2]._id,
-      clientId: ids.users[2]._id,
-      createdBy: ids.users[2]._id,
-    },
-  ]);
-
-  ids.vehicles = vehicles;
-  console.log(`✓ Created ${vehicles.length} vehicles\n`);
+      driverPack: i % 2 === 0,
+      notes: `Vehicle #${i + 1} seeded for testing`,
+      driverId: ids.drivers[i % ids.drivers.length]?._id,
+      clientId: ids.users[i % ids.users.length]._id,
+      attachments: [ids.documents[i % ids.documents.length]?._id],
+      createdBy: ids.users[i % ids.users.length]._id,
+    });
+  }
+  const createdVehicles = await Vehicle.create(vehicles);
+  ids.vehicles = createdVehicles;
+  console.log(`✓ Created ${createdVehicles.length} vehicles\n`);
 }
 
 async function seedDriverTachographs() {
