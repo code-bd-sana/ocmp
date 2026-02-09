@@ -152,9 +152,8 @@ const getManySubscriptionPricing = async (query: SearchQueryInput, userRole?: Us
   // Convert searchKey to number if possible
   const numericSearch = !isNaN(Number(searchKey)) ? Number(searchKey) : null;
   // Determine if user is super admin (has access to all pricing)
-  console.log(userRole, 'user role');
   const isSuperAdmin = userRole === UserRole.SUPER_ADMIN;
-
+  // Build aggregation pipeline
   const aggregationPipeline: mongoose.PipelineStage[] = [
     // Filter by isActive status if not super admin
     ...(!isSuperAdmin ? [{ $match: { isActive: true } }] : []),

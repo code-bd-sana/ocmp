@@ -100,14 +100,13 @@ router.delete(
  * @route GET /api/v1/subscription-pricing
  * @description Get multiple subscription-pricing(s)
  * @access Public (with optional authentication)
- * @param {function} middleware - ['validateSearchQueries', 'isAuthorized', 'authorizedRoles']
+ * @param {function} middleware - ['validateSearchQueries', 'isAuthorized']
  * @param {function} controller - ['getManySubscriptionPricing']
  */
 router.get(
   '/',
   validateSearchQueries,
   isAuthorized({ isOptional: true }),
-  authorizedRoles([UserRole.SUPER_ADMIN]),
   getManySubscriptionPricing
 );
 
@@ -116,16 +115,10 @@ router.get(
  * @description Get a subscription-pricing by ID
  * @access Public (with optional authentication)
  * @param {IdOrIdsInput['id']} id - The ID of the subscription-pricing to retrieve
- * @param {function} middleware - ['validateId', 'isAuthorized', 'authorizedRoles']
+ * @param {function} middleware - ['validateId', 'isAuthorized']
  * @param {function} controller - ['getSubscriptionPricingById']
  */
-router.get(
-  '/:id',
-  validateId,
-  isAuthorized({ isOptional: true }),
-  authorizedRoles([UserRole.SUPER_ADMIN]),
-  getSubscriptionPricingById
-);
+router.get('/:id', validateId, isAuthorized({ isOptional: true }), getSubscriptionPricingById);
 
 // Export the router
 module.exports = router;
