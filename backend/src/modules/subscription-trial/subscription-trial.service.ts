@@ -1,6 +1,7 @@
 // Import the model
 import mongoose from 'mongoose';
 
+import config from '../../config/config';
 import { IdOrIdsInput, SearchQueryInput } from '../../handlers/common-zod-validator';
 import UserSubscription, {
   IUserSubscription,
@@ -22,25 +23,31 @@ import {
 const createSubscriptionTrial = async (
   data: Partial<IUserSubscription> & { userId: string }
 ): Promise<Partial<IUserSubscription>> => {
+  // Set trial start and end dates
   const newDate = new Date();
+  // Set time for consistency
   const endDate = new Date(newDate);
-  endDate.setDate(endDate.getDate() + 7); // Set end date to 7 days from now
+  // Set time to end of the day
+  endDate.setDate(endDate.getDate() + config.SUBSCRIPTION_TRIAL_DAYS); // Add trial days from config
   data = {
     ...data,
     startDate: newDate,
     endDate: endDate,
     status: 'TRIAL',
   };
+  // Check for existing active trial for the user and subscription
   const existingSubscriptionTrial = await UserSubscription.findOne({
     userId: data.userId,
   }).lean();
+  // Prevent duplicate trials
   if (existingSubscriptionTrial) {
     throw new Error(
       'Duplicate detected: An active subscription-trial for this user and subscription already exists.'
     );
   }
-
+  // Proceed to create the subscription-trial
   const newSubscriptionTrial = new UserSubscription(data);
+  // Save to database
   const savedSubscriptionTrial = await newSubscriptionTrial.save();
   return savedSubscriptionTrial;
 };
@@ -231,14 +238,18 @@ const getManySubscriptionTrial = async (
  * @returns { daysRemaining: number, expired: boolean, startDate?: Date, endDate?: Date }
  */
 export const getTrialRemainingDays = async (userId: string) => {
+  // Validate userId
   if (!mongoose.Types.ObjectId.isValid(userId)) throw new Error('Invalid user id');
+  // Find active trial subscription for the user
   const subscription = await UserSubscription.findOne({
     userId: new mongoose.Types.ObjectId(userId),
     status: SubscriptionStatus.TRIAL,
   }).lean();
+  // If no active trial found
   if (!subscription || !subscription.endDate) {
     return { daysRemaining: 0, expired: true };
   }
+  // Calculate remaining days
   const now = new Date();
   const diffMs = subscription.endDate.getTime() - now.getTime();
   const daysRemaining = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
@@ -263,4 +274,3 @@ export const subscriptionTrialServices = {
   getManySubscriptionTrial,
   getTrialRemainingDays,
 };
-

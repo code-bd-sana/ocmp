@@ -21,7 +21,7 @@ const router = Router();
 
 // Define route handlers
 /**
- * @route POST /api/v1/subscription-trial/create-subscription-trial
+ * @route POST /api/v1/subscription-trial
  * @description Create a new subscription-trial
  * @access Private
  * @param {function} validation - ['validateCreateSubscriptionTrial']
@@ -30,7 +30,7 @@ const router = Router();
 router.post('/', isAuthorized, createSubscriptionTrial);
 
 /**
- * @route PATCH /api/v1/subscription-trial/update-subscription-trial/:id
+ * @route PATCH /api/v1/subscription-trial/:id
  * @description Update subscription-trial information
  * @access Private
  * @param {IdOrIdsInput['id']} id - The ID of the subscription-trial to update
@@ -40,7 +40,7 @@ router.post('/', isAuthorized, createSubscriptionTrial);
 router.patch('/:id', validateId, validateUpdateSubscriptionTrial, updateSubscriptionTrial);
 
 /**
- * @route DELETE /api/v1/subscription-trial/delete-subscription-trial/:id
+ * @route DELETE /api/v1/subscription-trial/:id
  * @description Delete a subscription-trial
  * @access Private
  * @param {IdOrIdsInput['id']} id - The ID of the subscription-trial to delete
@@ -50,7 +50,7 @@ router.patch('/:id', validateId, validateUpdateSubscriptionTrial, updateSubscrip
 router.delete('/:id', validateId, deleteSubscriptionTrial);
 
 /**
- * @route GET /api/v1/subscription-trial/get-subscription-trial/many
+ * @route GET /api/v1/subscription-trial/many
  * @description Get multiple subscription-trials
  * @access Private
  * @param {function} validation - ['validateSearchQueries']
@@ -66,7 +66,7 @@ router.get('/many', validateSearchQueries, getManySubscriptionTrial);
 router.get('/remaining', isAuthorized, getTrialRemainingDaysController);
 
 /**
- * @route GET /api/v1/subscription-trial/get-subscription-trial/:id
+ * @route GET /api/v1/subscription-trial/:id
  * @description Get a subscription-trial by ID
  * @access Private
  * @param {IdOrIdsInput['id']} id - The ID of the subscription-trial to retrieve
@@ -77,4 +77,3 @@ router.get('/:id', validateId, getSubscriptionTrialById);
 
 // Export the router
 module.exports = router;
-

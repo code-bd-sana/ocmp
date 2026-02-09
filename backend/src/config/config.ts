@@ -10,6 +10,7 @@ interface Config {
   DB_CONNECTION_URI: string;
   NODE_ENV: string;
   SALT_ROUNDS: number;
+  SUBSCRIPTION_TRIAL_DAYS: number;
   JWT_SECRET: string;
   JWT_EXPIRATION_TIME: string;
   EMAIL_HOST: string;
@@ -44,6 +45,7 @@ const config: Config = {
   DB_CONNECTION_URI: process.env.DB_CONNECTION_URI as string,
   NODE_ENV: process.env.NODE_ENV as string,
   SALT_ROUNDS: parseInt(process.env.SALT_ROUNDS as string, 10),
+  SUBSCRIPTION_TRIAL_DAYS: parseInt(process.env.SUBSCRIPTION_TRIAL_DAYS as string, 10),
   JWT_SECRET: process.env.JWT_SECRET as string,
   JWT_EXPIRATION_TIME: process.env.JWT_EXPIRATION_TIME as string,
   EMAIL_HOST: process.env.EMAIL_HOST as string,
