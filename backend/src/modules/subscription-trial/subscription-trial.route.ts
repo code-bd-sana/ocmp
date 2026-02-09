@@ -5,16 +5,13 @@ import { Router } from 'express';
 import {
   createSubscriptionTrial,
   deleteSubscriptionTrial,
-  getManySubscriptionTrial,
   getSubscriptionTrialById,
-  updateSubscriptionTrial,
 } from './subscription-trial.controller';
 
 //Import validation from corresponding module
-import { validateId, validateSearchQueries } from '../../handlers/common-zod-validator';
+import { validateId } from '../../handlers/common-zod-validator';
 import isAuthorized from '../../middlewares/is-authorized';
 import { getTrialRemainingDaysController } from './subscription-trial.controller';
-import { validateUpdateSubscriptionTrial } from './subscription-trial.validation';
 
 // Initialize router
 const router = Router();
@@ -30,16 +27,6 @@ const router = Router();
 router.post('/', isAuthorized, createSubscriptionTrial);
 
 /**
- * @route PATCH /api/v1/subscription-trial/:id
- * @description Update subscription-trial information
- * @access Private
- * @param {IdOrIdsInput['id']} id - The ID of the subscription-trial to update
- * @param {function} validation - ['validateId', 'validateUpdateSubscriptionTrial']
- * @param {function} controller - ['updateSubscriptionTrial']
- */
-router.patch('/:id', validateId, validateUpdateSubscriptionTrial, updateSubscriptionTrial);
-
-/**
  * @route DELETE /api/v1/subscription-trial/:id
  * @description Delete a subscription-trial
  * @access Private
@@ -48,15 +35,6 @@ router.patch('/:id', validateId, validateUpdateSubscriptionTrial, updateSubscrip
  * @param {function} controller - ['deleteSubscriptionTrial']
  */
 router.delete('/:id', validateId, deleteSubscriptionTrial);
-
-/**
- * @route GET /api/v1/subscription-trial/many
- * @description Get multiple subscription-trials
- * @access Private
- * @param {function} validation - ['validateSearchQueries']
- * @param {function} controller - ['getManySubscriptionTrial']
- */
-router.get('/many', validateSearchQueries, getManySubscriptionTrial);
 
 /**
  * @route GET /api/v1/subscription-trial/remaining
