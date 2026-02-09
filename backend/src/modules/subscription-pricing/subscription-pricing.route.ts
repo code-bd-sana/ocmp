@@ -19,7 +19,6 @@ import {
 } from '../../handlers/common-zod-validator';
 import authorizedRoles from '../../middlewares/authorized-roles';
 import isAuthorized from '../../middlewares/is-authorized';
-import isOptionallyAuthorized from '../../middlewares/is-optionally-authorized';
 import { UserRole } from '../../models';
 import {
   validateCreateSubscriptionPricing,
@@ -101,13 +100,13 @@ router.delete(
  * @route GET /api/v1/subscription-pricing
  * @description Get multiple subscription-pricing(s)
  * @access Public (with optional authentication)
- * @param {function} middleware - ['validateSearchQueries', 'isOptionallyAuthorized', 'authorizedRoles']
+ * @param {function} middleware - ['validateSearchQueries', 'isAuthorized', 'authorizedRoles']
  * @param {function} controller - ['getManySubscriptionPricing']
  */
 router.get(
   '/',
   validateSearchQueries,
-  isOptionallyAuthorized,
+  isAuthorized({ isOptional: true }),
   authorizedRoles([UserRole.SUPER_ADMIN]),
   getManySubscriptionPricing
 );
@@ -117,13 +116,13 @@ router.get(
  * @description Get a subscription-pricing by ID
  * @access Public (with optional authentication)
  * @param {IdOrIdsInput['id']} id - The ID of the subscription-pricing to retrieve
- * @param {function} middleware - ['validateId', 'isOptionallyAuthorized', 'authorizedRoles']
+ * @param {function} middleware - ['validateId', 'isAuthorized', 'authorizedRoles']
  * @param {function} controller - ['getSubscriptionPricingById']
  */
 router.get(
   '/:id',
   validateId,
-  isOptionallyAuthorized,
+  isAuthorized({ isOptional: true }),
   authorizedRoles([UserRole.SUPER_ADMIN]),
   getSubscriptionPricingById
 );
