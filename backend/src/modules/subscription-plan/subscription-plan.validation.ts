@@ -26,20 +26,16 @@ const zodCreateSubscriptionPlanSchema = z
       .string({ message: 'Name must be a string' })
       .min(2, 'Name must be at least 2 characters')
       .max(100, 'Name must not exceed 100 characters'),
-
     // Plan type: determines if the plan is FREE, PAID, or CUSTOM
     planType: z.enum(SubscriptionPlanType, {
       message: 'Plan type must be one of: FREE, PAID, or CUSTOM',
     }),
-
     // Applicable account type: defines which account can use this plan
     applicableAccountType: z.enum(ApplicableAccountType, {
       message: 'Applicable account type must be STANDALONE, TRANSPORT_MANAGER, or BOTH',
     }),
-
     // Plan description
     description: z.string({ message: 'Description must be a string' }).optional(),
-
     // Plan status: true if active, false if inactive
     isActive: z.boolean({ message: 'isActive must be a boolean value' }).optional(),
   })
@@ -60,24 +56,20 @@ const zodUpdateSubscriptionPlanSchema = z
       .min(2, 'Name must be at least 2 characters')
       .max(100, 'Name must not exceed 100 characters')
       .optional(),
-
     // Plan type: determines if the plan is FREE, PAID, or CUSTOM
     planType: z
       .enum(SubscriptionPlanType, {
         message: 'Plan type must be one of: FREE, PAID, or CUSTOM',
       })
       .optional(),
-
     // Applicable account type: defines which account can use this plan
     applicableAccountType: z
       .enum(ApplicableAccountType, {
         message: 'Applicable account type must be STANDALONE, TRANSPORT_MANAGER, or BOTH',
       })
       .optional(),
-
     // Plan description
     description: z.string({ message: 'Description must be a string' }).optional(),
-
     // Plan status: true if active, false if inactive
     isActive: z.boolean({ message: 'isActive must be a boolean value' }).optional(),
   })
