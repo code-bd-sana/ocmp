@@ -1,6 +1,6 @@
 // Import the model
 
-import User, { IUser as IUserPayload } from '../../models/users-accounts/user.schema';
+import { IUser as IUserPayload, User } from '../../models';
 import { getUserData, setUserData } from '../../utils/redis/user/user';
 import { IUserResponse } from './user.interface';
 

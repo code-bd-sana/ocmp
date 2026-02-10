@@ -1,14 +1,22 @@
 export * from './document.schema';
 
 // users accounts
-export * from './users-accounts/activityLog.schema';
-export * from './users-accounts/loginActivity.schema';
-export * from './users-accounts/notification.schema';
-export * from './users-accounts/repositorySettings.schema';
-export * from './users-accounts/user.schema';
+export { default as ActivityLog, IActivityLog } from './users-accounts/activityLog.schema';
+export { ILoginActivity, default as LoginActivity } from './users-accounts/loginActivity.schema';
+export {
+  INotification,
+  default as Notification,
+  NotificationType,
+} from './users-accounts/notification.schema';
+export {
+  IRepositorySettings,
+  default as RepositorySettings,
+} from './users-accounts/repositorySettings.schema';
+export { IUser, default as User, UserRole } from './users-accounts/user.schema';
 
 // subscription billing
 export * from './subscription-billing/subscriptionChangeRequest.schema';
+export * from './subscription-billing/subscriptionCoupon.schema';
 export * from './subscription-billing/subscriptionCustomization.schema';
 export * from './subscription-billing/subscriptionDuration.schema';
 export * from './subscription-billing/subscriptionExemption.schema';

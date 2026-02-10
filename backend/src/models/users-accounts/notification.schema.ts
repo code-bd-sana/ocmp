@@ -1,11 +1,18 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
+export enum NotificationType {
+  SYSTEM = 'SYSTEM',
+  BILLING = 'BILLING',
+  SUBSCRIPTION = 'SUBSCRIPTION',
+  SECURITY = 'SECURITY',
+}
+
 // Define and export an interface representing a Notification document
 export interface INotification extends Document {
   userId: mongoose.Types.ObjectId;
   title?: string;
   message?: string;
-  type?: 'SYSTEM' | 'BILLING' | 'SUBSCRIPTION' | 'SECURITY';
+  type?: NotificationType;
   isRead: boolean;
   readAt?: Date;
 }
@@ -26,7 +33,8 @@ const NotificationSchema: Schema<INotification> = new Schema(
     },
     type: {
       type: String,
-      enum: ['SYSTEM', 'BILLING', 'SUBSCRIPTION', 'SECURITY'],
+      enum: Object.values(NotificationType),
+      default: NotificationType.SYSTEM,
     },
     isRead: {
       type: Boolean,
