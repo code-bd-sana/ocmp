@@ -18,7 +18,9 @@ const router = Router();
  * @route POST /api/v1/subscription-trial
  * @description Create a new subscription-trial
  * @access Private
- * @param {function} validation - ['validateCreateSubscriptionTrial']
+ * @param {function} isAuthorized - Middleware to check if the user is authenticated
+ * @param {function} authorizedRoles - Middleware to check if the user has the required role(s) (TRANSPORT_MANAGER, STANDALONE_USER)
+ * @param {function} checkSubscriptionValidity - Middleware to check if the user has an active subscription or trial before allowing access to this route
  * @param {function} controller - ['createSubscriptionTrial']
  */
 router.post(

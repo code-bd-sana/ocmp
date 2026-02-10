@@ -15,8 +15,9 @@ const updateUser = async (
   id: string,
   data: Partial<IUserPayload>
 ): Promise<Partial<IUserResponse | null>> => {
+  // Update the user in the database
   const updatedUser = await User.findByIdAndUpdate(id, data, { new: true });
-
+  // If the user was not found or update failed, return null
   const updateUserData: Partial<IUserResponse> = {
     _id: updatedUser?._id.toString(),
     fullName: updatedUser?.fullName,
@@ -25,12 +26,10 @@ const updateUser = async (
     role: updatedUser?.role,
     isEmailVerified: updatedUser?.isEmailVerified || false,
   };
-
   // Update the user data in Redis cache
   if (updateUserData._id) {
     await setUserData(id, updateUserData as IUserResponse, 30 * 24 * 60 * 60); // Set TTL to 30 days
   }
-
   return updateUserData;
 };
 
@@ -46,9 +45,9 @@ const getUserProfile = async (id: string): Promise<Partial<IUserResponse | null>
   if (cacheUserProfileData) {
     return cacheUserProfileData;
   }
-
+  // If not found in cache, fetch from the database
   const userProfile = await User.findById(id);
-
+  // If the user was not found, return null
   const userProfileData: Partial<IUserResponse> = {
     _id: userProfile?._id.toString(),
     fullName: userProfile?.fullName,
@@ -60,7 +59,6 @@ const getUserProfile = async (id: string): Promise<Partial<IUserResponse | null>
 
   // Store the user profile in Redis cache
   await setUserData(id, userProfileData as IUserResponse, 30 * 24 * 60 * 60); // Set TTL to 30 days
-
   return userProfileData;
 };
 
