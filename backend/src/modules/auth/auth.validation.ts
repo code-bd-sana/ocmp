@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { validateBody } from '../../handlers/zod-error-handler';
+import { UserRole } from '../../models';
 
 /**
  * Authentication Validation Schemas and Types
@@ -43,7 +44,7 @@ export const registerSchema = z.object({
     .string({ message: 'Password is required' })
     .min(8, 'Password must be at least 8 characters')
     .max(128, 'Password is too long'),
-  role: z.enum(['TRANSPORT_MANAGER', 'STANDALONE_USER'] as const),
+  role: z.enum([UserRole.TRANSPORT_MANAGER, UserRole.STANDALONE_USER] as const),
 });
 
 export type RegisterInput = z.infer<typeof registerSchema>;
