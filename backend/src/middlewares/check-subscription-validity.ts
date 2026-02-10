@@ -1,10 +1,7 @@
 import { NextFunction, Request, Response } from 'express';
-import mongoose from 'mongoose';
 import ServerResponse from '../helpers/responses/custom-response';
 import { UserRole } from '../models';
-import UserSubscription, {
-  SubscriptionStatus,
-} from '../models/subscription-billing/userSubscription.schema';
+import { getSubscriptionRemainingDays } from '../modules/subscription-remain/subscription-remain.service';
 
 // Extend the Request interface to include a user property
 export interface AuthenticatedRequest extends Request {
@@ -33,13 +30,9 @@ const checkSubscriptionValidity = async (req: Request, res: Response, next: Next
   }
   // Validate user ID format
   try {
-    // Check the user last subscription plan from the database
-    const userSubscription = await UserSubscription.findOne({
-      userId: new mongoose.Types.ObjectId(user._id),
-      status: { $in: [SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIAL] },
-    })
-      .lean()
-      .sort({ createdAt: -1 }); // Get the most recent subscription
+    // Check the user last subscription plan from the database and calculate remaining days
+    const userSubscription = await getSubscriptionRemainingDays(user._id);
+
     // If no active subscription or trial found, return a forbidden response
     if (!userSubscription) {
       return ServerResponse(
