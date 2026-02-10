@@ -6,7 +6,6 @@ import { createSubscriptionTrial } from './subscription-trial.controller';
 
 //Import validation from corresponding module
 import authorizedRoles from '../../middlewares/authorized-roles';
-import checkSubscriptionValidity from '../../middlewares/check-subscription-validity';
 import isAuthorized from '../../middlewares/is-authorized';
 import { UserRole } from '../../models';
 
