@@ -55,42 +55,11 @@ export type CreateSubscriptionPricingInput = z.infer<typeof zodCreateSubscriptio
  *
  * → All fields should usually be .optional()
  */
-const zodUpdateSubscriptionPricingSchema = z
-  .object({
-    // Subscription Plan ID — must be a valid MongoDB ObjectId
-    subscriptionPlanId: z
-      .string()
-      .refine((val) => mongoose.Types.ObjectId.isValid(val), {
-        message: 'Subscription Plan ID is invalid',
-      })
-      .optional(),
-    // Subscription Duration ID — must be a valid MongoDB ObjectId
-    subscriptionDurationId: z
-      .string()
-      .refine((val) => mongoose.Types.ObjectId.isValid(val), {
-        message: 'Subscription Duration ID is invalid',
-      })
-      .optional(),
-    // Price of the subscription — must be a number
-    price: z
-      .number({
-        message: 'Price must be a number',
-      })
-      .optional(),
-    // Currency code — must be a string (e.g., USD, GBP)
-    currency: z
-      .string({
-        message: 'Currency is required',
-      })
-      .optional(),
-    // Status — true if active, false if inactive
-    isActive: z
-      .boolean({
-        message: 'Status is required',
-      })
-      .optional(),
-  })
-  .strict();
+const zodUpdateSubscriptionPricingSchema = zodCreateSubscriptionPricingSchema
+  .partial()
+  .refine((data) => Object.keys(data).length > 0, {
+    message: 'At least one field must be provided for update',
+  });
 
 export type UpdateSubscriptionPricingInput = z.infer<typeof zodUpdateSubscriptionPricingSchema>;
 
