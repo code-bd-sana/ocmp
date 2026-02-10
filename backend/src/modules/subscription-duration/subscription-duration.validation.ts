@@ -35,21 +35,8 @@ export type CreateSubscriptionDurationInput = z.infer<typeof zodCreateSubscripti
 /**
  * Zod schema for validating subscription-duration data during updates.
  */
-export const zodUpdateSubscriptionDurationSchema = z
-  .object({
-    name: z
-      .string({ message: 'Subscription duration name is required.' })
-      .min(1, 'Subscription duration name cannot be empty.')
-      .optional(),
-    durationInDays: z
-      .number({ message: 'Duration in days must be a valid number.' })
-      .positive('Duration in days must be greater than 0.')
-      .optional(),
-    isActive: z
-      .boolean({ message: 'isActive must be a boolean value (true or false).' })
-      .optional(),
-  })
-  .strict()
+export const zodUpdateSubscriptionDurationSchema = zodCreateSubscriptionDurationSchema
+  .partial()
   .refine((data) => Object.keys(data).length > 0, {
     message: 'At least one field must be provided for update.',
   });

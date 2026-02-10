@@ -48,7 +48,11 @@ export type CreateSubscriptionPlanInput = z.infer<typeof zodCreateSubscriptionPl
  *
  * → All fields should usually be .optional()
  */
-const zodUpdateSubscriptionPlanSchema = zodCreateSubscriptionPlanSchema.partial();
+const zodUpdateSubscriptionPlanSchema = zodCreateSubscriptionPlanSchema
+  .partial()
+  .refine((data) => Object.keys(data).length > 0, {
+    message: 'At least one field must be provided for update',
+  });
 
 export type UpdateSubscriptionPlanInput = z.infer<typeof zodUpdateSubscriptionPlanSchema>;
 

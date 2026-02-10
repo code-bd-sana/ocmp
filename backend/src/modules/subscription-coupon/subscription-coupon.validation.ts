@@ -36,7 +36,11 @@ export type CreateSubscriptionCouponInput = z.infer<typeof zodCreateSubscription
  *
  * → All fields should usually be .optional()
  */
-const zodUpdateSubscriptionCouponSchema = zodCreateSubscriptionCouponSchema.partial();
+const zodUpdateSubscriptionCouponSchema = zodCreateSubscriptionCouponSchema
+  .partial()
+  .refine((data) => Object.keys(data).length > 0, {
+    message: 'At least one field must be provided for update',
+  });
 
 export type UpdateSubscriptionCouponInput = z.infer<typeof zodUpdateSubscriptionCouponSchema>;
 
@@ -45,4 +49,3 @@ export type UpdateSubscriptionCouponInput = z.infer<typeof zodUpdateSubscription
  */
 export const validateCreateSubscriptionCoupon = validateBody(zodCreateSubscriptionCouponSchema);
 export const validateUpdateSubscriptionCoupon = validateBody(zodUpdateSubscriptionCouponSchema);
-

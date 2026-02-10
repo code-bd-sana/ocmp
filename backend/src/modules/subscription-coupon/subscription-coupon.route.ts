@@ -12,7 +12,9 @@ import {
 
 //Import validation from corresponding module
 import { validateId, validateSearchQueries } from '../../handlers/common-zod-validator';
+import authorizedRoles from '../../middlewares/authorized-roles';
 import isAuthorized from '../../middlewares/is-authorized';
+import { UserRole } from '../../models';
 import {
   validateCreateSubscriptionCoupon,
   validateUpdateSubscriptionCoupon,
@@ -21,37 +23,60 @@ import {
 // Initialize router
 const router = Router();
 
-router.use(isAuthorized);
-
 // Define route handlers
 /**
  * @route POST /api/v1/subscription-coupon
  * @description Create a new subscription-coupon
- * @access Public
+ * @access Private
+ * @param {function} isAuthorized - Middleware to check if the user is authenticated
+ * @param {function} authorizedRoles - Middleware to check if the user has the required role(s) (SUPER_ADMIN)
  * @param {function} validation - ['validateCreateSubscriptionCoupon']
  * @param {function} controller - ['createSubscriptionCoupon']
  */
-router.post('/', validateCreateSubscriptionCoupon, createSubscriptionCoupon);
+router.post(
+  '/',
+  isAuthorized,
+  authorizedRoles([UserRole.SUPER_ADMIN]),
+  validateCreateSubscriptionCoupon,
+  createSubscriptionCoupon
+);
 
 /**
  * @route PATCH /api/v1/subscription-coupon/:id
  * @description Update subscription-coupon information
- * @access Public
+ * @access Private
+ * @param {function} isAuthorized - Middleware to check if the user is authenticated
+ * @param {function} authorizedRoles - Middleware to check if the user has the required role(s) (SUPER_ADMIN)
  * @param {IdOrIdsInput['id']} id - The ID of the subscription-coupon to update
  * @param {function} validation - ['validateId', 'validateUpdateSubscriptionCoupon']
  * @param {function} controller - ['updateSubscriptionCoupon']
  */
-router.patch('/:id', validateId, validateUpdateSubscriptionCoupon, updateSubscriptionCoupon);
+router.patch(
+  '/:id',
+  isAuthorized,
+  authorizedRoles([UserRole.SUPER_ADMIN]),
+  validateId,
+  validateUpdateSubscriptionCoupon,
+  updateSubscriptionCoupon
+);
 
 /**
  * @route DELETE /api/v1/subscription-coupon/:id
  * @description Delete a subscription-coupon
- * @access Public
+ * @access Private
  * @param {IdOrIdsInput['id']} id - The ID of the subscription-coupon to delete
+ * @param {function} isAuthorized - Middleware to check if the user is authenticated
+ * @param {function} authorizedRoles - Middleware to check if the user has the required role(s) (SUPER_ADMIN)
  * @param {function} validation - ['validateId']
  * @param {function} controller - ['deleteSubscriptionCoupon']
  */
-router.delete('/:id', validateId, deleteSubscriptionCoupon);
+router.delete(
+  '/:id',
+  isAuthorized,
+  authorizedRoles([UserRole.SUPER_ADMIN]),
+  validateId,
+  deleteSubscriptionCoupon
+);
 
 /**
  * @route GET /api/v1/subscription-coupon/many
@@ -65,13 +90,20 @@ router.get('/many', validateSearchQueries, getManySubscriptionCoupon);
 /**
  * @route GET /api/v1/subscription-coupon/:id
  * @description Get a subscription-coupon by ID
- * @access Public
+ * @access Private
  * @param {IdOrIdsInput['id']} id - The ID of the subscription-coupon to retrieve
+ * @param {function} isAuthorized - Middleware to check if the user is authenticated
+ * @param {function} authorizedRoles - Middleware to check if the user has the required role(s) (SUPER_ADMIN)
  * @param {function} validation - ['validateId']
  * @param {function} controller - ['getSubscriptionCouponById']
  */
-router.get('/:id', validateId, getSubscriptionCouponById);
+router.get(
+  '/:id',
+  isAuthorized,
+  authorizedRoles([UserRole.SUPER_ADMIN]),
+  validateId,
+  getSubscriptionCouponById
+);
 
 // Export the router
 module.exports = router;
-
