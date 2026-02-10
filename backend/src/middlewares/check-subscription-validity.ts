@@ -1,17 +1,7 @@
 import { NextFunction, Request, Response } from 'express';
 import ServerResponse from '../helpers/responses/custom-response';
-import { UserRole } from '../models';
 import { getSubscriptionRemainingDays } from '../modules/subscription-remain/subscription-remain.service';
-
-// Extend the Request interface to include a user property
-export interface AuthenticatedRequest extends Request {
-  user?: {
-    _id: string;
-    email: string;
-    role: UserRole;
-    loginHash: string;
-  };
-}
+import { AuthenticatedRequest } from './is-authorized';
 
 /**
  * Middleware to check if the authenticated user has an active subscription or trial before allowing access to protected routes.
