@@ -14,7 +14,7 @@ export interface IUserSubscription extends Document {
   subscriptionPlanId: mongoose.Types.ObjectId;
   subscriptionDurationId?: mongoose.Types.ObjectId;
   subscriptionPricingId?: mongoose.Types.ObjectId;
-  status: string;
+  status: SubscriptionStatus;
   startDate?: Date;
   endDate?: Date;
   autoRenew: boolean;
@@ -48,7 +48,7 @@ const UserSubscriptionSchema: Schema<IUserSubscription> = new Schema(
       type: String,
       enum: Object.values(SubscriptionStatus),
       required: true,
-      default: 'ACTIVE',
+      default: SubscriptionStatus.TRIAL,
     },
     startDate: {
       type: Date,

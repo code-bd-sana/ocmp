@@ -1,5 +1,10 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
+export enum CheckStatus {
+  OKAY = 'Okay',
+  DUE = 'Due',
+}
+
 // Define and export an interface representing a Driver document
 export interface IDriver extends Document {
   fullName: string;
@@ -15,7 +20,7 @@ export interface IDriver extends Document {
   checkFrequencyDays: Number;
   nextCheckDueDate: Date;
   employed: Boolean;
-  checkStatus?: string;
+  checkStatus?: CheckStatus;
   attachments?: mongoose.Types.ObjectId[];
   employedBy: mongoose.Types.ObjectId;
   createdBy: mongoose.Types.ObjectId;
@@ -78,7 +83,7 @@ const DriverSchema: Schema<IDriver> = new Schema(
     },
     checkStatus: {
       type: String,
-      enum: ['Okay', 'Due'],
+      enum: Object.values(CheckStatus),
     },
     attachments: [
       {

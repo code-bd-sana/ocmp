@@ -8,7 +8,7 @@ export interface IWheelRetorquePolicyMonitoring extends Document {
   tyreLocation?: string;
   reTorqueDue?: Date;
   reTorqueCompleted?: Date;
-  Technician?: string;
+  technician?: string;
   createdBy: mongoose.Types.ObjectId;
 }
 
@@ -35,7 +35,7 @@ const WheelRetorquePolicyMonitoringSchema: Schema<IWheelRetorquePolicyMonitoring
     reTorqueCompleted: {
       type: Date,
     },
-    Technician: {
+    technician: {
       type: String,
     },
     createdBy: {

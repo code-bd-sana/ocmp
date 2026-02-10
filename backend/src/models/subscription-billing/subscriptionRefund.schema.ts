@@ -1,19 +1,30 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
+export enum SubscriptionRefundType {
+  FULL = 'FULL',
+  PARTIAL = 'PARTIAL',
+  PRORATED = 'PRORATED',
+}
+
+export enum SubscriptionRefundMethod {
+  ORIGINAL_METHOD = 'ORIGINAL_METHOD',
+  MANUAL = 'MANUAL',
+}
+
 // Define and export an interface representing a SubscriptionRefund document
 export interface ISubscriptionRefund extends Document {
   userId: mongoose.Types.ObjectId;
   userSubscriptionId: mongoose.Types.ObjectId;
   subscriptionInvoiceId: mongoose.Types.ObjectId;
   subscriptionPaymentId: mongoose.Types.ObjectId;
-  refundType: 'FULL' | 'PARTIAL' | 'PRORATED';
+  refundType: SubscriptionRefundType;
   refundReason?: string;
   paidAmount: number;
   usedDays?: number;
   totalDays?: number;
   calculatedRefundAmount?: number;
   approvedRefundAmount?: number;
-  refundMethod: 'ORIGINAL_METHOD' | 'MANUAL';
+  refundMethod: SubscriptionRefundMethod;
   requestedBy: mongoose.Types.ObjectId;
   approvedBy?: mongoose.Types.ObjectId;
   requestedAt: Date;
@@ -47,7 +58,7 @@ const SubscriptionRefundSchema: Schema<ISubscriptionRefund> = new Schema(
     },
     refundType: {
       type: String,
-      enum: ['FULL', 'PARTIAL', 'PRORATED'],
+      enum: Object.values(SubscriptionRefundType),
       required: true,
     },
     refundReason: {
@@ -71,7 +82,7 @@ const SubscriptionRefundSchema: Schema<ISubscriptionRefund> = new Schema(
     },
     refundMethod: {
       type: String,
-      enum: ['ORIGINAL_METHOD', 'MANUAL'],
+      enum: Object.values(SubscriptionRefundMethod),
       required: true,
     },
     requestedBy: {

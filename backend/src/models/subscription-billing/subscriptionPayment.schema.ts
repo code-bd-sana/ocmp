@@ -1,5 +1,12 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
+export enum SubscriptionPaymentMethod {
+  CARD = 'CARD',
+  STRIPE = 'STRIPE',
+  CASH = 'CASH',
+  MANUAL = 'MANUAL',
+}
+
 // Define and export an interface representing a SubscriptionPayment document
 export interface ISubscriptionPayment extends Document {
   subscriptionInvoiceId: mongoose.Types.ObjectId;
@@ -7,7 +14,7 @@ export interface ISubscriptionPayment extends Document {
   paidAmount?: number;
   paymentStatus?: string;
   paidAt?: Date;
-  paymentMethod?: 'CARD' | 'STRIPE' | 'CASH' | 'MANUAL';
+  paymentMethod?: SubscriptionPaymentMethod;
 }
 
 // Define the SubscriptionPayment schema
@@ -32,7 +39,7 @@ const SubscriptionPaymentSchema: Schema<ISubscriptionPayment> = new Schema(
     },
     paymentMethod: {
       type: String,
-      enum: ['CARD', 'STRIPE', 'CASH', 'MANUAL'],
+      enum: Object.values(SubscriptionPaymentMethod),
     },
   },
   { timestamps: true, versionKey: false }

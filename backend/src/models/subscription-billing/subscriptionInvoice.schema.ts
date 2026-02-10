@@ -1,12 +1,19 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
+export enum SubscriptionInvoiceStatus {
+  PENDING = 'PENDING',
+  PAID = 'PAID',
+  FAILED = 'FAILED',
+  REFUNDED = 'REFUNDED',
+}
+
 // Define and export an interface representing a SubscriptionInvoice document
 export interface ISubscriptionInvoice extends Document {
   userId: mongoose.Types.ObjectId;
   userSubscriptionId: mongoose.Types.ObjectId;
   invoiceNumber: string; /* Unique invoice ID */
   amount?: number;
-  status?: 'PENDING' | 'PAID' | 'FAILED' | 'REFUNDED';
+  status?: SubscriptionInvoiceStatus;
   dueDate?: Date;
 }
 
@@ -33,7 +40,7 @@ const SubscriptionInvoiceSchema: Schema<ISubscriptionInvoice> = new Schema(
     },
     status: {
       type: String,
-      enum: ['PENDING', 'PAID', 'FAILED', 'REFUNDED'],
+      enum: Object.values(SubscriptionInvoiceStatus),
     },
     dueDate: {
       type: Date, // Due date for the invoice payment

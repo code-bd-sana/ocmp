@@ -1,11 +1,17 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
+export enum ComplianceStatus {
+  PENDING = 'PENDING',
+  IN_PROGRESS = 'IN_PROGRESS',
+  COMPLETED = 'COMPLETED',
+}
+
 // Define and export an interface representing a ComplianceTimeTable document
 export interface IComplianceTimeTable extends Document {
   task: string;
   responsibleParty?: string;
   dueDate?: Date;
-  status?: string;
+  status?: ComplianceStatus;
   createdBy: mongoose.Types.ObjectId;
 }
 
@@ -24,7 +30,7 @@ const ComplianceTimeTableSchema: Schema<IComplianceTimeTable> = new Schema(
     },
     status: {
       type: String,
-      enum: ['PENDING', 'IN_PROGRESS', 'COMPLETED'],
+      enum: Object.values(ComplianceStatus),
     },
     createdBy: {
       type: Schema.Types.ObjectId,

@@ -1,13 +1,25 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
+export enum SubscriptionChangeRequestType {
+  UPGRADE = 'UPGRADE',
+  DOWNGRADE = 'DOWNGRADE',
+  CUSTOMIZE = 'CUSTOMIZE',
+}
+
+export enum SubscriptionChangeRequestStatus {
+  PENDING = 'PENDING',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
+}
+
 // Define and export an interface representing a SubscriptionChangeRequest document
 export interface ISubscriptionChangeRequest extends Document {
   userId: mongoose.Types.ObjectId;
   userSubscriptionId: mongoose.Types.ObjectId;
   subscriptionPlanId: mongoose.Types.ObjectId;
   subscriptionDurationId: mongoose.Types.ObjectId;
-  requestType?: 'UPGRADE' | 'DOWNGRADE' | 'CUSTOMIZE';
-  status?: 'PENDING' | 'APPROVED' | 'REJECTED';
+  requestType?: SubscriptionChangeRequestType;
+  status?: SubscriptionChangeRequestStatus;
   requestedAt?: Date;
   processedAt?: Date;
 }
@@ -37,11 +49,11 @@ const SubscriptionChangeRequestSchema: Schema<ISubscriptionChangeRequest> = new 
     },
     requestType: {
       type: String,
-      enum: ['UPGRADE', 'DOWNGRADE', 'CUSTOMIZE'],
+      enum: Object.values(SubscriptionChangeRequestType),
     },
     status: {
       type: String,
-      enum: ['PENDING', 'APPROVED', 'REJECTED'],
+      enum: Object.values(SubscriptionChangeRequestStatus),
     },
     requestedAt: {
       type: Date,

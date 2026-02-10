@@ -1,16 +1,21 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
+export enum PG9AndPG13IssueType {
+  PG9 = 'PG9',
+  DV79D = 'DV79D',
+}
+
 // Define and export an interface representing a pg9AndPg13Plan document
 export interface Ipg9AndPg13Plan extends Document {
   vehicleId: mongoose.Types.ObjectId;
-  issueType: string;
+  issueType: PG9AndPG13IssueType;
   defectDescription?: string;
   clearanceStatus?: string;
-  tcContactMade?: Boolean;
+  tcContactMade?: boolean;
   maintenanceProvider?: string;
   meetingDate?: Date;
   notes?: string;
-  followUp?: Boolean;
+  followUp?: boolean;
   createdBy: mongoose.Types.ObjectId;
 }
 
@@ -24,7 +29,7 @@ const pg9AndPg13PlanSchema: Schema<Ipg9AndPg13Plan> = new Schema(
     },
     issueType: {
       type: String,
-      enum: ['PG9', 'DV79D'],
+      enum: Object.values(PG9AndPG13IssueType),
       required: true,
     },
     defectDescription: {

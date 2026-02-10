@@ -15,18 +15,46 @@ export {
 export { IUser, default as User, UserRole } from './users-accounts/user.schema';
 
 // subscription billing
-export * from './subscription-billing/subscriptionChangeRequest.schema';
-export * from './subscription-billing/subscriptionCoupon.schema';
-export * from './subscription-billing/subscriptionCustomization.schema';
+export {
+  ISubscriptionChangeRequest,
+  default as SubscriptionChangeRequest,
+  SubscriptionChangeRequestStatus,
+  SubscriptionChangeRequestType,
+} from './subscription-billing/subscriptionChangeRequest.schema';
+export {
+  ISubscriptionCoupon,
+  default as SubscriptionCoupon,
+} from './subscription-billing/subscriptionCoupon.schema';
+export {
+  ISubscriptionCustomization,
+  default as SubscriptionCustomization,
+} from './subscription-billing/subscriptionCustomization.schema';
 export {
   ISubscriptionDuration,
   default as SubscriptionDuration,
 } from './subscription-billing/subscriptionDuration.schema';
-export * from './subscription-billing/subscriptionExemption.schema';
-export * from './subscription-billing/subscriptionFeature.schema';
-export * from './subscription-billing/subscriptionHistory.schema';
-export * from './subscription-billing/subscriptionInvoice.schema';
-export * from './subscription-billing/subscriptionPayment.schema';
+export {
+  ISubscriptionExemption,
+  default as SubscriptionExemption,
+} from './subscription-billing/subscriptionExemption.schema';
+export {
+  ISubscriptionFeature,
+  default as SubscriptionFeature,
+} from './subscription-billing/subscriptionFeature.schema';
+export {
+  ISubscriptionHistory,
+  default as SubscriptionHistory,
+} from './subscription-billing/subscriptionHistory.schema';
+export {
+  ISubscriptionInvoice,
+  default as SubscriptionInvoice,
+  SubscriptionInvoiceStatus,
+} from './subscription-billing/subscriptionInvoice.schema';
+export {
+  ISubscriptionPayment,
+  default as SubscriptionPayment,
+  SubscriptionPaymentMethod,
+} from './subscription-billing/subscriptionPayment.schema';
 export {
   ApplicableAccountType,
   ISubscriptionPlan,
@@ -37,10 +65,24 @@ export {
   ISubscriptionPricing,
   default as SubscriptionPricing,
 } from './subscription-billing/subscriptionPricing.schema';
-export * from './subscription-billing/subscriptionRefund.schema';
-export * from './subscription-billing/subscriptionStatusLog.schema';
-export * from './subscription-billing/subscriptionTrial.schema';
-export * from './subscription-billing/subscriptionUsageLog.schema';
+export {
+  ISubscriptionRefund,
+  default as SubscriptionRefund,
+  SubscriptionRefundMethod,
+  SubscriptionRefundType,
+} from './subscription-billing/subscriptionRefund.schema';
+export {
+  ISubscriptionStatusLog,
+  default as SubscriptionStatusLog,
+} from './subscription-billing/subscriptionStatusLog.schema';
+export {
+  ISubscriptionTrial,
+  default as SubscriptionTrial,
+} from './subscription-billing/subscriptionTrial.schema';
+export {
+  ISubscriptionUsageLog,
+  default as SubscriptionUsageLog,
+} from './subscription-billing/subscriptionUsageLog.schema';
 export {
   IUserSubscription,
   SubscriptionStatus,
@@ -48,18 +90,46 @@ export {
 } from './subscription-billing/userSubscription.schema';
 
 // vehicle transport
-export * from './vehicle-transport/driver.schema';
-export * from './vehicle-transport/driverTachograph.schema';
-export * from './vehicle-transport/fuelUsage.schema';
-export * from './vehicle-transport/subContractor.schema';
-export * from './vehicle-transport/vehicle.schema';
+export { CheckStatus, default as Driver, IDriver } from './vehicle-transport/driver.schema';
+export {
+  default as DriverTachograph,
+  IDriverTachograph,
+} from './vehicle-transport/driverTachograph.schema';
+export { default as FuelUsage, IFuelUsage } from './vehicle-transport/fuelUsage.schema';
+export { ISubContractor, default as SubContractor } from './vehicle-transport/subContractor.schema';
+export {
+  IVehicle,
+  OwnerShipStatus,
+  default as Vehicle,
+  VehicleStatus,
+} from './vehicle-transport/vehicle.schema';
 
 // compliance, enforcement & dvsa
-export * from './compliance-enforcement-dvsa/auditsAndRecificationReports.schema';
-export * from './compliance-enforcement-dvsa/complianceTimeTable.schema';
-export * from './compliance-enforcement-dvsa/orsPlan.schema';
-export * from './compliance-enforcement-dvsa/pg9AndPg13Plan.schema';
-export * from './compliance-enforcement-dvsa/renewalTracker.schema';
-export * from './compliance-enforcement-dvsa/spotCheck.schema';
-export * from './compliance-enforcement-dvsa/trafficCommissionerCommunication.schema';
-export * from './compliance-enforcement-dvsa/wheelRetorquePolicyMonitoring.schema';
+export {
+  default as AuditsAndRectificationReports,
+  IAuditsAndRectificationReports,
+} from './compliance-enforcement-dvsa/auditsAndRecificationReports.schema';
+export {
+  ComplianceStatus,
+  default as ComplianceTimeTable,
+  IComplianceTimeTable,
+} from './compliance-enforcement-dvsa/complianceTimeTable.schema';
+export { IOrsPlan, default as OrsPlan } from './compliance-enforcement-dvsa/orsPlan.schema';
+export {
+  Ipg9AndPg13Plan,
+  PG9AndPG13IssueType,
+  default as pg9AndPg13Plan,
+} from './compliance-enforcement-dvsa/pg9AndPg13Plan.schema';
+export {
+  IRenewalTracker,
+  default as RenewalTracker,
+} from './compliance-enforcement-dvsa/renewalTracker.schema';
+export { ISpotCheck, default as SpotCheck } from './compliance-enforcement-dvsa/spotCheck.schema';
+export {
+  ITrafficCommissionerCommunication,
+  default as TrafficCommissionerCommunication,
+} from './compliance-enforcement-dvsa/trafficCommissionerCommunication.schema';
+export {
+  IWheelRetorquePolicyMonitoring,
+  default as WheelRetorquePolicyMonitoring,
+} from './compliance-enforcement-dvsa/wheelRetorquePolicyMonitoring.schema';

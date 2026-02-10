@@ -1,21 +1,30 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
+export enum VehicleStatus {
+  PENDING = 'PENDING',
+  ACTIVE = 'ACTIVE',
+  INACTIVE = 'INACTIVE',
+}
+
+export enum OwnerShipStatus {
+  Individual_Ownership = 'Individual_Ownership',
+  Joint_Ownership = 'Joint_Ownership',
+  Company_Business_Ownership = 'Company/Business_Ownership',
+  Leased_Financed = 'Leased/Financed',
+  Fleet_Management = 'Fleet_Management',
+}
+
 // Define and export an interface representing a Vehicle document
 export interface IVehicle extends Document {
   vehicleRegId: string;
   vehicleType: string;
   licensePlate: string;
-  status: 'PENDING' | 'ACTIVE' | 'INACTIVE';
+  status: VehicleStatus;
   additionalDetails: {
     lastServiceDate?: Date;
     nextServiceDate?: Date;
     grossPlatedWeight: number;
-    ownerShipStatus:
-      | 'Individual_Ownership'
-      | 'Joint_Ownership'
-      | 'Company/Business_Ownership'
-      | 'Leased/Financed'
-      | 'Fleet_Management';
+    ownerShipStatus: OwnerShipStatus;
     diskNumber: Date;
     dateLeft?: Date;
     chassisNumber: string;
@@ -51,9 +60,9 @@ const VehicleSchema: Schema<IVehicle> = new Schema(
     },
     status: {
       type: String,
-      enum: ['PENDING', 'ACTIVE', 'INACTIVE'],
+      enum: Object.values(VehicleStatus),
       required: true,
-      default: 'PENDING',
+      default: VehicleStatus.PENDING,
     },
     additionalDetails: {
       lastServiceDate: {
@@ -68,13 +77,7 @@ const VehicleSchema: Schema<IVehicle> = new Schema(
       },
       ownerShipStatus: {
         type: String,
-        enum: [
-          'Individual_Ownership',
-          'Joint_Ownership',
-          'Company/Business_Ownership',
-          'Leased/Financed',
-          'Fleet_Management',
-        ],
+        enum: Object.values(OwnerShipStatus),
         required: true,
       },
       diskNumber: {
