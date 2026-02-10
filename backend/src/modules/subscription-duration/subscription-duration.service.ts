@@ -1,7 +1,5 @@
 import { IdOrIdsInput, SearchQueryInput } from '../../handlers/common-zod-validator';
-import SubscriptionDuration, {
-  ISubscriptionDuration,
-} from '../../models/subscription-billing/subscriptionDuration.schema';
+import { ISubscriptionDuration, SubscriptionDuration } from '../../models';
 import {
   CreateSubscriptionDurationInput,
   UpdateSubscriptionDurationInput,

@@ -1,10 +1,22 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
+export enum SubscriptionPlanType {
+  FREE = 'FREE',
+  PAID = 'PAID',
+  CUSTOM = 'CUSTOM',
+}
+
+export enum ApplicableAccountType {
+  STANDALONE = 'STANDALONE',
+  TRANSPORT_MANAGER = 'TRANSPORT_MANAGER',
+  BOTH = 'BOTH',
+}
+
 // Define and export an interface representing a SubscriptionPlan document
 export interface ISubscriptionPlan extends Document {
   name: string;
-  planType: 'FREE' | 'PAID' | 'CUSTOM';
-  applicableAccountType?: 'STANDALONE' | 'TRANSPORT_MANAGER' | 'BOTH';
+  planType: SubscriptionPlanType;
+  applicableAccountType?: ApplicableAccountType;
   description?: string;
   isActive?: boolean;
   createdBy: mongoose.Types.ObjectId;
@@ -21,12 +33,13 @@ const SubscriptionPlanSchema: Schema<ISubscriptionPlan> = new Schema(
     },
     planType: {
       type: String,
-      enum: ['FREE', 'PAID', 'CUSTOM'],
+      enum: Object.values(SubscriptionPlanType),
       required: true,
     },
     applicableAccountType: {
       type: String,
-      enum: ['STANDALONE', 'TRANSPORT_MANAGER', 'BOTH'],
+      enum: Object.values(ApplicableAccountType),
+      required: true,
     },
     description: {
       type: String,

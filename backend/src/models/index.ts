@@ -18,19 +18,34 @@ export { IUser, default as User, UserRole } from './users-accounts/user.schema';
 export * from './subscription-billing/subscriptionChangeRequest.schema';
 export * from './subscription-billing/subscriptionCoupon.schema';
 export * from './subscription-billing/subscriptionCustomization.schema';
-export * from './subscription-billing/subscriptionDuration.schema';
+export {
+  ISubscriptionDuration,
+  default as SubscriptionDuration,
+} from './subscription-billing/subscriptionDuration.schema';
 export * from './subscription-billing/subscriptionExemption.schema';
 export * from './subscription-billing/subscriptionFeature.schema';
 export * from './subscription-billing/subscriptionHistory.schema';
 export * from './subscription-billing/subscriptionInvoice.schema';
 export * from './subscription-billing/subscriptionPayment.schema';
-export * from './subscription-billing/subscriptionPlan.schema';
-export * from './subscription-billing/subscriptionPricing.schema';
+export {
+  ApplicableAccountType,
+  ISubscriptionPlan,
+  default as SubscriptionPlan,
+  SubscriptionPlanType,
+} from './subscription-billing/subscriptionPlan.schema';
+export {
+  ISubscriptionPricing,
+  default as SubscriptionPricing,
+} from './subscription-billing/subscriptionPricing.schema';
 export * from './subscription-billing/subscriptionRefund.schema';
 export * from './subscription-billing/subscriptionStatusLog.schema';
 export * from './subscription-billing/subscriptionTrial.schema';
 export * from './subscription-billing/subscriptionUsageLog.schema';
-export * from './subscription-billing/userSubscription.schema';
+export {
+  IUserSubscription,
+  SubscriptionStatus,
+  default as UserSubscription,
+} from './subscription-billing/userSubscription.schema';
 
 // vehicle transport
 export * from './vehicle-transport/driver.schema';

@@ -1,12 +1,10 @@
 import mongoose from 'mongoose';
-import UserSubscription, {
-  SubscriptionStatus,
-} from '../../models/subscription-billing/userSubscription.schema';
+import { SubscriptionStatus, UserSubscription } from '../../models';
 
 /**
  * Get remaining subscription days for a user.
  * @param userId string - Mongo user id
- * @returns { daysRemaining: number, expired: boolean, startDate?: Date, endDate?: Date }
+ * @returns { daysRemaining: number, expired: boolean, startDate?: Date, endDate?: Date, subscriptionId?: string }
  */
 export const getSubscriptionRemainingDays = async (userId: string) => {
   // Validate userId

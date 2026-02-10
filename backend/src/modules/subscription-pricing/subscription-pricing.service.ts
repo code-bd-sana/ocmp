@@ -2,12 +2,13 @@
 
 import mongoose from 'mongoose';
 import { IdOrIdsInput, SearchQueryInput } from '../../handlers/common-zod-validator';
-import { UserRole } from '../../models';
-import SubscriptionDuration from '../../models/subscription-billing/subscriptionDuration.schema';
-import SubscriptionPlan from '../../models/subscription-billing/subscriptionPlan.schema';
-import SubscriptionPricing, {
+import {
   ISubscriptionPricing,
-} from '../../models/subscription-billing/subscriptionPricing.schema';
+  SubscriptionDuration,
+  SubscriptionPlan,
+  SubscriptionPricing,
+  UserRole,
+} from '../../models';
 import {
   CreateSubscriptionPricingInput,
   UpdateSubscriptionPricingInput,

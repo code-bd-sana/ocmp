@@ -1,9 +1,7 @@
 // Import the model
 
 import { IdOrIdsInput, SearchQueryInput } from '../../handlers/common-zod-validator';
-import SubscriptionPlan, {
-  ISubscriptionPlan,
-} from '../../models/subscription-billing/subscriptionPlan.schema';
+import { ISubscriptionPlan, SubscriptionPlan } from '../../models';
 import {
   CreateSubscriptionPlanInput,
   UpdateSubscriptionPlanInput,

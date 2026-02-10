@@ -2,10 +2,7 @@
 import mongoose from 'mongoose';
 
 import config from '../../config/config';
-import UserSubscription, {
-  IUserSubscription,
-  SubscriptionStatus,
-} from '../../models/subscription-billing/userSubscription.schema';
+import { IUserSubscription, SubscriptionStatus, UserSubscription } from '../../models';
 
 /**
  * Service function to create a new subscription-trial.

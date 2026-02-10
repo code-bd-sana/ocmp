@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import ServerResponse from '../../helpers/responses/custom-response';
 import { AuthenticatedRequest } from '../../middlewares/is-authorized';
-import LoginActivity from '../../models/users-accounts/loginActivity.schema';
+import { LoginActivity } from '../../models';
 import catchAsync from '../../utils/catch-async/catch-async';
 import { IChangePassword, ILogin } from './auth.interface';
 import { authServices } from './auth.service';

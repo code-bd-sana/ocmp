@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { validateBody } from '../../handlers/zod-error-handler';
+import { ApplicableAccountType, SubscriptionPlanType } from '../../models';
 
 /**
  * Subscription-plan Validation Schemas and Types
@@ -27,12 +28,12 @@ const zodCreateSubscriptionPlanSchema = z
       .max(100, 'Name must not exceed 100 characters'),
 
     // Plan type: determines if the plan is FREE, PAID, or CUSTOM
-    planType: z.enum(['FREE', 'PAID', 'CUSTOM'], {
+    planType: z.enum(SubscriptionPlanType, {
       message: 'Plan type must be one of: FREE, PAID, or CUSTOM',
     }),
 
     // Applicable account type: defines which account can use this plan
-    applicableAccountType: z.enum(['STANDALONE', 'TRANSPORT_MANAGER', 'BOTH'], {
+    applicableAccountType: z.enum(ApplicableAccountType, {
       message: 'Applicable account type must be STANDALONE, TRANSPORT_MANAGER, or BOTH',
     }),
 
@@ -62,14 +63,14 @@ const zodUpdateSubscriptionPlanSchema = z
 
     // Plan type: determines if the plan is FREE, PAID, or CUSTOM
     planType: z
-      .enum(['FREE', 'PAID', 'CUSTOM'], {
+      .enum(SubscriptionPlanType, {
         message: 'Plan type must be one of: FREE, PAID, or CUSTOM',
       })
       .optional(),
 
     // Applicable account type: defines which account can use this plan
     applicableAccountType: z
-      .enum(['STANDALONE', 'TRANSPORT_MANAGER', 'BOTH'], {
+      .enum(ApplicableAccountType, {
         message: 'Applicable account type must be STANDALONE, TRANSPORT_MANAGER, or BOTH',
       })
       .optional(),
