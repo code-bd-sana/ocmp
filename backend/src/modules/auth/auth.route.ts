@@ -51,7 +51,7 @@ router.post('/login', validateLoginAuth, requestMeta, login);
  * @param {middleware} isAuthorized - ['isAuthorized']
  * @param {function} controller - ['logout']
  */
-router.post('/logout', isAuthorized, logout);
+router.post('/logout', isAuthorized(), logout);
 
 /**
  * @route POST /api/v1/auth/register
@@ -113,7 +113,7 @@ router.post('/reset-password', resetPasswordAuth, resetPassword);
  * @param {function} validation - ['changePasswordAuth']
  * @param {function} controller - ['changePassword']
  */
-router.patch('/change-password', isAuthorized, changePasswordAuth, changePassword);
+router.patch('/change-password', isAuthorized(), changePasswordAuth, changePassword);
 
 // Export the router
 module.exports = router;

@@ -40,7 +40,7 @@ const router = Router();
  */
 router.post(
   '/',
-  isAuthorized,
+  isAuthorized(),
   authorizedRoles([UserRole.SUPER_ADMIN]),
   validateCreateSubscriptionDuration,
   createSubscriptionDuration
@@ -58,7 +58,7 @@ router.post(
  */
 router.put(
   '/:id',
-  isAuthorized,
+  isAuthorized(),
   authorizedRoles([UserRole.SUPER_ADMIN]),
   validateId,
   validateUpdateSubscriptionDuration,
@@ -76,7 +76,7 @@ router.put(
  */
 router.delete(
   '/many',
-  isAuthorized,
+  isAuthorized(),
   authorizedRoles([UserRole.SUPER_ADMIN]),
   validateIds,
   deleteManySubscriptionDuration
@@ -94,7 +94,7 @@ router.delete(
  */
 router.delete(
   '/:id',
-  isAuthorized,
+  isAuthorized(),
   authorizedRoles([UserRole.SUPER_ADMIN]),
   validateId,
   deleteSubscriptionDuration
@@ -111,7 +111,7 @@ router.delete(
  */
 router.get(
   '/',
-  isAuthorized,
+  isAuthorized(),
   authorizedRoles([UserRole.SUPER_ADMIN]),
   validateSearchQueries,
   getManySubscriptionDuration
@@ -129,7 +129,7 @@ router.get(
  */
 router.get(
   '/:id',
-  isAuthorized,
+  isAuthorized(),
   authorizedRoles([UserRole.SUPER_ADMIN]),
   validateId,
   getSubscriptionDurationById

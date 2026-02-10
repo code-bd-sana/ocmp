@@ -40,7 +40,7 @@ const router = Router();
 router.post(
   '/',
   validateCreateSubscriptionPricing,
-  isAuthorized,
+  isAuthorized(),
   authorizedRoles([UserRole.SUPER_ADMIN]),
   createSubscriptionPricing
 );
@@ -57,7 +57,7 @@ router.post(
 router.patch(
   '/:id',
   validateId,
-  isAuthorized,
+  isAuthorized(),
   authorizedRoles([UserRole.SUPER_ADMIN]),
   validateUpdateSubscriptionPricing,
   updateSubscriptionPricing
@@ -74,7 +74,7 @@ router.patch(
 router.delete(
   '/many',
   validateIds,
-  isAuthorized,
+  isAuthorized(),
   authorizedRoles([UserRole.SUPER_ADMIN]),
   deleteManySubscriptionPricing
 );
@@ -91,7 +91,7 @@ router.delete(
 router.delete(
   '/:id',
   validateId,
-  isAuthorized,
+  isAuthorized(),
   authorizedRoles([UserRole.SUPER_ADMIN]),
   deleteSubscriptionPricing
 );

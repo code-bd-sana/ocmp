@@ -22,7 +22,7 @@ const router = Router();
  * @param {function} validation - ['validateUpdateUser']
  * @param {function} controller - ['updateUser']
  */
-router.patch('/me', isAuthorized, validateUpdateUser, updateUser);
+router.patch('/me', isAuthorized(), validateUpdateUser, updateUser);
 
 /**
  * @route GET /api/v1/user/me
@@ -31,7 +31,7 @@ router.patch('/me', isAuthorized, validateUpdateUser, updateUser);
  * @param {middleware} isAuthorized - ['isAuthorized']
  * @param {function} controller - ['getUserProfile']
  */
-router.get('/me', isAuthorized, getUserProfile);
+router.get('/me', isAuthorized(), getUserProfile);
 
 /**
  * @route GET /api/v1/user/:id
@@ -41,7 +41,7 @@ router.get('/me', isAuthorized, getUserProfile);
  * @param {middleware} isAuthorized - ['isAuthorized']
  * @param {function} controller - ['getUserById']
  */
-router.get('/:id', isAuthorized, authorizedRoles([UserRole.SUPER_ADMIN]), getUserById);
+router.get('/:id', isAuthorized(), authorizedRoles([UserRole.SUPER_ADMIN]), getUserById);
 
 // Export the router
 module.exports = router;
