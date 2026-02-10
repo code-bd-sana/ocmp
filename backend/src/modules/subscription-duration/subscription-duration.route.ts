@@ -53,14 +53,13 @@ router.post(
  * @access Private
  * @param {function} isAuthorized - Middleware to check if the user is authenticated
  * @param {function} authorizedRoles - Middleware to check if the user has the required role(s)
- * @param {function} validation - ['validateId', 'validateUpdateSubscriptionDuration']
+ * @param {function} validation - ['validateUpdateSubscriptionDuration']
  * @param {function} controller - ['updateSubscriptionDuration']
  */
 router.put(
   '/:id',
   isAuthorized(),
   authorizedRoles([UserRole.SUPER_ADMIN]),
-  validateId,
   validateUpdateSubscriptionDuration,
   updateSubscriptionDuration
 );

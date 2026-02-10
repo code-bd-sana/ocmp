@@ -58,7 +58,6 @@ router.patch(
   '/:id',
   isAuthorized(),
   authorizedRoles([UserRole.SUPER_ADMIN]),
-  validateId,
   validateUpdateSubscriptionPricing,
   updateSubscriptionPricing
 );

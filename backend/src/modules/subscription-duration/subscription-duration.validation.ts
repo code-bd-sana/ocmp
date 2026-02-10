@@ -37,23 +37,14 @@ export type CreateSubscriptionDurationInput = z.infer<typeof zodCreateSubscripti
  */
 export const zodUpdateSubscriptionDurationSchema = zodCreateSubscriptionDurationSchema
   .partial()
+  .extend({
+    id: z.string().refine(isMongoId, { message: 'Please provide a valid MongoDB ObjectId' }),
+  })
   .refine((data) => Object.keys(data).length > 0, {
     message: 'At least one field must be provided for update.',
   });
 
 export type UpdateSubscriptionDurationInput = z.infer<typeof zodUpdateSubscriptionDurationSchema>;
-
-/**
- * Zod schema for validating multiple subscription-duration updates.
- * Each object in the array must include an 'id' field along with at least one other field to update.
- */
-export const zodUpdateSubscriptionDurationForBulkSchema = zodUpdateSubscriptionDurationSchema
-  .extend({
-    id: z.string().refine(isMongoId, { message: 'Please provide a valid MongoDB ObjectId' }),
-  })
-  .refine((data) => Object.keys(data).length > 1, {
-    message: 'At least one field besides id must be provided for update.',
-  });
 
 /**
  * Export named validators (express middleware creators) for use in routes.

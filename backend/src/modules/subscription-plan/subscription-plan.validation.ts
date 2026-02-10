@@ -1,3 +1,4 @@
+import { isMongoId } from 'validator';
 import { z } from 'zod';
 import { validateBody } from '../../handlers/zod-error-handler';
 import { ApplicableAccountType, SubscriptionPlanType } from '../../models';
@@ -50,6 +51,9 @@ export type CreateSubscriptionPlanInput = z.infer<typeof zodCreateSubscriptionPl
  */
 const zodUpdateSubscriptionPlanSchema = zodCreateSubscriptionPlanSchema
   .partial()
+  .extend({
+    id: z.string().refine(isMongoId, { message: 'Please provide a valid MongoDB ObjectId' }),
+  })
   .refine((data) => Object.keys(data).length > 0, {
     message: 'At least one field must be provided for update',
   });
