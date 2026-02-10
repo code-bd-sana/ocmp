@@ -5,8 +5,10 @@ import { Router } from 'express';
 import { createSubscriptionTrial } from './subscription-trial.controller';
 
 //Import validation from corresponding module
+import authorizedRoles from '../../middlewares/authorized-roles';
 import checkSubscriptionValidity from '../../middlewares/check-subscription-validity';
 import isAuthorized from '../../middlewares/is-authorized';
+import { UserRole } from '../../models';
 
 // Initialize router
 const router = Router();
@@ -19,7 +21,13 @@ const router = Router();
  * @param {function} validation - ['validateCreateSubscriptionTrial']
  * @param {function} controller - ['createSubscriptionTrial']
  */
-router.post('/', isAuthorized(), checkSubscriptionValidity, createSubscriptionTrial);
+router.post(
+  '/',
+  isAuthorized(),
+  authorizedRoles([UserRole.TRANSPORT_MANAGER, UserRole.STANDALONE_USER]),
+  checkSubscriptionValidity,
+  createSubscriptionTrial
+);
 
 // Export the router
 module.exports = router;

@@ -1,7 +1,6 @@
 import { Request, Response } from 'express';
 import ServerResponse from '../../helpers/responses/custom-response';
 import { AuthenticatedRequest } from '../../middlewares/is-authorized';
-import { UserRole } from '../../models';
 import catchAsync from '../../utils/catch-async/catch-async';
 import { subscriptionTrialServices } from './subscription-trial.service';
 
@@ -16,10 +15,6 @@ import { subscriptionTrialServices } from './subscription-trial.service';
 export const createSubscriptionTrial = catchAsync(
   async (req: AuthenticatedRequest, res: Response) => {
     // Use the authenticated user's ID from the request object
-    if (req.user?.role !== (UserRole.TRANSPORT_MANAGER || UserRole.STANDALONE_USER)) {
-      return ServerResponse(res, false, 403, 'Access denied. Insufficient permissions.');
-    }
-    // Associate the subscription-trial with the authenticated user by adding userId to the request body
     const userId = req.user!._id;
     req.body.userId = userId; // Associate the subscription-trial with the authenticated user
     // Call the service method to create a subscription-trial and get the result
