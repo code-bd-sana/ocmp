@@ -35,7 +35,7 @@ const router = Router();
  */
 router.post(
   '/',
-  isAuthorized,
+  isAuthorized(),
   authorizedRoles([UserRole.SUPER_ADMIN]),
   validateCreateSubscriptionCoupon,
   createSubscriptionCoupon
@@ -53,7 +53,7 @@ router.post(
  */
 router.patch(
   '/:id',
-  isAuthorized,
+  isAuthorized(),
   authorizedRoles([UserRole.SUPER_ADMIN]),
   validateId,
   validateUpdateSubscriptionCoupon,
@@ -72,7 +72,7 @@ router.patch(
  */
 router.delete(
   '/:id',
-  isAuthorized,
+  isAuthorized(),
   authorizedRoles([UserRole.SUPER_ADMIN]),
   validateId,
   deleteSubscriptionCoupon
@@ -99,7 +99,7 @@ router.get('/many', validateSearchQueries, getManySubscriptionCoupon);
  */
 router.get(
   '/:id',
-  isAuthorized,
+  isAuthorized(),
   authorizedRoles([UserRole.SUPER_ADMIN]),
   validateId,
   getSubscriptionCouponById

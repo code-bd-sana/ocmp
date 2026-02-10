@@ -22,6 +22,7 @@ export {
   SubscriptionChangeRequestType,
 } from './subscription-billing/subscriptionChangeRequest.schema';
 export {
+  DiscountType,
   ISubscriptionCoupon,
   default as SubscriptionCoupon,
 } from './subscription-billing/subscriptionCoupon.schema';

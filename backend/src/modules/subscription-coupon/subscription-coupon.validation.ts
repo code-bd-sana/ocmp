@@ -1,6 +1,7 @@
 import { isMongoId } from 'validator';
 import { z } from 'zod';
 import { validateBody } from '../../handlers/zod-error-handler';
+import { DiscountType } from '../../models';
 
 /**
  * Subscription-coupon Validation Schemas and Types
@@ -20,6 +21,10 @@ import { validateBody } from '../../handlers/zod-error-handler';
 const zodCreateSubscriptionCouponSchema = z
   .object({
     code: z.string().min(1, 'Code is required'),
+    discountType: z.enum(DiscountType, {
+      message: 'Discount type is required and must be either "percentage" or "fixed"',
+    }),
+    discountValue: z.number({ message: 'Discount value is required' }),
     isActive: z.boolean().optional(),
     users: z
       .array(

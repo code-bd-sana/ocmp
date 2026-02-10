@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
+import mongoose from 'mongoose';
 import { SearchQueryInput } from '../../handlers/common-zod-validator';
 import ServerResponse from '../../helpers/responses/custom-response';
+import { AuthenticatedRequest } from '../../middlewares/is-authorized';
 import catchAsync from '../../utils/catch-async/catch-async';
 import { subscriptionCouponServices } from './subscription-coupon.service';
 
@@ -12,13 +14,19 @@ import { subscriptionCouponServices } from './subscription-coupon.service';
  * @returns {Promise<Partial<ISubscriptionCoupon>>} - The created subscription-coupon.
  * @throws {Error} - Throws an error if the subscription-coupon creation fails.
  */
-export const createSubscriptionCoupon = catchAsync(async (req: Request, res: Response) => {
-  // Call the service method to create a new subscription-coupon and get the result
-  const result = await subscriptionCouponServices.createSubscriptionCoupon(req.body);
-  if (!result) throw new Error('Failed to create subscription-coupon');
-  // Send a success response with the created subscription-coupon data
-  ServerResponse(res, true, 201, 'Subscription-coupon created successfully', result);
-});
+export const createSubscriptionCoupon = catchAsync(
+  async (req: AuthenticatedRequest, res: Response) => {
+    // Use the authenticated user's ID as the creator
+    const userId = req.user!._id;
+    // Request body assignment for createdBy field
+    req.body.createdBy = new mongoose.Types.ObjectId(userId);
+    // Call the service method to create a new subscription-coupon and get the result
+    const result = await subscriptionCouponServices.createSubscriptionCoupon(req.body);
+    if (!result) throw new Error('Failed to create subscription-coupon');
+    // Send a success response with the created subscription-coupon data
+    ServerResponse(res, true, 201, 'Subscription-coupon created successfully', result);
+  }
+);
 
 /**
  * Controller function to handle the update operation for a single subscription-coupon.

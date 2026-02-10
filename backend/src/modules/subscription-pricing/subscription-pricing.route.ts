@@ -33,15 +33,15 @@ const router = Router();
  * @route POST /api/v1/subscription-pricing
  * @description Create a new subscription-pricing
  * @access Private
- * @param {function} validation - ['validateCreateSubscriptionPricing']
  * @param {function} middleware - ['isAuthorized', 'authorizedRoles']
+ * @param {function} validation - ['validateCreateSubscriptionPricing']
  * @param {function} controller - ['createSubscriptionPricing']
  */
 router.post(
   '/',
-  validateCreateSubscriptionPricing,
   isAuthorized(),
   authorizedRoles([UserRole.SUPER_ADMIN]),
+  validateCreateSubscriptionPricing,
   createSubscriptionPricing
 );
 
@@ -49,16 +49,16 @@ router.post(
  * @route PUT /api/v1/subscription-pricing/:id
  * @description Update subscription-pricing information
  * @access Private
+ * @param {function} middleware - ['isAuthorized', 'authorizedRoles']
  * @param {IdOrIdsInput['id']} id - The ID of the subscription-pricing to update
  * @param {function} validation - ['validateId', 'validateUpdateSubscriptionPricing']
- * @param {function} middleware - ['isAuthorized', 'authorizedRoles']
  * @param {function} controller - ['updateSubscriptionPricing']
  */
 router.patch(
   '/:id',
-  validateId,
   isAuthorized(),
   authorizedRoles([UserRole.SUPER_ADMIN]),
+  validateId,
   validateUpdateSubscriptionPricing,
   updateSubscriptionPricing
 );
@@ -67,15 +67,15 @@ router.patch(
  * @route DELETE /api/v1/subscription-pricing/many
  * @description Delete multiple subscription-pricing(s)
  * @access Private
- * @param {function} validation - ['validateIds']
  * @param {function} middleware - ['isAuthorized', 'authorizedRoles']
+ * @param {function} validation - ['validateIds']
  * @param {function} controller - ['deleteManySubscriptionPricing']
  */
 router.delete(
   '/many',
-  validateIds,
   isAuthorized(),
   authorizedRoles([UserRole.SUPER_ADMIN]),
+  validateIds,
   deleteManySubscriptionPricing
 );
 
@@ -84,15 +84,15 @@ router.delete(
  * @description Delete a subscription-pricing
  * @access Private
  * @param {IdOrIdsInput['id']} id - The ID of the subscription-pricing to delete
- * @param {function} validation - ['validateId']
  * @param {function} middleware - ['isAuthorized', 'authorizedRoles']
+ * @param {function} validation - ['validateId']
  * @param {function} controller - ['deleteSubscriptionPricing']
  */
 router.delete(
   '/:id',
-  validateId,
   isAuthorized(),
   authorizedRoles([UserRole.SUPER_ADMIN]),
+  validateId,
   deleteSubscriptionPricing
 );
 
@@ -100,13 +100,13 @@ router.delete(
  * @route GET /api/v1/subscription-pricing
  * @description Get multiple subscription-pricing(s)
  * @access Public (with optional authentication)
- * @param {function} middleware - ['validateSearchQueries', 'isAuthorized']
+ * @param {function} middleware - ['isAuthorized', 'validateSearchQueries']
  * @param {function} controller - ['getManySubscriptionPricing']
  */
 router.get(
   '/',
-  validateSearchQueries,
   isAuthorized({ isOptional: true }),
+  validateSearchQueries,
   getManySubscriptionPricing
 );
 
@@ -115,10 +115,10 @@ router.get(
  * @description Get a subscription-pricing by ID
  * @access Public (with optional authentication)
  * @param {IdOrIdsInput['id']} id - The ID of the subscription-pricing to retrieve
- * @param {function} middleware - ['validateId', 'isAuthorized']
+ * @param {function} middleware - ['isAuthorized', 'validateId']
  * @param {function} controller - ['getSubscriptionPricingById']
  */
-router.get('/:id', validateId, isAuthorized({ isOptional: true }), getSubscriptionPricingById);
+router.get('/:id', isAuthorized({ isOptional: true }), validateId, getSubscriptionPricingById);
 
 // Export the router
 module.exports = router;

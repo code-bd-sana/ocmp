@@ -1,6 +1,7 @@
 // Import the model
+import mongoose from 'mongoose';
 import { IdOrIdsInput, SearchQueryInput } from '../../handlers/common-zod-validator';
-import { ISubscriptionCoupon, SubscriptionCoupon } from '../../models';
+import { ISubscriptionCoupon, SubscriptionCoupon, User } from '../../models';
 import {
   CreateSubscriptionCouponInput,
   UpdateSubscriptionCouponInput,
@@ -15,6 +16,34 @@ import {
 const createSubscriptionCoupon = async (
   data: CreateSubscriptionCouponInput
 ): Promise<Partial<ISubscriptionCoupon>> => {
+  // Destructure the relevant fields from the input data
+  const { code, users } = data;
+  const normalizedCode = code.toUpperCase().trim();
+  // Check for duplicate code
+  const existingSubscriptionCoupon = await SubscriptionCoupon.findOne({
+    code: normalizedCode,
+  }).lean();
+  // Check for duplicate code and prevent creation if a duplicate exists
+  if (existingSubscriptionCoupon) {
+    throw new Error('Duplicate detected: A subscription-coupon with the same code already exists.');
+  }
+  // Validate user IDs if provided
+  const userIds = users?.map((u) => new mongoose.Types.ObjectId(u));
+  // Validate user IDs if provided
+  const userExistenceChecks = await User.find({ _id: { $in: userIds } })
+    .select('_id')
+    .lean();
+  // Extract existing user IDs from the database results
+  const existingUserIds = userExistenceChecks.map((u) => u._id.toString());
+  // Identify any non-existing user IDs from the input
+  const nonExistingUserIds = userIds?.filter((u) => !existingUserIds.includes(u.toString()));
+  // If there are any non-existing user IDs, throw an error with details
+  if (nonExistingUserIds && nonExistingUserIds.length > 0) {
+    throw new Error(
+      `Validation error: The following user IDs do not exist: ${nonExistingUserIds.join(', ')}`
+    );
+  }
+  // Proceed to create the new subscription-coupon
   const newSubscriptionCoupon = new SubscriptionCoupon(data);
   const savedSubscriptionCoupon = await newSubscriptionCoupon.save();
   return savedSubscriptionCoupon;
@@ -121,4 +150,3 @@ export const subscriptionCouponServices = {
   getSubscriptionCouponById,
   getManySubscriptionCoupon,
 };
-
