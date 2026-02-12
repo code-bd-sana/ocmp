@@ -19,8 +19,8 @@ export const createSubscriptionTrial = catchAsync(
     req.body.userId = userId; // Associate the subscription-trial with the authenticated user
     // Call the service method to create a subscription-trial and get the result
     const result = await subscriptionTrialServices.createSubscriptionTrial(req.body);
-    if (!result) throw new Error('Failed to create subscription-trial');
+    if (!result) throw new Error('Failed to activate subscription-trial');
     // Send a success response with the created subscription-trial data
-    ServerResponse(res, true, 201, 'Subscription-trial created successfully', result);
+    ServerResponse(res, true, 201, 'Subscription-trial activated successfully', result);
   }
 );
