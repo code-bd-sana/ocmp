@@ -1,14 +1,19 @@
 import { Request, Response } from 'express';
+import mongoose from 'mongoose';
 import ServerResponse from '../../helpers/responses/custom-response';
+import { AuthenticatedRequest } from '../../middlewares/is-authorized';
 import { ISubscriptionPlan } from './subscription-plan.interface';
 import { subscriptionPlanServices } from './subscription-plan.service';
 
 /**
  * Controller function to create a new subscription plan.
  */
-export const createSubscriptionPlan = async (req: Request, res: Response): Promise<void> => {
+export const createSubscriptionPlan = async (
+  req: AuthenticatedRequest,
+  res: Response
+): Promise<void> => {
   try {
-    const { name, planType, applicableAccountType, description, isActive, createdBy } = req.body;
+    const { name, planType, applicableAccountType, description, isActive } = req.body;
 
     // Ensure applicableAccountType and planType are strings (in case they're sent as arrays)
     const planTypeString = Array.isArray(planType) ? planType[0] : planType;
@@ -23,7 +28,7 @@ export const createSubscriptionPlan = async (req: Request, res: Response): Promi
       applicableAccountType: applicableAccountTypeString,
       description,
       isActive: isActive ?? true, // Default to true if not provided
-      createdBy,
+      createdBy: new mongoose.Types.ObjectId(req.user?._id),
     };
 
     // Call the service to create a new subscription plan

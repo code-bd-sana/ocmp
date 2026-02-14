@@ -21,9 +21,6 @@ export const zodCreateSubscriptionPlanSchema = z
       .refine((value) => value !== undefined, { message: 'Applicable account type is required' }), // Fix here using refine
     description: z.string().max(500, { message: 'Description is too long' }).optional(),
     isActive: z.boolean({ message: 'isActive must be a boolean' }).optional(),
-    createdBy: z
-      .string({ message: 'CreatedBy is required' })
-      .regex(/^[a-fA-F0-9]{24}$/, { message: 'Invalid user ID format' }), // MongoDB ObjectId format validation
   })
   .strict();
 
@@ -32,7 +29,8 @@ export type CreateSubscriptionPlanInput = z.infer<typeof zodCreateSubscriptionPl
 /**
  * Zod schema for validating subscription plan update (PATCH)
  */
-export const zodUpdateSubscriptionPlanSchema = z
+export const zodUpdateSubscriptionPlanSchema = zodCreateSubscriptionPlanSchema.partial();
+/* z
   .object({
     name: z
       .string({ message: 'Plan name is required' })
@@ -49,7 +47,7 @@ export const zodUpdateSubscriptionPlanSchema = z
     description: z.string().max(500, { message: 'Description is too long' }).optional(),
     isActive: z.boolean({ message: 'isActive must be a boolean' }).optional(),
   })
-  .strict();
+  .strict(); */
 
 export type UpdateSubscriptionPlanInput = z.infer<typeof zodUpdateSubscriptionPlanSchema>;
 
