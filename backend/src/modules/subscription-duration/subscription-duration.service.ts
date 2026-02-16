@@ -57,7 +57,8 @@ const updateSubscriptionDuration = async (
 
   if (hasAnyUserPurchasedReferencedDuration) {
     const updateFields = Object.keys(data);
-    const isOnlyStatusUpdate = updateFields.length > 0 && updateFields.every((key) => key === 'isActive');
+    const isOnlyStatusUpdate =
+      updateFields.length > 0 && updateFields.every((key) => key === 'isActive');
 
     if (!isOnlyStatusUpdate) {
       throw new Error(
@@ -67,14 +68,28 @@ const updateSubscriptionDuration = async (
   }
 
   if (!hasAnyUserPurchasedReferencedDuration) {
-    // Check for duplicate name and durationInDays combination
-    const existingDuration = await SubscriptionDuration.findOne({
-      _id: { $ne: id }, // Exclude the current document
-      $or: [{ name: data.name?.toUpperCase() }, { durationInDays: data.durationInDays }],
-    });
-    // Prevent duplicate updates
-    if (existingDuration) {
-      throw new Error('A subscription-duration with the same name or duration already exists.');
+    // Check duplicate name
+    if (data.name) {
+      const existingName = await SubscriptionDuration.findOne({
+        _id: { $ne: id }, // Exclude current document
+        name: data.name.toUpperCase(),
+      });
+
+      if (existingName) {
+        throw new Error('A subscription-duration with the same name already exists.');
+      }
+    }
+
+    // Check duplicate durationInDays
+    if (data.durationInDays) {
+      const existingDuration = await SubscriptionDuration.findOne({
+        _id: { $ne: id }, // Exclude current document
+        durationInDays: data.durationInDays,
+      });
+
+      if (existingDuration) {
+        throw new Error('A subscription-duration with the same duration already exists.');
+      }
     }
   }
 
@@ -96,9 +111,20 @@ const deleteSubscriptionDuration = async (
 ): Promise<Partial<ISubscriptionDuration | null>> => {
   // ! If this duration is implemented in any subscription and that subscription is used by any user, do not allow deletion
 
-  // TODO: * First, check if this duration exists in any subscription
-  // TODO: * Second, check if any user has taken this subscription
-  // TODO: * If taken by any user, throw a thorough error: 'This duration is already assigned to a user's subscription'
+  const isDurationInAnySubscription = await SubscriptionPricing.exists({
+    subscriptionDurationId: id,
+  });
+  const hasAnyUserTakenThisSubscription = isDurationInAnySubscription
+    ? await UserSubscription.exists({
+        subscriptionPricingId: {
+          $in: await SubscriptionPricing.find({ subscriptionDurationId: id }).distinct('_id'),
+        },
+      })
+    : false;
+
+  if (hasAnyUserTakenThisSubscription) {
+    throw new Error("This duration is already assigned to a user's subscription");
+  }
 
   // Proceed to delete the subscription-duration
   const deletedSubscriptionDuration = await SubscriptionDuration.findOneAndDelete({ _id: id });
