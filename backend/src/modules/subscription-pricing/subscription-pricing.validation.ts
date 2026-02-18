@@ -3,6 +3,7 @@ import { isMongoId } from 'validator';
 import { z } from 'zod';
 import { zodSearchQuerySchema } from '../../handlers/common-zod-validator';
 import { validateBody, validateQuery } from '../../handlers/zod-error-handler';
+import { ApplicableAccountType } from '../../models';
 
 /**
  * SubscriptionPricing Validation Schemas and Types
@@ -83,6 +84,15 @@ const validateSubscriptionPricingSearchQueries = zodSearchQuerySchema.extend({
   durationId: z
     .string()
     .refine(isMongoId, { message: 'Duration ID must be a valid MongoDB ObjectId' })
+    .optional()
+    .or(z.literal('')),
+
+  applicableAccountType: z
+    .enum([
+      ApplicableAccountType.STANDALONE,
+      ApplicableAccountType.TRANSPORT_MANAGER,
+      ApplicableAccountType.BOTH,
+    ] as const)
     .optional()
     .or(z.literal('')),
 });
