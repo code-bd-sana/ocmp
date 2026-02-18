@@ -133,18 +133,13 @@ const deleteManySubscriptionPricing = async (
  * @returns {Promise<Partial<ISubscriptionPricing>>} - The retrieved subscription-pricing.
  */
 const getSubscriptionPricingById = async (
-  id: string,
+  id: IdOrIdsInput['id'],
   userRole?: UserRole
 ): Promise<Partial<ISubscriptionPricing> | null> => {
-  // Check if valid ObjectId
-  if (!mongoose.Types.ObjectId.isValid(id)) {
-    throw new Error('Invalid ID format');
-  }
-  const objectId = new mongoose.Types.ObjectId(id);
   // Determine if user is super admin (has access to all pricing)
   const isSuperAdmin = userRole === UserRole.SUPER_ADMIN;
   // Build query - filter by isActive if not super admin
-  const query: any = { _id: objectId };
+  const query: any = { _id: new mongoose.Types.ObjectId(id) };
   if (!isSuperAdmin) {
     query.isActive = true;
   }
@@ -160,119 +155,6 @@ const getSubscriptionPricingById = async (
  * @param {UserRole} userRole - Optional user role to determine filtering (SUPER_ADMIN sees all, others see only active)
  * @returns {Promise<Partial<ISubscriptionPricing & { subscriptionPlanName: string; subscriptionDuration: string }>[]>} - The retrieved subscription-pricing
  */
-// const getManySubscriptionPricing = async (query: SearchQueryInput, userRole?: UserRole) => {
-//   const { searchKey = '', showPerPage = 10, pageNo = 1, planId, durationId } = query;
-//   const skipItems = (pageNo - 1) * showPerPage;
-//   // Convert searchKey to number if possible
-//   const numericSearch = !isNaN(Number(searchKey)) ? Number(searchKey) : null;
-//   // Determine if user is super admin (has access to all pricing)
-//   const isSuperAdmin = userRole === UserRole.SUPER_ADMIN;
-//   // Build aggregation pipeline
-//   const aggregationPipeline: mongoose.PipelineStage[] = [
-//     // Filter by isActive status if not super admin
-//     ...(!isSuperAdmin ? [{ $match: { isActive: true } }] : []),
-//     // Lookup subscription plan
-//     {
-//       $lookup: {
-//         from: 'subscriptionplans',
-//         localField: 'subscriptionPlanId',
-//         foreignField: '_id',
-//         as: 'subscriptionPlan',
-//       },
-//     },
-//     { $unwind: { path: '$subscriptionPlan', preserveNullAndEmptyArrays: true } },
-//     // Lookup subscription duration
-//     {
-//       $lookup: {
-//         from: 'subscriptiondurations',
-//         localField: 'subscriptionDurationId',
-//         foreignField: '_id',
-//         as: 'subscriptionDuration',
-//       },
-//     },
-//     { $unwind: { path: '$subscriptionDuration', preserveNullAndEmptyArrays: true } },
-//     // Match search key across multiple fields
-//     {
-//       $match: {
-//         $or: [
-//           { currency: { $regex: searchKey, $options: 'i' } },
-//           { 'subscriptionPlan.name': { $regex: searchKey, $options: 'i' } },
-//           ...(numericSearch !== null ? [{ price: numericSearch }] : []),
-//           ...(numericSearch !== null
-//             ? [{ 'subscriptionDuration.durationInDays': numericSearch }]
-//             : []),
-//         ],
-//       },
-//     },
-//     // Sort by createdAt desc
-//     { $sort: { createdAt: -1 } },
-//     // Pagination
-//     { $skip: skipItems },
-//     { $limit: showPerPage },
-//     // Project final fields
-//     {
-//       $project: {
-//         _id: 1,
-//         subscriptionPlanName: '$subscriptionPlan.name',
-//         subscriptionPlanType: '$subscriptionPlan.planType',
-//         applicableAccountType: '$subscriptionPlan.applicableAccountType',
-//         subscriptionPlanDescription: '$subscriptionPlan.description',
-//         subscriptionPlanStatus: '$subscriptionPlan.isActive',
-//         subscriptionDurationStatus: '$subscriptionDuration.isActive',
-//         subscriptionName: '$subscriptionDuration.name',
-//         subscriptionDuration: '$subscriptionDuration.durationInDays',
-//         price: 1,
-//         currency: 1,
-//         isActive: 1,
-//         createdBy: 1,
-//         createdAt: 1,
-//         updatedAt: 1,
-//       },
-//     },
-//   ];
-//   const subscriptionPricings = await SubscriptionPricing.aggregate(aggregationPipeline);
-//   // Total count
-//   const totalDataPipeline: mongoose.PipelineStage[] = [
-//     // Filter by isActive status if not super admin
-//     ...(!isSuperAdmin ? [{ $match: { isActive: true } }] : []),
-//     {
-//       $lookup: {
-//         from: 'subscriptionplans',
-//         localField: 'subscriptionPlanId',
-//         foreignField: '_id',
-//         as: 'subscriptionPlan',
-//       },
-//     },
-//     { $unwind: { path: '$subscriptionPlan', preserveNullAndEmptyArrays: true } },
-//     {
-//       $lookup: {
-//         from: 'subscriptiondurations',
-//         localField: 'subscriptionDurationId',
-//         foreignField: '_id',
-//         as: 'subscriptionDuration',
-//       },
-//     },
-//     { $unwind: { path: '$subscriptionDuration', preserveNullAndEmptyArrays: true } },
-//     {
-//       $match: {
-//         $or: [
-//           { currency: { $regex: searchKey, $options: 'i' } },
-//           { 'subscriptionPlan.name': { $regex: searchKey, $options: 'i' } },
-//           ...(numericSearch !== null ? [{ price: numericSearch }] : []),
-//           ...(numericSearch !== null
-//             ? [{ 'subscriptionDuration.durationInDays': numericSearch }]
-//             : []),
-//         ],
-//       },
-//     },
-//     { $count: 'count' },
-//   ];
-
-//   const totalCountResult = await SubscriptionPricing.aggregate(totalDataPipeline);
-//   const totalData = totalCountResult[0]?.count || 0;
-//   const totalPages = Math.ceil(totalData / showPerPage);
-//   return { subscriptionPricings, totalData, totalPages };
-// };
 const getManySubscriptionPricing = async (
   query: SubscriptionPricingSearchQueries,
   userRole?: UserRole

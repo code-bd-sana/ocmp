@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import { SearchQueryInput } from '../../handlers/common-zod-validator';
 import ServerResponse from '../../helpers/responses/custom-response';
 import { AuthenticatedRequest } from '../../middlewares/is-authorized';
+import { UserRole } from '../../models';
 import catchAsync from '../../utils/catch-async/catch-async';
 import { subscriptionDurationServices } from './subscription-duration.service';
 
@@ -90,14 +91,21 @@ export const deleteManySubscriptionDuration = catchAsync(async (req: Request, re
  * @returns {Promise<Partial<ISubscriptionDuration>>} - The retrieved subscription-duration.
  * @throws {Error} - Throws an error if the subscription-duration retrieval fails.
  */
-export const getSubscriptionDurationById = catchAsync(async (req: Request, res: Response) => {
-  const { id } = req.params;
-  // Call the service method to get the subscription-duration by ID and get the result
-  const result = await subscriptionDurationServices.getSubscriptionDurationById(id as string);
-  if (!result) throw new Error('Subscription-duration not found');
-  // Send a success response with the retrieved resource data
-  ServerResponse(res, true, 200, 'Subscription-duration retrieved successfully', result);
-});
+export const getSubscriptionDurationById = catchAsync(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const { id } = req.params;
+    // Extract user role if authenticated
+    const userRole = req.user?.role as UserRole;
+    // Call the service method to get the subscription-duration by ID and get the result
+    const result = await subscriptionDurationServices.getSubscriptionDurationById(
+      id as string,
+      userRole
+    );
+    if (!result) throw new Error('Subscription-duration not found');
+    // Send a success response with the retrieved resource data
+    ServerResponse(res, true, 200, 'Subscription-duration retrieved successfully', result);
+  }
+);
 
 /**
  * Controller function to handle the retrieval of multiple subscription-durations.
@@ -107,17 +115,21 @@ export const getSubscriptionDurationById = catchAsync(async (req: Request, res: 
  * @returns {Promise<Partial<ISubscriptionDuration>[]>} - The retrieved subscription-durations.
  * @throws {Error} - Throws an error if the subscription-durations retrieval fails.
  */
-export const getManySubscriptionDuration = catchAsync(async (req: Request, res: Response) => {
-  // Use the validated and transformed query from Zod middleware
-  const query = (req as any).validatedQuery as SearchQueryInput;
-  // Call the service method to get multiple subscription-durations based on query parameters and get the result
-  const { subscriptionDurations, totalData, totalPages } =
-    await subscriptionDurationServices.getManySubscriptionDuration(query);
-  if (!subscriptionDurations) throw new Error('Failed to retrieve subscription-durations');
-  // Send a success response with the retrieved subscription-durations data
-  ServerResponse(res, true, 200, 'Subscription-durations retrieved successfully', {
-    subscriptionDurations,
-    totalData,
-    totalPages,
-  });
-});
+export const getManySubscriptionDuration = catchAsync(
+  async (req: AuthenticatedRequest, res: Response) => {
+    // Use the validated and transformed query from Zod middleware
+    const query = (req as any).validatedQuery as SearchQueryInput;
+    // Extract user role if authenticated
+    const userRole = req.user?.role as UserRole;
+    // Call the service method to get multiple subscription-durations based on query parameters and get the result
+    const { subscriptionDurations, totalData, totalPages } =
+      await subscriptionDurationServices.getManySubscriptionDuration(query, userRole);
+    if (!subscriptionDurations) throw new Error('Failed to retrieve subscription-durations');
+    // Send a success response with the retrieved subscription-durations data
+    ServerResponse(res, true, 200, 'Subscription-durations retrieved successfully', {
+      subscriptionDurations,
+      totalData,
+      totalPages,
+    });
+  }
+);

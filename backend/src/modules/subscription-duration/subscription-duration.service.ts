@@ -1,5 +1,6 @@
+import mongoose from 'mongoose';
 import { IdOrIdsInput, SearchQueryInput } from '../../handlers/common-zod-validator';
-import { ISubscriptionDuration, SubscriptionDuration } from '../../models';
+import { ISubscriptionDuration, SubscriptionDuration, UserRole } from '../../models';
 import {
   CreateSubscriptionDurationInput,
   UpdateSubscriptionDurationInput,
@@ -106,13 +107,22 @@ const deleteManySubscriptionDuration = async (
  * Service function to retrieve a single subscription-duration by ID.
  *
  * @param {IdOrIdsInput['id']} id - The ID of the subscription-duration to retrieve.
+ * @param {UserRole} userRole - The role of the user making the request (to determine access level).
  * @returns {Promise<Partial<ISubscriptionDuration>>} - The retrieved subscription-duration.
  */
 const getSubscriptionDurationById = async (
-  id: IdOrIdsInput['id']
+  id: IdOrIdsInput['id'],
+  userRole: UserRole
 ): Promise<Partial<ISubscriptionDuration | null>> => {
+  // Determine if user is super admin (has access to all pricing)
+  const isSuperAdmin = userRole === UserRole.SUPER_ADMIN;
+  // Build query - filter by isActive if not super admin
+  const query: any = { _id: new mongoose.Types.ObjectId(id) };
+  if (!isSuperAdmin) {
+    query.isActive = true;
+  }
   // Find the subscription-duration by ID
-  const subscriptionDuration = await SubscriptionDuration.findById(id);
+  const subscriptionDuration = await SubscriptionDuration.findOne(query);
   return subscriptionDuration;
 };
 
@@ -120,16 +130,19 @@ const getSubscriptionDurationById = async (
  * Service function to retrieve multiple subscription-durations based on query parameters.
  *
  * @param {SearchQueryInput} query - The query parameters for filtering subscription-duration.
+ * @param {UserRole} userRole - The role of the user making the request (to determine access level).
  * @returns {Promise<Partial<ISubscriptionDuration>[]>} - The retrieved subscription-duration.
  */
 const getManySubscriptionDuration = async (
-  query: SearchQueryInput
+  query: SearchQueryInput,
+  userRole: UserRole
 ): Promise<{
   subscriptionDurations: Partial<ISubscriptionDuration>[];
   totalData: number;
   totalPages: number;
 }> => {
   const { searchKey = '', showPerPage = 10, pageNo = 1 } = query;
+  const isSuperAdmin = userRole === UserRole.SUPER_ADMIN;
   // Build the search filter based on the search key
   const searchFilter = {
     $or: [
@@ -137,6 +150,10 @@ const getManySubscriptionDuration = async (
       { durationInDays: Number(searchKey) || -1 }, // convert searchKey to number
     ],
   };
+  // If user is not super admin, add filter to show only active subscription-durations
+  if (!isSuperAdmin) {
+    Object.assign(searchFilter, { isActive: true });
+  }
   // Calculate the number of items to skip based on the page number
   const skipItems = (pageNo - 1) * showPerPage;
   // Find the total count of matching subscription-durations
