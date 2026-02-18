@@ -37,7 +37,7 @@ export type IdOrIdsInput = z.infer<typeof zodIdSchema>;
 /**
  * Zod schema for validating pagination & search query parameters.
  */
-const zodSearchQuerySchema = z
+export const zodSearchQuerySchema = z
   .object({
     searchKey: z.string({ message: 'Please specify the search key' }).optional(),
 
