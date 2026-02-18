@@ -30,7 +30,7 @@ const zodCreatePaymentSchema = z
 export type CreatePaymentInput = z.infer<typeof zodCreatePaymentSchema>;
 
 /**
- * Named validators — use these directly in your Express routes
+ * Named validators — use these directly in your Express route
  */
 export const validateCreatePayment = validateBody(zodCreatePaymentSchema);
 
