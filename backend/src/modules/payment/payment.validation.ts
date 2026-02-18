@@ -1,3 +1,4 @@
+import { isMongoId } from 'validator';
 import { z } from 'zod';
 import { validateBody } from '../../handlers/zod-error-handler';
 
@@ -20,11 +21,9 @@ import { validateBody } from '../../handlers/zod-error-handler';
  */
 const zodCreatePaymentSchema = z
   .object({
-    // Example fields — replace / expand as needed:
-    // name: z.string({ message: 'Payment name is required' }).min(2, 'Name must be at least 2 characters').max(100),
-    // email: z.string().email({ message: 'Invalid email format' }),
-    // age: z.number().int().positive().optional(),
-    // status: z.enum(['active', 'inactive', 'pending']).default('pending'),
+    subscriptionPricingId: z
+      .string()
+      .refine(isMongoId, { message: 'Please provide a valid MongoDB ObjectId' }),
   })
   .strict();
 
@@ -34,3 +33,4 @@ export type CreatePaymentInput = z.infer<typeof zodCreatePaymentSchema>;
  * Named validators — use these directly in your Express routes
  */
 export const validateCreatePayment = validateBody(zodCreatePaymentSchema);
+
