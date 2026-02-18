@@ -201,6 +201,17 @@ const getManySubscriptionPricing = async (
         as: 'subscriptionDuration',
       },
     },
+    // Extra active check for non-super-admin
+    ...(!isSuperAdmin
+      ? [
+          {
+            $match: {
+              'subscriptionPlan.isActive': true,
+              'subscriptionDuration.isActive': true,
+            },
+          },
+        ]
+      : []),
     { $unwind: { path: '$subscriptionDuration', preserveNullAndEmptyArrays: true } },
     // Search filter
     ...(searchKey

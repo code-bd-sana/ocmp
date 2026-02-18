@@ -128,7 +128,7 @@ router.get(
  */
 router.get(
   '/:id',
-  isAuthorized({}),
+  isAuthorized({ isOptional: true }),
   authorizedRoles([UserRole.SUPER_ADMIN]),
   validateId,
   getSubscriptionDurationById

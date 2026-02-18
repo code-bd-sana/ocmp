@@ -102,7 +102,7 @@ router.delete(
 /**
  * @route GET /api/v1/subscription-plan
  * @description Get multiple subscription-plans
- * @access Private
+ * @access Public (with optional authentication)
  * @param {function} isAuthorized - Middleware to check if the user is authenticated
  * @param {function} authorizedRoles - Middleware to check if the user has the required role(s) (SUPER_ADMIN)
  * @param {function} validation - ['validateSearchQueries']
@@ -110,7 +110,7 @@ router.delete(
  */
 router.get(
   '/',
-  isAuthorized(),
+  isAuthorized({ isOptional: true }),
   authorizedRoles([UserRole.SUPER_ADMIN]),
   validateSearchQueries,
   getManySubscriptionPlan
@@ -119,7 +119,7 @@ router.get(
 /**
  * @route GET /api/v1/subscription-plan/:id
  * @description Get a subscription-plan by ID
- * @access Private
+ * @access Public (with optional authentication)
  * @param {function} isAuthorized - Middleware to check if the user is authenticated
  * @param {function} authorizedRoles - Middleware to check if the user has the required role(s) (SUPER_ADMIN)
  * @param {IdOrIdsInput['id']} id - The ID of the subscription-plan to retrieve
@@ -128,7 +128,7 @@ router.get(
  */
 router.get(
   '/:id',
-  isAuthorized(),
+  isAuthorized({ isOptional: true }),
   authorizedRoles([UserRole.SUPER_ADMIN]),
   validateId,
   getSubscriptionPlanById

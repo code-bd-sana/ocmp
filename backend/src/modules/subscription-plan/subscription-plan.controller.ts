@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import { SearchQueryInput } from '../../handlers/common-zod-validator';
 import ServerResponse from '../../helpers/responses/custom-response';
 import { AuthenticatedRequest } from '../../middlewares/is-authorized';
+import { UserRole } from '../../models';
 import catchAsync from '../../utils/catch-async/catch-async';
 import { subscriptionPlanServices } from './subscription-plan.service';
 
@@ -88,14 +89,18 @@ export const deleteManySubscriptionPlan = catchAsync(async (req: Request, res: R
  * @returns {Promise<Partial<ISubscriptionPlan>>} - The retrieved subscription-plan.
  * @throws {Error} - Throws an error if the subscriptionPlan retrieval fails.
  */
-export const getSubscriptionPlanById = catchAsync(async (req: Request, res: Response) => {
-  const { id } = req.params;
-  // Call the service method to get the subscription-plan by ID and get the result
-  const result = await subscriptionPlanServices.getSubscriptionPlanById(id as string);
-  if (!result) throw new Error('Subscription-plan not found');
-  // Send a success response with the retrieved resource data
-  ServerResponse(res, true, 200, 'Subscription-plan retrieved successfully', result);
-});
+export const getSubscriptionPlanById = catchAsync(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const { id } = req.params;
+    // Extract user role if authenticated
+    const userRole = req.user?.role as UserRole;
+    // Call the service method to get the subscription-plan by ID and get the result
+    const result = await subscriptionPlanServices.getSubscriptionPlanById(id as string, userRole);
+    if (!result) throw new Error('Subscription-plan not found');
+    // Send a success response with the retrieved resource data
+    ServerResponse(res, true, 200, 'Subscription-plan retrieved successfully', result);
+  }
+);
 
 /**
  * Controller function to handle the retrieval of multiple subscription-plans.
@@ -105,17 +110,21 @@ export const getSubscriptionPlanById = catchAsync(async (req: Request, res: Resp
  * @returns {Promise<Partial<ISubscriptionPlan>[]>} - The retrieved subscription-plans.
  * @throws {Error} - Throws an error if the subscription-plans retrieval fails.
  */
-export const getManySubscriptionPlan = catchAsync(async (req: Request, res: Response) => {
-  // Use the validated and transformed query from Zod middleware
-  const query = (req as any).validatedQuery as SearchQueryInput;
-  // Call the service method to get multiple subscription-plans based on query parameters and get the result
-  const { subscriptionPlans, totalData, totalPages } =
-    await subscriptionPlanServices.getManySubscriptionPlan(query);
-  if (!subscriptionPlans) throw new Error('Failed to retrieve subscription-plans');
-  // Send a success response with the retrieved subscription-plans data
-  ServerResponse(res, true, 200, 'Subscription-plans retrieved successfully', {
-    subscriptionPlans,
-    totalData,
-    totalPages,
-  });
-});
+export const getManySubscriptionPlan = catchAsync(
+  async (req: AuthenticatedRequest, res: Response) => {
+    // Use the validated and transformed query from Zod middleware
+    const query = (req as any).validatedQuery as SearchQueryInput;
+    // Extract user role if authenticated
+    const userRole = req.user?.role as UserRole;
+    // Call the service method to get multiple subscription-plans based on query parameters and get the result
+    const { subscriptionPlans, totalData, totalPages } =
+      await subscriptionPlanServices.getManySubscriptionPlan(query, userRole);
+    if (!subscriptionPlans) throw new Error('Failed to retrieve subscription-plans');
+    // Send a success response with the retrieved subscription-plans data
+    ServerResponse(res, true, 200, 'Subscription-plans retrieved successfully', {
+      subscriptionPlans,
+      totalData,
+      totalPages,
+    });
+  }
+);
