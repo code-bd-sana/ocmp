@@ -23,11 +23,17 @@ router.use(isAuthorized());
  * @description Create a new payment
  * @access Private
  * @param {function} isAuthorized - Middleware to check if the user is authenticated
- * @param {function} authorizedRoles - Middleware to check if the user has the required role(s) (SUPER_ADMIN)
+ * @param {function} authorizedRoles - Middleware to check if the user has the required role(s) ([UserRole.TRANSPORT_MANAGER, UserRole.STANDALONE_USER])
  * @param {function} validation - ['validateCreatePayment']
  * @param {function} controller - ['createPayment']
  */
-router.post('/', authorizedRoles([UserRole.SUPER_ADMIN]), validateCreatePayment, createPayment);
+router.post(
+  '/',
+  // TODO: need to remove the super admin role from this route after testing
+  authorizedRoles([UserRole.SUPER_ADMIN, UserRole.TRANSPORT_MANAGER, UserRole.STANDALONE_USER]),
+  validateCreatePayment,
+  createPayment
+);
 
 /**
  * @route GET /api/v1/payment/many
