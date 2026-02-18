@@ -13,6 +13,7 @@ import { paymentServices } from './payment.service';
  * @throws {Error} - Throws an error if the payment creation fails.
  */
 export const createPayment = catchAsync(async (req: Request, res: Response) => {
+  console.log(req.body, 'Make payment controller');
   // Call the service method to create a new payment and get the result
   const result = await paymentServices.createPayment(req.body);
   if (!result) throw new Error('Failed to create payment');
@@ -58,3 +59,4 @@ export const getManyPayment = catchAsync(async (req: Request, res: Response) => 
     totalPages,
   });
 });
+
