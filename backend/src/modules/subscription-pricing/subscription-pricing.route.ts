@@ -60,14 +60,14 @@ router.patch(
 );
 
 /**
- * @route DELETE /api/v1/subscription-pricing/many
+ * @route GET /api/v1/subscription-pricing/many
  * @description Delete multiple subscription-pricing(s)
  * @access Private
  * @param {function} middleware - ['isAuthorized', 'authorizedRoles']
  * @param {function} validation - ['validateIds']
  * @param {function} controller - ['deleteManySubscriptionPricing']
  */
-router.delete(
+router.get(
   '/many',
   isAuthorized(),
   authorizedRoles([UserRole.SUPER_ADMIN]),
