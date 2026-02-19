@@ -9,6 +9,7 @@ import { CreatePaymentInput } from './payment.validation';
  * @returns {Promise<Partial<any>>} - The created payment.
  */
 const createPayment = async (data: CreatePaymentInput): Promise<Partial<any>> => {
+  // TODO: check any plan already purchased by the user, if yes, then don't allow to purchase any more plan until the existing plan expires
   return 'This is a placeholder implementation for the createPayment service function. You should replace this with your actual logic to create a payment using your database model (e.g., Mongoose, Sequelize, etc.). The function currently returns a dummy object for demonstration purposes.';
 };
 
