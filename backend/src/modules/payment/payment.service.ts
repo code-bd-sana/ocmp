@@ -312,5 +312,4 @@ export const paymentServices = {
   createPayment,
   stripePaymentWebHook,
   getPaymentById,
-  getManyPayment,
 };
