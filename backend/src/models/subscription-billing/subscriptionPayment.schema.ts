@@ -1,8 +1,8 @@
 import mongoose, { Document, Schema } from 'mongoose';
+import { SubscriptionInvoiceStatus } from './subscriptionInvoice.schema';
 
 export enum SubscriptionPaymentMethod {
   CARD = 'CARD',
-  STRIPE = 'STRIPE',
   CASH = 'CASH',
   MANUAL = 'MANUAL',
 }
@@ -12,7 +12,7 @@ export interface ISubscriptionPayment extends Document {
   subscriptionInvoiceId: mongoose.Types.ObjectId;
   transactionId?: string;
   paidAmount?: number;
-  paymentStatus?: string;
+  paymentStatus?: SubscriptionInvoiceStatus;
   paidAt?: Date;
   paymentMethod?: SubscriptionPaymentMethod;
 }
@@ -33,6 +33,7 @@ const SubscriptionPaymentSchema: Schema<ISubscriptionPayment> = new Schema(
     },
     paymentStatus: {
       type: String,
+      enum: Object.values(SubscriptionInvoiceStatus),
     },
     paidAt: {
       type: Date,

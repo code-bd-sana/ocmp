@@ -81,10 +81,6 @@ export {
   default as SubscriptionTrial,
 } from './subscription-billing/subscriptionTrial.schema';
 export {
-  ISubscriptionUsageLog,
-  default as SubscriptionUsageLog,
-} from './subscription-billing/subscriptionUsageLog.schema';
-export {
   IUserSubscription,
   SubscriptionStatus,
   default as UserSubscription,
