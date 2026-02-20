@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { SearchQueryInput } from '../../handlers/common-zod-validator';
 import ServerResponse from '../../helpers/responses/custom-response';
+import { AuthenticatedRequest } from '../../middlewares/is-authorized';
 import catchAsync from '../../utils/catch-async/catch-async';
 import { paymentServices } from './payment.service';
 
@@ -12,13 +13,21 @@ import { paymentServices } from './payment.service';
  * @returns {Promise<Partial<IPayment>>} - The created payment.
  * @throws {Error} - Throws an error if the payment creation fails.
  */
-export const createPayment = catchAsync(async (req: Request, res: Response) => {
-  console.log(req.body, 'Make payment controller');
+export const createPayment = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+  const userId = req.user!._id;
+  // Attach the user ID to the request body for use in the service layer
+  req.body.userId = userId;
   // Call the service method to create a new payment and get the result
-  const result = await paymentServices.createPayment(req.body);
+  const result = await paymentServices.createPayment(userId, req.body);
   if (!result) throw new Error('Failed to create payment');
   // Send a success response with the created payment data
   ServerResponse(res, true, 201, 'Payment created successfully', result);
+});
+
+export const stripePaymentWebHook = catchAsync(async (req: Request, res: Response) => {
+  await paymentServices.stripePaymentWebHook(req);
+  // Send a success response to acknowledge receipt of the webhook event
+  res.status(200).send('Webhook received successfully');
 });
 
 /**
@@ -59,4 +68,3 @@ export const getManyPayment = catchAsync(async (req: Request, res: Response) => 
     totalPages,
   });
 });
-

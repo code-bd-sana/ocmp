@@ -4,6 +4,7 @@ dotenv.config();
 
 interface Config {
   BASE_URL: string;
+  CLIENT_URL: string;
   PORT: number;
   EMAIL_VERIFICATION_REDIRECT_URI: string;
   PASSWORD_RESET_REDIRECT_URI: string;
@@ -27,18 +28,14 @@ interface Config {
   REDIS_URL: string;
   REDIS_HOST: string;
   REDIS_PORT: string;
-  KEYCLOAK_HOST: string;
-  KEYCLOAK_REALM: string;
-  KEYCLOAK_ADMIN_CLIENT_ID: string;
-  KEYCLOAK_CLIENT_ID: string;
-  KEYCLOAK_CLIENT_SECRET: string;
-  KEYCLOAK_ADMIN_PASSWORD: string;
-  KEYCLOAK_ADMIN_USERNAME: string;
-  KEYCLOAK_GRANT_TYPE: string;
+  STRIPE_PUBLISHER_KEY: string;
+  STRIPE_SECRET_KEY: string;
+  STRIPE_WEBHOOK_SECRET: string;
 }
 
 const config: Config = {
   BASE_URL: process.env.BASE_URL as string,
+  CLIENT_URL: process.env.CLIENT_URL || 'http://localhost:3000',
   PORT: parseInt(process.env.PORT as string, 10),
   EMAIL_VERIFICATION_REDIRECT_URI: process.env.EMAIL_VERIFICATION_REDIRECT_URI as string,
   PASSWORD_RESET_REDIRECT_URI: process.env.PASSWORD_RESET_REDIRECT_URI as string,
@@ -68,14 +65,9 @@ const config: Config = {
   REDIS_URL: process.env.REDIS_URL as string,
   REDIS_HOST: process.env.REDIS_HOST as string,
   REDIS_PORT: process.env.REDIS_PORT as string,
-  KEYCLOAK_HOST: process.env.KEYCLOAK_HOST as string,
-  KEYCLOAK_REALM: process.env.KEYCLOAK_REALM as string,
-  KEYCLOAK_ADMIN_CLIENT_ID: process.env.KEYCLOAK_ADMIN_CLIENT_ID as string,
-  KEYCLOAK_CLIENT_ID: process.env.KEYCLOAK_CLIENT_ID as string,
-  KEYCLOAK_CLIENT_SECRET: process.env.KEYCLOAK_CLIENT_SECRET as string,
-  KEYCLOAK_ADMIN_PASSWORD: process.env.KEYCLOAK_ADMIN_PASSWORD as string,
-  KEYCLOAK_ADMIN_USERNAME: process.env.KEYCLOAK_ADMIN_USERNAME as string,
-  KEYCLOAK_GRANT_TYPE: process.env.KEYCLOAK_GRANT_TYPE as string,
+  STRIPE_PUBLISHER_KEY: process.env.STRIPE_PUBLISHER_KEY as string,
+  STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY as string,
+  STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET as string,
 };
 
 export default config;

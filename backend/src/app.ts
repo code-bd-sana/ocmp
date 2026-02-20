@@ -31,6 +31,8 @@ const app: Application = express();
 const publicDirPath = path.join(__dirname, '..', 'public');
 
 // Middleware setup
+app.use('/api/v1/payment/webhook', express.raw({ type: 'application/json' }));
+
 app.use(express.json({ limit: config.MAX_JSON_SIZE }));
 
 app.use(express.urlencoded({ extended: config.URL_ENCODED }));

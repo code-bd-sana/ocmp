@@ -1,10 +1,10 @@
 import { createClient, RedisClientType } from 'redis';
+import config from '../../config/config';
 import { logMessage } from '../logger/logger';
 
 // Construct Redis URL from environment variables or use default
 const redisUrl =
-  process.env.REDIS_URL ||
-  `redis://${process.env.REDIS_HOST || '127.0.0.1'}:${process.env.REDIS_PORT || '6379'}`;
+  config.REDIS_URL || `redis://${config.REDIS_HOST || '127.0.0.1'}:${config.REDIS_PORT || '6379'}`;
 
 // Create Redis client
 export const client: RedisClientType = createClient({ url: redisUrl });

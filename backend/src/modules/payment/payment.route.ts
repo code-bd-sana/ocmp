@@ -2,9 +2,15 @@
 import { Router } from 'express';
 
 // Import controller from corresponding module
-import { createPayment, getManyPayment, getPaymentById } from './payment.controller';
+import {
+  createPayment,
+  getManyPayment,
+  getPaymentById,
+  stripePaymentWebHook,
+} from './payment.controller';
 
 //Import validation from corresponding module
+import config from '../../config/config';
 import { validateId, validateSearchQueries } from '../../handlers/common-zod-validator';
 import authorizedRoles from '../../middlewares/authorized-roles';
 import isAuthorized from '../../middlewares/is-authorized';
@@ -13,9 +19,6 @@ import { validateCreatePayment } from './payment.validation';
 
 // Initialize router
 const router = Router();
-
-// Use isAuthorized middleware for all routes in this router
-router.use(isAuthorized());
 
 // Define route handlers
 /**
@@ -28,12 +31,33 @@ router.use(isAuthorized());
  * @param {function} controller - ['createPayment']
  */
 router.post(
-  '/',
+  '',
   // TODO: need to remove the super admin role from this route after testing
+  isAuthorized(),
   authorizedRoles([UserRole.SUPER_ADMIN, UserRole.TRANSPORT_MANAGER, UserRole.STANDALONE_USER]),
   validateCreatePayment,
   createPayment
 );
+
+/**
+ * @route POST /api/v1/payment/webhook
+ * @description Handle Stripe payment webhook events
+ * @access Public (Stripe will call this endpoint)
+ * @param {function} controller - ['stripePaymentWebHook']
+ */
+router.post('/webhook', stripePaymentWebHook);
+
+/**
+ * @route GET /api/v1/payment/config
+ * @description Get Stripe configuration (e.g., publishable key)
+ * @access Public
+ * @param {function} controller - ['getStripeConfig']
+ */
+router.get('/config', (req, res) => {
+  res.json({
+    publishableKey: config.STRIPE_PUBLISHER_KEY,
+  });
+});
 
 /**
  * @route GET /api/v1/payment/many
@@ -58,4 +82,3 @@ router.get('/:id', validateId, getPaymentById);
 
 // Export the router
 module.exports = router;
-
