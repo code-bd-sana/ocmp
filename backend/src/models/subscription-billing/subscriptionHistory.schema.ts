@@ -7,7 +7,6 @@ export interface ISubscriptionHistory extends Document {
   subscriptionDurationId: mongoose.Types.ObjectId;
   startDate?: Date;
   endDate?: Date;
-  status?: string;
   changedAt: Date;
 }
 
@@ -34,14 +33,6 @@ const SubscriptionHistorySchema: Schema<ISubscriptionHistory> = new Schema(
     },
     endDate: {
       type: Date,
-    },
-    status: {
-      type: String,
-    },
-    changedAt: {
-      type: Date,
-      required: true,
-      default: Date.now,
     },
   },
   { timestamps: true, versionKey: false }

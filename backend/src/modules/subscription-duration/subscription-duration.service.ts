@@ -3,6 +3,7 @@ import { IdOrIdsInput, SearchQueryInput } from '../../handlers/common-zod-valida
 import {
   ISubscriptionDuration,
   SubscriptionDuration,
+  SubscriptionHistory,
   SubscriptionPricing,
   UserRole,
   UserSubscription,
@@ -46,41 +47,51 @@ const updateSubscriptionDuration = async (
   id: IdOrIdsInput['id'],
   data: UpdateSubscriptionDurationInput
 ): Promise<Partial<ISubscriptionDuration | null>> => {
-  // ! Update Guard: Restrict modification of subscription-duration when it is in active use.
+  // Check if the subscription-duration exists
+  const [durationInPricing, durationInUserSubscription, subscriptionHistory] = await Promise.all([
+    await SubscriptionPricing.exists({ subscriptionDurationId: new mongoose.Types.ObjectId(id) }),
+    await UserSubscription.exists({ subscriptionDurationId: new mongoose.Types.ObjectId(id) }),
+    await SubscriptionHistory.exists({ subscriptionDurationId: new mongoose.Types.ObjectId(id) }),
+  ]);
 
-  const isDurationReferenced = await SubscriptionPricing.exists({ subscriptionDurationId: id });
-  const hasAnyUserPurchasedReferencedDuration = isDurationReferenced
-    ? await UserSubscription.exists({
-        subscriptionPricingId: {
-          $in: await SubscriptionPricing.find({ subscriptionDurationId: id }).distinct('_id'),
-        },
-      })
-    : false;
-
-  if (hasAnyUserPurchasedReferencedDuration) {
-    const updateFields = Object.keys(data);
-    const isOnlyStatusUpdate =
-      updateFields.length > 0 && updateFields.every((key) => key === 'isActive');
-
-    if (!isOnlyStatusUpdate) {
+  // If this subscription-duration is currently in use in any subscription or subscription history, only allow updating the isActive field. If trying to update any other field, throw an error. If trying to update the isActive field, allow it but throw a warning message about the impact of changing the status.
+  if (durationInPricing || durationInUserSubscription || subscriptionHistory) {
+    // If trying to update any field other than isActive, throw an error
+    if (data.isActive === undefined) {
       throw new Error(
-        'Cannot update this duration after users have purchased it. Only isActive can be changed.'
+        'This subscription-duration is currently in use. You can only update the status (isActive) field.'
       );
     }
-  }
 
-  if (!hasAnyUserPurchasedReferencedDuration) {
-    // Check for duplicate name and durationInDays combination
-    const existingDuration = await SubscriptionDuration.findOne({
-      _id: { $ne: id }, // Exclude the current document
-      $or: [{ name: data.name?.toUpperCase() }, { durationInDays: data.durationInDays }],
-    });
-    // Prevent duplicate updates
-    if (existingDuration) {
-      throw new Error('A subscription-duration with the same name or duration already exists.');
+    // If trying to update the isActive field, allow it but throw a warning message about the impact of changing the status
+    if (data.isActive === false) {
+      await SubscriptionDuration.findByIdAndUpdate(id, { isActive: false }, { new: true });
+
+      throw new Error(
+        'This subscription-duration has been deactivated successfully. However, it is currently in use by some active subscriptions. Users with those subscriptions will continue to have access until their subscription expires, but no new users will be able to subscribe to it.'
+      );
+    } else if (data.isActive === true) {
+      await SubscriptionDuration.findByIdAndUpdate(id, { isActive: true }, { new: true });
+
+      throw new Error(
+        'This subscription-duration has been activated successfully. Users can now subscribe to it.'
+      );
     }
+
+    throw new Error(
+      'This subscription-duration is currently in use. You can only update the status (isActive) field.'
+    );
   }
 
+  // Check for duplicate name and durationInDays combination
+  const existingDuration = await SubscriptionDuration.findOne({
+    _id: { $ne: id }, // Exclude the current document
+    $or: [{ name: data.name?.toUpperCase() }, { durationInDays: data.durationInDays }],
+  });
+  // Prevent duplicate updates
+  if (existingDuration) {
+    throw new Error('A subscription-duration with the same name or duration already exists.');
+  }
   // Proceed to update the subscription-duration
   const updatedSubscriptionDuration = await SubscriptionDuration.findByIdAndUpdate(id, data, {
     new: true,
@@ -97,15 +108,20 @@ const updateSubscriptionDuration = async (
 const deleteSubscriptionDuration = async (
   id: IdOrIdsInput['id']
 ): Promise<Partial<ISubscriptionDuration | null>> => {
-  // ! If this duration is implemented in any subscription and that subscription is used by any user, do not allow deletion
+  // Check if the subscription-duration exists
+  const [durationInPricing, durationInUserSubscription, subscriptionHistory] = await Promise.all([
+    await SubscriptionPricing.exists({ subscriptionDurationId: new mongoose.Types.ObjectId(id) }),
+    await UserSubscription.exists({ subscriptionDurationId: new mongoose.Types.ObjectId(id) }),
+    await SubscriptionHistory.exists({ subscriptionDurationId: new mongoose.Types.ObjectId(id) }),
+  ]);
 
-  // TODO: * First, check if this duration exists in any subscription
-  // TODO: * Second, check if any user has taken this subscription
-  // TODO: * If taken by any user, throw a thorough error: 'This duration is already assigned to a user's subscription'
+  // If the subscription-duration is in use, do not allow deletion
+  if (durationInPricing || durationInUserSubscription || subscriptionHistory) {
+    throw new Error('This subscription-duration is currently in use. It cannot be deleted.');
+  }
 
   // Proceed to delete the subscription-duration
-  const deletedSubscriptionDuration = await SubscriptionDuration.findOneAndDelete({ _id: id });
-
+  const deletedSubscriptionDuration = await SubscriptionDuration.findByIdAndDelete(id);
   return deletedSubscriptionDuration;
 };
 
@@ -118,7 +134,25 @@ const deleteSubscriptionDuration = async (
 const deleteManySubscriptionDuration = async (
   ids: IdOrIdsInput['ids']
 ): Promise<Partial<ISubscriptionDuration>[]> => {
-  // ! If these durations are implemented in any subscription and that subscription is used by any user, do not allow deletion
+  // Check if any of the subscription-durations are in use
+  const [durationInPricing, durationInUserSubscription, subscriptionHistory] = await Promise.all([
+    await SubscriptionPricing.exists({
+      subscriptionDurationId: { $in: ids?.map((id) => new mongoose.Types.ObjectId(id)) },
+    }),
+    await UserSubscription.exists({
+      subscriptionDurationId: { $in: ids?.map((id) => new mongoose.Types.ObjectId(id)) },
+    }),
+    await SubscriptionHistory.exists({
+      subscriptionDurationId: { $in: ids?.map((id) => new mongoose.Types.ObjectId(id)) },
+    }),
+  ]);
+
+  // If any of the subscription-durations are in use, do not allow deletion
+  if (durationInPricing || durationInUserSubscription || subscriptionHistory) {
+    throw new Error(
+      'One or more subscription-durations are currently in use. They cannot be deleted.'
+    );
+  }
 
   // Proceed to delete the subscription-durations
   const subscriptionDurationToDelete = await SubscriptionDuration.find({ _id: { $in: ids } });

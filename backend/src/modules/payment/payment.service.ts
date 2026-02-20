@@ -1,16 +1,293 @@
-// Import the model
-import { IdOrIdsInput, SearchQueryInput } from '../../handlers/common-zod-validator';
+import { Request } from 'express';
+import mongoose from 'mongoose';
+import Stripe from 'stripe';
+import config from '../../config/config';
+import { IdOrIdsInput } from '../../handlers/common-zod-validator';
+import { AuthenticatedRequest } from '../../middlewares/is-authorized';
+import {
+  DiscountType,
+  SubscriptionCoupon,
+  SubscriptionHistory,
+  SubscriptionInvoice,
+  SubscriptionInvoiceStatus,
+  SubscriptionPayment,
+  SubscriptionPaymentMethod,
+  SubscriptionStatus,
+  UserSubscription,
+} from '../../models';
+import { subscriptionCouponServices } from '../subscription-coupon/subscription-coupon.service';
+import { subscriptionPricingServices } from '../subscription-pricing/subscription-pricing.service';
+import { getSubscriptionRemainingDays } from '../subscription-remain/subscription-remain.service';
 import { CreatePaymentInput } from './payment.validation';
+
+// Import the model
+
+export const stripe = new Stripe(config.STRIPE_SECRET_KEY as string, {
+  apiVersion: '2026-01-28.clover',
+});
 
 /**
  * Service function to create a new payment.
  *
+ * @param {AuthenticatedRequest} req - The authenticated request object containing user information.
  * @param {CreatePaymentInput} data - The data to create a new payment.
  * @returns {Promise<Partial<any>>} - The created payment.
  */
-const createPayment = async (data: CreatePaymentInput): Promise<Partial<any>> => {
-  // TODO: check any plan already purchased by the user, if yes, then don't allow to purchase any more plan until the existing plan expires
-  return 'This is a placeholder implementation for the createPayment service function. You should replace this with your actual logic to create a payment using your database model (e.g., Mongoose, Sequelize, etc.). The function currently returns a dummy object for demonstration purposes.';
+const createPayment = async (
+  req: AuthenticatedRequest,
+  data: CreatePaymentInput
+): Promise<Partial<any>> => {
+  // Check the user last subscription plan from the database and calculate remaining days
+  const userSubscription = await getSubscriptionRemainingDays(req.user!._id);
+
+  // If the user has an active subscription or trial, don't allow to purchase any more plan until the existing plan expires
+  if (userSubscription.endDate && userSubscription.endDate > new Date()) {
+    throw new Error(
+      'You already have an active subscription. Please wait until the current subscription expires before purchasing a new one.'
+    );
+  }
+
+  // If the subscription is lifetime, don't allow to purchase any more plan until the existing plan expires
+  if (userSubscription?.isLifetime) {
+    throw new Error('You have a lifetime subscription and cannot purchase another plan.');
+  }
+
+  const couponExist = await subscriptionCouponServices.getSubscriptionCouponByCode(
+    data.coupon || ''
+  );
+
+  if (data.coupon && !couponExist) {
+    throw new Error('Invalid coupon code');
+  }
+
+  if (couponExist && !couponExist.isActive) {
+    throw new Error('This coupon code is not valid anymore');
+  }
+
+  // Validate the coupon for the pricing and user eligibility if coupon code is provided
+  if (couponExist) {
+    const isValidForPricing = couponExist.subscriptionPricings?.some(
+      (pricingId) => pricingId.toString() === data.subscriptionPricingId
+    );
+    if (!isValidForPricing) {
+      throw new Error('This coupon code is not valid for the selected subscription pricing');
+    }
+    const isUserEligible = couponExist.users?.some(
+      (userId) => userId.toString() === req.user!._id.toString()
+    );
+    if (!isUserEligible) {
+      throw new Error('You are not eligible to use this coupon code');
+    }
+  }
+
+  // Check if the coupon is used by the user before if the coupon code is provided
+  if (couponExist) {
+    const hasUsedCoupon = couponExist.usedBy?.some(
+      (userId) => userId.toString() === req.user!._id.toString()
+    );
+
+    if (hasUsedCoupon) {
+      throw new Error('You have already used this coupon code before');
+    }
+  }
+
+  const subscriptionPricingId = data.subscriptionPricingId;
+
+  const subscriptionExist =
+    await subscriptionPricingServices.getSubscriptionPricingById(subscriptionPricingId);
+
+  if (!subscriptionExist) {
+    throw new Error('Subscription pricing not found');
+  }
+
+  if (!subscriptionExist.isActive) {
+    throw new Error('This subscription plan is not active currently');
+  }
+
+  if (subscriptionExist.price === undefined || subscriptionExist.price === null) {
+    throw new Error('Subscription price is not available');
+  }
+
+  // Calculate the discounted price if a valid coupon is applied
+  if (
+    couponExist &&
+    couponExist.discountValue !== undefined &&
+    couponExist.discountValue !== null
+  ) {
+    if (couponExist.discountType === DiscountType.PERCENTAGE) {
+      subscriptionExist.price = subscriptionExist.price * (1 - couponExist.discountValue / 100);
+    } else if (couponExist.discountType === DiscountType.FIXED) {
+      subscriptionExist.price = Math.max(0, subscriptionExist.price - couponExist.discountValue);
+    }
+  }
+
+  // Create Stripe Checkout Session for the new payment
+  const session = await stripe.checkout.sessions.create({
+    payment_method_types: ['card'],
+    mode: 'payment',
+    line_items: [
+      {
+        price_data: {
+          currency: 'GBP',
+          product_data: {
+            name: `Plan ${subscriptionExist.subscriptionPlanName} Subscription`,
+          },
+          unit_amount: Math.round(subscriptionExist.price * 100), // Convert price to pence
+        },
+        quantity: 1,
+      },
+    ],
+    success_url: `${config.CLIENT_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${config.CLIENT_URL}/cancel`,
+    customer_email: req.user!.email,
+    metadata: {
+      userId: req.user!._id,
+      userEmail: req.user!.email,
+      planDetails: JSON.stringify({
+        subscriptionPlanId: subscriptionExist._id,
+        subscriptionPlanName: subscriptionExist.subscriptionPlanName,
+        subscriptionDuration: subscriptionExist.subscriptionDuration,
+      }),
+      couponId: couponExist?._id?.toString() || null,
+      couponCode: data.coupon || null,
+    },
+  });
+
+  return {
+    sessionId: session.id,
+    checkoutUrl: session.url,
+    cancel: session.cancel_url,
+  };
+};
+
+/**
+ * Service function to handle Stripe payment webhook events.
+ *
+ * @param {Request} req - The request object containing the webhook event data.
+ * @returns {Promise<{ received: boolean }>} - An object indicating that the webhook event was received successfully.
+ * @throws {Error} - Throws an error if the webhook event processing fails.
+ */
+const stripePaymentWebHook = async (req: Request) => {
+  // Stripe sends the webhook event data as raw bytes, so we need to construct the event using the raw body and signature
+  const signature = req.headers['stripe-signature'];
+  const endpointSecret = config.STRIPE_WEBHOOK_SECRET || 'whsec_xxxxx';
+
+  // Validate the presence of the Stripe signature header
+  if (!signature || Array.isArray(signature)) {
+    throw new Error('Missing or invalid Stripe signature header');
+  }
+
+  // Construct the Stripe event using the raw body and signature to ensure the webhook is secure and valid
+  let event: Stripe.Event;
+
+  // Use the Stripe library's webhook construction method to validate the event and extract the event data
+
+  try {
+    event = stripe.webhooks.constructEvent(req.body, signature, endpointSecret);
+    if (event.type === 'checkout.session.completed') {
+      const session = event.data.object as Stripe.Checkout.Session;
+
+      if (!session.metadata) {
+        throw new Error('Session metadata is missing');
+      }
+
+      // Generate user subscription document in the database based on the session metadata and other relevant information
+      const userSubscriptionData = await UserSubscription.create({
+        userId: new mongoose.Types.ObjectId(session.metadata.userId),
+        subscriptionPlanId: new mongoose.Types.ObjectId(
+          JSON.parse(session.metadata.planDetails).subscriptionPlanId
+        ),
+        subscriptionDurationId: new mongoose.Types.ObjectId(
+          JSON.parse(session.metadata.planDetails).subscriptionDurationId
+        ),
+        subscriptionPricingId: new mongoose.Types.ObjectId(
+          JSON.parse(session.metadata.planDetails).subscriptionPricingId
+        ),
+        status: SubscriptionStatus.ACTIVE,
+        startDate: new Date(),
+        endDate: new Date(
+          Date.now() +
+            JSON.parse(session.metadata.planDetails).subscriptionDuration * 24 * 60 * 60 * 1000
+        ),
+      });
+
+      // Invoice number
+      const generateInvoiceNumber = () => {
+        const timestamp = Date.now().toString();
+        const randomSuffix = Math.floor(Math.random() * 1000)
+          .toString()
+          .padStart(3, '0');
+        return `INV-${timestamp}-${randomSuffix}`;
+      };
+
+      // Generate subscription invoice document in the database based on the session metadata and other relevant information
+      const invoice = await SubscriptionInvoice.create({
+        userId: new mongoose.Types.ObjectId(session.metadata.userId),
+        userSubscriptionId: userSubscriptionData._id,
+        invoiceNumber: generateInvoiceNumber(),
+        amount: session.amount_total ? session.amount_total / 100 : undefined, // Convert amount from pence to pounds
+        status:
+          session.payment_status === 'paid'
+            ? SubscriptionInvoiceStatus.PAID
+            : SubscriptionInvoiceStatus.FAILED,
+        stripeInvoiceId: session.invoice ? session.invoice.toString() : undefined,
+        couponId: session.metadata.couponId
+          ? new mongoose.Types.ObjectId(session.metadata.couponId)
+          : undefined,
+      });
+
+      // Generate Subscription history document in the database based on the session metadata and other relevant information
+      const subscriptionHistoryLog = await SubscriptionHistory.create({
+        userId: new mongoose.Types.ObjectId(session.metadata.userId),
+        subscriptionPlanId: new mongoose.Types.ObjectId(
+          JSON.parse(session.metadata.planDetails).subscriptionPlanId
+        ),
+        subscriptionDurationId: new mongoose.Types.ObjectId(
+          JSON.parse(session.metadata.planDetails).subscriptionDurationId
+        ),
+        startDate: new Date(),
+        endDate: new Date(
+          Date.now() +
+            JSON.parse(session.metadata.planDetails).subscriptionDuration * 24 * 60 * 60 * 1000
+        ),
+      });
+
+      // Generate Subscription payment log document in the database based on the session metadata and other relevant information
+      const subscriptionPaymentLog = await SubscriptionPayment.create({
+        subscriptionInvoiceId: new mongoose.Types.ObjectId(invoice._id),
+        transactionId: session.payment_intent ? session.payment_intent.toString() : undefined,
+        paidAmount: session.amount_total ? session.amount_total / 100 : undefined, // Convert amount from pence to pounds
+        paymentStatus:
+          session.payment_status === 'paid'
+            ? SubscriptionInvoiceStatus.PAID
+            : SubscriptionInvoiceStatus.FAILED,
+        paidAt: new Date(),
+        paymentMethod: SubscriptionPaymentMethod.CARD,
+      });
+
+      // Updated the coupon document to add the user to the usedBy array if a coupon code is applied
+      if (session.metadata.couponId) {
+        await SubscriptionCoupon.findByIdAndUpdate(session.metadata.couponId, {
+          $addToSet: { usedBy: new mongoose.Types.ObjectId(session.metadata.userId) },
+        });
+      }
+
+      console.log('Payment successful for session:', session.id);
+      console.log('User subscription created:', userSubscriptionData);
+      console.log('Invoice log -', invoice);
+      console.log('Subscription history log -', subscriptionHistoryLog);
+      console.log('Subscription payment log -', subscriptionPaymentLog);
+    }
+    if (event.type === 'payment_intent.succeeded') {
+      const paymentIntent = event.data.object as Stripe.PaymentIntent;
+      console.log('PaymentIntent was successful:', paymentIntent.id);
+    }
+  } catch (err) {
+    console.error('Error processing Stripe webhook:', err);
+    throw new Error(`Webhook Error: ${err instanceof Error ? err.message : 'Unknown error'}`);
+  }
+
+  return { received: true };
 };
 
 /**
@@ -19,31 +296,13 @@ const createPayment = async (data: CreatePaymentInput): Promise<Partial<any>> =>
  * @param {IdOrIdsInput['id']} id - The ID of the payment to retrieve.
  * @returns {Promise<Partial<any>>} - The retrieved payment.
  */
-const getPaymentById = async (id: IdOrIdsInput['id']): Promise<Partial<any | null>> => {
-  return 'This is a placeholder implementation for the getPaymentById service function. You should replace this with your actual logic to retrieve a payment by its ID using your database model (e.g., Mongoose, Sequelize, etc.). The function currently returns a dummy object for demonstration purposes.';
-};
-
-/**
- * Service function to retrieve multiple payment based on query parameters.
- *
- * @param {SearchQueryInput} query - The query parameters for filtering payment.
- * @returns {Promise<Partial<any>[]>} - The retrieved payment
- */
-const getManyPayment = async (
-  query: SearchQueryInput
-): Promise<{ payments: Partial<any>[]; totalData: number; totalPages: number }> => {
-  return {
-    payments: [
-      'This is a placeholder implementation for the getManyPayment service function. You should replace this with your actual logic to retrieve multiple payments using your database model (e.g., Mongoose, Sequelize, etc.). The function currently returns a dummy array of objects for demonstration purposes.',
-    ],
-    totalData: 1,
-    totalPages: 1,
-  };
+const getPaymentById = async (id: IdOrIdsInput['id']): Promise<Partial<any> | null> => {
+  return null;
 };
 
 export const paymentServices = {
   createPayment,
+  stripePaymentWebHook,
   getPaymentById,
   getManyPayment,
 };
-

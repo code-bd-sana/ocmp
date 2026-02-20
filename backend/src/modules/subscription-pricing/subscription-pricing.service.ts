@@ -5,10 +5,13 @@ import { IdOrIdsInput, SearchQueryInput } from '../../handlers/common-zod-valida
 import {
   ISubscriptionPricing,
   SubscriptionDuration,
+  SubscriptionHistory,
   SubscriptionPlan,
   SubscriptionPricing,
   UserRole,
+  UserSubscription,
 } from '../../models';
+import { TSubscriptionPricing } from './subscription-pricing.interface';
 import {
   CreateSubscriptionPricingInput,
   SubscriptionPricingSearchQueries,
@@ -23,7 +26,7 @@ import {
  */
 const createSubscriptionPricing = async (
   data: CreateSubscriptionPricingInput
-): Promise<Partial<ISubscriptionPricing>> => {
+): Promise<Partial<TSubscriptionPricing | null>> => {
   // Extract subscription plan and duration IDs from validated data
   const { subscriptionPlanId, subscriptionDurationId } = data;
   // Check if the subscription plan exists
@@ -52,7 +55,11 @@ const createSubscriptionPricing = async (
   }
   const newSubscriptionPricing = new SubscriptionPricing(data);
   const savedSubscriptionPricing = await newSubscriptionPricing.save();
-  return savedSubscriptionPricing;
+
+  return await getSubscriptionPricingById(
+    savedSubscriptionPricing._id.toString(),
+    UserRole.SUPER_ADMIN
+  );
 };
 
 /**
@@ -60,12 +67,12 @@ const createSubscriptionPricing = async (
  *
  * @param {IdOrIdsInput['id']} id - The ID of the subscription-pricing to update.
  * @param {UpdateSubscriptionPricingInput} data - The updated data for the subscription-pricing.
- * @returns {Promise<Partial<ISubscriptionPricing>>} - The updated subscription-pricing.
+ * @returns {Promise<Partial<TSubscriptionPricing>>} - The updated subscription-pricing.
  */
 const updateSubscriptionPricing = async (
   id: IdOrIdsInput['id'],
   data: UpdateSubscriptionPricingInput
-): Promise<Partial<ISubscriptionPricing | null>> => {
+): Promise<Partial<TSubscriptionPricing | null>> => {
   // Check for duplicate (filed) combination
   const existingSubscriptionPricing = await SubscriptionPricing.findOne({
     subscriptionPlanId: data.subscriptionPlanId,
@@ -77,15 +84,45 @@ const updateSubscriptionPricing = async (
       'Duplicate detected: Another subscription-pricing with the same fieldName already exists.'
     );
   }
-  // ! If this subscription-pricing is currently active, prevent updates to core fields (subscriptionPlanId, subscriptionDurationId) and allow only price, currency, and isActive status updates.
 
-  // TODO: First check if any user has purchased this subscription pricing
-  // TODO: if (purchased) => then subscriptionPlanId and subscriptionDurationId not allow to update, only price, currency and isActive allow to update
+  // Check if the subscription-plan exists
+  const [durationInUserSubscription, subscriptionHistory] = await Promise.all([
+    await UserSubscription.exists({ subscriptionDurationId: new mongoose.Types.ObjectId(id) }),
+    await SubscriptionHistory.exists({ subscriptionDurationId: new mongoose.Types.ObjectId(id) }),
+  ]);
+
+  if (durationInUserSubscription || subscriptionHistory) {
+    // If trying to update any field other than isActive, throw an error
+    if (data.isActive === undefined) {
+      throw new Error(
+        'This subscription pricing is currently in use. You can only update the status of this subscription pricing. If you want to update any other field, please create a new subscription pricing with the desired changes and deactivate this one.'
+      );
+    }
+
+    // If trying to update the isActive field, allow it but throw a warning message about the impact of changing the status.
+    if (data.isActive === false) {
+      await SubscriptionPricing.findByIdAndUpdate(id, { isActive: false });
+
+      throw new Error(
+        'This subscription pricing has been deactivated. Please note that deactivating a subscription pricing will prevent new purchases of this plan-duration combination, but it will not affect existing subscriptions. Existing subscribers will continue to have access until their current subscription period ends.'
+      );
+    } else if (data.isActive === true) {
+      await SubscriptionPricing.findByIdAndUpdate(id, { isActive: true });
+
+      throw new Error(
+        'This subscription pricing has been re-activated. Please note that re-activating a subscription pricing will allow new purchases of this plan-duration combination, but it will not affect existing subscriptions. Existing subscribers will continue to have access as long as their subscription is active.'
+      );
+    }
+
+    throw new Error(
+      'This subscription pricing is currently in use. You can only update the status of this subscription pricing. If you want to update any other field, please create a new subscription pricing with the desired changes and deactivate this one.'
+    );
+  }
+
   // Proceed to update the subscription-pricing
-  const updatedSubscriptionPricing = await SubscriptionPricing.findByIdAndUpdate(id, data, {
-    new: true,
-  });
-  return updatedSubscriptionPricing;
+  await SubscriptionPricing.findByIdAndUpdate(id, data);
+
+  return await getSubscriptionPricingById(id, UserRole.SUPER_ADMIN);
 };
 
 /**
@@ -97,10 +134,19 @@ const updateSubscriptionPricing = async (
 const deleteSubscriptionPricing = async (
   id: IdOrIdsInput['id']
 ): Promise<Partial<ISubscriptionPricing | null>> => {
-  // ! if any user purchased this subscription pricing already then not allowed to delete this subscription pricing
+  // Check if the subscription-plan exists
+  const [durationInUserSubscription, subscriptionHistory] = await Promise.all([
+    await UserSubscription.exists({ subscriptionDurationId: new mongoose.Types.ObjectId(id) }),
+    await SubscriptionHistory.exists({ subscriptionDurationId: new mongoose.Types.ObjectId(id) }),
+  ]);
 
-  // TODO: First check if any user has purchased this subscription pricing
-  // TODO: if (purchased) => then not allowed to delete this subscription pricing
+  // If this subscription-duration is currently in use in any subscription or subscription history, do not allow deleting this subscription pricing. If trying to delete, throw an error message about the impact of deleting this subscription pricing.
+  if (durationInUserSubscription || subscriptionHistory) {
+    throw new Error(
+      'This subscription pricing is currently in use. You cannot delete this subscription pricing. If you want to make this subscription pricing unavailable for new subscribers, please update the status of this subscription pricing to inactive.'
+    );
+  }
+
   const deletedSubscriptionPricing = await SubscriptionPricing.findByIdAndDelete(id);
   return deletedSubscriptionPricing;
 };
@@ -117,10 +163,24 @@ const deleteManySubscriptionPricing = async (
   const subscriptionPricingToDelete = await SubscriptionPricing.find({ _id: { $in: ids } });
   if (!subscriptionPricingToDelete.length)
     throw new Error('No subscription-pricing found to delete');
-  // ! if any user purchased this subscription pricing already then not allowed to delete this subscription pricing
 
-  // TODO: First check if any user has purchased any of these subscription pricing
-  // TODO: if (purchased) => then not allowed to delete those subscription pricing which are purchased by user
+  // Check if the subscription-plan exists
+  const [durationInUserSubscription, subscriptionHistory] = await Promise.all([
+    await UserSubscription.exists({
+      subscriptionDurationId: { $in: ids?.map((id) => new mongoose.Types.ObjectId(id)) },
+    }),
+    await SubscriptionHistory.exists({
+      subscriptionDurationId: { $in: ids?.map((id) => new mongoose.Types.ObjectId(id)) },
+    }),
+  ]);
+
+  // If any of these subscription-duration is currently in use in any subscription or subscription history, do not allow deleting these subscription pricing. If trying to delete, throw an error message about the impact of deleting these subscription pricing.
+  if (durationInUserSubscription || subscriptionHistory) {
+    throw new Error(
+      'One or more of these subscription pricing are currently in use. You cannot delete these subscription pricing. If you want to make these subscription pricing unavailable for new subscribers, please update the status of these subscription pricing to inactive.'
+    );
+  }
+
   await SubscriptionPricing.deleteMany({ _id: { $in: ids } });
   return subscriptionPricingToDelete;
 };
@@ -130,12 +190,12 @@ const deleteManySubscriptionPricing = async (
  *
  * @param {IdOrIdsInput['id']} id - The ID of the subscription-pricing to retrieve.
  * @param {UserRole} userRole - Optional user role to determine filtering (SUPER_ADMIN sees all, others see only active)
- * @returns {Promise<Partial<ISubscriptionPricing>>} - The retrieved subscription-pricing.
+ * @returns {Promise<Partial<TSubscriptionPricing>>} - The retrieved subscription-pricing.
  */
 const getSubscriptionPricingById = async (
   id: IdOrIdsInput['id'],
   userRole?: UserRole
-): Promise<Partial<ISubscriptionPricing> | null> => {
+): Promise<Partial<TSubscriptionPricing> | null> => {
   // Determine if user is super admin (has access to all pricing)
   const isSuperAdmin = userRole === UserRole.SUPER_ADMIN;
   // Build query - filter by isActive if not super admin
@@ -144,8 +204,51 @@ const getSubscriptionPricingById = async (
     query.isActive = true;
   }
   // Search by _id with optional isActive filter
-  const subscriptionPricing = await SubscriptionPricing.findOne(query);
-  return subscriptionPricing;
+  const subscriptionPricing = await SubscriptionPricing.aggregate([
+    { $match: query },
+    // Lookup subscription plan
+    {
+      $lookup: {
+        from: 'subscriptionplans',
+        localField: 'subscriptionPlanId',
+        foreignField: '_id',
+        as: 'subscriptionPlan',
+      },
+    },
+    { $unwind: { path: '$subscriptionPlan', preserveNullAndEmptyArrays: true } },
+    // Lookup subscription duration
+    {
+      $lookup: {
+        from: 'subscriptiondurations',
+        localField: 'subscriptionDurationId',
+        foreignField: '_id',
+        as: 'subscriptionDuration',
+      },
+    },
+    { $unwind: { path: '$subscriptionDuration', preserveNullAndEmptyArrays: true } },
+    // Final projection
+    {
+      $project: {
+        _id: 1,
+        subscriptionPlanName: '$subscriptionPlan.name',
+        subscriptionPlanType: '$subscriptionPlan.planType',
+        applicableAccountType: '$subscriptionPlan.applicableAccountType',
+        subscriptionPlanDescription: '$subscriptionPlan.description',
+        subscriptionPlanStatus: '$subscriptionPlan.isActive',
+        subscriptionDurationStatus: '$subscriptionDuration.isActive',
+        subscriptionName: '$subscriptionDuration.name',
+        subscriptionDuration: '$subscriptionDuration.durationInDays',
+        price: 1,
+        currency: 1,
+        isActive: 1,
+        createdBy: 1,
+        createdAt: 1,
+        updatedAt: 1,
+      },
+    },
+  ]).exec();
+
+  return subscriptionPricing[0] || null;
 };
 
 /**
