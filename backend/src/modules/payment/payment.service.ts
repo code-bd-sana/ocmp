@@ -39,8 +39,6 @@ const createPayment = async (
     throw new Error('You have a lifetime subscription and cannot purchase another plan.');
   } */
 
-  console.log(req.user?._id);
-
   const couponExist = await subscriptionCouponServices.getSubscriptionCouponByCode(
     data.coupon || ''
   );
