@@ -1,11 +1,11 @@
 import { Request, Response } from 'express';
 import mongoose from 'mongoose';
-import { SearchQueryInput } from '../../handlers/common-zod-validator';
 import ServerResponse from '../../helpers/responses/custom-response';
 import { AuthenticatedRequest } from '../../middlewares/is-authorized';
 import { UserRole } from '../../models';
 import catchAsync from '../../utils/catch-async/catch-async';
 import { subscriptionPricingServices } from './subscription-pricing.service';
+import { SubscriptionPricingSearchQueries } from './subscription-pricing.validation';
 
 /**
  * Controller function to handle the creation of a single subscription-pricing.
@@ -119,7 +119,7 @@ export const getSubscriptionPricingById = catchAsync(
 export const getManySubscriptionPricing = catchAsync(
   async (req: AuthenticatedRequest, res: Response) => {
     // Use the validated and transformed query from Zod middleware
-    const query = (req as any).validatedQuery as SearchQueryInput;
+    const query = (req as any).validatedQuery as SubscriptionPricingSearchQueries;
     // Extract user role if authenticated
     const userRole = req.user?.role as UserRole;
     // Call the service method to get multiple subscription-pricings based on query parameters and get the result

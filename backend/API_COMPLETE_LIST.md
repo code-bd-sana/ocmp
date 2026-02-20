@@ -607,7 +607,7 @@ This document contains **ALL** APIs required for the complete Tim Tim transport 
 
 ## Summary Statistics
 
-### Total API Endpoints: **400+**
+### Total API Endpoints: **Around 200**
 
 ### Breakdown by Category:
 

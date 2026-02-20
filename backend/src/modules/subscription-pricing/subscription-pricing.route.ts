@@ -12,16 +12,13 @@ import {
 } from './subscription-pricing.controller';
 
 //Import validation from corresponding module
-import {
-  validateId,
-  validateIds,
-  validateSearchQueries,
-} from '../../handlers/common-zod-validator';
+import { validateId, validateIds } from '../../handlers/common-zod-validator';
 import authorizedRoles from '../../middlewares/authorized-roles';
 import isAuthorized from '../../middlewares/is-authorized';
 import { UserRole } from '../../models';
 import {
   validateCreateSubscriptionPricing,
+  validateSubscriptionPricingSearch,
   validateUpdateSubscriptionPricing,
 } from './subscription-pricing.validation';
 
@@ -99,13 +96,13 @@ router.delete(
  * @route GET /api/v1/subscription-pricing
  * @description Get multiple subscription-pricing(s)
  * @access Public (with optional authentication)
- * @param {function} middleware - ['isAuthorized', 'validateSearchQueries']
+ * @param {function} middleware - ['isAuthorized', 'validateSubscriptionPricingSearch']
  * @param {function} controller - ['getManySubscriptionPricing']
  */
 router.get(
   '/',
   isAuthorized({ isOptional: true }),
-  validateSearchQueries,
+  validateSubscriptionPricingSearch,
   getManySubscriptionPricing
 );
 

@@ -1,7 +1,9 @@
 import mongoose from 'mongoose';
 import { isMongoId } from 'validator';
 import { z } from 'zod';
-import { validateBody } from '../../handlers/zod-error-handler';
+import { zodSearchQuerySchema } from '../../handlers/common-zod-validator';
+import { validateBody, validateQuery } from '../../handlers/zod-error-handler';
+import { ApplicableAccountType } from '../../models';
 
 /**
  * SubscriptionPricing Validation Schemas and Types
@@ -68,7 +70,42 @@ const zodUpdateSubscriptionPricingSchema = zodCreateSubscriptionPricingSchema
 export type UpdateSubscriptionPricingInput = z.infer<typeof zodUpdateSubscriptionPricingSchema>;
 
 /**
+ * Zod schema for validating search query parameters when fetching multiple subscription-pricing records.
+ *
+ * → All fields are optional and should be validated if provided
+ */
+const validateSubscriptionPricingSearchQueries = zodSearchQuerySchema.extend({
+  planId: z
+    .string()
+    .refine(isMongoId, { message: 'Plan ID must be a valid MongoDB ObjectId' })
+    .optional()
+    .or(z.literal('')),
+
+  durationId: z
+    .string()
+    .refine(isMongoId, { message: 'Duration ID must be a valid MongoDB ObjectId' })
+    .optional()
+    .or(z.literal('')),
+
+  applicableAccountType: z
+    .enum([
+      ApplicableAccountType.STANDALONE,
+      ApplicableAccountType.TRANSPORT_MANAGER,
+      ApplicableAccountType.BOTH,
+    ] as const)
+    .optional()
+    .or(z.literal('')),
+});
+
+export type SubscriptionPricingSearchQueries = z.infer<
+  typeof validateSubscriptionPricingSearchQueries
+>;
+
+/**
  * Named validators — use these directly in your Express routes
  */
 export const validateCreateSubscriptionPricing = validateBody(zodCreateSubscriptionPricingSchema);
 export const validateUpdateSubscriptionPricing = validateBody(zodUpdateSubscriptionPricingSchema);
+export const validateSubscriptionPricingSearch = validateQuery(
+  validateSubscriptionPricingSearchQueries
+);

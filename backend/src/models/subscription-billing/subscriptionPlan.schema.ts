@@ -35,6 +35,7 @@ const SubscriptionPlanSchema: Schema<ISubscriptionPlan> = new Schema(
       type: String,
       enum: Object.values(SubscriptionPlanType),
       required: true,
+      default: SubscriptionPlanType.PAID,
     },
     applicableAccountType: {
       type: String,

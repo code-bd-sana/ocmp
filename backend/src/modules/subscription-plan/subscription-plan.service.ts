@@ -1,7 +1,8 @@
 // Import the model
 
+import mongoose from 'mongoose';
 import { IdOrIdsInput, SearchQueryInput } from '../../handlers/common-zod-validator';
-import { ISubscriptionPlan, SubscriptionPlan } from '../../models';
+import { ISubscriptionPlan, SubscriptionPlan, UserRole } from '../../models';
 import {
   CreateSubscriptionPlanInput,
   UpdateSubscriptionPlanInput,
@@ -103,12 +104,21 @@ const deleteManySubscriptionPlan = async (
  * Service function to retrieve a single subscription-plan by ID.
  *
  * @param {IdOrIdsInput['id']} id - The ID of the subscription-plan to retrieve.
+ * @param {UserRole} userRole - The role of the user making the request.
  * @returns {Promise<Partial<ISubscriptionPlan>>} - The retrieved subscription-plan.
  */
 const getSubscriptionPlanById = async (
-  id: IdOrIdsInput['id']
+  id: IdOrIdsInput['id'],
+  userRole: UserRole
 ): Promise<Partial<ISubscriptionPlan | null>> => {
-  const subscriptionPlan = await SubscriptionPlan.findById(id);
+  // Determine if user is super admin (has access to all pricing)
+  const isSuperAdmin = userRole === UserRole.SUPER_ADMIN;
+  // Build query - filter by isActive if not super admin
+  const query: any = { _id: new mongoose.Types.ObjectId(id) };
+  if (!isSuperAdmin) {
+    query.isActive = true;
+  }
+  const subscriptionPlan = await SubscriptionPlan.findOne(query);
   return subscriptionPlan;
 };
 
@@ -119,13 +129,15 @@ const getSubscriptionPlanById = async (
  * @returns {Promise<Partial<ISubscriptionPlan>[]>} - The retrieved subscription-plans.
  */
 const getManySubscriptionPlan = async (
-  query: SearchQueryInput
+  query: SearchQueryInput,
+  userRole: UserRole
 ): Promise<{
   subscriptionPlans: Partial<ISubscriptionPlan>[];
   totalData: number;
   totalPages: number;
 }> => {
   const { searchKey = '', showPerPage = 10, pageNo = 1 } = query;
+  const isSuperAdmin = userRole === UserRole.SUPER_ADMIN;
   // Build the search filter based on the search key
   const searchFilter = {
     $or: [
@@ -134,6 +146,10 @@ const getManySubscriptionPlan = async (
       { applicableAccountType: { $regex: searchKey, $options: 'i' } }, // string search
     ],
   };
+  // If user is not super admin, add filter to show only active subscription-plans
+  if (!isSuperAdmin) {
+    Object.assign(searchFilter, { isActive: true });
+  }
   // Calculate the number of items to skip based on the page number
   const skipItems = (pageNo - 1) * showPerPage;
   // Find the total count of matching subscription-plan

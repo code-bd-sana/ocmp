@@ -1,0 +1,35 @@
+import { isMongoId } from 'validator';
+import { z } from 'zod';
+import { validateBody } from '../../handlers/zod-error-handler';
+
+/**
+ * Payment Validation Schemas and Types
+ *
+ * This module defines Zod schemas for validating payment related
+ * requests such as creation (single + bulk) and updates (single + bulk).
+ * It also exports corresponding TypeScript types inferred from these schemas.
+ * Each schema includes detailed validation rules and custom error messages
+ * to ensure data integrity and provide clear feedback to API consumers.
+ *
+ * Named validator middleware functions are exported for direct use in Express routes.
+ */
+
+/**
+ * Zod schema for validating data when **creating** a single payment.
+ *
+ * → Add all **required** fields here
+ */
+const zodCreatePaymentSchema = z
+  .object({
+    subscriptionPricingId: z
+      .string()
+      .refine(isMongoId, { message: 'Please provide a valid MongoDB ObjectId' }),
+  })
+  .strict();
+
+export type CreatePaymentInput = z.infer<typeof zodCreatePaymentSchema>;
+
+/**
+ * Named validators — use these directly in your Express route
+ */
+export const validateCreatePayment = validateBody(zodCreatePaymentSchema);
