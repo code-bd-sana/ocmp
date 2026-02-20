@@ -15,6 +15,7 @@ import {
   SubscriptionStatus,
   UserSubscription,
 } from '../../models';
+import SendEmail from '../../utils/email/send-email';
 import { subscriptionCouponServices } from '../subscription-coupon/subscription-coupon.service';
 import { subscriptionPricingServices } from '../subscription-pricing/subscription-pricing.service';
 import { getSubscriptionRemainingDays } from '../subscription-remain/subscription-remain.service';
@@ -277,6 +278,13 @@ const stripePaymentWebHook = async (req: Request) => {
       console.log('Invoice log -', invoice);
       console.log('Subscription history log -', subscriptionHistoryLog);
       console.log('Subscription payment log -', subscriptionPaymentLog);
+
+      await SendEmail({
+        to: session.customer_email!,
+        subject: 'Subscription Purchase Confirmation',
+        text: `Thank you for your purchase! Your subscription to the ${JSON.parse(session.metadata.planDetails).subscriptionPlanName} plan has been activated. Invoice Number: ${invoice.invoiceNumber}`,
+        html: `<p>Thank you for your purchase! Your subscription to the <strong>${JSON.parse(session.metadata.planDetails).subscriptionPlanName}</strong> plan has been activated.</p><p>Invoice Number: <strong>${invoice.invoiceNumber}</strong></p>`,
+      });
     }
     if (event.type === 'payment_intent.succeeded') {
       const paymentIntent = event.data.object as Stripe.PaymentIntent;
