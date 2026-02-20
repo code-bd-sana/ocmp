@@ -2,7 +2,7 @@ import { Request } from 'express';
 import mongoose from 'mongoose';
 import Stripe from 'stripe';
 import config from '../../config/config';
-import { IdOrIdsInput, SearchQueryInput } from '../../handlers/common-zod-validator';
+import { IdOrIdsInput } from '../../handlers/common-zod-validator';
 import { AuthenticatedRequest } from '../../middlewares/is-authorized';
 import {
   DiscountType,
@@ -298,22 +298,6 @@ const stripePaymentWebHook = async (req: Request) => {
  */
 const getPaymentById = async (id: IdOrIdsInput['id']): Promise<Partial<any> | null> => {
   return null;
-};
-
-/**
- * Service function to retrieve multiple payment based on query parameters.
- *
- * @param {SearchQueryInput} query - The query parameters for filtering payment.
- * @returns {Promise<Partial<any>[]>} - The retrieved payment
- */
-const getManyPayment = async (
-  query: SearchQueryInput
-): Promise<{ payments: Partial<any>[]; totalData: number; totalPages: number }> => {
-  return {
-    payments: [],
-    totalData: 0,
-    totalPages: 0,
-  };
 };
 
 export const paymentServices = {

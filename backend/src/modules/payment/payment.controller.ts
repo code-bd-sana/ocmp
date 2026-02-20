@@ -1,5 +1,4 @@
 import { Request, Response } from 'express';
-import { SearchQueryInput } from '../../handlers/common-zod-validator';
 import ServerResponse from '../../helpers/responses/custom-response';
 import { AuthenticatedRequest } from '../../middlewares/is-authorized';
 import catchAsync from '../../utils/catch-async/catch-async';
@@ -42,26 +41,4 @@ export const getPaymentById = catchAsync(async (req: Request, res: Response) => 
   if (!result) throw new Error('Payment not found');
   // Send a success response with the retrieved resource data
   ServerResponse(res, true, 200, 'Payment retrieved successfully', result);
-});
-
-/**
- * Controller function to handle the retrieval of multiple payments.
- *
- * @param {Request} req - The request object containing query parameters for filtering.
- * @param {Response} res - The response object used to send the response.
- * @returns {Promise<Partial<IPayment>[]>} - The retrieved payments.
- * @throws {Error} - Throws an error if the payments retrieval fails.
- */
-export const getManyPayment = catchAsync(async (req: Request, res: Response) => {
-  // Use the validated and transformed query from Zod middleware
-  const query = (req as any).validatedQuery as SearchQueryInput;
-  // Call the service method to get multiple payments based on query parameters and get the result
-  const { payments, totalData, totalPages } = await paymentServices.getManyPayment(query);
-  if (!payments) throw new Error('Failed to retrieve payments');
-  // Send a success response with the retrieved payments data
-  ServerResponse(res, true, 200, 'Payments retrieved successfully', {
-    payments,
-    totalData,
-    totalPages,
-  });
 });

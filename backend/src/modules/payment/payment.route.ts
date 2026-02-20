@@ -2,16 +2,11 @@
 import { Router } from 'express';
 
 // Import controller from corresponding module
-import {
-  createPayment,
-  getManyPayment,
-  getPaymentById,
-  stripePaymentWebHook,
-} from './payment.controller';
+import { createPayment, getPaymentById, stripePaymentWebHook } from './payment.controller';
 
 //Import validation from corresponding module
 import config from '../../config/config';
-import { validateId, validateSearchQueries } from '../../handlers/common-zod-validator';
+import { validateId } from '../../handlers/common-zod-validator';
 import authorizedRoles from '../../middlewares/authorized-roles';
 import isAuthorized from '../../middlewares/is-authorized';
 import { UserRole } from '../../models';
@@ -58,16 +53,6 @@ router.get('/config', (req, res) => {
     publishableKey: config.STRIPE_PUBLISHER_KEY,
   });
 });
-
-/**
- * @route GET /api/v1/payment/many
- * @description Get multiple payments
- * @access Private
- * @param {function} isAuthorized - Middleware to check if the user is authenticated
- * @param {function} validation - ['validateSearchQueries']
- * @param {function} controller - ['getManyPayment']
- */
-router.get('/many', validateSearchQueries, getManyPayment);
 
 /**
  * @route GET /api/v1/payment/:id
