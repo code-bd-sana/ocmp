@@ -65,5 +65,8 @@ router.get('/config', (req, res) => {
  */
 router.get('/:id', validateId, getPaymentById);
 
+//TODO: need to add route for getting all payments for a user and for transport manager to get all payments for their transport jobs
+//TODO: need to add route for the SUPER_ADMIN to get all payments in the system with pagination and filtering options
+
 // Export the router
 module.exports = router;
