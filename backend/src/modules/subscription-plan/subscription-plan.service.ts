@@ -2,7 +2,14 @@
 
 import mongoose from 'mongoose';
 import { IdOrIdsInput, SearchQueryInput } from '../../handlers/common-zod-validator';
-import { ISubscriptionPlan, SubscriptionPlan, UserRole } from '../../models';
+import {
+  ISubscriptionPlan,
+  SubscriptionHistory,
+  SubscriptionPlan,
+  SubscriptionPricing,
+  UserRole,
+  UserSubscription,
+} from '../../models';
 import {
   CreateSubscriptionPlanInput,
   UpdateSubscriptionPlanInput,
@@ -55,10 +62,40 @@ const updateSubscriptionPlan = async (
     );
   }
 
-  // ! If this subscription plan is already purchased by any user then not allow to update name, planType, applicableAccountType
+  // Check if the subscription-plan exists
+  const [durationInPricing, durationInUserSubscription, subscriptionHistory] = await Promise.all([
+    await SubscriptionPricing.exists({ subscriptionPlanId: new mongoose.Types.ObjectId(id) }),
+    await UserSubscription.exists({ subscriptionPlanId: new mongoose.Types.ObjectId(id) }),
+    await SubscriptionHistory.exists({ subscriptionPlanId: new mongoose.Types.ObjectId(id) }),
+  ]);
 
-  // TODO:First chcekc if any user purches this subscirption price
-  // TODO: if(!purches) => then name, plantype applicableaccount not allow to update4
+  // If this subscription-plan is currently in use in any subscription pricing, user subscription or subscription history, only allow updating the isActive field. If trying to update any other field, throw an error. If trying to update the isActive field, allow it but throw a warning message about the impact of changing the status.
+  if (durationInPricing || durationInUserSubscription || subscriptionHistory) {
+    // If trying to update any field other than isActive, throw an error
+    if (data.isActive === undefined) {
+      throw new Error(
+        'This subscription plan is currently in use. You can only update the isActive field to activate/deactivate this plan.'
+      );
+    }
+
+    if (data.isActive === false) {
+      await SubscriptionPlan.findByIdAndUpdate(id, { isActive: false });
+
+      throw new Error(
+        'This subscription plan has been deactivated. However, it is currently in use, so it will still be available for existing users until they change their subscription plan or their subscription expires. New users will not be able to see or purchase this plan.'
+      );
+    } else if (data.isActive === true) {
+      await SubscriptionPlan.findByIdAndUpdate(id, { isActive: true });
+
+      throw new Error(
+        'This subscription plan has been activated. It will now be available for all users to see and purchase.'
+      );
+    }
+
+    throw new Error(
+      'This subscription plan is currently in use. You can only update the status (isActive) field.'
+    );
+  }
 
   // Proceed to update the subscription-plan
   const updatedSubscriptionPlan = await SubscriptionPlan.findByIdAndUpdate(id, data, { new: true });
@@ -74,9 +111,18 @@ const updateSubscriptionPlan = async (
 const deleteSubscriptionPlan = async (
   id: IdOrIdsInput['id']
 ): Promise<Partial<ISubscriptionPlan | null>> => {
-  // ! if any user purchased this plan already then not allowed to delete this plan
-  // TODO: First check any user purchased!
-  // TODO: if already purchased then 500 not allowed
+  // Check if the subscription-plan exists
+  const [durationInPricing, durationInUserSubscription, subscriptionHistory] = await Promise.all([
+    await SubscriptionPricing.exists({ subscriptionPlanId: new mongoose.Types.ObjectId(id) }),
+    await UserSubscription.exists({ subscriptionPlanId: new mongoose.Types.ObjectId(id) }),
+    await SubscriptionHistory.exists({ subscriptionPlanId: new mongoose.Types.ObjectId(id) }),
+  ]);
+
+  // If this subscription-plan is currently in use in any subscription or subscription history, do not allow deleting this plan. Throw an error message about the impact of deleting this plan.
+  if (durationInPricing || durationInUserSubscription || subscriptionHistory) {
+    throw new Error('This subscription plan is currently in use. You cannot delete this plan. ');
+  }
+
   const deletedSubscriptionPlan = await SubscriptionPlan.findByIdAndDelete(id);
   return deletedSubscriptionPlan;
 };
@@ -92,10 +138,26 @@ const deleteManySubscriptionPlan = async (
 ): Promise<Partial<ISubscriptionPlan>[]> => {
   const subscriptionPlanToDelete = await SubscriptionPlan.find({ _id: { $in: ids } });
   if (!subscriptionPlanToDelete.length) throw new Error('No subscription-plan found to delete');
-  // ! if any user purchased any of these plan already then not allowed to delete those plan which are purchased by user
 
-  // TODO: First check any user purchased any of these subscirption price
-  // TODO: if already purchased then 500 not allowed to delete those plan which are purchased by user
+  const [durationInPricing, durationInUserSubscription, subscriptionHistory] = await Promise.all([
+    await SubscriptionPricing.exists({
+      subscriptionPlanId: { $in: ids?.map((id) => new mongoose.Types.ObjectId(id)) },
+    }),
+    await UserSubscription.exists({
+      subscriptionPlanId: { $in: ids?.map((id) => new mongoose.Types.ObjectId(id)) },
+    }),
+    await SubscriptionHistory.exists({
+      subscriptionPlanId: { $in: ids?.map((id) => new mongoose.Types.ObjectId(id)) },
+    }),
+  ]);
+
+  // If any of these subscription-plans are currently in use in any subscription or subscription history, do not allow deleting these plans. Throw an error message about the impact of deleting these plans.
+  if (durationInPricing || durationInUserSubscription || subscriptionHistory) {
+    throw new Error(
+      'Some of these subscription plans are currently in use. You cannot delete these plans. '
+    );
+  }
+
   await SubscriptionPlan.deleteMany({ _id: { $in: ids } });
   return subscriptionPlanToDelete;
 };

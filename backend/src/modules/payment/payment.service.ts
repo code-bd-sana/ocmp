@@ -100,6 +100,10 @@ const createPayment = async (
     throw new Error('Subscription pricing not found');
   }
 
+  if (!subscriptionExist.isActive) {
+    throw new Error('This subscription plan is not active currently');
+  }
+
   if (subscriptionExist.price === undefined || subscriptionExist.price === null) {
     throw new Error('Subscription price is not available');
   }
