@@ -130,6 +130,29 @@ const updateSubscriptionCoupon = async (
       `Validation error: The following subscription pricing IDs do not exist: ${nonExistingSubscriptionPricingIds.join(', ')}`
     );
   }
+  // Don't update the coupon if it's already been used by any user
+  const associatedUser = await SubscriptionCoupon.findById(id).select('usedBy').lean();
+
+  if (associatedUser?.usedBy && associatedUser.usedBy.length > 0) {
+    if (data.isActive === false) {
+      // If the update is trying to deactivate the coupon, allow it even if it's been used
+      const updatedSubscriptionCoupon = await SubscriptionCoupon.findByIdAndUpdate(
+        id,
+        {
+          isActive: false,
+        },
+        {
+          new: true,
+        }
+      );
+      return updatedSubscriptionCoupon;
+    }
+
+    throw new Error(
+      'Update error: This subscription-coupon cannot be updated because it has been used by one or more users.'
+    );
+  }
+
   // Proceed to update the subscription-coupon
   const updatedSubscriptionCoupon = await SubscriptionCoupon.findByIdAndUpdate(id, data, {
     new: true,
@@ -146,6 +169,15 @@ const updateSubscriptionCoupon = async (
 const deleteSubscriptionCoupon = async (
   id: IdOrIdsInput['id']
 ): Promise<Partial<ISubscriptionCoupon | null>> => {
+  // Don't delete the subscription-coupon if it's associated with any active users
+  const associatedUser = await SubscriptionCoupon.findById(id).select('usedBy').lean();
+
+  if (associatedUser?.usedBy && associatedUser.usedBy.length > 0) {
+    throw new Error(
+      'Deletion error: This subscription-coupon cannot be deleted because it has been used by one or more users.'
+    );
+  }
+
   const deletedSubscriptionCoupon = await SubscriptionCoupon.findByIdAndDelete(id);
   return deletedSubscriptionCoupon;
 };

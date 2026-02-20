@@ -6,6 +6,7 @@ import { IdOrIdsInput, SearchQueryInput } from '../../handlers/common-zod-valida
 import { AuthenticatedRequest } from '../../middlewares/is-authorized';
 import {
   DiscountType,
+  SubscriptionCoupon,
   SubscriptionHistory,
   SubscriptionInvoice,
   SubscriptionInvoiceStatus,
@@ -16,6 +17,7 @@ import {
 } from '../../models';
 import { subscriptionCouponServices } from '../subscription-coupon/subscription-coupon.service';
 import { subscriptionPricingServices } from '../subscription-pricing/subscription-pricing.service';
+import { getSubscriptionRemainingDays } from '../subscription-remain/subscription-remain.service';
 import { CreatePaymentInput } from './payment.validation';
 
 // Import the model
@@ -35,7 +37,7 @@ const createPayment = async (
   req: AuthenticatedRequest,
   data: CreatePaymentInput
 ): Promise<Partial<any>> => {
-  /* // Check the user last subscription plan from the database and calculate remaining days
+  // Check the user last subscription plan from the database and calculate remaining days
   const userSubscription = await getSubscriptionRemainingDays(req.user!._id);
 
   // If the user has an active subscription or trial, don't allow to purchase any more plan until the existing plan expires
@@ -48,7 +50,7 @@ const createPayment = async (
   // If the subscription is lifetime, don't allow to purchase any more plan until the existing plan expires
   if (userSubscription?.isLifetime) {
     throw new Error('You have a lifetime subscription and cannot purchase another plan.');
-  } */
+  }
 
   const couponExist = await subscriptionCouponServices.getSubscriptionCouponByCode(
     data.coupon || ''
@@ -56,6 +58,10 @@ const createPayment = async (
 
   if (data.coupon && !couponExist) {
     throw new Error('Invalid coupon code');
+  }
+
+  if (couponExist && !couponExist.isActive) {
+    throw new Error('This coupon code is not valid anymore');
   }
 
   // Validate the coupon for the pricing and user eligibility if coupon code is provided
@@ -71,6 +77,17 @@ const createPayment = async (
     );
     if (!isUserEligible) {
       throw new Error('You are not eligible to use this coupon code');
+    }
+  }
+
+  // Check if the coupon is used by the user before if the coupon code is provided
+  if (couponExist) {
+    const hasUsedCoupon = couponExist.usedBy?.some(
+      (userId) => userId.toString() === req.user!._id.toString()
+    );
+
+    if (hasUsedCoupon) {
+      throw new Error('You have already used this coupon code before');
     }
   }
 
@@ -243,6 +260,13 @@ const stripePaymentWebHook = async (req: Request) => {
         paidAt: new Date(),
         paymentMethod: SubscriptionPaymentMethod.CARD,
       });
+
+      // Updated the coupon document to add the user to the usedBy array if a coupon code is applied
+      if (session.metadata.couponId) {
+        await SubscriptionCoupon.findByIdAndUpdate(session.metadata.couponId, {
+          $addToSet: { usedBy: new mongoose.Types.ObjectId(session.metadata.userId) },
+        });
+      }
 
       console.log('Payment successful for session:', session.id);
       console.log('User subscription created:', userSubscriptionData);
