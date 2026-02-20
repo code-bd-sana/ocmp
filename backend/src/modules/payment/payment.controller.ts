@@ -14,11 +14,8 @@ import { paymentServices } from './payment.service';
  * @throws {Error} - Throws an error if the payment creation fails.
  */
 export const createPayment = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-  const userId = req.user!._id;
-  // Attach the user ID to the request body for use in the service layer
-  req.body.userId = userId;
   // Call the service method to create a new payment and get the result
-  const result = await paymentServices.createPayment(userId, req.body);
+  const result = await paymentServices.createPayment(req, req.body);
   if (!result) throw new Error('Failed to create payment');
   // Send a success response with the created payment data
   ServerResponse(res, true, 201, 'Payment created successfully', result);

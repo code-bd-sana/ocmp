@@ -3,42 +3,95 @@ import { Request } from 'express';
 import Stripe from 'stripe';
 import config from '../../config/config';
 import { IdOrIdsInput, SearchQueryInput } from '../../handlers/common-zod-validator';
+import { AuthenticatedRequest } from '../../middlewares/is-authorized';
+import { DiscountType } from '../../models';
+import { subscriptionCouponServices } from '../subscription-coupon/subscription-coupon.service';
+import { subscriptionPricingServices } from '../subscription-pricing/subscription-pricing.service';
 import { CreatePaymentInput } from './payment.validation';
 
 export const stripe = new Stripe(config.STRIPE_SECRET_KEY as string, {
   apiVersion: '2026-01-28.clover',
 });
 
-const getClientBaseUrl = (): string => {
-  const rawClientUrl = config.CLIENT_URL?.trim();
-  const fallbackUrl = 'http://localhost:3000';
-
-  if (!rawClientUrl) return fallbackUrl;
-
-  const hasScheme = /^https?:\/\//i.test(rawClientUrl);
-  const normalized = hasScheme ? rawClientUrl : `http://${rawClientUrl}`;
-
-  try {
-    return new URL(normalized).toString().replace(/\/$/, '');
-  } catch {
-    return fallbackUrl;
-  }
-};
-
 /**
  * Service function to create a new payment.
  *
- * @param {string} userId - The ID of the user making the payment.
+ * @param {AuthenticatedRequest} req - The authenticated request object containing user information.
  * @param {CreatePaymentInput} data - The data to create a new payment.
  * @returns {Promise<Partial<any>>} - The created payment.
  */
-const createPayment = async (userId: string, data: CreatePaymentInput): Promise<Partial<any>> => {
-  // TODO: check any plan already purchased by the user, if yes, then don't allow to purchase any more plan until the existing plan expires
-  const clientBaseUrl = getClientBaseUrl();
+const createPayment = async (
+  req: AuthenticatedRequest,
+  data: CreatePaymentInput
+): Promise<Partial<any>> => {
+  /* // Check the user last subscription plan from the database and calculate remaining days
+  const userSubscription = await getSubscriptionRemainingDays(req.user!._id);
 
-  /**
-   * Create Stripe Checkout Session
-   */
+  // If the user has an active subscription or trial, don't allow to purchase any more plan until the existing plan expires
+  if (userSubscription.endDate && userSubscription.endDate > new Date()) {
+    throw new Error(
+      'You already have an active subscription. Please wait until the current subscription expires before purchasing a new one.'
+    );
+  }
+
+  // If the subscription is lifetime, don't allow to purchase any more plan until the existing plan expires
+  if (userSubscription?.isLifetime) {
+    throw new Error('You have a lifetime subscription and cannot purchase another plan.');
+  } */
+
+  console.log(req.user?._id);
+
+  const couponExist = await subscriptionCouponServices.getSubscriptionCouponByCode(
+    data.coupon || ''
+  );
+
+  if (data.coupon && !couponExist) {
+    throw new Error('Invalid coupon code');
+  }
+
+  // Validate the coupon for the pricing and user eligibility if coupon code is provided
+  if (couponExist) {
+    const isValidForPricing = couponExist.subscriptionPricings?.some(
+      (pricingId) => pricingId.toString() === data.subscriptionPricingId
+    );
+    if (!isValidForPricing) {
+      throw new Error('This coupon code is not valid for the selected subscription pricing');
+    }
+    const isUserEligible = couponExist.users?.some(
+      (userId) => userId.toString() === req.user!._id.toString()
+    );
+    if (!isUserEligible) {
+      throw new Error('You are not eligible to use this coupon code');
+    }
+  }
+
+  const subscriptionPricingId = data.subscriptionPricingId;
+
+  const subscriptionExist =
+    await subscriptionPricingServices.getSubscriptionPricingById(subscriptionPricingId);
+
+  if (!subscriptionExist) {
+    throw new Error('Subscription pricing not found');
+  }
+
+  if (subscriptionExist.price === undefined || subscriptionExist.price === null) {
+    throw new Error('Subscription price is not available');
+  }
+
+  // Calculate the discounted price if a valid coupon is applied
+  if (
+    couponExist &&
+    couponExist.discountValue !== undefined &&
+    couponExist.discountValue !== null
+  ) {
+    if (couponExist.discountType === DiscountType.PERCENTAGE) {
+      subscriptionExist.price = subscriptionExist.price * (1 - couponExist.discountValue / 100);
+    } else if (couponExist.discountType === DiscountType.FIXED) {
+      subscriptionExist.price = Math.max(0, subscriptionExist.price - couponExist.discountValue);
+    }
+  }
+
+  // Create Stripe Checkout Session for the new payment
   const session = await stripe.checkout.sessions.create({
     payment_method_types: ['card'],
     mode: 'payment',
@@ -47,18 +100,25 @@ const createPayment = async (userId: string, data: CreatePaymentInput): Promise<
         price_data: {
           currency: 'GBP',
           product_data: {
-            name: `Plan ${data.subscriptionPricingId} Subscription`,
+            name: `Plan ${subscriptionExist.subscriptionPlanName} Subscription`,
           },
-          unit_amount: Math.round(50000 * 100),
+          unit_amount: Math.round(subscriptionExist.price * 100), // Convert price to pence
         },
         quantity: 1,
       },
     ],
-    success_url: `${clientBaseUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${clientBaseUrl}/cancel`,
+    success_url: `${config.CLIENT_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${config.CLIENT_URL}/cancel`,
+    customer_email: req.user!.email,
     metadata: {
-      userId,
-      planId: data.subscriptionPricingId,
+      userId: req.user!._id,
+      userEmail: req.user!.email,
+      planDetails: JSON.stringify({
+        subscriptionPlanId: subscriptionExist._id,
+        subscriptionPlanName: subscriptionExist.subscriptionPlanName,
+        subscriptionDuration: subscriptionExist.subscriptionDuration,
+      }),
+      couponCode: data.coupon || null,
     },
   });
 
@@ -69,30 +129,41 @@ const createPayment = async (userId: string, data: CreatePaymentInput): Promise<
   };
 };
 
+/**
+ * Service function to handle Stripe payment webhook events.
+ *
+ * @param {Request} req - The request object containing the webhook event data.
+ * @returns {Promise<{ received: boolean }>} - An object indicating that the webhook event was received successfully.
+ * @throws {Error} - Throws an error if the webhook event processing fails.
+ */
 const stripePaymentWebHook = async (req: Request) => {
+  // Stripe sends the webhook event data as raw bytes, so we need to construct the event using the raw body and signature
   const signature = req.headers['stripe-signature'];
   const endpointSecret = config.STRIPE_WEBHOOK_SECRET || 'whsec_xxxxx';
 
+  // Validate the presence of the Stripe signature header
   if (!signature || Array.isArray(signature)) {
     throw new Error('Missing or invalid Stripe signature header');
   }
 
+  // Construct the Stripe event using the raw body and signature to ensure the webhook is secure and valid
   let event: Stripe.Event;
+
+  // Use the Stripe library's webhook construction method to validate the event and extract the event data
 
   try {
     event = stripe.webhooks.constructEvent(req.body, signature, endpointSecret);
+    if (event.type === 'checkout.session.completed') {
+      const session = event.data.object as Stripe.Checkout.Session;
+      console.log('Payment successful for session:', session.id);
+    }
+    if (event.type === 'payment_intent.succeeded') {
+      const paymentIntent = event.data.object as Stripe.PaymentIntent;
+      console.log('PaymentIntent was successful:', paymentIntent.id);
+    }
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown webhook error';
-    throw new Error(`Webhook Error: ${message}`);
-  }
-
-  if (event.type === 'checkout.session.completed') {
-    const session = event.data.object as Stripe.Checkout.Session;
-    console.log('Payment successful for session:', session.id);
-  }
-  if (event.type === 'payment_intent.succeeded') {
-    const paymentIntent = event.data.object as Stripe.PaymentIntent;
-    console.log('PaymentIntent was successful:', paymentIntent.id);
+    console.error('Error processing Stripe webhook:', err);
+    throw new Error(`Webhook Error: ${err instanceof Error ? err.message : 'Unknown error'}`);
   }
 
   return { received: true };

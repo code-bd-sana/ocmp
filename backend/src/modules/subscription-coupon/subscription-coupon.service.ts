@@ -199,7 +199,6 @@ const getSubscriptionCouponById = async (
         as: 'plan',
       },
     },
-    // Unwind plan to flatten the data structure for easier access to plan details
     { $unwind: { path: '$plan', preserveNullAndEmptyArrays: true } },
     // Lookup duration
     {
@@ -211,12 +210,21 @@ const getSubscriptionCouponById = async (
       },
     },
     { $unwind: { path: '$duration', preserveNullAndEmptyArrays: true } },
-    // Reshape pricing
+    // Reshape pricing to flat structure
     {
       $addFields: {
         pricingFormatted: {
-          subscriptionPlan: '$plan.name',
-          subscriptionDuration: '$duration.durationInDays',
+          $cond: {
+            if: { $ifNull: ['$subscriptionPricings._id', false] },
+            then: {
+              _id: '$subscriptionPricings._id',
+              price: '$subscriptionPricings.price',
+              currency: '$subscriptionPricings.currency',
+              planName: '$plan.name',
+              duration: '$duration.name',
+            },
+            else: '$$REMOVE',
+          },
         },
       },
     },
@@ -228,9 +236,21 @@ const getSubscriptionCouponById = async (
         discountType: { $first: '$discountType' },
         discountValue: { $first: '$discountValue' },
         isActive: { $first: '$isActive' },
-        users: { $first: '$users' },
         createdAt: { $first: '$createdAt' },
         updatedAt: { $first: '$updatedAt' },
+        users: {
+          $first: {
+            $map: {
+              input: '$users',
+              as: 'user',
+              in: {
+                _id: '$$user._id',
+                fullName: '$$user.fullName',
+                email: '$$user.email',
+              },
+            },
+          },
+        },
         subscriptionPricings: { $push: '$pricingFormatted' },
       },
     },
@@ -242,10 +262,24 @@ const getSubscriptionCouponById = async (
 };
 
 /**
+ * Service function to retrieve a single subscription-coupon by code.
+ *
+ * @param {string} code - The code of the subscription-coupon to retrieve.
+ * @returns {Promise<Partial<ISubscriptionCoupon>>} - The retrieved subscription-coupon.
+ */
+const getSubscriptionCouponByCode = async (
+  code: string
+): Promise<Partial<ISubscriptionCoupon> | null> => {
+  const normalizedCode = code.toUpperCase().trim();
+  const subscriptionCoupon = await SubscriptionCoupon.findOne({ code: normalizedCode }).lean();
+  return subscriptionCoupon;
+};
+
+/**
  * Service function to retrieve multiple subscription-coupon based on query parameters.
  *
  * @param {SearchQueryInput} query - The query parameters for filtering subscription-coupon.
- * @returns {Promise<Partial<ISubscriptionCoupon>[]>} - The retrieved subscription-coupon
+ * @returns {Promise<{ subscriptionCoupons: Partial<ISubscriptionCoupon>[]; totalData: number; totalPages: number; }>}
  */
 const getManySubscriptionCoupon = async (
   query: SearchQueryInput
@@ -255,9 +289,8 @@ const getManySubscriptionCoupon = async (
   totalPages: number;
 }> => {
   const { searchKey = '', showPerPage = 10, pageNo = 1 } = query;
-  // Calculate the number of items to skip based on the current page and items per page
   const skipItems = (pageNo - 1) * showPerPage;
-  // Build the match stage for the aggregation pipeline based on the presence of a search key
+
   const matchStage = searchKey
     ? {
         $match: {
@@ -265,10 +298,11 @@ const getManySubscriptionCoupon = async (
         },
       }
     : { $match: {} };
-  // Construct the aggregation pipeline to retrieve subscription-coupons with related data and pagination
+
   const aggregationPipeline: mongoose.PipelineStage[] = [
     matchStage,
-    // Lookup users
+
+    // Lookup users who can use the coupon
     {
       $lookup: {
         from: 'users',
@@ -277,7 +311,8 @@ const getManySubscriptionCoupon = async (
         as: 'users',
       },
     },
-    // Lookup subscription pricings
+
+    // Lookup pricing documents
     {
       $lookup: {
         from: 'subscriptionpricings',
@@ -286,14 +321,8 @@ const getManySubscriptionCoupon = async (
         as: 'subscriptionPricings',
       },
     },
-    // Unwind pricing to join plan & duration
-    {
-      $unwind: {
-        path: '$subscriptionPricings',
-        preserveNullAndEmptyArrays: true,
-      },
-    },
-    // Lookup plan
+
+    // Lookup plan name
     {
       $lookup: {
         from: 'subscriptionplans',
@@ -302,7 +331,7 @@ const getManySubscriptionCoupon = async (
         as: 'plan',
       },
     },
-    { $unwind: { path: '$plan', preserveNullAndEmptyArrays: true } },
+
     // Lookup duration
     {
       $lookup: {
@@ -312,17 +341,7 @@ const getManySubscriptionCoupon = async (
         as: 'duration',
       },
     },
-    { $unwind: { path: '$duration', preserveNullAndEmptyArrays: true } },
-    // Reshape pricing
-    {
-      $addFields: {
-        pricingFormatted: {
-          subscriptionPlan: '$plan.name',
-          subscriptionDuration: '$duration.durationInDays',
-        },
-      },
-    },
-    // Group back because of unwind
+
     {
       $group: {
         _id: '$_id',
@@ -330,15 +349,81 @@ const getManySubscriptionCoupon = async (
         discountType: { $first: '$discountType' },
         discountValue: { $first: '$discountValue' },
         isActive: { $first: '$isActive' },
-        users: { $first: '$users' },
         createdAt: { $first: '$createdAt' },
         updatedAt: { $first: '$updatedAt' },
-        subscriptionPricings: { $push: '$pricingFormatted' },
+
+        users: {
+          $first: {
+            $map: {
+              input: '$users',
+              as: 'user',
+              in: {
+                _id: '$$user._id',
+                fullName: '$$user.fullName',
+                email: '$$user.email',
+              },
+            },
+          },
+        },
+
+        subscriptionPricings: {
+          $first: {
+            $map: {
+              input: '$subscriptionPricings',
+              as: 'pricing',
+              in: {
+                _id: '$$pricing._id',
+                price: '$$pricing.price',
+                currency: '$$pricing.currency',
+                planName: {
+                  $let: {
+                    vars: {
+                      matchedPlan: {
+                        $arrayElemAt: [
+                          {
+                            $filter: {
+                              input: '$plan',
+                              as: 'p',
+                              cond: { $eq: ['$$p._id', '$$pricing.subscriptionPlanId'] },
+                            },
+                          },
+                          0,
+                        ],
+                      },
+                    },
+                    in: '$$matchedPlan.name',
+                  },
+                },
+                duration: {
+                  $let: {
+                    vars: {
+                      matchedDuration: {
+                        $arrayElemAt: [
+                          {
+                            $filter: {
+                              input: '$duration',
+                              as: 'd',
+                              cond: { $eq: ['$$d._id', '$$pricing.subscriptionDurationId'] },
+                            },
+                          },
+                          0,
+                        ],
+                      },
+                    },
+                    in: '$$matchedDuration.name',
+                  },
+                },
+              },
+            },
+          },
+        },
       },
     },
-    // Sort by creation date in descending order
+
+    // Sort newest first
     { $sort: { createdAt: -1 } },
-    // Facet for pagination and total count
+
+    // Pagination + total count
     {
       $facet: {
         data: [{ $skip: skipItems }, { $limit: showPerPage }],
@@ -346,12 +431,12 @@ const getManySubscriptionCoupon = async (
       },
     },
   ];
-  // Execute the aggregation pipeline
-  const result = await SubscriptionCoupon.aggregate(aggregationPipeline);
-  // Extract the subscription-coupons, total data count, and total pages from the aggregation result
-  const subscriptionCoupons = result[0].data;
-  const totalData = result[0].totalCount[0]?.count || 0;
-  const totalPages = Math.ceil(totalData / showPerPage);
+
+  const result = await SubscriptionCoupon.aggregate(aggregationPipeline).exec();
+
+  const subscriptionCoupons = result[0]?.data ?? [];
+  const totalData = result[0]?.totalCount?.[0]?.count ?? 0;
+  const totalPages = totalData > 0 ? Math.ceil(totalData / showPerPage) : 1;
 
   return { subscriptionCoupons, totalData, totalPages };
 };
@@ -361,5 +446,6 @@ export const subscriptionCouponServices = {
   updateSubscriptionCoupon,
   deleteSubscriptionCoupon,
   getSubscriptionCouponById,
+  getSubscriptionCouponByCode,
   getManySubscriptionCoupon,
 };

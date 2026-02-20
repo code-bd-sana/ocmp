@@ -9,6 +9,7 @@ import {
   SubscriptionPricing,
   UserRole,
 } from '../../models';
+import { TSubscriptionPricing } from './subscription-pricing.interface';
 import {
   CreateSubscriptionPricingInput,
   SubscriptionPricingSearchQueries,
@@ -23,7 +24,7 @@ import {
  */
 const createSubscriptionPricing = async (
   data: CreateSubscriptionPricingInput
-): Promise<Partial<ISubscriptionPricing>> => {
+): Promise<Partial<TSubscriptionPricing | null>> => {
   // Extract subscription plan and duration IDs from validated data
   const { subscriptionPlanId, subscriptionDurationId } = data;
   // Check if the subscription plan exists
@@ -52,7 +53,11 @@ const createSubscriptionPricing = async (
   }
   const newSubscriptionPricing = new SubscriptionPricing(data);
   const savedSubscriptionPricing = await newSubscriptionPricing.save();
-  return savedSubscriptionPricing;
+
+  return await getSubscriptionPricingById(
+    savedSubscriptionPricing._id.toString(),
+    UserRole.SUPER_ADMIN
+  );
 };
 
 /**
@@ -60,12 +65,12 @@ const createSubscriptionPricing = async (
  *
  * @param {IdOrIdsInput['id']} id - The ID of the subscription-pricing to update.
  * @param {UpdateSubscriptionPricingInput} data - The updated data for the subscription-pricing.
- * @returns {Promise<Partial<ISubscriptionPricing>>} - The updated subscription-pricing.
+ * @returns {Promise<Partial<TSubscriptionPricing>>} - The updated subscription-pricing.
  */
 const updateSubscriptionPricing = async (
   id: IdOrIdsInput['id'],
   data: UpdateSubscriptionPricingInput
-): Promise<Partial<ISubscriptionPricing | null>> => {
+): Promise<Partial<TSubscriptionPricing | null>> => {
   // Check for duplicate (filed) combination
   const existingSubscriptionPricing = await SubscriptionPricing.findOne({
     subscriptionPlanId: data.subscriptionPlanId,
@@ -82,10 +87,9 @@ const updateSubscriptionPricing = async (
   // TODO: First check if any user has purchased this subscription pricing
   // TODO: if (purchased) => then subscriptionPlanId and subscriptionDurationId not allow to update, only price, currency and isActive allow to update
   // Proceed to update the subscription-pricing
-  const updatedSubscriptionPricing = await SubscriptionPricing.findByIdAndUpdate(id, data, {
-    new: true,
-  });
-  return updatedSubscriptionPricing;
+  await SubscriptionPricing.findByIdAndUpdate(id, data);
+
+  return await getSubscriptionPricingById(id, UserRole.SUPER_ADMIN);
 };
 
 /**
@@ -130,12 +134,12 @@ const deleteManySubscriptionPricing = async (
  *
  * @param {IdOrIdsInput['id']} id - The ID of the subscription-pricing to retrieve.
  * @param {UserRole} userRole - Optional user role to determine filtering (SUPER_ADMIN sees all, others see only active)
- * @returns {Promise<Partial<ISubscriptionPricing>>} - The retrieved subscription-pricing.
+ * @returns {Promise<Partial<TSubscriptionPricing>>} - The retrieved subscription-pricing.
  */
 const getSubscriptionPricingById = async (
   id: IdOrIdsInput['id'],
   userRole?: UserRole
-): Promise<Partial<ISubscriptionPricing> | null> => {
+): Promise<Partial<TSubscriptionPricing> | null> => {
   // Determine if user is super admin (has access to all pricing)
   const isSuperAdmin = userRole === UserRole.SUPER_ADMIN;
   // Build query - filter by isActive if not super admin
@@ -144,8 +148,51 @@ const getSubscriptionPricingById = async (
     query.isActive = true;
   }
   // Search by _id with optional isActive filter
-  const subscriptionPricing = await SubscriptionPricing.findOne(query);
-  return subscriptionPricing;
+  const subscriptionPricing = await SubscriptionPricing.aggregate([
+    { $match: query },
+    // Lookup subscription plan
+    {
+      $lookup: {
+        from: 'subscriptionplans',
+        localField: 'subscriptionPlanId',
+        foreignField: '_id',
+        as: 'subscriptionPlan',
+      },
+    },
+    { $unwind: { path: '$subscriptionPlan', preserveNullAndEmptyArrays: true } },
+    // Lookup subscription duration
+    {
+      $lookup: {
+        from: 'subscriptiondurations',
+        localField: 'subscriptionDurationId',
+        foreignField: '_id',
+        as: 'subscriptionDuration',
+      },
+    },
+    { $unwind: { path: '$subscriptionDuration', preserveNullAndEmptyArrays: true } },
+    // Final projection
+    {
+      $project: {
+        _id: 1,
+        subscriptionPlanName: '$subscriptionPlan.name',
+        subscriptionPlanType: '$subscriptionPlan.planType',
+        applicableAccountType: '$subscriptionPlan.applicableAccountType',
+        subscriptionPlanDescription: '$subscriptionPlan.description',
+        subscriptionPlanStatus: '$subscriptionPlan.isActive',
+        subscriptionDurationStatus: '$subscriptionDuration.isActive',
+        subscriptionName: '$subscriptionDuration.name',
+        subscriptionDuration: '$subscriptionDuration.durationInDays',
+        price: 1,
+        currency: 1,
+        isActive: 1,
+        createdBy: 1,
+        createdAt: 1,
+        updatedAt: 1,
+      },
+    },
+  ]).exec();
+
+  return subscriptionPricing[0] || null;
 };
 
 /**

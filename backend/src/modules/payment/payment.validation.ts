@@ -24,6 +24,7 @@ const zodCreatePaymentSchema = z
     subscriptionPricingId: z
       .string()
       .refine(isMongoId, { message: 'Please provide a valid MongoDB ObjectId' }),
+    coupon: z.string().optional(),
   })
   .strict();
 
