@@ -6,7 +6,6 @@ import {
   createClient,
   getClientLimit,
   getClientsByManagerId,
-  getManagerByClientId,
   getManagerList,
   getPendingRequests,
   removeClientFromManager,
@@ -91,23 +90,6 @@ router.get(
   validateManagerIdParam,
   validateSearchQueries,
   getClientsByManagerId
-);
-
-/**
- * @route GET /api/v1/client-management/clients/:clientId/manager
- * @description Get Transport Manager of a client
- * @access Private
- * @param {function} isAuthorized - Middleware to check if the user is authenticated
- * @param {function} authorizedRoles - Middleware to check if the user has the required role(s) (STANDALONE_USER, SUPER_ADMIN)
- * @param {function} validation - ['validateClientIdParam']
- * @param {function} controller - ['getManagerByClientId']
- */
-router.get(
-  '/clients/:clientId/manager',
-  isAuthorized(),
-  authorizedRoles([UserRole.STANDALONE_USER, UserRole.SUPER_ADMIN]),
-  validateClientIdParam,
-  getManagerByClientId
 );
 
 /**
