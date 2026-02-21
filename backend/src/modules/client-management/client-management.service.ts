@@ -4,6 +4,7 @@ import { SearchQueryInput } from '../../handlers/common-zod-validator';
 import { User, UserRole, ClientManagement, ClientStatus, IClientManagement } from '../../models';
 import HashInfo from '../../utils/bcrypt/hash-info';
 import SendEmail from '../../utils/email/send-email';
+import { repositorySettingsServices } from '../repository-settings/repository-settings.service';
 import { IClientLimitStatus } from './client-management.interface';
 import {
   ActionInput,
@@ -79,7 +80,11 @@ const createClient = async (
     });
   }
 
-  // 5. Send email — fire and forget (don't block the response)
+  // 5. Create default repository settings for the new client (all flags false) — fire and forget
+  repositorySettingsServices
+    .createDefaultSettings((newUser._id as mongoose.Types.ObjectId).toString());
+
+  // 6. Send email — fire and forget (don't block the response)
   await SendEmail({
     to: data.email,
     subject: 'Your account has been created',
