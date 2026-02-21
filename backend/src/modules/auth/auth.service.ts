@@ -9,6 +9,7 @@ import SendEmail from '../../utils/email/send-email';
 import EncodeToken from '../../utils/jwt/encode-token';
 import { delUserToken, existsUserToken, setUserToken } from '../../utils/redis/auth/auth';
 import { delUserData, getUserData, setUserData } from '../../utils/redis/user/user';
+import { repositorySettingsServices } from '../repository-settings/repository-settings.service';
 import { IChangePassword, ILogin, ILoginResponse, IRegisterResponse } from './auth.interface';
 import {
   ForgotPasswordInput,
@@ -157,6 +158,11 @@ const register = async (data: RegisterInput): Promise<IRegisterResponse> => {
     emailVerificationToken,
     emailVerificationTokenExpiry: emailVerificationExpiry,
   });
+
+  // Create default repository settings (all flags false) — fire and forget
+  repositorySettingsServices
+    .createDefaultSettings(savedUser._id.toString())
+
 
   // Send verification email
   const verificationLink = `${config.EMAIL_VERIFICATION_REDIRECT_URI}?email=${encodeURIComponent(
