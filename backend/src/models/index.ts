@@ -18,7 +18,7 @@ export {
   default as ClientManagement,
   IClientEntry,
   IClientManagement,
-} from './users-accounts/clientmanagement.schema';
+} from './users-accounts/clientManagement.schema';
 
 // subscription billing
 export {
