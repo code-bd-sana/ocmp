@@ -18,6 +18,7 @@ export interface IUser extends Document {
   resetToken?: string;
   resetTokenExpiry?: Date;
   role: UserRole;
+  clientName?: string;
   isEmailVerified: boolean;
   emailVerificationToken?: string;
   emailVerificationTokenExpiry?: Date;
@@ -57,6 +58,9 @@ const UserSchema: Schema<IUser> = new Schema(
       type: String,
       enum: Object.values(UserRole),
       required: true,
+    },
+    clientName: {
+      type: String,
     },
     isEmailVerified: {
       type: Boolean,

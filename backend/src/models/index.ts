@@ -13,6 +13,12 @@ export {
   default as RepositorySettings,
 } from './users-accounts/repositorySettings.schema';
 export { IUser, default as User, UserRole } from './users-accounts/user.schema';
+export {
+  ClientStatus,
+  default as ClientManagement,
+  IClientEntry,
+  IClientManagement,
+} from './users-accounts/clientmanagement.schema';
 
 // subscription billing
 export {
