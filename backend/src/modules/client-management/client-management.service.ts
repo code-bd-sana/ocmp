@@ -94,7 +94,7 @@ const createClient = async (
       </table>
       <p>Please change your password after your first login.</p>
     `,
-  }).catch((err) => console.error('[createClient] Email send failed:', err.message));
+  })
 
   return updatedDoc;
 };
