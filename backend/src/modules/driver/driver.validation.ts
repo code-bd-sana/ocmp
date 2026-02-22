@@ -1,7 +1,8 @@
 import { isMongoId } from 'validator';
 import { z } from 'zod';
-import { validateBody } from '../../handlers/zod-error-handler';
+import { validateBody, validateParams, validateQuery } from '../../handlers/zod-error-handler';
 import { CheckStatus } from '../../models';
+import { zodSearchQuerySchema } from '../../handlers/common-zod-validator';
 
 /**
  * Driver Validation Schemas and Types
@@ -134,6 +135,35 @@ const zodUpdateManyDriverSchema = z
 export type UpdateManyDriverInput = z.infer<typeof zodUpdateManyDriverSchema>;
 
 /**
+ * Zod schema for validating search query parameters when retrieving multiple drivers.
+ * This can be extended with driver-specific search parameters as needed.
+ */
+
+const zodSearchDriverSchema = zodSearchQuerySchema.extend({
+  // You can add driver-specific search query parameters here if needed
+
+  // get client's id
+  standAloneId: z
+    .string()
+    .refine(isMongoId, { message: 'Please provide a valid MongoDB ObjectId for standAloneId' }),
+});
+
+export type SearchDriverQueryInput = z.infer<typeof zodSearchDriverSchema>;
+
+/**
+ * Zod schema for validating the deletion of a driver, ensuring the provided IDs are valid MongoDB ObjectIds.
+ */
+
+const zodDeleteDriverSchema = z.object({
+  driverId: z.string().refine(isMongoId, { message: 'Please provide a valid MongoDB ObjectId' }),
+  standAloneId: z
+    .string()
+    .refine(isMongoId, { message: 'Please provide a valid MongoDB ObjectId for standAloneId' }),
+});
+
+export type DeleteDriverInput = z.infer<typeof zodDeleteDriverSchema>;
+
+/**
  * Named validators — use these directly in your Express routes
  */
 export const validateCreateDriverAsTransportManager = validateBody(
@@ -142,4 +172,6 @@ export const validateCreateDriverAsTransportManager = validateBody(
 export const validateCreateDriverAsStandAlone = validateBody(zodCreateDriverAsStandAloneSchema);
 export const validateUpdateDriver = validateBody(zodUpdateDriverSchema);
 export const validateUpdateManyDriver = validateBody(zodUpdateManyDriverSchema);
+export const validateSearchDriverQueries = validateQuery(zodSearchDriverSchema);
+export const validateDeleteDriver = validateParams(zodDeleteDriverSchema);
 

@@ -16,6 +16,8 @@ import {
   validateCreateDriverAsTransportManager,
   validateCreateDriverAsStandAlone,
   validateUpdateDriver,
+  validateSearchDriverQueries,
+  validateDeleteDriver,
 } from './driver.validation';
 import { validateId, validateSearchQueries } from '../../handlers/common-zod-validator';
 import isAuthorized from '../../middlewares/is-authorized';
@@ -77,16 +79,37 @@ router.put('/update-driver/:id', validateId, validateUpdateDriver, updateDriver)
  * @param {function} validation - ['validateId']
  * @param {function} controller - ['deleteDriver']
  */
-router.delete('/delete-driver/:id', validateId, deleteDriver);
+router.delete(
+  '/delete-driver-by-manager/:driverId/:standAloneId',
+  authorizedRoles([UserRole.TRANSPORT_MANAGER]),
+  validateDeleteDriver,
+  validateClientForManagerMiddleware,
+  deleteDriver
+);
 
 /**
- * @route GET /api/v1/driver/get-driver/many
+ * @route DELETE /api/v1/driver/delete-driver/:id
+ * @description Delete a driver
+ * @access Public
+ * @param {IdOrIdsInput['id']} id - The ID of the driver to delete
+ * @param {function} validation - ['validateId']
+ * @param {function} controller - ['deleteDriver']
+ */
+router.delete(
+  '/delete-driver/:id',
+  authorizedRoles([UserRole.STANDALONE_USER]),
+  validateId,
+  deleteDriver
+);
+
+/**
+ * @route GET /api/v1/driver/get-drivers
  * @description Get multiple drivers
  * @access Public
- * @param {function} validation - ['validateSearchQueries']
+ * @param {function} validation - ['validateSearchDriverQueries']
  * @param {function} controller - ['getManyDriver']
  */
-router.get('/get-driver/many', validateSearchQueries, getManyDriver);
+router.get('/get-drivers', validateSearchDriverQueries, getManyDriver);
 
 /**
  * @route GET /api/v1/driver/get-driver/:id

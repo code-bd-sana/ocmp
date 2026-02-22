@@ -1,5 +1,5 @@
 // Import the model
-import mongoose from 'mongoose';
+import mongoose, { Mongoose } from 'mongoose';
 import DriverModel, { IDriver } from '../../models/vehicle-transport/driver.schema';
 import { IdOrIdsInput, SearchQueryInput } from '../../handlers/common-zod-validator';
 import {
@@ -7,8 +7,9 @@ import {
   CreateDriverAsStandAloneInput,
   UpdateDriverInput,
   UpdateManyDriverInput,
+  SearchDriverQueryInput,
 } from './driver.validation';
-import { ClientManagement, ClientStatus } from '../../models';
+import { ClientManagement, ClientStatus, DriverTachograph, FuelUsage, Vehicle } from '../../models';
 
 /**
  * Service function to create a new driver as a Transport Manager.
@@ -143,21 +144,30 @@ const updateManyDriver = async (data: UpdateManyDriverInput): Promise<Partial<ID
  * @returns {Promise<Partial<IDriver>>} - The deleted driver.
  */
 const deleteDriver = async (id: IdOrIdsInput['id']): Promise<Partial<IDriver | null>> => {
+  const [driverTachographExists, fuelUsageExists, vehicleExists] = await Promise.all([
+    DriverTachograph.exists({
+      driverId: new mongoose.Types.ObjectId(id),
+      tachographRecords: { $exists: true, $not: { $size: 0 } },
+    }),
+    FuelUsage.exists({
+      driverId: new mongoose.Types.ObjectId(id),
+      fuelUsageRecords: { $exists: true, $not: { $size: 0 } },
+    }),
+    Vehicle.exists({
+      driverId: new mongoose.Types.ObjectId(id),
+      assignedVehicles: { $exists: true, $not: { $size: 0 } },
+    }),
+  ]);
+
+  // if any of the related records exist, prevent deletion and throw an error
+  if (driverTachographExists || fuelUsageExists || vehicleExists) {
+    throw new Error(
+      'Cannot delete driver with associated tachograph records, fuel usage records, or assigned vehicles.'
+    );
+  }
+
   const deletedDriver = await DriverModel.findByIdAndDelete(id);
   return deletedDriver;
-};
-
-/**
- * Service function to delete multiple driver.
- *
- * @param {IdOrIdsInput['ids']} ids - An array of IDs of driver to delete.
- * @returns {Promise<Partial<IDriver>[]>} - The deleted driver.
- */
-const deleteManyDriver = async (ids: IdOrIdsInput['ids']): Promise<Partial<IDriver>[]> => {
-  const driverToDelete = await DriverModel.find({ _id: { $in: ids } });
-  if (!driverToDelete.length) throw new Error('No driver found to delete');
-  await DriverModel.deleteMany({ _id: { $in: ids } });
-  return driverToDelete;
 };
 
 /**
@@ -178,27 +188,56 @@ const getDriverById = async (id: IdOrIdsInput['id']): Promise<Partial<IDriver | 
  * @returns {Promise<Partial<IDriver>[]>} - The retrieved driver
  */
 const getManyDriver = async (
-  query: SearchQueryInput
-): Promise<{ drivers: Partial<IDriver>[]; totalData: number; totalPages: number }> => {
-  const { searchKey = '', showPerPage = 10, pageNo = 1 } = query;
-  // Build the search filter based on the search key
-  const searchFilter = {
-    $or: [
-      // { fieldName: { $regex: searchKey, $options: 'i' } },
-      // Add more fields as needed
-    ],
-  };
-  // Calculate the number of items to skip based on the page number
+  query: SearchDriverQueryInput
+): Promise<{
+  drivers: Partial<IDriver>[];
+  totalData: number;
+  totalPages: number;
+}> => {
+  const { searchKey = '', showPerPage = 10, pageNo = 1, standAloneId } = query;
+
+  const searchConditions: any[] = [];
+  const andConditions: any[] = [];
+
+  // Search filter
+  if (searchKey) {
+    searchConditions.push({
+      $or: [
+        { name: { $regex: searchKey, $options: 'i' } },
+        { licenseNumber: { $regex: searchKey, $options: 'i' } },
+        { niNumber: { $regex: searchKey, $options: 'i' } },
+      ],
+    });
+  }
+
+  // Standalone filter (can be in standAloneId OR createdBy)
+  if (standAloneId) {
+    const objectId = new mongoose.Types.ObjectId(standAloneId);
+
+    andConditions.push({
+      $or: [{ standAloneId: objectId }, { createdBy: objectId }],
+    });
+  }
+
+  // Final filter build
+  const finalFilter: any = {};
+
+  if (searchConditions.length) {
+    finalFilter.$and = searchConditions;
+  }
+
+  if (andConditions.length) {
+    finalFilter.$and = [...(finalFilter.$and || []), ...andConditions];
+  }
+
+  // Pagination
   const skipItems = (pageNo - 1) * showPerPage;
-  // Find the total count of matching driver
-  const totalData = await DriverModel.countDocuments(searchFilter);
-  // Calculate the total number of pages
+
+  const totalData = await DriverModel.countDocuments(finalFilter);
   const totalPages = Math.ceil(totalData / showPerPage);
-  // Find drivers based on the search filter with pagination
-  const drivers = await DriverModel.find(searchFilter)
-    .skip(skipItems)
-    .limit(showPerPage)
-    .select(''); // Keep/Exclude any field if needed
+
+  const drivers = await DriverModel.find(finalFilter).skip(skipItems).limit(showPerPage).select('');
+
   return { drivers, totalData, totalPages };
 };
 
@@ -208,7 +247,6 @@ export const driverServices = {
   updateDriver,
   updateManyDriver,
   deleteDriver,
-  deleteManyDriver,
   getDriverById,
   getManyDriver,
 };

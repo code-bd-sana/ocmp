@@ -5,6 +5,7 @@ import { SearchQueryInput } from '../../handlers/common-zod-validator';
 import ServerResponse from '../../helpers/responses/custom-response';
 import { AuthenticatedRequest } from '../../middlewares/is-authorized';
 import catchAsync from '../../utils/catch-async/catch-async';
+import { SearchDriverQueryInput } from './driver.validation';
 
 /**
  * Controller function to handle the creation of a driver by a transport manager.
@@ -75,9 +76,11 @@ export const updateDriver = catchAsync(async (req: Request, res: Response) => {
  * @throws {Error} - Throws an error if the driver deletion fails.
  */
 export const deleteDriver = catchAsync(async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const paramToString = (p?: string | string[]) => (Array.isArray(p) ? p[0] : p);
+  const driverId = paramToString(req.params.driverId ?? req.params.id);
+
   // Call the service method to delete the driver by ID
-  const result = await driverServices.deleteDriver(id as string);
+  const result = await driverServices.deleteDriver(driverId as string);
   if (!result) throw new Error('Failed to delete driver');
   // Send a success response confirming the deletion
   ServerResponse(res, true, 200, 'Driver deleted successfully');
@@ -110,7 +113,7 @@ export const getDriverById = catchAsync(async (req: Request, res: Response) => {
  */
 export const getManyDriver = catchAsync(async (req: Request, res: Response) => {
   // Use the validated and transformed query from Zod middleware
-  const query = (req as any).validatedQuery as SearchQueryInput;
+  const query = (req as any).validatedQuery as SearchDriverQueryInput;
   // Call the service method to get multiple drivers based on query parameters and get the result
   const { drivers, totalData, totalPages } = await driverServices.getManyDriver(query);
   if (!drivers) throw new Error('Failed to retrieve drivers');

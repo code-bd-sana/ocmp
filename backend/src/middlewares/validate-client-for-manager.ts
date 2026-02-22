@@ -10,7 +10,7 @@ export const validateClientForManagerMiddleware = async (
   next: NextFunction
 ) => {
   try {
-    const { standAloneId } = req.body;
+    const { standAloneId } = req.body || req.params; // depending on where you send the standAloneId from
     const managerId = req.user?._id; // assuming auth middleware sets this
 
     const isClientExist = await ClientManagement.exists({
