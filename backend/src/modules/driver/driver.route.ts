@@ -21,6 +21,7 @@ import { validateId, validateSearchQueries } from '../../handlers/common-zod-val
 import isAuthorized from '../../middlewares/is-authorized';
 import authorizedRoles from '../../middlewares/authorized-roles';
 import { UserRole } from '../../models';
+import { validateClientForManagerMiddleware } from '../../middlewares/validate-client-for-manager';
 
 // TODO: have to check subscription middleware in create update & delete routes
 
@@ -40,6 +41,7 @@ router.post(
   '/create-driver',
   authorizedRoles([UserRole.TRANSPORT_MANAGER]),
   validateCreateDriverAsTransportManager,
+  validateClientForManagerMiddleware,
   createDriverAsTransportManager
 );
 

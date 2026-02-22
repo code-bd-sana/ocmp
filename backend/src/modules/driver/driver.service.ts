@@ -21,20 +21,6 @@ const createDriverAsTransportManager = async (
   data: CreateDriverAsTransportManagerInput,
   userId: string
 ): Promise<Partial<IDriver>> => {
-  // Convert employedBy to ObjectId
-  const employedByObjectId = new mongoose.Types.ObjectId(data.employedBy);
-
-  // Check if the client exists in the manager's clients list with APPROVED status
-  const isClientExist = await ClientManagement.exists({
-    managerId: new mongoose.Types.ObjectId(userId),
-    'clients.clientId': employedByObjectId,
-    'clients.status': { $in: [ClientStatus.APPROVED] },
-  });
-
-  if (!isClientExist) {
-    throw new Error('Client not found in your clients list or not approved');
-  }
-
   // Check for duplicate driver by licenseNumber or niNumber
   const existingDriver = await DriverModel.findOne({
     $or: [{ licenseNumber: data.licenseNumber }, { niNumber: data.niNumber }],

@@ -18,6 +18,9 @@ export const createDriverAsTransportManager = catchAsync(
   async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user!._id;
     req.body.createdBy = new mongoose.Types.ObjectId(userId);
+
+    req.body.standAloneId = new mongoose.Types.ObjectId(req.body.standAloneId);
+
     // Call the service method to create a new driver and get the result
     const result = await driverServices.createDriverAsTransportManager(req.body, userId);
     if (!result) throw new Error('Failed to create driver');

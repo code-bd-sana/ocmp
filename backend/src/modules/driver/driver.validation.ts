@@ -62,14 +62,14 @@ const baseDriverFields = {
 
 /**
  * Zod schema for creating a driver as a Transport Manager
- * → employedBy is REQUIRED (must be one of the manager's approved clients)
+ * → standAloneId is REQUIRED (must be one of the manager's approved clients)
  */
 const zodCreateDriverAsTransportManagerSchema = z
   .object({
     ...baseDriverFields,
-    employedBy: z
-      .string({ message: 'employedBy is required for transport manager' })
-      .refine(isMongoId, { message: 'employedBy must be a valid MongoDB ObjectId' }),
+    standAloneId: z
+      .string({ message: 'standAloneId is required for transport manager' })
+      .refine(isMongoId, { message: 'standAloneId must be a valid MongoDB ObjectId' }),
   })
   .strict();
 
@@ -79,12 +79,12 @@ export type CreateDriverAsTransportManagerInput = z.infer<
 
 /**
  * Zod schema for creating a driver as a Stand-Alone user
- * → employedBy is optional (stand-alone users employ their own drivers)
+ * → standAloneId is optional (stand-alone users employ their own drivers)
  */
 const zodCreateDriverAsStandAloneSchema = z
   .object({
     ...baseDriverFields,
-    employedBy: z
+    standAloneId: z
       .string()
       .refine(isMongoId, { message: 'Please provide a valid MongoDB ObjectId' })
       .optional(),
