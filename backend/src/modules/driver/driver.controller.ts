@@ -58,10 +58,10 @@ export const createDriverAsStandAlone = catchAsync(
  * @returns {Promise<Partial<IDriver>>} - The updated driver.
  * @throws {Error} - Throws an error if the driver update fails.
  */
-export const updateDriver = catchAsync(async (req: Request, res: Response) => {
+export const updateDriver = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
   const { id } = req.params;
   // Call the service method to update the driver by ID and get the result
-  const result = await driverServices.updateDriver(id as string, req.body);
+  const result = await driverServices.updateDriver(id as string, req.body, req.user!._id);
   if (!result) throw new Error('Failed to update driver');
   // Send a success response with the updated driver data
   ServerResponse(res, true, 200, 'Driver updated successfully', result);
@@ -75,12 +75,12 @@ export const updateDriver = catchAsync(async (req: Request, res: Response) => {
  * @returns {Promise<Partial<IDriver>>} - The deleted driver.
  * @throws {Error} - Throws an error if the driver deletion fails.
  */
-export const deleteDriver = catchAsync(async (req: Request, res: Response) => {
+export const deleteDriver = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
   const paramToString = (p?: string | string[]) => (Array.isArray(p) ? p[0] : p);
   const driverId = paramToString(req.params.driverId ?? req.params.id);
 
   // Call the service method to delete the driver by ID
-  const result = await driverServices.deleteDriver(driverId as string);
+  const result = await driverServices.deleteDriver(driverId as string, req.user!._id);
   if (!result) throw new Error('Failed to delete driver');
   // Send a success response confirming the deletion
   ServerResponse(res, true, 200, 'Driver deleted successfully');

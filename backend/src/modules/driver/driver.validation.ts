@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { validateBody, validateParams, validateQuery } from '../../handlers/zod-error-handler';
 import { CheckStatus } from '../../models';
 import { zodSearchQuerySchema } from '../../handlers/common-zod-validator';
+import { createDriverAsTransportManager } from './driver.controller';
 
 /**
  * Driver Validation Schemas and Types
@@ -102,37 +103,29 @@ export type CreateDriverInput = CreateDriverAsTransportManagerInput | CreateDriv
  *
  * → All fields should usually be .optional()
  */
-const zodUpdateDriverSchema = z
-  .object({
-    // Example fields — replace / expand as needed:
-    // name: z.string().min(2, 'Name must be at least 2 characters').max(100).optional(),
-    // email: z.string().email({ message: 'Invalid email format' }).optional(),
-    // age: z.number().int().positive().optional(),
-    // status: z.enum(['active', 'inactive', 'pending']).optional(),
+// Build an update schema by picking allowed fields from the create schema
+// then making them optional with .partial()
+const zodUpdateDriverSchema = zodCreateDriverAsTransportManagerSchema
+  .pick({
+    fullName: true,
+    licenseNumber: true,
+    postCode: true,
+    niNumber: true,
+    nextCheckDueDate: true,
+    licenseExpiry: true,
+    licenseExpiryDTC: true,
+    cpcExpiry: true,
+    points: true,
+    endorsementCodes: true,
+    lastChecked: true,
+    checkFrequencyDays: true,
+    employed: true,
+    checkStatus: true,
+    attachments: true,
   })
-  .strict();
+  .partial();
 
 export type UpdateDriverInput = z.infer<typeof zodUpdateDriverSchema>;
-
-/**
- * Zod schema for validating bulk updates (array of partial driver objects).
- */
-const zodUpdateManyDriverForBulkSchema = zodUpdateDriverSchema
-  .extend({
-    id: z.string().refine(isMongoId, { message: 'Please provide a valid MongoDB ObjectId' }),
-  })
-  .refine((data) => Object.keys(data).length > 1, {
-    message: 'At least one field to update must be provided',
-  });
-
-/**
- * Zod schema for validating an array of multiple driver updates.
- */
-const zodUpdateManyDriverSchema = z
-  .array(zodUpdateManyDriverForBulkSchema)
-  .min(1, { message: 'At least one driver update object must be provided' });
-
-export type UpdateManyDriverInput = z.infer<typeof zodUpdateManyDriverSchema>;
 
 /**
  * Zod schema for validating search query parameters when retrieving multiple drivers.
@@ -154,14 +147,28 @@ export type SearchDriverQueryInput = z.infer<typeof zodSearchDriverSchema>;
  * Zod schema for validating the deletion of a driver, ensuring the provided IDs are valid MongoDB ObjectIds.
  */
 
-const zodDeleteDriverSchema = z.object({
-  driverId: z.string().refine(isMongoId, { message: 'Please provide a valid MongoDB ObjectId' }),
+const zodDriverAndManagerIdSchema = z.object({
+  driverId: z
+    .string()
+    .refine(isMongoId, { message: 'Please provide a valid MongoDB ObjectId for driver ID' }),
   standAloneId: z
     .string()
     .refine(isMongoId, { message: 'Please provide a valid MongoDB ObjectId for standAloneId' }),
 });
 
+export type DriverAndManagerIdInput = z.infer<typeof zodDriverAndManagerIdSchema>;
+
+/**
+ * Zod schema for validating the deletion of a driver, ensuring the provided IDs are valid MongoDB ObjectIds.
+ */
+
+const zodDeleteDriverSchema = zodDriverAndManagerIdSchema.strict();
+
 export type DeleteDriverInput = z.infer<typeof zodDeleteDriverSchema>;
+
+const zodUpdateDriverIdSchema = zodDriverAndManagerIdSchema.strict();
+
+export type UpdateDriverInputWithIds = z.infer<typeof zodUpdateDriverIdSchema>;
 
 /**
  * Named validators — use these directly in your Express routes
@@ -171,7 +178,7 @@ export const validateCreateDriverAsTransportManager = validateBody(
 );
 export const validateCreateDriverAsStandAlone = validateBody(zodCreateDriverAsStandAloneSchema);
 export const validateUpdateDriver = validateBody(zodUpdateDriverSchema);
-export const validateUpdateManyDriver = validateBody(zodUpdateManyDriverSchema);
 export const validateSearchDriverQueries = validateQuery(zodSearchDriverSchema);
-export const validateDeleteDriver = validateParams(zodDeleteDriverSchema);
+export const validateDeleteDriverIds = validateParams(zodDeleteDriverSchema);
+export const validateUpdateDriverIds = validateParams(zodUpdateDriverIdSchema);
 

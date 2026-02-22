@@ -17,7 +17,8 @@ import {
   validateCreateDriverAsStandAlone,
   validateUpdateDriver,
   validateSearchDriverQueries,
-  validateDeleteDriver,
+  validateUpdateDriverIds,
+  validateDeleteDriverIds,
 } from './driver.validation';
 import { validateId, validateSearchQueries } from '../../handlers/common-zod-validator';
 import isAuthorized from '../../middlewares/is-authorized';
@@ -62,14 +63,37 @@ router.post(
 );
 
 /**
+ * @route PUT /api/v1/driver/update-driver/:driverId/:standAloneId
+ * @description Update driver information as a transport manager
+ * @access Private - Transport Manager only
+ * @param {IdOrIdsInput['id']} id - The ID of the driver to update
+ * @param {function} validation - ['validateId', 'validateUpdateDriver']
+ * @param {function} controller - ['updateDriver']
+ */
+router.patch(
+  '/update-driver-by-manager/:driverId/:standAloneId',
+  authorizedRoles([UserRole.TRANSPORT_MANAGER]),
+  validateClientForManagerMiddleware,
+  validateUpdateDriverIds,
+  validateUpdateDriver,
+  updateDriver
+);
+
+/**
  * @route PUT /api/v1/driver/update-driver/:id
- * @description Update driver information
+ * @description Update driver information as a stand-alone user
  * @access Public
  * @param {IdOrIdsInput['id']} id - The ID of the driver to update
  * @param {function} validation - ['validateId', 'validateUpdateDriver']
  * @param {function} controller - ['updateDriver']
  */
-router.put('/update-driver/:id', validateId, validateUpdateDriver, updateDriver);
+router.patch(
+  '/update-driver/:id',
+  authorizedRoles([UserRole.STANDALONE_USER]),
+  validateId,
+  validateUpdateDriver,
+  updateDriver
+);
 
 /**
  * @route DELETE /api/v1/driver/delete-driver/:id
@@ -82,7 +106,7 @@ router.put('/update-driver/:id', validateId, validateUpdateDriver, updateDriver)
 router.delete(
   '/delete-driver-by-manager/:driverId/:standAloneId',
   authorizedRoles([UserRole.TRANSPORT_MANAGER]),
-  validateDeleteDriver,
+  validateDeleteDriverIds,
   validateClientForManagerMiddleware,
   deleteDriver
 );

@@ -6,7 +6,6 @@ import {
   CreateDriverAsTransportManagerInput,
   CreateDriverAsStandAloneInput,
   UpdateDriverInput,
-  UpdateManyDriverInput,
   SearchDriverQueryInput,
 } from './driver.validation';
 import { ClientManagement, ClientStatus, DriverTachograph, FuelUsage, Vehicle } from '../../models';
@@ -61,80 +60,61 @@ const createDriverAsStandAlone = async (
  */
 const updateDriver = async (
   id: IdOrIdsInput['id'],
-  data: UpdateDriverInput
+  data: UpdateDriverInput,
+  userId: string
 ): Promise<Partial<IDriver | null>> => {
-  // Check for duplicate (filed) combination
-  const existingDriver = await DriverModel.findOne({
-    _id: { $ne: id }, // Exclude the current document
-    $or: [
-      {
-        /* filedName: data.filedName, */
-      },
-    ],
-  }).lean();
-  // Prevent duplicate updates
-  if (existingDriver) {
-    throw new Error('Duplicate detected: Another driver with the same fieldName already exists.');
+  // Build $or conditions only for fields provided in `data`
+  const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const orConditions: any[] = [];
+
+  if (data.licenseNumber) {
+    orConditions.push({
+      licenseNumber: { $regex: new RegExp(`^${escapeRegex(data.licenseNumber)}$`, 'i') },
+    });
+  }
+  if (data.niNumber) {
+    orConditions.push({ niNumber: { $regex: new RegExp(`^${escapeRegex(data.niNumber)}$`, 'i') } });
+  }
+  if (data.postCode) {
+    orConditions.push({ postCode: { $regex: new RegExp(`^${escapeRegex(data.postCode)}$`, 'i') } });
+  }
+  if (data.nextCheckDueDate) orConditions.push({ nextCheckDueDate: data.nextCheckDueDate });
+  if (data.licenseExpiry) orConditions.push({ licenseExpiry: data.licenseExpiry });
+  if (data.licenseExpiryDTC) orConditions.push({ licenseExpiryDTC: data.licenseExpiryDTC });
+  if (data.cpcExpiry) orConditions.push({ cpcExpiry: data.cpcExpiry });
+  if (typeof data.points !== 'undefined') orConditions.push({ points: data.points });
+  if (Array.isArray(data.endorsementCodes) && data.endorsementCodes.length)
+    orConditions.push({ endorsementCodes: { $all: data.endorsementCodes } });
+  if (data.lastChecked) orConditions.push({ lastChecked: data.lastChecked });
+  if (typeof data.checkFrequencyDays !== 'undefined')
+    orConditions.push({ checkFrequencyDays: data.checkFrequencyDays });
+  if (typeof data.employed !== 'undefined') orConditions.push({ employed: data.employed });
+  if (data.checkStatus) orConditions.push({ checkStatus: data.checkStatus });
+  if (Array.isArray(data.attachments) && data.attachments.length)
+    orConditions.push({ attachments: { $all: data.attachments } });
+
+  if (orConditions.length > 0) {
+    const existingDriver = await DriverModel.findOne({
+      _id: { $ne: id },
+      $or: orConditions,
+    }).lean();
+    if (existingDriver) {
+      throw new Error('Duplicate detected: Another driver with the same field(s) already exists.');
+    }
   }
   // Proceed to update the driver
-  const updatedDriver = await DriverModel.findByIdAndUpdate(id, data, { new: true });
-  return updatedDriver;
-};
-
-/**
- * Service function to update multiple driver.
- *
- * @param {UpdateManyDriverInput} data - An array of data to update multiple driver.
- * @returns {Promise<Partial<IDriver>[]>} - The updated driver.
- */
-const updateManyDriver = async (data: UpdateManyDriverInput): Promise<Partial<IDriver>[]> => {
-  // Early return if no data provided
-  if (data.length === 0) {
-    return [];
-  }
-  // Convert string ids to ObjectId (for safety)
-  const objectIds = data.map((item) => new mongoose.Types.ObjectId(item.id));
-  // Check for duplicates (filedName) excluding the documents being updated
-  const existingDriver = await DriverModel.find({
-    _id: { $nin: objectIds }, // Exclude documents being updated
-    $or: data.flatMap((item) => [
-      // { filedName: item.filedName },
-    ]),
-  }).lean();
-  // If any duplicates found, throw error
-  if (existingDriver.length > 0) {
-    throw new Error(
-      'Duplicate detected: One or more driver with the same fieldName already exist.'
-    );
-  }
-  // Prepare bulk operations
-  const operations = data.map((item) => ({
-    updateOne: {
-      filter: { _id: new mongoose.Types.ObjectId(item.id) },
-      update: { $set: item },
-      upsert: false,
+  const updatedDriver = await DriverModel.findOneAndUpdate(
+    {
+      _id: id,
+      $or: [
+        { createdBy: new mongoose.Types.ObjectId(userId) },
+        { standAloneId: new mongoose.Types.ObjectId(userId) },
+      ],
     },
-  }));
-  // Execute bulk update
-  const bulkResult = await DriverModel.bulkWrite(operations, {
-    ordered: true, // keep order of operations
-  });
-  // check if all succeeded
-  if (bulkResult.matchedCount !== data.length) {
-    throw new Error('Some documents were not found or updated');
-  }
-  // Fetch the freshly updated documents
-  const updatedDocs = await DriverModel.find({ _id: { $in: objectIds } })
-    .lean()
-    .exec();
-  // Map back to original input order
-  const resultMap = new Map<string, any>(updatedDocs.map((doc) => [doc._id.toString(), doc]));
-  // Ensure the result array matches the input order
-  const orderedResults = data.map((item) => {
-    const updated = resultMap.get(item.id);
-    return updated || { _id: item.id };
-  });
-  return orderedResults as Partial<IDriver>[];
+    data,
+    { new: true }
+  );
+  return updatedDriver;
 };
 
 /**
@@ -143,7 +123,10 @@ const updateManyDriver = async (data: UpdateManyDriverInput): Promise<Partial<ID
  * @param {IdOrIdsInput['id']} id - The ID of the driver to delete.
  * @returns {Promise<Partial<IDriver>>} - The deleted driver.
  */
-const deleteDriver = async (id: IdOrIdsInput['id']): Promise<Partial<IDriver | null>> => {
+const deleteDriver = async (
+  id: IdOrIdsInput['id'],
+  userId: string
+): Promise<Partial<IDriver | null>> => {
   const [driverTachographExists, fuelUsageExists, vehicleExists] = await Promise.all([
     DriverTachograph.exists({
       driverId: new mongoose.Types.ObjectId(id),
@@ -166,7 +149,13 @@ const deleteDriver = async (id: IdOrIdsInput['id']): Promise<Partial<IDriver | n
     );
   }
 
-  const deletedDriver = await DriverModel.findByIdAndDelete(id);
+  const deletedDriver = await DriverModel.findOneAndDelete({
+    _id: id,
+    $or: [
+      { createdBy: new mongoose.Types.ObjectId(userId) },
+      { standAloneId: new mongoose.Types.ObjectId(userId) },
+    ],
+  });
   return deletedDriver;
 };
 
@@ -245,7 +234,6 @@ export const driverServices = {
   createDriverAsTransportManager,
   createDriverAsStandAlone,
   updateDriver,
-  updateManyDriver,
   deleteDriver,
   getDriverById,
   getManyDriver,
