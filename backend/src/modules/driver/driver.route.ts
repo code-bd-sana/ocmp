@@ -20,7 +20,7 @@ import {
   validateUpdateDriverIds,
   validateDeleteDriverIds,
 } from './driver.validation';
-import { validateId, validateSearchQueries } from '../../handlers/common-zod-validator';
+import { validateId } from '../../handlers/common-zod-validator';
 import isAuthorized from '../../middlewares/is-authorized';
 import authorizedRoles from '../../middlewares/authorized-roles';
 import { UserRole } from '../../models';
