@@ -44,14 +44,14 @@ router.post(
 );
 
 /**
- * @route POST /api/v1/driver/create-stand-alone
+ * @route POST /api/v1/driver/create-stand-alone-driver
  * @description Create a new driver as a stand-alone user
  * @access Private - Stand-alone user only
  * @param {function} validation - ['validateCreateDriverAsStandAlone']
  * @param {function} controller - ['createDriverAsStandAlone']
  */
 router.post(
-  '/create-stand-alone',
+  '/create-stand-alone-driver',
   authorizedRoles([UserRole.STANDALONE_USER]),
   validateCreateDriverAsStandAlone,
   createDriverAsStandAlone

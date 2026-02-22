@@ -46,21 +46,15 @@ const baseDriverFields = {
   points: z
     .number({ message: 'Points must be a number' })
     .int({ message: 'Points must be an integer' })
-    .min(0, 'Points cannot be negative')
-    .optional(),
+    .min(0, 'Points cannot be negative'),
   endorsementCodes: z.array(z.string({ message: 'Endorsement code must be a string' })).optional(),
   lastChecked: z.coerce.date({ message: 'Last checked must be a valid date string' }).optional(),
   checkFrequencyDays: z
     .number({ message: 'Check frequency days must be a number' })
     .int({ message: 'Check frequency days must be an integer' })
-    .min(0, 'Check frequency days cannot be negative')
-    .optional(),
-  employed: z.boolean({ message: 'Employed must be a boolean value' }).optional(),
-  checkStatus: z
-    .enum(CheckStatus, {
-      message: 'Check status must be one of: Okay or Due',
-    })
-    .optional(),
+    .min(0, 'Check frequency days cannot be negative'),
+  employed: z.boolean({ message: 'Employed must be a boolean value' }),
+  checkStatus: z.nativeEnum(CheckStatus).optional(),
   attachments: z
     .array(z.string().refine(isMongoId, { message: 'Please provide a valid MongoDB ObjectId' }))
     .optional(),
