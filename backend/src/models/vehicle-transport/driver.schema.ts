@@ -22,7 +22,7 @@ export interface IDriver extends Document {
   employed: Boolean;
   checkStatus?: CheckStatus;
   attachments?: mongoose.Types.ObjectId[];
-  employedBy: mongoose.Types.ObjectId;
+  standAloneId?: mongoose.Types.ObjectId;
   createdBy: mongoose.Types.ObjectId;
 }
 
@@ -91,9 +91,8 @@ const DriverSchema: Schema<IDriver> = new Schema(
         ref: 'Document', // Reference to the Document model
       },
     ] /* Driver details, licence and doc files */,
-    employedBy: {
+    standAloneId: {
       type: Schema.Types.ObjectId,
-      required: true,
       ref: 'User', // Which Standalone or client employed this driver
     },
     createdBy: {

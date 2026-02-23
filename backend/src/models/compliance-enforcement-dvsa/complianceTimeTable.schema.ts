@@ -12,6 +12,7 @@ export interface IComplianceTimeTable extends Document {
   responsibleParty?: string;
   dueDate?: Date;
   status?: ComplianceStatus;
+  standAloneId?: mongoose.Types.ObjectId;
   createdBy: mongoose.Types.ObjectId;
 }
 
@@ -32,6 +33,10 @@ const ComplianceTimeTableSchema: Schema<IComplianceTimeTable> = new Schema(
       type: String,
       enum: Object.values(ComplianceStatus),
     },
+    standAloneId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+    },
     createdBy: {
       type: Schema.Types.ObjectId,
       required: true,
@@ -41,7 +46,7 @@ const ComplianceTimeTableSchema: Schema<IComplianceTimeTable> = new Schema(
   { timestamps: true, versionKey: false }
 );
 
-// Create the AuditsAndRecificationReports model
+// Create the ComplianceTimeTable model
 const ComplianceTimeTable = mongoose.model<IComplianceTimeTable>(
   'ComplianceTimeTable',
   ComplianceTimeTableSchema

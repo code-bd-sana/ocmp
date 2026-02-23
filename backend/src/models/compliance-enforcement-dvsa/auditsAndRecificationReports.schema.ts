@@ -6,6 +6,7 @@ export interface IAuditsAndRectificationReports extends Document {
   type?: string;
   responsiblePerson?: string;
   attachments?: mongoose.Types.ObjectId[];
+  standAloneId?: mongoose.Types.ObjectId;
   createdBy: mongoose.Types.ObjectId;
 }
 
@@ -28,6 +29,10 @@ const AuditsAndRectificationReportsSchema: Schema<IAuditsAndRectificationReports
         ref: 'Document', // Reference from Document model
       },
     ],
+    standAloneId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+    },
     createdBy: {
       type: Schema.Types.ObjectId,
       required: true,

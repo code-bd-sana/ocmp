@@ -12,6 +12,8 @@ export interface IOrsPlan extends Document {
     }[];
     attachments: mongoose.Types.ObjectId[];
   }[];
+  standAloneId?: mongoose.Types.ObjectId;
+  createdBy: mongoose.Types.ObjectId;
 }
 
 // Define the OrsPlan schema
@@ -46,6 +48,15 @@ const OrsPlanSchema: Schema<IOrsPlan> = new Schema(
         ],
       },
     ],
+    standAloneId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+    },
+    createdBy: {
+      type: Schema.Types.ObjectId,
+      required: true,
+      ref: 'User', // Reference from User model
+    },
   },
   { timestamps: true, versionKey: false }
 );
