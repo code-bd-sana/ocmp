@@ -1,14 +1,14 @@
 import { isMongoId } from 'validator';
 import { z } from 'zod';
-import { validateBody } from '../../handlers/zod-error-handler';
-import { VehicleStatus, OwnerShipStatus } from '../../models';
+import { validateBody, validateParams } from '../../handlers/zod-error-handler';
+import { OwnerShipStatus, VehicleStatus } from '../../models';
 
 const additionalDetailsSchema = z
   .object({
     lastServiceDate: z.coerce.date({ message: 'lastServiceDate must be a valid date' }).optional(),
     nextServiceDate: z.coerce.date({ message: 'nextServiceDate must be a valid date' }).optional(),
     grossPlatedWeight: z.number({ message: 'grossPlatedWeight must be a number' }),
-    ownerShipStatus: z.nativeEnum(OwnerShipStatus, {
+    ownerShipStatus: z.enum(OwnerShipStatus, {
       message: 'ownerShipStatus must be a valid ownership status',
     }),
     diskNumber: z.coerce.date({ message: 'diskNumber must be a valid date' }),
@@ -53,39 +53,8 @@ const baseVehicleFields = {
     .string({ message: 'licensePlate must be a string' })
     .min(1, 'License plate is required')
     .max(50, 'License plate must not exceed 50 characters'),
-  status: z.nativeEnum(VehicleStatus, { message: 'status must be a valid vehicle status' }),
-  additionalDetails: z.preprocess(
-    (val) => val || {},
-    z
-      .object({
-        lastServiceDate: z.coerce
-          .date({ message: 'lastServiceDate must be a valid date' })
-          .optional(),
-        nextServiceDate: z.coerce
-          .date({ message: 'nextServiceDate must be a valid date' })
-          .optional(),
-        grossPlatedWeight: z.number({ message: 'grossPlatedWeight must be a number' }),
-        ownerShipStatus: z.nativeEnum(OwnerShipStatus, {
-          message: 'ownerShipStatus must be a valid ownership status',
-        }),
-        diskNumber: z.coerce.date({ message: 'diskNumber must be a valid date' }),
-        dateLeft: z.coerce.date({ message: 'dateLeft must be a valid date' }).optional(),
-        chassisNumber: z
-          .string({ message: 'chassisNumber must be a string' })
-          .min(1, 'chassisNumber is required'),
-        keysAvailable: z.number({ message: 'keysAvailable must be a number' }),
-        v5InName: z.boolean({ message: 'v5InName must be a boolean' }),
-        plantingCertificate: z.boolean({ message: 'plantingCertificate must be a boolean' }),
-        vedExpiry: z.coerce.date({ message: 'vedExpiry must be a valid date' }).optional(),
-        insuranceExpiry: z.coerce
-          .date({ message: 'insuranceExpiry must be a valid date' })
-          .optional(),
-        serviceDueDate: z.coerce
-          .date({ message: 'serviceDueDate must be a valid date' })
-          .optional(),
-      })
-      .strict()
-  ),
+  status: z.enum(VehicleStatus, { message: 'status must be a valid vehicle status' }),
+  additionalDetails: additionalDetailsSchema,
   driverPack: z.boolean({ message: 'driverPack must be a boolean' }),
   notes: z.string({ message: 'notes must be a string' }).optional(),
   driverIds: z.array(
@@ -136,6 +105,48 @@ const zodCreateVehicleAsStandAloneSchema = z
 
 export type CreateVehicleAsStandAloneInput = z.infer<typeof zodCreateVehicleAsStandAloneSchema>;
 
+const zodUpdateVehicleSchema = z
+  .object({
+    vehicleRegId: baseVehicleFields.vehicleRegId.optional(),
+    vehicleType: baseVehicleFields.vehicleType.optional(),
+    licensePlate: baseVehicleFields.licensePlate.optional(),
+    status: baseVehicleFields.status.optional(),
+    additionalDetails: baseVehicleFields.additionalDetails.optional(),
+    driverPack: baseVehicleFields.driverPack.optional(),
+    notes: baseVehicleFields.notes.optional(),
+    driverIds: baseVehicleFields.driverIds.optional(),
+    attachments: baseVehicleFields.attachments?.optional(),
+  })
+  .strict();
+
+export type UpdateVehicleInput = z.infer<typeof zodUpdateVehicleSchema>;
+
+/**
+ * Zod schema for validating the deletion of a vehicle, ensuring the provided IDs are valid MongoDB ObjectIds.
+ */
+const zodVehicleAndManagerIdSchema = z.object({
+  vehicleId: z
+    .string()
+    .refine(isMongoId, { message: 'Please provide a valid MongoDB ObjectId for vehicle ID' }),
+  standAloneId: z
+    .string()
+    .refine(isMongoId, { message: 'Please provide a valid MongoDB ObjectId for standAloneId' }),
+});
+
+export type VehicleAndManagerIdInput = z.infer<typeof zodVehicleAndManagerIdSchema>;
+
+/**
+ * Zod schema for validating the deletion of a vehicle, ensuring the provided IDs are valid MongoDB ObjectIds.
+ */
+
+const zodDeleteVehicleSchema = zodVehicleAndManagerIdSchema.strict();
+
+export type DeleteVehicleInput = z.infer<typeof zodDeleteVehicleSchema>;
+
+const zodUpdateVehicleIdSchema = zodVehicleAndManagerIdSchema.strict();
+
+export type UpdateVehicleInputWithIds = z.infer<typeof zodUpdateVehicleIdSchema>;
+
 /**
  * Named validators — use these directly in your Express routes
  */
@@ -143,4 +154,6 @@ export const validateCreateVehicleAsTransportManager = validateBody(
   zodCreateVehicleAsTransportManagerSchema
 );
 export const validateCreateVehicleAsStandAlone = validateBody(zodCreateVehicleAsStandAloneSchema);
-
+export const validateUpdateVehicle = validateBody(zodUpdateVehicleSchema);
+export const validateDeleteVehicle = validateParams(zodDeleteVehicleSchema);
+export const validateUpdateVehicleIds = validateParams(zodUpdateVehicleIdSchema);

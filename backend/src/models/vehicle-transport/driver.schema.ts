@@ -22,7 +22,7 @@ export interface IDriver extends Document {
   employed: Boolean;
   checkStatus?: CheckStatus;
   attachments?: mongoose.Types.ObjectId[];
-  standAloneId?: mongoose.Types.ObjectId; // If employed, which standalone or client employed this driver
+  standAloneId?: mongoose.Types.ObjectId;
   createdBy: mongoose.Types.ObjectId;
 }
 

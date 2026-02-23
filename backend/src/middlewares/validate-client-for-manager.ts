@@ -1,8 +1,8 @@
-import { Request, Response, NextFunction } from 'express';
+import { NextFunction, Response } from 'express';
 import mongoose from 'mongoose';
+import ServerResponse from '../helpers/responses/custom-response';
 import { ClientManagement, ClientStatus } from '../models';
 import { AuthenticatedRequest } from './is-authorized';
-import ServerResponse from '../helpers/responses/custom-response';
 
 export const validateClientForManagerMiddleware = async (
   req: AuthenticatedRequest,
@@ -21,9 +21,6 @@ export const validateClientForManagerMiddleware = async (
 
     if (!isClientExist) {
       ServerResponse(res, false, 403, 'Client not found in your clients list or not approved');
-      // return res.status(403).json({
-      //   message: 'Client not found in your clients list or not approved',
-      // });
     }
 
     next();

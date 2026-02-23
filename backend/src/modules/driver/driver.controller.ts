@@ -1,10 +1,10 @@
 import { Request, Response } from 'express';
 import mongoose from 'mongoose';
-import { driverServices } from './driver.service';
-import { SearchQueryInput } from '../../handlers/common-zod-validator';
 import ServerResponse from '../../helpers/responses/custom-response';
 import { AuthenticatedRequest } from '../../middlewares/is-authorized';
+import { UserRole } from '../../models';
 import catchAsync from '../../utils/catch-async/catch-async';
+import { driverServices } from './driver.service';
 import { SearchDriverQueryInput } from './driver.validation';
 
 /**
@@ -19,11 +19,9 @@ export const createDriverAsTransportManager = catchAsync(
   async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user!._id;
     req.body.createdBy = new mongoose.Types.ObjectId(userId);
-
     req.body.standAloneId = new mongoose.Types.ObjectId(req.body.standAloneId);
-
     // Call the service method to create a new driver and get the result
-    const result = await driverServices.createDriverAsTransportManager(req.body, userId);
+    const result = await driverServices.createDriverAsTransportManager(req.body);
     if (!result) throw new Error('Failed to create driver');
     // Send a success response with the created driver data
     ServerResponse(res, true, 201, 'Driver created successfully', result);
@@ -78,7 +76,6 @@ export const updateDriver = catchAsync(async (req: AuthenticatedRequest, res: Re
 export const deleteDriver = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
   const paramToString = (p?: string | string[]) => (Array.isArray(p) ? p[0] : p);
   const driverId = paramToString(req.params.driverId ?? req.params.id);
-
   // Call the service method to delete the driver by ID
   const result = await driverServices.deleteDriver(driverId as string, req.user!._id);
   if (!result) throw new Error('Failed to delete driver');
@@ -94,10 +91,18 @@ export const deleteDriver = catchAsync(async (req: AuthenticatedRequest, res: Re
  * @returns {Promise<Partial<IDriver>>} - The retrieved driver.
  * @throws {Error} - Throws an error if the driver retrieval fails.
  */
-export const getDriverById = catchAsync(async (req: Request, res: Response) => {
+export const getDriverById = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
   const { id } = req.params;
+  let standAloneId: string | undefined;
+  let createdBy: string | undefined;
+  if (req.user?.role === UserRole.STANDALONE_USER) {
+    standAloneId = req.user._id;
+  }
+  if (req.user?.role === UserRole.TRANSPORT_MANAGER) {
+    createdBy = req.user._id;
+  }
   // Call the service method to get the driver by ID and get the result
-  const result = await driverServices.getDriverById(id as string);
+  const result = await driverServices.getDriverById(id as string, standAloneId, createdBy);
   if (!result) throw new Error('Driver not found');
   // Send a success response with the retrieved resource data
   ServerResponse(res, true, 200, 'Driver retrieved successfully', result);
@@ -111,9 +116,17 @@ export const getDriverById = catchAsync(async (req: Request, res: Response) => {
  * @returns {Promise<Partial<IDriver>[]>} - The retrieved drivers.
  * @throws {Error} - Throws an error if the drivers retrieval fails.
  */
-export const getManyDriver = catchAsync(async (req: Request, res: Response) => {
+export const getManyDriver = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
   // Use the validated and transformed query from Zod middleware
-  const query = (req as any).validatedQuery as SearchDriverQueryInput;
+  type DriverSearchQuery = SearchDriverQueryInput & { createdBy?: string };
+  const query: DriverSearchQuery = { ...((req as any).validatedQuery as SearchDriverQueryInput) };
+
+  if (req.user?.role === UserRole.STANDALONE_USER) {
+    query.standAloneId = req.user._id;
+  }
+  if (req.user?.role === UserRole.TRANSPORT_MANAGER) {
+    query.createdBy = req.user._id;
+  }
   // Call the service method to get multiple drivers based on query parameters and get the result
   const { drivers, totalData, totalPages } = await driverServices.getManyDriver(query);
   if (!drivers) throw new Error('Failed to retrieve drivers');
@@ -124,4 +137,3 @@ export const getManyDriver = catchAsync(async (req: Request, res: Response) => {
     totalPages,
   });
 });
-

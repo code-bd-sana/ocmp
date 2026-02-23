@@ -12,6 +12,8 @@ export interface ISpotCheck extends Document {
   followUpNeeded?: string;
   notes?: string;
   attachments?: mongoose.Types.ObjectId[];
+  standAloneId?: mongoose.Types.ObjectId;
+  createdBy: mongoose.Types.ObjectId;
 }
 
 // Define the SpotCheck schema
@@ -55,6 +57,15 @@ const SpotCheckSchema: Schema<ISpotCheck> = new Schema(
         ref: 'Document', // Reference to the Document model
       },
     ],
+    standAloneId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+    },
+    createdBy: {
+      type: Schema.Types.ObjectId,
+      required: true,
+      ref: 'User', // Reference from User model
+    },
   },
   { timestamps: true, versionKey: false }
 );

@@ -1,29 +1,32 @@
 // Import the model
-import mongoose, { Mongoose } from 'mongoose';
-import DriverModel, { IDriver } from '../../models/vehicle-transport/driver.schema';
+import mongoose from 'mongoose';
 import { IdOrIdsInput, SearchQueryInput } from '../../handlers/common-zod-validator';
+import { DriverTachograph, FuelUsage, Vehicle } from '../../models';
+import DriverModel, { IDriver } from '../../models/vehicle-transport/driver.schema';
 import {
-  CreateDriverAsTransportManagerInput,
   CreateDriverAsStandAloneInput,
-  UpdateDriverInput,
+  CreateDriverAsTransportManagerInput,
   SearchDriverQueryInput,
+  UpdateDriverInput,
 } from './driver.validation';
-import { ClientManagement, ClientStatus, DriverTachograph, FuelUsage, Vehicle } from '../../models';
+
+const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 /**
  * Service function to create a new driver as a Transport Manager.
  *
  * @param {CreateDriverAsTransportManagerInput} data - The data to create a new driver.
- * @param {string} userId - The transport manager's user ID.
  * @returns {Promise<Partial<IDriver>>} - The created driver.
  */
 const createDriverAsTransportManager = async (
-  data: CreateDriverAsTransportManagerInput,
-  userId: string
+  data: CreateDriverAsTransportManagerInput
 ): Promise<Partial<IDriver>> => {
   // Check for duplicate driver by licenseNumber or niNumber
   const existingDriver = await DriverModel.findOne({
-    $or: [{ licenseNumber: data.licenseNumber }, { niNumber: data.niNumber }],
+    $or: [
+      { licenseNumber: { $regex: new RegExp(`^${escapeRegex(data.licenseNumber)}$`, 'i') } },
+      { niNumber: { $regex: new RegExp(`^${escapeRegex(data.niNumber)}$`, 'i') } },
+    ],
   });
 
   if (existingDriver) {
@@ -35,11 +38,20 @@ const createDriverAsTransportManager = async (
   return savedDriver;
 };
 
+/**
+ * Service function to create a new driver as a Stand-alone User.
+ *
+ * @param {CreateDriverAsStandAloneInput} data - The data to create a new driver.
+ * @returns {Promise<Partial<IDriver>>} - The created driver.
+ */
 const createDriverAsStandAlone = async (
   data: CreateDriverAsStandAloneInput
 ): Promise<Partial<IDriver>> => {
   const existingDriver = await DriverModel.findOne({
-    $or: [{ licenseNumber: data.licenseNumber }, { niNumber: data.niNumber }],
+    $or: [
+      { licenseNumber: { $regex: new RegExp(`^${escapeRegex(data.licenseNumber)}$`, 'i') } },
+      { niNumber: { $regex: new RegExp(`^${escapeRegex(data.niNumber)}$`, 'i') } },
+    ],
   });
 
   if (existingDriver) {
@@ -96,7 +108,18 @@ const updateDriver = async (
   if (orConditions.length > 0) {
     const existingDriver = await DriverModel.findOne({
       _id: { $ne: id },
-      $or: orConditions,
+      $or: [
+        {
+          licenseNumber: data.licenseNumber
+            ? { $regex: new RegExp(`^${escapeRegex(data.licenseNumber)}$`, 'i') }
+            : undefined,
+        },
+        {
+          niNumber: data.niNumber
+            ? { $regex: new RegExp(`^${escapeRegex(data.niNumber)}$`, 'i') }
+            : undefined,
+        },
+      ],
     }).lean();
     if (existingDriver) {
       throw new Error('Duplicate detected: Another driver with the same field(s) already exists.');
@@ -130,15 +153,12 @@ const deleteDriver = async (
   const [driverTachographExists, fuelUsageExists, vehicleExists] = await Promise.all([
     DriverTachograph.exists({
       driverId: new mongoose.Types.ObjectId(id),
-      tachographRecords: { $exists: true, $not: { $size: 0 } },
     }),
     FuelUsage.exists({
       driverId: new mongoose.Types.ObjectId(id),
-      fuelUsageRecords: { $exists: true, $not: { $size: 0 } },
     }),
     Vehicle.exists({
       driverId: new mongoose.Types.ObjectId(id),
-      assignedVehicles: { $exists: true, $not: { $size: 0 } },
     }),
   ]);
 
@@ -163,10 +183,22 @@ const deleteDriver = async (
  * Service function to retrieve a single driver by ID.
  *
  * @param {IdOrIdsInput['id']} id - The ID of the driver to retrieve.
+ * @param {IdOrIdsInput['standAloneId']} [standAloneId] - Optional stand-alone ID for additional filtering.
+ * @param {IdOrIdsInput['createdById']} [createdById] - Optional createdBy ID for additional filtering.
  * @returns {Promise<Partial<IDriver>>} - The retrieved driver.
  */
-const getDriverById = async (id: IdOrIdsInput['id']): Promise<Partial<IDriver | null>> => {
-  const driver = await DriverModel.findById(id);
+const getDriverById = async (
+  id: IdOrIdsInput['id'],
+  standAloneId?: IdOrIdsInput['id'],
+  createdBy?: IdOrIdsInput['id']
+): Promise<Partial<IDriver | null>> => {
+  const driver = await DriverModel.findById(id, {
+    $or: [
+      { standAloneId: standAloneId ? new mongoose.Types.ObjectId(standAloneId) : null },
+      { createdBy: standAloneId ? new mongoose.Types.ObjectId(standAloneId) : null },
+      { createdBy: createdBy ? new mongoose.Types.ObjectId(createdBy) : null },
+    ],
+  });
   return driver;
 };
 
@@ -177,13 +209,13 @@ const getDriverById = async (id: IdOrIdsInput['id']): Promise<Partial<IDriver | 
  * @returns {Promise<Partial<IDriver>[]>} - The retrieved driver
  */
 const getManyDriver = async (
-  query: SearchDriverQueryInput
+  query: SearchDriverQueryInput & { createdBy?: string }
 ): Promise<{
   drivers: Partial<IDriver>[];
   totalData: number;
   totalPages: number;
 }> => {
-  const { searchKey = '', showPerPage = 10, pageNo = 1, standAloneId } = query;
+  const { searchKey = '', showPerPage = 10, pageNo = 1, standAloneId, createdBy } = query;
 
   const searchConditions: any[] = [];
   const andConditions: any[] = [];
@@ -206,6 +238,12 @@ const getManyDriver = async (
     andConditions.push({
       $or: [{ standAloneId: objectId }, { createdBy: objectId }],
     });
+  }
+
+  // CreatedBy filter
+  if (createdBy) {
+    const objectId = new mongoose.Types.ObjectId(createdBy);
+    andConditions.push({ createdBy: objectId });
   }
 
   // Final filter build
@@ -238,4 +276,3 @@ export const driverServices = {
   getDriverById,
   getManyDriver,
 };
-

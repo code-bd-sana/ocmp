@@ -6,18 +6,18 @@ import {
   createClient,
   getClientLimit,
   getClientsByManagerId,
+  getLeaveRequests,
   getManagerList,
   getPendingRequests,
+  getRemoveRequest,
+  handleLeaveRequest,
+  handleRemoveRequest,
   removeClientFromManager,
   requestJoinTeam,
+  requestLeave,
+  requestRemove,
   updateClientLimit,
   updateJoinRequest,
-  requestLeave,
-  getLeaveRequests,
-  handleLeaveRequest,
-  requestRemove,
-  getRemoveRequest,
-  handleRemoveRequest,
 } from './client-management.controller';
 
 // Import validators
@@ -26,20 +26,21 @@ import authorizedRoles from '../../middlewares/authorized-roles';
 import isAuthorized from '../../middlewares/is-authorized';
 import { UserRole } from '../../models';
 import {
+  validateAction,
   validateClientIdParam,
   validateCreateClient,
   validateManagerIdParam,
   validateRequestJoinTeam,
   validateUpdateClientLimit,
   validateUpdateJoinRequest,
-  validateAction,
 } from './client-management.validation';
+
+// TODO: have to check subscription middleware in create update & delete routes
 
 // Initialize router
 const router = Router();
 
 // Define route handlers
-
 /**
  * @route POST /api/v1/client-management/clients
  * @description Create client under Transport Manager
@@ -53,6 +54,7 @@ router.post(
   '/clients',
   isAuthorized(),
   authorizedRoles([UserRole.TRANSPORT_MANAGER]),
+  // checkSubscriptionValidity,
   validateCreateClient,
   createClient
 );
@@ -105,6 +107,7 @@ router.post(
   '/request-join-team',
   isAuthorized(),
   authorizedRoles([UserRole.STANDALONE_USER]),
+  // checkSubscriptionValidity,
   validateRequestJoinTeam,
   requestJoinTeam
 );
@@ -152,6 +155,7 @@ router.put(
   '/join-requests/:clientId',
   isAuthorized(),
   authorizedRoles([UserRole.TRANSPORT_MANAGER]),
+  // checkSubscriptionValidity,
   validateClientIdParam,
   validateUpdateJoinRequest,
   updateJoinRequest
@@ -170,6 +174,7 @@ router.delete(
   '/clients/:clientId/remove-manager',
   isAuthorized(),
   authorizedRoles([UserRole.SUPER_ADMIN, UserRole.STANDALONE_USER]),
+  // checkSubscriptionValidity,
   validateClientIdParam,
   removeClientFromManager
 );
@@ -202,6 +207,7 @@ router.put(
   '/transport-manager/:managerId/client-limit',
   isAuthorized(),
   authorizedRoles([UserRole.SUPER_ADMIN]),
+  // checkSubscriptionValidity,
   validateManagerIdParam,
   validateUpdateClientLimit,
   updateClientLimit
@@ -223,6 +229,7 @@ router.patch(
   '/request-leave',
   isAuthorized(),
   authorizedRoles([UserRole.STANDALONE_USER]),
+  // checkSubscriptionValidity,
   requestLeave
 );
 
@@ -254,6 +261,7 @@ router.patch(
   '/leave-requests/:clientId',
   isAuthorized(),
   authorizedRoles([UserRole.TRANSPORT_MANAGER]),
+  // checkSubscriptionValidity,
   validateClientIdParam,
   validateAction,
   handleLeaveRequest
@@ -276,6 +284,7 @@ router.patch(
   '/request-remove/:clientId',
   isAuthorized(),
   authorizedRoles([UserRole.TRANSPORT_MANAGER]),
+  // checkSubscriptionValidity,
   validateClientIdParam,
   requestRemove
 );
@@ -308,6 +317,7 @@ router.patch(
   '/remove-request',
   isAuthorized(),
   authorizedRoles([UserRole.STANDALONE_USER]),
+  // checkSubscriptionValidity,
   validateAction,
   handleRemoveRequest
 );

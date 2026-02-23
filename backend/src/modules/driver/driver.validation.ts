@@ -1,9 +1,8 @@
 import { isMongoId } from 'validator';
 import { z } from 'zod';
+import { zodSearchQuerySchema } from '../../handlers/common-zod-validator';
 import { validateBody, validateParams, validateQuery } from '../../handlers/zod-error-handler';
 import { CheckStatus } from '../../models';
-import { zodSearchQuerySchema } from '../../handlers/common-zod-validator';
-import { createDriverAsTransportManager } from './driver.controller';
 
 /**
  * Driver Validation Schemas and Types
@@ -146,7 +145,6 @@ export type SearchDriverQueryInput = z.infer<typeof zodSearchDriverSchema>;
 /**
  * Zod schema for validating the deletion of a driver, ensuring the provided IDs are valid MongoDB ObjectIds.
  */
-
 const zodDriverAndManagerIdSchema = z.object({
   driverId: z
     .string()
@@ -181,4 +179,3 @@ export const validateUpdateDriver = validateBody(zodUpdateDriverSchema);
 export const validateSearchDriverQueries = validateQuery(zodSearchDriverSchema);
 export const validateDeleteDriverIds = validateParams(zodDeleteDriverSchema);
 export const validateUpdateDriverIds = validateParams(zodUpdateDriverIdSchema);
-
