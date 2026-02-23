@@ -18,7 +18,7 @@ export {
   default as ClientManagement,
   IClientEntry,
   IClientManagement,
-} from './users-accounts/clientmanagement.schema';
+} from './users-accounts/clientManagement.schema';
 
 // subscription billing
 export {
@@ -113,3 +113,9 @@ export {
   IWheelRetorquePolicyMonitoring,
   default as WheelRetorquePolicyMonitoring,
 } from './compliance-enforcement-dvsa/wheelRetorquePolicyMonitoring.schema';
+
+// training
+export {
+  default as TrainingSheet,
+  ITrainingSheet,
+} from './training/trainingSheet.schema';
