@@ -1,10 +1,17 @@
 // Import the model
+import mongoose from 'mongoose';
 import { IdOrIdsInput, SearchQueryInput } from '../../handlers/common-zod-validator';
-import VehicleModel, { IVehicle } from '../../models/vehicle-transport/vehicle.schema';
+import VehicleModel, {
+  IVehicle,
+  OwnerShipStatus,
+} from '../../models/vehicle-transport/vehicle.schema';
 import {
   CreateVehicleAsStandAloneInput,
   CreateVehicleAsTransportManagerInput,
+  UpdateVehicleInput,
 } from './vehicle.validation';
+
+const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 /**
  * Service function to create a new vehicle.
@@ -16,7 +23,6 @@ const createVehicle = async (
   data: CreateVehicleAsStandAloneInput | CreateVehicleAsTransportManagerInput
 ): Promise<Partial<IVehicle>> => {
   // Prevent duplicates by vehicleRegId or licensePlate (case-insensitive)
-  const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const or: any[] = [];
   if (data.vehicleRegId) {
     or.push({ vehicleRegId: { $regex: new RegExp(`^${escapeRegex(data.vehicleRegId)}$`, 'i') } });
@@ -30,23 +36,11 @@ const createVehicle = async (
     if (existingVehicle) throw new Error('Vehicle already exists');
   }
 
+  // TODO: ATTACHMENTS Left
+
   const newVehicle = new VehicleModel(data);
   const savedVehicle = await newVehicle.save();
   return savedVehicle;
-};
-
-const createVehicleAsTransportManager = async (
-  data: CreateVehicleAsTransportManagerInput,
-  userId: string
-): Promise<Partial<IVehicle>> => {
-  // Optionally verify manager-client relationship here
-  return createVehicle(data);
-};
-
-const createVehicleAsStandAlone = async (
-  data: CreateVehicleAsStandAloneInput
-): Promise<Partial<IVehicle>> => {
-  return createVehicle(data);
 };
 
 /**
@@ -58,23 +52,147 @@ const createVehicleAsStandAlone = async (
  */
 const updateVehicle = async (
   id: IdOrIdsInput['id'],
-  data: UpdateVehicleInput
+  data: UpdateVehicleInput,
+  userId: IdOrIdsInput['id']
 ): Promise<Partial<IVehicle | null>> => {
-  // Check for duplicate (filed) combination
-  const existingVehicle = await VehicleModel.findOne({
-    _id: { $ne: id }, // Exclude the current document
-    $or: [
-      {
-        /* filedName: data.filedName, */
-      },
-    ],
-  }).lean();
-  // Prevent duplicate updates
-  if (existingVehicle) {
-    throw new Error('Duplicate detected: Another vehicle with the same fieldName already exists.');
+  // Build $or conditions only for fields provided in `data`
+  const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const orConditions: any[] = [];
+  if (data.vehicleRegId)
+    orConditions.push({
+      vehicleRegId: { $regex: new RegExp(`^${escapeRegex(data.vehicleRegId)}$`, 'i') },
+    });
+  if (data.licensePlate)
+    orConditions.push({
+      licensePlate: { $regex: new RegExp(`^${escapeRegex(data.licensePlate)}$`, 'i') },
+    });
+  if (data.status)
+    orConditions.push({
+      status: data.status,
+    });
+
+  if (data.additionalDetails) {
+    if (data.additionalDetails.lastServiceDate)
+      orConditions.push({
+        'additionalDetails.lastServiceDate': data.additionalDetails.lastServiceDate,
+      });
+
+    if (data.additionalDetails.nextServiceDate)
+      orConditions.push({
+        'additionalDetails.nextServiceDate': data.additionalDetails.nextServiceDate,
+      });
+
+    if (data.additionalDetails.grossPlatedWeight)
+      orConditions.push({
+        'additionalDetails.grossPlatedWeight': data.additionalDetails.grossPlatedWeight,
+      });
+
+    if (data.additionalDetails.ownerShipStatus)
+      orConditions.push({
+        'additionalDetails.ownerShipStatus': data.additionalDetails
+          .ownerShipStatus as OwnerShipStatus,
+      });
+
+    if (data.additionalDetails.diskNumber)
+      orConditions.push({
+        'additionalDetails.diskNumber': data.additionalDetails.diskNumber,
+      });
+
+    if (data.additionalDetails.dateLeft)
+      orConditions.push({
+        'additionalDetails.dateLeft': data.additionalDetails.dateLeft,
+      });
+
+    if (data.additionalDetails.chassisNumber)
+      orConditions.push({
+        'additionalDetails.chassisNumber': data.additionalDetails.chassisNumber,
+      });
+
+    if (data.additionalDetails.keysAvailable)
+      orConditions.push({
+        'additionalDetails.keysAvailable': data.additionalDetails.keysAvailable,
+      });
+
+    if (data.additionalDetails.v5InName !== undefined)
+      orConditions.push({
+        'additionalDetails.v5InName': data.additionalDetails.v5InName,
+      });
+
+    if (data.additionalDetails.plantingCertificate !== undefined)
+      orConditions.push({
+        'additionalDetails.plantingCertificate': data.additionalDetails.plantingCertificate,
+      });
+
+    if (data.additionalDetails.vedExpiry)
+      orConditions.push({
+        'additionalDetails.vedExpiry': data.additionalDetails.vedExpiry,
+      });
+
+    if (data.additionalDetails.insuranceExpiry)
+      orConditions.push({
+        'additionalDetails.insuranceExpiry': data.additionalDetails.insuranceExpiry,
+      });
+
+    if (data.additionalDetails.serviceDueDate)
+      orConditions.push({
+        'additionalDetails.serviceDueDate': data.additionalDetails.serviceDueDate,
+      });
+  }
+
+  if (data.driverPack !== undefined)
+    orConditions.push({
+      driverPack: data.driverPack,
+    });
+
+  if (data.notes)
+    orConditions.push({
+      notes: data.notes,
+    });
+
+  // convert into mongo Id
+  if (Array.isArray(data.driverIds) && data.driverIds.length > 0) {
+    orConditions.push({
+      driverIds: { $all: data.driverIds.map((id) => new mongoose.Types.ObjectId(id)) },
+    });
+  }
+
+  // TODO: ATTACHMENTS Left
+
+  if (orConditions.length > 0) {
+    const existingVehicle = await VehicleModel.findOne({
+      _id: { $ne: id }, // Exclude the current document
+      $or: [
+        {
+          vehicleRegId: data.vehicleRegId
+            ? { $regex: new RegExp(`^${escapeRegex(data.vehicleRegId)}$`, 'i') }
+            : undefined,
+        },
+        {
+          licensePlate: data.licensePlate
+            ? { $regex: new RegExp(`^${escapeRegex(data.licensePlate)}$`, 'i') }
+            : undefined,
+        },
+      ],
+    }).lean();
+    if (existingVehicle) {
+      throw new Error(
+        'Duplicate detected: Another vehicle with the same vehicleRegId or licensePlate already exists.'
+      );
+    }
   }
   // Proceed to update the vehicle
-  const updatedVehicle = await VehicleModel.findByIdAndUpdate(id, data, { new: true });
+  const updatedVehicle = await VehicleModel.findOneAndUpdate(
+    {
+      _id: id,
+      $or: [
+        { createdBy: new mongoose.Types.ObjectId(userId) },
+        { 'additionalDetails.createdBy': new mongoose.Types.ObjectId(userId) },
+      ],
+    },
+    data,
+    { new: true }
+  );
+
   return updatedVehicle;
 };
 
@@ -85,6 +203,8 @@ const updateVehicle = async (
  * @returns {Promise<Partial<IVehicle>>} - The deleted vehicle.
  */
 const deleteVehicle = async (id: IdOrIdsInput['id']): Promise<Partial<IVehicle | null>> => {
+  // TODO: Can't delete if associated with fuel usage, tachograph, etc. (if any association exists)
+
   const deletedVehicle = await VehicleModel.findByIdAndDelete(id);
   return deletedVehicle;
 };
@@ -133,8 +253,6 @@ const getManyVehicle = async (
 
 export const vehicleServices = {
   createVehicle,
-  createVehicleAsTransportManager,
-  createVehicleAsStandAlone,
   updateVehicle,
   deleteVehicle,
   getVehicleById,

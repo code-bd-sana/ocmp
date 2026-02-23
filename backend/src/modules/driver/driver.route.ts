@@ -1,3 +1,4 @@
+import { validateSearchQueries } from './../../handlers/common-zod-validator';
 // Import Router from express
 import { Router } from 'express';
 
@@ -149,7 +150,14 @@ router.get(
     }
     next();
   },
-  validateSearchDriverQueries,
+  (req: AuthenticatedRequest, res, next) => {
+    // For transport managers, ensure they can only access drivers of their approved clients
+    if (req.user!.role === UserRole.TRANSPORT_MANAGER) {
+      return validateSearchDriverQueries(req, res, next);
+    }
+    next();
+  },
+  validateSearchQueries,
   getManyDriver
 );
 
