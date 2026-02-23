@@ -10,6 +10,8 @@ import {
   UpdateDriverInput,
 } from './driver.validation';
 
+const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 /**
  * Service function to create a new driver as a Transport Manager.
  *
@@ -21,7 +23,10 @@ const createDriverAsTransportManager = async (
 ): Promise<Partial<IDriver>> => {
   // Check for duplicate driver by licenseNumber or niNumber
   const existingDriver = await DriverModel.findOne({
-    $or: [{ licenseNumber: data.licenseNumber }, { niNumber: data.niNumber }],
+    $or: [
+      { licenseNumber: { $regex: new RegExp(`^${escapeRegex(data.licenseNumber)}$`, 'i') } },
+      { niNumber: { $regex: new RegExp(`^${escapeRegex(data.niNumber)}$`, 'i') } },
+    ],
   });
 
   if (existingDriver) {
@@ -43,7 +48,10 @@ const createDriverAsStandAlone = async (
   data: CreateDriverAsStandAloneInput
 ): Promise<Partial<IDriver>> => {
   const existingDriver = await DriverModel.findOne({
-    $or: [{ licenseNumber: data.licenseNumber }, { niNumber: data.niNumber }],
+    $or: [
+      { licenseNumber: { $regex: new RegExp(`^${escapeRegex(data.licenseNumber)}$`, 'i') } },
+      { niNumber: { $regex: new RegExp(`^${escapeRegex(data.niNumber)}$`, 'i') } },
+    ],
   });
 
   if (existingDriver) {
@@ -100,7 +108,18 @@ const updateDriver = async (
   if (orConditions.length > 0) {
     const existingDriver = await DriverModel.findOne({
       _id: { $ne: id },
-      $or: orConditions,
+      $or: [
+        {
+          licenseNumber: data.licenseNumber
+            ? { $regex: new RegExp(`^${escapeRegex(data.licenseNumber)}$`, 'i') }
+            : undefined,
+        },
+        {
+          niNumber: data.niNumber
+            ? { $regex: new RegExp(`^${escapeRegex(data.niNumber)}$`, 'i') }
+            : undefined,
+        },
+      ],
     }).lean();
     if (existingDriver) {
       throw new Error('Duplicate detected: Another driver with the same field(s) already exists.');
