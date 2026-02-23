@@ -8,6 +8,7 @@ export interface ITrafficCommissionerCommunication extends Document {
   communicationDate: Date;
   attachments?: mongoose.Types.ObjectId[];
   notes?: Date;
+  standAloneId?: mongoose.Types.ObjectId;
   createdBy: mongoose.Types.ObjectId;
 }
 
@@ -39,6 +40,10 @@ const TrafficCommissionerCommunicationSchema: Schema<ITrafficCommissionerCommuni
       ],
       notes: {
         type: Date,
+      },
+      standAloneId: {
+        type: Schema.Types.ObjectId,
+        ref: 'User',
       },
       createdBy: {
         type: Schema.Types.ObjectId,

@@ -16,6 +16,7 @@ export interface Ipg9AndPg13Plan extends Document {
   meetingDate?: Date;
   notes?: string;
   followUp?: boolean;
+  standAloneId?: mongoose.Types.ObjectId;
   createdBy: mongoose.Types.ObjectId;
 }
 
@@ -52,6 +53,10 @@ const pg9AndPg13PlanSchema: Schema<Ipg9AndPg13Plan> = new Schema(
     },
     followUp: {
       type: Boolean,
+    },
+    standAloneId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
     },
     createdBy: {
       type: Schema.Types.ObjectId,

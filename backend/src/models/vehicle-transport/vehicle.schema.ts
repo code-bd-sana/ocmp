@@ -37,8 +37,8 @@ export interface IVehicle extends Document {
   };
   driverPack: boolean;
   notes?: string;
-  driverId: mongoose.Types.ObjectId;
-  clientId: mongoose.Types.ObjectId;
+  driverIds: mongoose.Types.ObjectId[];
+  standAloneId: mongoose.Types.ObjectId;
   attachments?: mongoose.Types.ObjectId[];
   createdBy: mongoose.Types.ObjectId;
 }
@@ -120,14 +120,17 @@ const VehicleSchema: Schema<IVehicle> = new Schema(
     notes: {
       type: String,
     },
-    driverId: {
+    driverIds: [
+      {
+        type: Schema.Types.ObjectId,
+        required: true,
+        ref: 'Driver', // Reference to the Driver model
+      },
+    ],
+    standAloneId: {
       type: Schema.Types.ObjectId,
       required: true,
-    },
-    clientId: {
-      type: Schema.Types.ObjectId,
-      required: true,
-      ref: 'User', // Which Standalone or client own this card
+      ref: 'User', // Which Standalone or client own this vehicle
     },
     attachments: [
       {
@@ -150,4 +153,4 @@ const Vehicle = mongoose.model<IVehicle>('Vehicle', VehicleSchema);
 // Export the Vehicle model
 export default Vehicle;
 
-// employedBy
+// standAloneId

@@ -9,10 +9,11 @@ export interface IWheelRetorquePolicyMonitoring extends Document {
   reTorqueDue?: Date;
   reTorqueCompleted?: Date;
   technician?: string;
+  standAloneId?: mongoose.Types.ObjectId;
   createdBy: mongoose.Types.ObjectId;
 }
 
-// Define the ComplianceTimeTable schema
+// Define the WheelRetorquePolicyMonitoring schema
 const WheelRetorquePolicyMonitoringSchema: Schema<IWheelRetorquePolicyMonitoring> = new Schema(
   {
     vehicleId: {
@@ -38,6 +39,10 @@ const WheelRetorquePolicyMonitoringSchema: Schema<IWheelRetorquePolicyMonitoring
     technician: {
       type: String,
     },
+    standAloneId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+    },
     createdBy: {
       type: Schema.Types.ObjectId,
       required: true,
@@ -47,7 +52,7 @@ const WheelRetorquePolicyMonitoringSchema: Schema<IWheelRetorquePolicyMonitoring
   { timestamps: true, versionKey: false }
 );
 
-// Create the AuditsAndRecificationReports model
+// Create the WheelRetorquePolicyMonitoring model
 const WheelRetorquePolicyMonitoring = mongoose.model<IWheelRetorquePolicyMonitoring>(
   'WheelRetorquePolicyMonitoring',
   WheelRetorquePolicyMonitoringSchema

@@ -672,7 +672,7 @@ async function seedDrivers() {
       employed: i % 2 === 0,
       checkStatus: i % 3 === 0 ? "Due" : "Okay",
       attachments: [ids.documents[i % ids.documents.length]?._id],
-      employedBy: ids.users[i % ids.users.length]._id,
+      standAloneId: ids.users[i % ids.users.length]._id,
       createdBy: ids.users[i % ids.users.length]._id,
     });
   }
