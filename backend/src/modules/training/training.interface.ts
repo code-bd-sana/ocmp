@@ -6,5 +6,6 @@
 export interface TTraining {
   trainingName: string;
   intervalDays: number[];
-  creatorId: string;
+  standAloneId?: string;
+  createdBy: string;
 }

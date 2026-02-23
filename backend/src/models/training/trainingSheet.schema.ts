@@ -4,7 +4,8 @@ import mongoose, { Document, Schema } from 'mongoose';
 export interface ITrainingSheet extends Document {
   trainingName: string;
   intervalDays: number[];
-  creatorId: mongoose.Types.ObjectId;
+  standAloneId?: mongoose.Types.ObjectId;
+  createdBy: mongoose.Types.ObjectId;
 }
 
 // Define the TrainingSheet schema
@@ -20,17 +21,22 @@ const TrainingSheetSchema: Schema<ITrainingSheet> = new Schema(
       required: true,
       default: [],
     } /* Array of interval days (e.g. [30, 60, 90]) */,
-    creatorId: {
+    standAloneId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+    } /* Which Standalone or client this training belongs to */,
+    createdBy: {
       type: Schema.Types.ObjectId,
       ref: 'User',
       required: true,
-    } /* Transport Manager who created this training */,
+    } /* User who created this training (TM or Standalone) */,
   },
   { timestamps: true, versionKey: false }
 );
 
-// Compound index for efficient lookup by creator
-TrainingSheetSchema.index({ creatorId: 1 });
+// Indexes for efficient lookup
+TrainingSheetSchema.index({ createdBy: 1 });
+TrainingSheetSchema.index({ standAloneId: 1 });
 
 // Create the TrainingSheet model
 const TrainingSheet = mongoose.model<ITrainingSheet>('TrainingSheet', TrainingSheetSchema);

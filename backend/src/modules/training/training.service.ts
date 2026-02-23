@@ -1,6 +1,11 @@
 import mongoose from 'mongoose';
 import { TrainingSheet, ITrainingSheet } from '../../models';
-import { CreateTrainingInput, UpdateTrainingInput } from './training.validation';
+import {
+  CreateTrainingAsManagerInput,
+  CreateTrainingAsStandAloneInput,
+  UpdateTrainingInput,
+  SearchTrainingsQueryInput,
+} from './training.validation';
 
 /**
  * Helper: Parse a string of interval days separated by comma, space, backslash, or newline
@@ -30,43 +35,80 @@ const parseIntervalDays = (raw: string): number[] => {
   return [...new Set(days)].sort((a, b) => a - b);
 };
 
+// ═══════════════════════════════════════════════════════════════
+// TRAINING SERVICES
+// ═══════════════════════════════════════════════════════════════
+
 /**
- * Service: Create a new training under the authenticated Transport Manager.
- * intervalDays is received as a string and parsed into a number array.
- *
- * @param {string} creatorId - The TM's user ID (from req.user._id).
- * @param {CreateTrainingInput} data - { trainingName, intervalDays (string) }.
- * @returns {Promise<ITrainingSheet>} - The created training document.
+ * Service: Create a new training as a Transport Manager.
+ * createdBy = managerId, standAloneId = client's userId.
  */
-const createTraining = async (
-  creatorId: string,
-  data: CreateTrainingInput
+const createTrainingAsManager = async (
+  data: CreateTrainingAsManagerInput & { createdBy: mongoose.Types.ObjectId; standAloneId: mongoose.Types.ObjectId }
 ): Promise<ITrainingSheet> => {
   const parsedDays = parseIntervalDays(data.intervalDays);
 
   return TrainingSheet.create({
     trainingName: data.trainingName,
     intervalDays: parsedDays,
-    creatorId: new mongoose.Types.ObjectId(creatorId),
+    createdBy: data.createdBy,
+    standAloneId: data.standAloneId,
   });
 };
 
 /**
- * Service: Get all trainings for a Transport Manager.
- * Returns only the FIRST interval day for each training (summary view).
- *
- * @param {string} creatorId - The TM's user ID (from req.user._id).
- * @returns {Promise<any[]>} - Array of trainings with only the first intervalDay.
+ * Service: Create a new training as a Standalone User.
+ * createdBy = userId (self).
  */
-const getAllTrainings = async (creatorId: string): Promise<any[]> => {
-  const trainings = await TrainingSheet.find({
-    creatorId: new mongoose.Types.ObjectId(creatorId),
-  })
+const createTrainingAsStandAlone = async (
+  data: CreateTrainingAsStandAloneInput & { createdBy: mongoose.Types.ObjectId }
+): Promise<ITrainingSheet> => {
+  const parsedDays = parseIntervalDays(data.intervalDays);
+
+  return TrainingSheet.create({
+    trainingName: data.trainingName,
+    intervalDays: parsedDays,
+    createdBy: data.createdBy,
+  });
+};
+
+/**
+ * Service: Get all trainings (paginated + searchable).
+ * Uses $or on createdBy/standAloneId so both TM-created and standalone-created docs are returned.
+ * Returns only the FIRST interval day for each training (summary view).
+ */
+const getAllTrainings = async (
+  query: SearchTrainingsQueryInput
+): Promise<{ trainings: any[]; totalData: number; totalPages: number }> => {
+  const showPerPage = Number(query.showPerPage) || 10;
+  const pageNo = Number(query.pageNo) || 1;
+  const searchKey = query.searchKey;
+  const { standAloneId } = query;
+
+  const filter: any = {};
+
+  // Access control: find docs where the target ID matches either createdBy or standAloneId
+  if (standAloneId) {
+    const objectId = new mongoose.Types.ObjectId(standAloneId);
+    filter.$or = [{ standAloneId: objectId }, { createdBy: objectId }];
+  }
+
+  // Search filter on trainingName
+  if (searchKey) {
+    filter.trainingName = { $regex: searchKey, $options: 'i' };
+  }
+
+  const totalData = await TrainingSheet.countDocuments(filter);
+  const totalPages = Math.ceil(totalData / showPerPage);
+
+  const trainings = await TrainingSheet.find(filter)
     .select('trainingName intervalDays createdAt updatedAt')
+    .skip((pageNo - 1) * showPerPage)
+    .limit(showPerPage)
     .lean();
 
-  // Return only the first interval day for each training
-  return trainings.map((t: any) => ({
+  // Return only the first interval day for each training (summary view)
+  const data = trainings.map((t: any) => ({
     _id: t._id,
     trainingName: t.trainingName,
     firstIntervalDay: t.intervalDays[0] ?? null,
@@ -74,24 +116,29 @@ const getAllTrainings = async (creatorId: string): Promise<any[]> => {
     createdAt: t.createdAt,
     updatedAt: t.updatedAt,
   }));
+
+  return { trainings: data, totalData, totalPages };
 };
 
 /**
  * Service: Get a single training with ALL interval days.
- * Only the creator (TM) can access their own training.
- *
- * @param {string} creatorId - The TM's user ID (from req.user._id).
- * @param {string} trainingId - The training document ID.
- * @returns {Promise<ITrainingSheet>} - The full training document.
+ * Uses $or to check both createdBy and standAloneId ownership.
  */
 const getTrainingById = async (
-  creatorId: string,
-  trainingId: string
+  trainingId: string,
+  accessId?: string
 ): Promise<ITrainingSheet> => {
-  const training = await TrainingSheet.findOne({
-    _id: new mongoose.Types.ObjectId(trainingId),
-    creatorId: new mongoose.Types.ObjectId(creatorId),
-  }).lean();
+  const filter: any = { _id: new mongoose.Types.ObjectId(trainingId) };
+
+  if (accessId) {
+    const objectId = new mongoose.Types.ObjectId(accessId);
+    filter.$or = [
+      { standAloneId: objectId },
+      { createdBy: objectId },
+    ];
+  }
+
+  const training = await TrainingSheet.findOne(filter).lean();
 
   if (!training) {
     throw new Error('Training not found or you do not have access');
@@ -103,17 +150,12 @@ const getTrainingById = async (
 /**
  * Service: Update a training's details.
  * If intervalDays is provided as a string, it's parsed into a number array.
- * TODO: can't remove a interval days if they are linked to existing compliance records — consider adding a warning or preventing deletion in that case.
- *
- * @param {string} creatorId - The TM's user ID (from req.user._id).
- * @param {string} trainingId - The training document ID.
- * @param {UpdateTrainingInput} data - Partial update fields.
- * @returns {Promise<ITrainingSheet>} - The updated training document.
+ * Uses $or on createdBy/standAloneId for access control.
  */
 const updateTraining = async (
-  creatorId: string,
   trainingId: string,
-  data: UpdateTrainingInput
+  data: UpdateTrainingInput,
+  accessId: string
 ): Promise<ITrainingSheet> => {
   const updateFields: Record<string, any> = {};
 
@@ -128,7 +170,10 @@ const updateTraining = async (
   const updated = await TrainingSheet.findOneAndUpdate(
     {
       _id: new mongoose.Types.ObjectId(trainingId),
-      creatorId: new mongoose.Types.ObjectId(creatorId),
+      $or: [
+        { createdBy: new mongoose.Types.ObjectId(accessId) },
+        { standAloneId: new mongoose.Types.ObjectId(accessId) },
+      ],
     },
     { $set: updateFields },
     { returnDocument: 'after' }
@@ -143,20 +188,18 @@ const updateTraining = async (
 
 /**
  * Service: Delete a specific training.
- * Only the creator (TM) can delete their own training.
- * TODO: if any compliance records are linked to this training, consider preventing deletion or implementing a soft delete instead.
- *
- * @param {string} creatorId - The TM's user ID (from req.user._id).
- * @param {string} trainingId - The training document ID.
- * @returns {Promise<{ deletedCount: number }>} - Deletion result.
+ * Uses $or on createdBy/standAloneId for access control.
  */
 const deleteTraining = async (
-  creatorId: string,
-  trainingId: string
+  trainingId: string,
+  accessId: string
 ): Promise<{ deletedCount: number }> => {
   const result = await TrainingSheet.deleteOne({
     _id: new mongoose.Types.ObjectId(trainingId),
-    creatorId: new mongoose.Types.ObjectId(creatorId),
+    $or: [
+      { createdBy: new mongoose.Types.ObjectId(accessId) },
+      { standAloneId: new mongoose.Types.ObjectId(accessId) },
+    ],
   });
 
   if (result.deletedCount === 0) {
@@ -168,7 +211,8 @@ const deleteTraining = async (
 
 // Export all service functions as a namespace
 export const trainingServices = {
-  createTraining,
+  createTrainingAsManager,
+  createTrainingAsStandAlone,
   getAllTrainings,
   getTrainingById,
   updateTraining,

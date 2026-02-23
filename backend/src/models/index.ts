@@ -119,3 +119,11 @@ export {
   default as TrainingSheet,
   ITrainingSheet,
 } from './training/trainingSheet.schema';
+export {
+  default as Participant,
+  IParticipant,
+} from './training/participant.schema';
+export {
+  default as ParticipantRole,
+  IParticipantRole,
+} from './training/participantRole.schema';
