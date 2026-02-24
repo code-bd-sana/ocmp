@@ -12,6 +12,7 @@ export interface ISubContractor extends Document {
   otherCapabilities?: string;
   startDateOfAgreement?: Date;
   rating?: Number;
+  standAloneId?: mongoose.Types.ObjectId;
   checkedBy: mongoose.Types.ObjectId;
 }
 
@@ -53,6 +54,10 @@ const SubContractorSchema: Schema<ISubContractor> = new Schema(
       default: 0,
       max: 1,
     } /* RATING(1-5) */,
+    standAloneId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User', // Reference from StandAlone model
+    },
     checkedBy: {
       type: Schema.Types.ObjectId,
       required: true,
