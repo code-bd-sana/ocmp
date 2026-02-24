@@ -1,11 +1,20 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
+/** Enum for training register status */
+export enum TrainingRegisterStatus {
+  PENDING = 'Pending',
+  OVERDUE = 'Overdue',
+  UPCOMING = 'Upcoming',
+  COMPLETED = 'Completed',
+}
+
 /** Interface representing a TrainingRegister document */
 export interface ITrainingRegister extends Document {
   participantId: mongoose.Types.ObjectId;
   trainingId: mongoose.Types.ObjectId;
   trainingInterval: number;
   trainingDate: Date;
+  status: TrainingRegisterStatus;
   standAloneId?: mongoose.Types.ObjectId;
   createdBy: mongoose.Types.ObjectId;
 }
@@ -31,6 +40,11 @@ const TrainingRegisterSchema: Schema<ITrainingRegister> = new Schema(
       type: Date,
       required: true,
     } /* The date when training was/will be conducted */,
+    status: {
+      type: String,
+      enum: Object.values(TrainingRegisterStatus),
+      default: TrainingRegisterStatus.PENDING,
+    } /* Status of this training register entry */,
     standAloneId: {
       type: Schema.Types.ObjectId,
       ref: 'User',

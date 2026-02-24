@@ -9,6 +9,7 @@ export interface TTrainingRegister {
   trainingId: string;
   trainingInterval: number;
   trainingDate: string;
+  status: string;
   standAloneId?: string;
   createdBy: string;
 }

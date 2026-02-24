@@ -100,6 +100,11 @@ const zodUpdateRegisterSchema = z
       .string({ message: 'Training date must be a string' })
       .datetime({ message: 'Training date must be a valid ISO date string' })
       .optional(),
+    status: z
+      .enum(['Pending', 'Overdue', 'Upcoming', 'Completed'], {
+        message: 'Status must be one of: Pending, Overdue, Upcoming, Completed',
+      })
+      .optional(),
   })
   .strict()
   .refine((data) => Object.keys(data).length > 0, {

@@ -286,6 +286,7 @@ const updateRegister = async (
   if (data.trainingId !== undefined) updateFields.trainingId = new mongoose.Types.ObjectId(data.trainingId);
   if (data.trainingInterval !== undefined) updateFields.trainingInterval = data.trainingInterval;
   if (data.trainingDate !== undefined) updateFields.trainingDate = new Date(data.trainingDate);
+  if ((data as any).status !== undefined) updateFields.status = (data as any).status;
 
   const updated = await TrainingRegister.findOneAndUpdate(
     {

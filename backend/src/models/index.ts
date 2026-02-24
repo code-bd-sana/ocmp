@@ -130,4 +130,5 @@ export {
 export {
   default as TrainingRegister,
   ITrainingRegister,
+  TrainingRegisterStatus,
 } from './training/trainingRegister.schema';
