@@ -129,7 +129,6 @@ const VehicleSchema: Schema<IVehicle> = new Schema(
     ],
     standAloneId: {
       type: Schema.Types.ObjectId,
-      required: true,
       ref: 'User', // Which Standalone or client own this vehicle
     },
     attachments: [

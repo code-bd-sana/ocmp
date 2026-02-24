@@ -25,6 +25,11 @@ const additionalDetailsSchema = z
   })
   .strict();
 
+const additionalDetailsRequiredSchema = z.preprocess(
+  (value) => (value === undefined || value === null ? {} : value),
+  additionalDetailsSchema
+);
+
 /**
  * Vehicle Validation Schemas and Types
  *
@@ -54,7 +59,7 @@ const baseVehicleFields = {
     .min(1, 'License plate is required')
     .max(50, 'License plate must not exceed 50 characters'),
   status: z.enum(VehicleStatus, { message: 'status must be a valid vehicle status' }),
-  additionalDetails: additionalDetailsSchema,
+  additionalDetails: additionalDetailsRequiredSchema,
   driverPack: z.boolean({ message: 'driverPack must be a boolean' }),
   notes: z.string({ message: 'notes must be a string' }).optional(),
   driverIds: z.array(
@@ -96,10 +101,6 @@ export type CreateVehicleAsTransportManagerInput = z.infer<
 const zodCreateVehicleAsStandAloneSchema = z
   .object({
     ...baseVehicleFields,
-    standAloneId: z
-      .string()
-      .refine(isMongoId, { message: 'Please provide a valid MongoDB ObjectId' })
-      .optional(),
   })
   .strict();
 
