@@ -225,10 +225,41 @@ const updateVehicle = async (
  * @param {IdOrIdsInput['id']} id - The ID of the vehicle to delete.
  * @returns {Promise<Partial<IVehicle>>} - The deleted vehicle.
  */
-const deleteVehicle = async (id: IdOrIdsInput['id']): Promise<Partial<IVehicle | null>> => {
+const deleteVehicle = async (
+  id: IdOrIdsInput['id'],
+  userId: IdOrIdsInput['id'],
+  standAloneId?: IdOrIdsInput['id']
+): Promise<Partial<IVehicle | null>> => {
   // TODO: Can't delete if associated with fuel usage, tachograph, etc. (if any association exists)
 
-  const deletedVehicle = await VehicleModel.findByIdAndDelete(id);
+  const accessFilters: Record<string, unknown>[] = [];
+
+  if (userId) {
+    accessFilters.push({ createdBy: userId });
+    accessFilters.push({ standAloneId: userId });
+
+    if (mongoose.Types.ObjectId.isValid(userId)) {
+      const userObjectId = new mongoose.Types.ObjectId(userId);
+      accessFilters.push({ createdBy: userObjectId });
+      accessFilters.push({ standAloneId: userObjectId });
+    }
+  }
+
+  if (standAloneId) {
+    accessFilters.push({ standAloneId });
+    accessFilters.push({ createdBy: standAloneId });
+
+    if (mongoose.Types.ObjectId.isValid(standAloneId)) {
+      const standAloneObjectId = new mongoose.Types.ObjectId(standAloneId);
+      accessFilters.push({ standAloneId: standAloneObjectId });
+      accessFilters.push({ createdBy: standAloneObjectId });
+    }
+  }
+
+  const deletedVehicle = await VehicleModel.findOneAndDelete({
+    _id: id,
+    $or: accessFilters,
+  });
   return deletedVehicle;
 };
 

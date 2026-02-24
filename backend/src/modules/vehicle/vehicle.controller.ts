@@ -83,11 +83,19 @@ export const updateVehicle = catchAsync(async (req: AuthenticatedRequest, res: R
  * @throws {Error} - Throws an error if the vehicle deletion fails.
  *
  */
-export const deleteVehicle = catchAsync(async (req: Request, res: Response) => {
-  const { id } = req.params;
+export const deleteVehicle = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+  const paramToString = (p?: string | string[]) => (Array.isArray(p) ? p[0] : p);
+  const vehicleId = paramToString(req.params.vehicleId ?? req.params.id);
+  const standAloneId = paramToString(req.params.standAloneId);
   // Call the service method to delete the vehicle by ID
-  const result = await vehicleServices.deleteVehicle(id as string);
-  if (!result) throw new Error('Failed to delete vehicle');
+  const result = await vehicleServices.deleteVehicle(
+    vehicleId as string,
+    req.user!._id,
+    standAloneId
+  );
+  if (!result) {
+    return ServerResponse(res, false, 404, 'Vehicle not found or access denied');
+  }
   // Send a success response confirming the deletion
   ServerResponse(res, true, 200, 'Vehicle deleted successfully');
 });

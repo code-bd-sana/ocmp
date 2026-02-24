@@ -21,6 +21,7 @@ import ServerResponse from '../../helpers/responses/custom-response';
 import {
   validateCreateVehicleAsStandAlone,
   validateCreateVehicleAsTransportManager,
+  validateDeleteVehicle,
   validateGetVehicleByIdParams,
   validateSearchVehicleQueries,
   validateUpdateVehicle,
@@ -109,8 +110,17 @@ router.patch(
  * @param {function} controller - ['deleteVehicle']
  */
 router.delete(
+  '/delete-vehicle/:vehicleId/:standAloneId',
+  authorizedRoles([UserRole.TRANSPORT_MANAGER]),
+  // checkSubscriptionValidity,
+  validateClientForManagerMiddleware,
+  validateDeleteVehicle,
+  deleteVehicle
+);
+
+router.delete(
   '/delete-vehicle/:id',
-  authorizedRoles([UserRole.STANDALONE_USER, UserRole.TRANSPORT_MANAGER]),
+  authorizedRoles([UserRole.STANDALONE_USER]),
   // checkSubscriptionValidity,
   validateId,
   deleteVehicle
