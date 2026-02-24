@@ -113,3 +113,17 @@ export {
   IWheelRetorquePolicyMonitoring,
   default as WheelRetorquePolicyMonitoring,
 } from './compliance-enforcement-dvsa/wheelRetorquePolicyMonitoring.schema';
+
+// training
+export {
+  default as TrainingSheet,
+  ITrainingSheet,
+} from './training/trainingSheet.schema';
+export {
+  default as Participant,
+  IParticipant,
+} from './training/participant.schema';
+export {
+  default as ParticipantRole,
+  IParticipantRole,
+} from './training/participantRole.schema';
