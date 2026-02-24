@@ -127,3 +127,7 @@ export {
   default as ParticipantRole,
   IParticipantRole,
 } from './training/participantRole.schema';
+export {
+  default as TrainingRegister,
+  ITrainingRegister,
+} from './training/trainingRegister.schema';
