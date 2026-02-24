@@ -57,10 +57,19 @@ export const createVehicleAsStandAlone = catchAsync(
  * @throws {Error} - Throws an error if the vehicle update fails.
  */
 export const updateVehicle = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-  const { id } = req.params;
+  const paramToString = (p?: string | string[]) => (Array.isArray(p) ? p[0] : p);
+  const vehicleId = paramToString(req.params.vehicleId ?? req.params.id);
+  const standAloneId = paramToString(req.params.standAloneId);
   // Call the service method to update the vehicle by ID and get the result
-  const result = await vehicleServices.updateVehicle(id as string, req.body, req.user!._id);
-  if (!result) throw new Error('Failed to update vehicle');
+  const result = await vehicleServices.updateVehicle(
+    vehicleId as string,
+    req.body,
+    req.user!._id,
+    standAloneId
+  );
+  if (!result) {
+    return ServerResponse(res, false, 404, 'Vehicle not found or access denied');
+  }
   // Send a success response with the updated vehicle data
   ServerResponse(res, true, 200, 'Vehicle updated successfully', result);
 });

@@ -54,7 +54,8 @@ const createVehicle = async (
 const updateVehicle = async (
   id: IdOrIdsInput['id'],
   data: UpdateVehicleInput,
-  userId: IdOrIdsInput['id']
+  userId: IdOrIdsInput['id'],
+  standAloneId?: IdOrIdsInput['id']
 ): Promise<Partial<IVehicle | null>> => {
   // Build $or conditions only for fields provided in `data`
   const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -181,17 +182,38 @@ const updateVehicle = async (
       );
     }
   }
+  const accessFilters: Record<string, unknown>[] = [];
+
+  if (userId) {
+    accessFilters.push({ createdBy: userId });
+    accessFilters.push({ standAloneId: userId });
+
+    if (mongoose.Types.ObjectId.isValid(userId)) {
+      const userObjectId = new mongoose.Types.ObjectId(userId);
+      accessFilters.push({ createdBy: userObjectId });
+      accessFilters.push({ standAloneId: userObjectId });
+    }
+  }
+
+  if (standAloneId) {
+    accessFilters.push({ standAloneId });
+    accessFilters.push({ createdBy: standAloneId });
+
+    if (mongoose.Types.ObjectId.isValid(standAloneId)) {
+      const standAloneObjectId = new mongoose.Types.ObjectId(standAloneId);
+      accessFilters.push({ standAloneId: standAloneObjectId });
+      accessFilters.push({ createdBy: standAloneObjectId });
+    }
+  }
+
   // Proceed to update the vehicle
   const updatedVehicle = await VehicleModel.findOneAndUpdate(
     {
       _id: id,
-      $or: [
-        { createdBy: new mongoose.Types.ObjectId(userId) },
-        { 'additionalDetails.createdBy': new mongoose.Types.ObjectId(userId) },
-      ],
+      $or: accessFilters,
     },
     data,
-    { new: true }
+    { returnDocument: 'after' }
   );
 
   return updatedVehicle;

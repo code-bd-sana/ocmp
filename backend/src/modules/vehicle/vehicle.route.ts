@@ -8,6 +8,7 @@ import {
   deleteVehicle,
   getManyVehicle,
   getVehicleById,
+  updateVehicle,
 } from './vehicle.controller';
 
 //Import validation from corresponding module
@@ -79,7 +80,24 @@ router.patch(
   // checkSubscriptionValidity,
   validateClientForManagerMiddleware,
   validateUpdateVehicleIds,
-  validateUpdateVehicle
+  validateUpdateVehicle,
+  updateVehicle
+);
+
+/**
+ * @route PATCH /api/v1/vehicle/update-vehicle/:id
+ * @description Update a vehicle by ID (Standalone User)
+ * @access Private (Standalone User)
+ * @param {function} validation - ['validateId', 'validateUpdateVehicle']
+ * @param {function} controller - ['updateVehicle']
+ */
+router.patch(
+  '/update-vehicle/:id',
+  authorizedRoles([UserRole.STANDALONE_USER]),
+  // checkSubscriptionValidity,
+  validateId,
+  validateUpdateVehicle,
+  updateVehicle
 );
 
 /**
@@ -147,6 +165,14 @@ router.get(
   getVehicleById
 );
 
+/**
+ * @route GET /api/v1/vehicle/get-vehicle/:id
+ * @description Get a vehicle as stand alone user by ID
+ * @access Private (Standalone User)
+ * @param {IdOrIdsInput['id']} id - The ID of the vehicle to retrieve
+ * @param {function} validation - ['validateId']
+ * @param {function} controller - ['getVehicleById']
+ */
 router.get(
   '/get-vehicle/:id',
   authorizedRoles([UserRole.STANDALONE_USER]),

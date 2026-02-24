@@ -31,6 +31,8 @@ const additionalDetailsRequiredSchema = z.preprocess(
   additionalDetailsSchema
 );
 
+const additionalDetailsUpdateSchema = additionalDetailsSchema.partial().strict();
+
 /**
  * Vehicle Validation Schemas and Types
  *
@@ -113,7 +115,7 @@ const zodUpdateVehicleSchema = z
     vehicleType: baseVehicleFields.vehicleType.optional(),
     licensePlate: baseVehicleFields.licensePlate.optional(),
     status: baseVehicleFields.status.optional(),
-    additionalDetails: baseVehicleFields.additionalDetails.optional(),
+    additionalDetails: additionalDetailsUpdateSchema.optional(),
     driverPack: baseVehicleFields.driverPack.optional(),
     notes: baseVehicleFields.notes.optional(),
     driverIds: baseVehicleFields.driverIds.optional(),
