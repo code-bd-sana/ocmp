@@ -1,11 +1,10 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
-// Define and export an interface representing a SubContractor document
+/** Interface representing a SubcontractorSheet document */
 export interface ISubContractor extends Document {
-  createdBy: mongoose.Types.ObjectId;
   insurancePolicyNumber?: string;
   insuranceExpiryDate?: Date;
-  gitPolicyNumber?: Date;
+  gitPolicyNumber?: string;
   gitExpiryDate?: Date;
   gitCover?: Number;
   hiabAvailable?: Boolean;
@@ -14,16 +13,12 @@ export interface ISubContractor extends Document {
   rating?: Number;
   standAloneId?: mongoose.Types.ObjectId;
   checkedBy?: String;
+  createdBy: mongoose.Types.ObjectId;
 }
 
-// Define the SubContractor schema
+// Define the SubcontractorSheet schema
 const SubContractorSchema: Schema<ISubContractor> = new Schema(
   {
-    createdBy: {
-      type: Schema.Types.ObjectId,
-      required: true,
-      ref: 'User', // Reference from User model
-    },
     insurancePolicyNumber: {
       type: String,
     },
@@ -52,11 +47,16 @@ const SubContractorSchema: Schema<ISubContractor> = new Schema(
     rating: {
       type: Number,
       default: 0,
-      max: 5,
+      max: 1,
     } /* RATING(1-5) */,
     standAloneId: {
       type: Schema.Types.ObjectId,
       ref: 'User', // Reference from StandAlone model
+    },
+    createdBy: {
+      type: Schema.Types.ObjectId,
+      required: true,
+      ref: 'User', // Reference from User model
     },
     checkedBy: {
       type: String,
@@ -67,8 +67,13 @@ const SubContractorSchema: Schema<ISubContractor> = new Schema(
   { timestamps: true, versionKey: false }
 );
 
-// Create the SubContractor model
+// Indexes for efficient lookup
+SubContractorSchema.index({ createdBy: 1 });
+SubContractorSchema.index({ standAloneId: 1 });
+
+// Create the SubcontractorSheet model
 const SubContractor = mongoose.model<ISubContractor>('SubContractor', SubContractorSchema);
 
-// Export the SubContractor model
+// Export the SubcontractorSheet model
 export default SubContractor;
+
