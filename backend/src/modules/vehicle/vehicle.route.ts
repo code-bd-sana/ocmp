@@ -13,12 +13,15 @@ import {
 //Import validation from corresponding module
 import { validateId, validateSearchQueries } from '../../handlers/common-zod-validator';
 import authorizedRoles from '../../middlewares/authorized-roles';
-import isAuthorized from '../../middlewares/is-authorized';
+import isAuthorized, { AuthenticatedRequest } from '../../middlewares/is-authorized';
 import { validateClientForManagerMiddleware } from '../../middlewares/validate-client-for-manager';
 import { UserRole } from '../../models';
+import ServerResponse from '../../helpers/responses/custom-response';
 import {
   validateCreateVehicleAsStandAlone,
   validateCreateVehicleAsTransportManager,
+  validateGetVehicleByIdParams,
+  validateSearchVehicleQueries,
   validateUpdateVehicle,
   validateUpdateVehicleIds,
 } from './vehicle.validation';
@@ -62,6 +65,14 @@ router.post(
   createVehicleAsStandAlone
 );
 
+/**
+ * @route PATCH /api/v1/vehicle/update-vehicle/:vehicleId/:standAloneId
+ * @description Update a vehicle by ID (Transport Manager can only update vehicles of their approved clients)
+ * @access Private (Transport Manager)
+ * @param {function} validation - ['validateUpdateVehicleIds', 'validateUpdateVehicle']
+ * @param {function} controller - ['updateVehicle']
+ */
+
 router.patch(
   '/update-vehicle/:vehicleId/:standAloneId',
   authorizedRoles([UserRole.TRANSPORT_MANAGER]),
@@ -94,7 +105,31 @@ router.delete(
  * @param {function} validation - ['validateSearchQueries']
  * @param {function} controller - ['getManyVehicle']
  */
-router.get('/get-vehicle/many', validateSearchQueries, getManyVehicle);
+router.get(
+  '/get-vehicle/many',
+  authorizedRoles([UserRole.STANDALONE_USER, UserRole.TRANSPORT_MANAGER]),
+  (req: AuthenticatedRequest, res, next) => {
+    if (req.user!.role === UserRole.STANDALONE_USER && req.query?.standAloneId) {
+      return ServerResponse(
+        res,
+        false,
+        403,
+        'Forbidden: standAloneId is only allowed for transport managers'
+      );
+    }
+    if (req.user!.role === UserRole.TRANSPORT_MANAGER) {
+      return validateClientForManagerMiddleware(req, res, next);
+    }
+    next();
+  },
+  (req: AuthenticatedRequest, res, next) => {
+    if (req.user!.role === UserRole.TRANSPORT_MANAGER) {
+      return validateSearchVehicleQueries(req, res, next);
+    }
+    return validateSearchQueries(req, res, next);
+  },
+  getManyVehicle
+);
 
 /**
  * @route GET /api/v1/vehicle/get-vehicle/:id
@@ -105,9 +140,17 @@ router.get('/get-vehicle/many', validateSearchQueries, getManyVehicle);
  * @param {function} controller - ['getVehicleById']
  */
 router.get(
+  '/get-vehicle/:id/:standAloneId',
+  authorizedRoles([UserRole.TRANSPORT_MANAGER]),
+  validateClientForManagerMiddleware,
+  validateGetVehicleByIdParams,
+  getVehicleById
+);
+
+router.get(
   '/get-vehicle/:id',
-  authorizedRoles([UserRole.STANDALONE_USER, UserRole.TRANSPORT_MANAGER]),
-  validateId,
+  authorizedRoles([UserRole.STANDALONE_USER]),
+  validateGetVehicleByIdParams,
   getVehicleById
 );
 

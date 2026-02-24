@@ -1,6 +1,6 @@
 // Import the model
 import mongoose from 'mongoose';
-import { IdOrIdsInput, SearchQueryInput } from '../../handlers/common-zod-validator';
+import { IdOrIdsInput } from '../../handlers/common-zod-validator';
 import VehicleModel, {
   IVehicle,
   OwnerShipStatus,
@@ -8,6 +8,7 @@ import VehicleModel, {
 import {
   CreateVehicleAsStandAloneInput,
   CreateVehicleAsTransportManagerInput,
+  SearchVehicleQueryInput,
   UpdateVehicleInput,
 } from './vehicle.validation';
 
@@ -215,8 +216,31 @@ const deleteVehicle = async (id: IdOrIdsInput['id']): Promise<Partial<IVehicle |
  * @param {IdOrIdsInput['id']} id - The ID of the vehicle to retrieve.
  * @returns {Promise<Partial<IVehicle>>} - The retrieved vehicle.
  */
-const getVehicleById = async (id: IdOrIdsInput['id']): Promise<Partial<IVehicle | null>> => {
-  const vehicle = await VehicleModel.findById(id);
+const getVehicleById = async (
+  id: IdOrIdsInput['id'],
+  standAloneId?: IdOrIdsInput['id'],
+  createdBy?: IdOrIdsInput['id']
+): Promise<Partial<IVehicle | null>> => {
+  const accessFilters: Record<string, mongoose.Types.ObjectId>[] = [];
+
+  if (standAloneId) {
+    const standAloneObjectId = new mongoose.Types.ObjectId(standAloneId);
+    accessFilters.push({ standAloneId: standAloneObjectId });
+    accessFilters.push({ createdBy: standAloneObjectId });
+  }
+
+  if (createdBy) {
+    accessFilters.push({ createdBy: new mongoose.Types.ObjectId(createdBy) });
+  }
+
+  const filter = accessFilters.length
+    ? {
+        _id: id,
+        $or: accessFilters,
+      }
+    : { _id: id };
+
+  const vehicle = await VehicleModel.findOne(filter);
   return vehicle;
 };
 
@@ -227,16 +251,43 @@ const getVehicleById = async (id: IdOrIdsInput['id']): Promise<Partial<IVehicle 
  * @returns {Promise<Partial<IVehicle>[]>} - The retrieved vehicle
  */
 const getManyVehicle = async (
-  query: SearchQueryInput
+  query: SearchVehicleQueryInput & { createdBy?: string }
 ): Promise<{ vehicles: Partial<IVehicle>[]; totalData: number; totalPages: number }> => {
-  const { searchKey = '', showPerPage = 10, pageNo = 1 } = query;
+  const { searchKey = '', showPerPage = 10, pageNo = 1, standAloneId, createdBy } = query;
   // Build the search filter based on the search key
-  const searchFilter = {
-    $or: [
-      // { fieldName: { $regex: searchKey, $options: 'i' } },
-      // Add more fields as needed
-    ],
-  };
+  const searchConditions: any[] = [];
+  const andConditions: any[] = [];
+
+  if (searchKey) {
+    searchConditions.push({
+      $or: [
+        { vehicleRegId: { $regex: searchKey, $options: 'i' } },
+        { licensePlate: { $regex: searchKey, $options: 'i' } },
+      ],
+    });
+  }
+
+  if (standAloneId) {
+    andConditions.push({
+      $or: [
+        { standAloneId: new mongoose.Types.ObjectId(standAloneId) },
+        { createdBy: new mongoose.Types.ObjectId(standAloneId) },
+        { createdBy: new mongoose.Types.ObjectId(createdBy!) },
+      ],
+    });
+  } else if (createdBy) {
+    andConditions.push({ createdBy: new mongoose.Types.ObjectId(createdBy) });
+  }
+
+  const searchFilter: any = {};
+
+  if (searchConditions.length) {
+    searchFilter.$and = searchConditions;
+  }
+
+  if (andConditions.length) {
+    searchFilter.$and = [...(searchFilter.$and || []), ...andConditions];
+  }
   // Calculate the number of items to skip based on the page number
   const skipItems = (pageNo - 1) * showPerPage;
   // Find the total count of matching vehicle

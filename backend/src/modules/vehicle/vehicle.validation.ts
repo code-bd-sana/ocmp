@@ -1,6 +1,7 @@
 import { isMongoId } from 'validator';
 import { z } from 'zod';
-import { validateBody, validateParams } from '../../handlers/zod-error-handler';
+import { validateBody, validateParams, validateQuery } from '../../handlers/zod-error-handler';
+import { zodSearchQuerySchema } from '../../handlers/common-zod-validator';
 import { OwnerShipStatus, VehicleStatus } from '../../models';
 
 const additionalDetailsSchema = z
@@ -123,6 +124,17 @@ const zodUpdateVehicleSchema = z
 export type UpdateVehicleInput = z.infer<typeof zodUpdateVehicleSchema>;
 
 /**
+ * Zod schema for validating search query parameters when retrieving multiple vehicles.
+ */
+const zodSearchVehicleSchema = zodSearchQuerySchema.extend({
+  standAloneId: z
+    .string()
+    .refine(isMongoId, { message: 'Please provide a valid MongoDB ObjectId for standAloneId' }),
+});
+
+export type SearchVehicleQueryInput = z.infer<typeof zodSearchVehicleSchema>;
+
+/**
  * Zod schema for validating the deletion of a vehicle, ensuring the provided IDs are valid MongoDB ObjectIds.
  */
 const zodVehicleAndManagerIdSchema = z.object({
@@ -148,6 +160,20 @@ const zodUpdateVehicleIdSchema = zodVehicleAndManagerIdSchema.strict();
 
 export type UpdateVehicleInputWithIds = z.infer<typeof zodUpdateVehicleIdSchema>;
 
+const zodGetVehicleByIdParamsSchema = z
+  .object({
+    id: z
+      .string({ message: 'Id is required' })
+      .refine(isMongoId, { message: 'Please provide a valid MongoDB ObjectId for vehicle ID' }),
+    standAloneId: z
+      .string()
+      .refine(isMongoId, { message: 'Please provide a valid MongoDB ObjectId for standAloneId' })
+      .optional(),
+  })
+  .strict();
+
+export type GetVehicleByIdParamsInput = z.infer<typeof zodGetVehicleByIdParamsSchema>;
+
 /**
  * Named validators — use these directly in your Express routes
  */
@@ -158,3 +184,5 @@ export const validateCreateVehicleAsStandAlone = validateBody(zodCreateVehicleAs
 export const validateUpdateVehicle = validateBody(zodUpdateVehicleSchema);
 export const validateDeleteVehicle = validateParams(zodDeleteVehicleSchema);
 export const validateUpdateVehicleIds = validateParams(zodUpdateVehicleIdSchema);
+export const validateGetVehicleByIdParams = validateParams(zodGetVehicleByIdParamsSchema);
+export const validateSearchVehicleQueries = validateQuery(zodSearchVehicleSchema);
