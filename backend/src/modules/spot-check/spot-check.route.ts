@@ -93,8 +93,8 @@ router.patch(
 );
 
 /**
- * @route DELETE /api/v1/spot-check/delete-spot-check/:id
- * @description Delete a spot-check
+ * @route DELETE /api/v1/spot-check/delete-spot-check/:id/:standAloneId
+ * @description Delete a spot-check (Transport Manager - includes standAloneId for additional Transport Manager filter)
  * @access Public
  * @param {IdOrIdsInput['id']} id - The ID of the spot-check to delete
  * @param {function} validation - ['validateId']
@@ -108,6 +108,14 @@ router.delete(
   deleteSpotCheck
 );
 
+/**
+ * @route DELETE /api/v1/spot-check/delete-spot-check/:id
+ * @description Delete a spot-check (Standalone User)
+ * @access Public
+ * @param {IdOrIdsInput['id']} id - The ID of the spot-check to delete
+ * @param {function} validation - ['validateId']
+ * @param {function} controller - ['deleteSpotCheck']
+ */
 router.delete(
   '/delete-spot-check/:id',
   authorizedRoles([UserRole.STANDALONE_USER]),
