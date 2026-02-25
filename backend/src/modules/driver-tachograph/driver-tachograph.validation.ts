@@ -125,6 +125,18 @@ const zodUpdateManyDriverTachographSchema = z
 
 export type UpdateManyDriverTachographInput = z.infer<typeof zodUpdateManyDriverTachographSchema>;
 
+const zodUpdateDriverTachographReviewedBySchema = z
+  .object({
+    reviewedBy: z
+      .string({ message: 'reviewedBy is required' })
+      .refine(isMongoId, { message: 'reviewedBy must be a valid MongoDB ObjectId' }),
+  })
+  .strict();
+
+export type UpdateDriverTachographReviewedByInput = z.infer<
+  typeof zodUpdateDriverTachographReviewedBySchema
+>;
+
 const zodSearchDriverTachographSchema = zodSearchQuerySchema.extend({
   standAloneId: z
     .string()
@@ -158,6 +170,9 @@ export const validateCreateDriverTachograph = validateBody(zodCreateDriverTachog
 export const validateCreateManyDriverTachograph = validateBody(zodCreateManyDriverTachographSchema);
 export const validateUpdateDriverTachograph = validateBody(zodUpdateDriverTachographSchema);
 export const validateUpdateManyDriverTachograph = validateBody(zodUpdateManyDriverTachographSchema);
+export const validateUpdateDriverTachographReviewedBy = validateBody(
+  zodUpdateDriverTachographReviewedBySchema
+);
 export const validateCreateDriverTachographAsManager = validateBody(
   zodCreateDriverTachographAsManagerSchema
 );

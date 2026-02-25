@@ -3,6 +3,8 @@ import { driverTachographServices } from './driver-tachograph.service';
 import { SearchQueryInput } from '../../handlers/common-zod-validator';
 import ServerResponse from '../../helpers/responses/custom-response';
 import catchAsync from '../../utils/catch-async/catch-async';
+import { AuthenticatedRequest } from '../../middlewares/is-authorized';
+import { UserRole } from '../../models';
 
 /**
  * Controller function to handle the creation of a single driver-tachograph.
@@ -12,13 +14,18 @@ import catchAsync from '../../utils/catch-async/catch-async';
  * @returns {Promise<Partial<IDriverTachograph>>} - The created driver-tachograph.
  * @throws {Error} - Throws an error if the driver-tachograph creation fails.
  */
-export const createDriverTachograph = catchAsync(async (req: Request, res: Response) => {
-  // Call the service method to create a new driver-tachograph and get the result
-  const result = await driverTachographServices.createDriverTachograph(req.body);
-  if (!result) throw new Error('Failed to create driver-tachograph');
-  // Send a success response with the created driver-tachograph data
-  ServerResponse(res, true, 201, 'Driver-tachograph created successfully', result);
-});
+export const createDriverTachograph = catchAsync(
+  async (req: AuthenticatedRequest, res: Response) => {
+    if (!req.body?.reviewedBy && req.user?._id) {
+      req.body.reviewedBy = req.user._id;
+    }
+    // Call the service method to create a new driver-tachograph and get the result
+    const result = await driverTachographServices.createDriverTachograph(req.body);
+    if (!result) throw new Error('Failed to create driver-tachograph');
+    // Send a success response with the created driver-tachograph data
+    ServerResponse(res, true, 201, 'Driver-tachograph created successfully', result);
+  }
+);
 
 /**
  * Controller function to handle the update operation for a single driver-tachograph.
@@ -41,6 +48,25 @@ export const updateDriverTachograph = catchAsync(async (req: Request, res: Respo
   // Send a success response with the updated driver-tachograph data
   ServerResponse(res, true, 200, 'Driver-tachograph updated successfully', result);
 });
+
+export const updateDriverTachographReviewedBy = catchAsync(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const { id } = req.params;
+    const standAloneId = (req.params as any).standAloneId || (req.query as any)?.standAloneId;
+
+    const reviewedBy = (req.body?.reviewedBy || req.user?._id) as string;
+
+    const result = await driverTachographServices.updateDriverTachographReviewedBy(
+      id as string,
+      { reviewedBy },
+      standAloneId as string | undefined
+    );
+
+    if (!result) throw new Error('Driver-tachograph not found');
+
+    ServerResponse(res, true, 200, 'Driver-tachograph reviewedBy updated successfully', result);
+  }
+);
 
 /**
  * Controller function to handle the deletion of a single driver-tachograph.
@@ -84,18 +110,31 @@ export const getDriverTachographById = catchAsync(async (req: Request, res: Resp
  * @returns {Promise<Partial<IDriverTachograph>[]>} - The retrieved driver-tachographs.
  * @throws {Error} - Throws an error if the driver-tachographs retrieval fails.
  */
-export const getManyDriverTachograph = catchAsync(async (req: Request, res: Response) => {
-  // Use the validated and transformed query from Zod middleware
-  const query = (req as any).validatedQuery as SearchQueryInput;
-  // Call the service method to get multiple driver-tachographs based on query parameters and get the result
-  const { driverTachographs, totalData, totalPages } =
-    await driverTachographServices.getManyDriverTachograph(query);
-  if (!driverTachographs) throw new Error('Failed to retrieve driver-tachographs');
-  // Send a success response with the retrieved driver-tachographs data
-  ServerResponse(res, true, 200, 'Driver-tachographs retrieved successfully', {
-    driverTachographs,
-    totalData,
-    totalPages,
-  });
-});
+export const getManyDriverTachograph = catchAsync(
+  async (req: AuthenticatedRequest, res: Response) => {
+    // Use the validated and transformed query from Zod middleware
+    const query = {
+      ...((req as any).validatedQuery as SearchQueryInput),
+      requesterId: req.user?._id,
+      requesterRole: req.user?.role,
+    } as any;
+
+    // For standalone users, always restrict to own scope
+    if (req.user?.role === UserRole.STANDALONE_USER) {
+      query.standAloneId = req.user._id;
+    }
+
+    // For transport managers, standAloneId from query is optional and handled in service
+    // Call the service method to get multiple driver-tachographs based on query parameters and get the result
+    const { driverTachographs, totalData, totalPages } =
+      await driverTachographServices.getManyDriverTachograph(query);
+    if (!driverTachographs) throw new Error('Failed to retrieve driver-tachographs');
+    // Send a success response with the retrieved driver-tachographs data
+    ServerResponse(res, true, 200, 'Driver-tachographs retrieved successfully', {
+      driverTachographs,
+      totalData,
+      totalPages,
+    });
+  }
+);
 

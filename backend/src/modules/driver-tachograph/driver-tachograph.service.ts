@@ -6,11 +6,11 @@ import DriverTachographModel, {
 import Vehicle from '../../models/vehicle-transport/vehicle.schema';
 import Driver from '../../models/vehicle-transport/driver.schema';
 import { IdOrIdsInput, SearchQueryInput } from '../../handlers/common-zod-validator';
+import { ClientManagement, ClientStatus, UserRole } from '../../models';
 import {
   CreateDriverTachographInput,
-  CreateManyDriverTachographInput,
   UpdateDriverTachographInput,
-  UpdateManyDriverTachographInput,
+  UpdateDriverTachographReviewedByInput,
 } from './driver-tachograph.validation';
 
 const resolveOwnerId = (entity: any): string | null => {
@@ -113,6 +113,28 @@ const updateDriverTachograph = async (
   return updatedDriverTachograph;
 };
 
+const updateDriverTachographReviewedBy = async (
+  id: IdOrIdsInput['id'],
+  data: UpdateDriverTachographReviewedByInput,
+  standAloneId?: string
+): Promise<Partial<IDriverTachograph | null>> => {
+  const existing = await DriverTachographModel.findById(id).select('vehicleId driverId').lean();
+  if (!existing) return null;
+
+  await validateVehicleDriverAndOwner(
+    (existing as any).vehicleId?.toString(),
+    (existing as any).driverId?.toString(),
+    standAloneId
+  );
+
+  const updatedDriverTachograph = await DriverTachographModel.findByIdAndUpdate(
+    id,
+    { reviewedBy: data.reviewedBy },
+    { new: true }
+  );
+  return updatedDriverTachograph;
+};
+
 /**
  * Service function to delete a single driver-tachograph by ID.
  *
@@ -146,13 +168,24 @@ const getDriverTachographById = async (
  * @returns {Promise<Partial<IDriverTachograph>[]>} - The retrieved driver-tachograph
  */
 const getManyDriverTachograph = async (
-  query: SearchQueryInput
+  query: SearchQueryInput & {
+    standAloneId?: string;
+    requesterId?: string;
+    requesterRole?: UserRole;
+  }
 ): Promise<{
   driverTachographs: Partial<IDriverTachograph>[];
   totalData: number;
   totalPages: number;
 }> => {
-  const { searchKey = '', showPerPage = 10, pageNo = 1 } = query;
+  const {
+    searchKey = '',
+    showPerPage = 10,
+    pageNo = 1,
+    standAloneId,
+    requesterId,
+    requesterRole,
+  } = query;
   // Build the search filter based on searchable fields
   const baseOr = [
     { typeOfInfringement: { $regex: searchKey, $options: 'i' } },
@@ -164,6 +197,51 @@ const getManyDriverTachograph = async (
   if (searchKey && searchKey.trim()) {
     searchFilter.$or = baseOr;
   }
+
+  const ownerIds = new Set<string>();
+
+  if (requesterRole === UserRole.STANDALONE_USER && requesterId) {
+    ownerIds.add(String(requesterId));
+  }
+
+  if (requesterRole === UserRole.TRANSPORT_MANAGER && requesterId) {
+    ownerIds.add(String(requesterId));
+
+    if (standAloneId) {
+      ownerIds.add(String(standAloneId));
+    } else {
+      const managerClients = await ClientManagement.findOne({
+        managerId: new mongoose.Types.ObjectId(requesterId),
+      })
+        .select('clients.clientId clients.status')
+        .lean();
+
+      const approvedClientIds = (managerClients?.clients || [])
+        .filter((client: any) => client?.status === ClientStatus.APPROVED)
+        .map((client: any) => client.clientId?.toString())
+        .filter(Boolean);
+
+      approvedClientIds.forEach((id: string) => ownerIds.add(id));
+    }
+  }
+
+  if (ownerIds.size > 0) {
+    const ownerObjectIds = Array.from(ownerIds)
+      .filter((id) => mongoose.Types.ObjectId.isValid(id))
+      .map((id) => new mongoose.Types.ObjectId(id));
+
+    const accessibleVehicles = await Vehicle.find({
+      $or: [{ standAloneId: { $in: ownerObjectIds } }, { createdBy: { $in: ownerObjectIds } }],
+    })
+      .select('_id')
+      .lean();
+
+    const accessibleVehicleIds = accessibleVehicles.map((vehicle: any) => vehicle._id);
+
+    searchFilter.$and = searchFilter.$and || [];
+    searchFilter.$and.push({ vehicleId: { $in: accessibleVehicleIds } });
+  }
+
   // Calculate the number of items to skip based on the page number
   const skipItems = (pageNo - 1) * showPerPage;
   // Find the total count of matching driver-tachograph
@@ -181,6 +259,7 @@ const getManyDriverTachograph = async (
 export const driverTachographServices = {
   createDriverTachograph,
   updateDriverTachograph,
+  updateDriverTachographReviewedBy,
   deleteDriverTachograph,
   getDriverTachographById,
   getManyDriverTachograph,

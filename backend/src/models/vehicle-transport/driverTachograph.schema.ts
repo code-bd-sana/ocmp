@@ -42,6 +42,7 @@ const DriverTachographSchema: Schema<IDriverTachograph> = new Schema(
       type: Boolean,
       default: false,
     },
+    
   },
   { timestamps: true, versionKey: false }
 );

@@ -5,6 +5,7 @@ import { Router, Response, NextFunction } from 'express';
 import {
   createDriverTachograph,
   updateDriverTachograph,
+  updateDriverTachographReviewedBy,
   deleteDriverTachograph,
   getDriverTachographById,
   getManyDriverTachograph,
@@ -15,6 +16,7 @@ import {
   validateCreateDriverTachographAsManager,
   validateCreateDriverTachographAsStandAlone,
   validateUpdateDriverTachograph,
+  validateUpdateDriverTachographReviewedBy,
   validateSearchDriverTachographQueries,
   validateDriverTachographAndManagerIdParam,
   validateDriverTachographIdParam,
@@ -88,6 +90,23 @@ router.patch(
   updateDriverTachograph
 );
 
+router.patch(
+  '/update-driver-tachograph-reviewed-by/:id/:standAloneId',
+  authorizedRoles([UserRole.TRANSPORT_MANAGER]),
+  validateClientForManagerMiddleware,
+  validateDriverTachographAndManagerIdParam,
+  validateUpdateDriverTachographReviewedBy,
+  updateDriverTachographReviewedBy
+);
+
+router.patch(
+  '/update-driver-tachograph-reviewed-by/:id',
+  authorizedRoles([UserRole.STANDALONE_USER]),
+  validateDriverTachographIdParam,
+  validateUpdateDriverTachographReviewedBy,
+  updateDriverTachographReviewedBy
+);
+
 /**
  * @route DELETE /api/v1/driver-tachograph/delete-driver-tachograph/:id/:standAloneId
  * @description Delete a driver-tachograph (Transport Manager)
@@ -128,14 +147,12 @@ router.get(
   authorizedRoles([UserRole.STANDALONE_USER, UserRole.TRANSPORT_MANAGER]),
   (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     if (req.user!.role === UserRole.STANDALONE_USER && req.query?.standAloneId) {
-      return ServerResponse(
-        res,
-        false,
-        403,
-        'Forbidden: standAloneId is only allowed for transport managers'
-      );
+      return ServerResponse(res, false, 400, 'standAloneId is not needed for standalone users');
     }
     if (req.user!.role === UserRole.TRANSPORT_MANAGER) {
+      if (!req.query?.standAloneId) {
+        return ServerResponse(res, false, 400, 'standAloneId is required for transport managers');
+      }
       return validateClientForManagerMiddleware(req, res, next);
     }
     next();
@@ -150,32 +167,27 @@ router.get(
 );
 
 /**
+ * @route GET /api/v1/driver-tachograph/get-driver-tachograph/:id/:standAloneId
+ * @description Get a driver-tachograph by ID (Transport Manager)
+ * @access Private (Transport Manager)
+ */
+router.get(
+  '/get-driver-tachograph/:id/:standAloneId',
+  authorizedRoles([UserRole.TRANSPORT_MANAGER]),
+  validateClientForManagerMiddleware,
+  validateDriverTachographAndManagerIdParam,
+  getDriverTachographById
+);
+
+/**
  * @route GET /api/v1/driver-tachograph/get-driver-tachograph/:id
- * @description Get a driver-tachograph by ID
- * @access Public
- * @param {IdOrIdsInput['id']} id - The ID of the driver-tachograph to retrieve
- * @param {function} validation - ['validateId']
- * @param {function} controller - ['getDriverTachographById']
+ * @description Get a driver-tachograph by ID (Standalone User)
+ * @access Private (Standalone User)
  */
 router.get(
   '/get-driver-tachograph/:id',
-  authorizedRoles([UserRole.STANDALONE_USER, UserRole.TRANSPORT_MANAGER]),
-  (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-    if (req.user!.role === UserRole.STANDALONE_USER && req.query?.standAloneId) {
-      return ServerResponse(
-        res,
-        false,
-        403,
-        'Forbidden: standAloneId is only allowed for transport managers'
-      );
-    }
-    if (req.user!.role === UserRole.TRANSPORT_MANAGER) {
-      if (!req.query?.standAloneId)
-        return ServerResponse(res, false, 400, 'standAloneId is required for transport managers');
-      return validateClientForManagerMiddleware(req, res, next);
-    }
-    next();
-  },
+  authorizedRoles([UserRole.STANDALONE_USER]),
+  validateDriverTachographIdParam,
   getDriverTachographById
 );
 
