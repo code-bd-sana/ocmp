@@ -30,7 +30,7 @@ const SpotCheckSchema: Schema<ISpotCheck> = new Schema(
     },
     reportedBy: {
       type: Schema.Types.ObjectId,
-      required: true,
+      // required: true,
       ref: 'User', // Reference from User model
     },
     rectificationRequired: {
