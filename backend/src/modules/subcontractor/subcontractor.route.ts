@@ -1,103 +1,164 @@
-// Import Router from express
 import { Router } from 'express';
 
-// Import controller from corresponding module
-import { 
-  createSubcontractor,
-  updateSubcontractor,
-  updateManySubcontractor,
-  deleteSubcontractor,
-  deleteManySubcontractor,
-  getSubcontractorById,
-  getManySubcontractor
-} from './subcontractor.controller';
+import {
+  createSubContractorAsManager,
+  createSubContractorAsStandAlone,
+  getAllSubContractors,
+  getSubContractorById,
+  updateSubContractor,
+  deleteSubContractor,
+} from './subContractor.controller';
 
-//Import validation from corresponding module
-import { validateCreateSubcontractor, validateCreateManySubcontractor, validateUpdateSubcontractor, validateUpdateManySubcontractor} from './subcontractor.validation';
-import { validateId, validateIds, validateSearchQueries } from '../../handlers/common-zod-validator';
-import isAuthorized from '../../middlewares/is-authorized';
+import {
+  validateSubContractorIdParam,
+  validateSubContractorAndManagerIdParam,
+  validateCreateSubContractorAsManager,
+  validateCreateSubContractorAsStandAlone,
+  validateUpdateSubContractor,
+  validateSearchSubContractorsQueries,
+} from './subContractor.validation';
+import { validateSearchQueries } from '../../handlers/common-zod-validator';
+
+import isAuthorized, { AuthenticatedRequest } from '../../middlewares/is-authorized';
 import authorizedRoles from '../../middlewares/authorized-roles';
-import { UserRole } from '../../models';
 import { validateClientForManagerMiddleware } from '../../middlewares/validate-client-for-manager';
+import { UserRole } from '../../models';
 
-// Initialize router
 const router = Router();
+router.use(isAuthorized());
 
-router.use(isAuthorized())
+// ═══════════════════════════════════════════════════════════════
+// CREATE ROUTES
+// ═══════════════════════════════════════════════════════════════
 
-// Define route handlers
 /**
- * @route POST /api/v1/subcontractor/create-subcontractor
- * @description Create a new subcontractor
- * @access Public
- * @param {function} validation - ['validateCreateSubcontractor']
- * @param {function} controller - ['createSubcontractor']
+ * @route   POST /api/v1/subContractor/create-sub-contractor
+ * @desc    Create a sub-contractor as a Transport Manager
+ * @access  Transport Manager
  */
 router.post(
-  "/create-subcontractor", 
+  '/create-sub-contractor',
   authorizedRoles([UserRole.TRANSPORT_MANAGER]),
   validateClientForManagerMiddleware,
-  validateCreateSubcontractor, 
-  createSubcontractor
+  validateCreateSubContractorAsManager,
+  createSubContractorAsManager
 );
 
+/**
+ * @route   POST /api/v1/subContractor/create-stand-alone-sub-contractor
+ * @desc    Create a sub-contractor as a Standalone User
+ * @access  Standalone User
+ */
+router.post(
+  '/create-stand-alone-sub-contractor',
+  authorizedRoles([UserRole.STANDALONE_USER]),
+  validateCreateSubContractorAsStandAlone,
+  createSubContractorAsStandAlone
+);
+
+// ═══════════════════════════════════════════════════════════════
+// UPDATE ROUTES
+// ═══════════════════════════════════════════════════════════════
 
 /**
- * @route PUT /api/v1/subcontractor/update-subcontractor/many
- * @description Update multiple subcontractors information
- * @access Public
- * @param {function} validation - ['validateIds', 'validateUpdateManySubcontractor']
- * @param {function} controller - ['updateManySubcontractor']
+ * @route   PATCH /api/v1/subContractor/update-sub-contractor-by-manager/:subContractorId/:standAloneId
+ * @desc    Update a sub-contractor as a Transport Manager
+ * @access  Transport Manager
  */
-router.put("/update-subcontractor/many", validateIds, validateUpdateManySubcontractor, updateManySubcontractor);
+router.patch(
+  '/update-sub-contractor-by-manager/:subContractorId/:standAloneId',
+  authorizedRoles([UserRole.TRANSPORT_MANAGER]),
+  validateClientForManagerMiddleware,
+  validateSubContractorAndManagerIdParam,
+  validateUpdateSubContractor,
+  updateSubContractor
+);
 
 /**
- * @route PUT /api/v1/subcontractor/update-subcontractor/:id
- * @description Update subcontractor information
- * @access Public
- * @param {IdOrIdsInput['id']} id - The ID of the subcontractor to update
- * @param {function} validation - ['validateId', 'validateUpdateSubcontractor']
- * @param {function} controller - ['updateSubcontractor']
+ * @route   PATCH /api/v1/subContractor/update-sub-contractor/:subContractorId
+ * @desc    Update a sub-contractor as a Standalone User
+ * @access  Standalone User
  */
-router.put("/update-subcontractor/:id", validateId, validateUpdateSubcontractor, updateSubcontractor);
+router.patch(
+  '/update-sub-contractor/:subContractorId',
+  authorizedRoles([UserRole.STANDALONE_USER]),
+  validateSubContractorIdParam,
+  validateUpdateSubContractor,
+  updateSubContractor
+);
+
+// ═══════════════════════════════════════════════════════════════
+// DELETE ROUTES
+// ═══════════════════════════════════════════════════════════════
 
 /**
- * @route DELETE /api/v1/subcontractor/delete-subcontractor/many
- * @description Delete multiple subcontractors
- * @access Public
- * @param {function} validation - ['validateIds']
- * @param {function} controller - ['deleteManySubcontractor']
+ * @route   DELETE /api/v1/subContractor/delete-sub-contractor-by-manager/:subContractorId/:standAloneId
+ * @desc    Delete a sub-contractor as a Transport Manager
+ * @access  Transport Manager
  */
-router.delete("/delete-subcontractor/many", validateIds, deleteManySubcontractor);
+router.delete(
+  '/delete-sub-contractor-by-manager/:subContractorId/:standAloneId',
+  authorizedRoles([UserRole.TRANSPORT_MANAGER]),
+  validateClientForManagerMiddleware,
+  validateSubContractorAndManagerIdParam,
+  deleteSubContractor
+);
 
 /**
- * @route DELETE /api/v1/subcontractor/delete-subcontractor/:id
- * @description Delete a subcontractor
- * @access Public
- * @param {IdOrIdsInput['id']} id - The ID of the subcontractor to delete
- * @param {function} validation - ['validateId']
- * @param {function} controller - ['deleteSubcontractor']
+ * @route   DELETE /api/v1/subContractor/delete-sub-contractor/:subContractorId
+ * @desc    Delete a sub-contractor as a Standalone User
+ * @access  Standalone User
  */
-router.delete("/delete-subcontractor/:id", validateId, deleteSubcontractor);
+router.delete(
+  '/delete-sub-contractor/:subContractorId',
+  authorizedRoles([UserRole.STANDALONE_USER]),
+  validateSubContractorIdParam,
+  deleteSubContractor
+);
+
+// ═══════════════════════════════════════════════════════════════
+// GET ROUTES
+// ═══════════════════════════════════════════════════════════════
 
 /**
- * @route GET /api/v1/subcontractor/get-subcontractor/many
- * @description Get multiple subcontractors
- * @access Public
- * @param {function} validation - ['validateSearchQueries']
- * @param {function} controller - ['getManySubcontractor']
+ * @route   GET /api/v1/subContractor/get-sub-contractors
+ * @desc    Get all sub-contractors (paginated + searchable)
+ * @access  Transport Manager & Standalone User
  */
-router.get("/get-subcontractor/many", validateSearchQueries, getManySubcontractor);
+router.get(
+  '/get-sub-contractors',
+  authorizedRoles([UserRole.STANDALONE_USER, UserRole.TRANSPORT_MANAGER]),
+  (req: AuthenticatedRequest, res, next) => {
+    if (req.user!.role === UserRole.TRANSPORT_MANAGER) {
+      return validateClientForManagerMiddleware(req, res, next);
+    }
+    next();
+  },
+  (req: AuthenticatedRequest, res, next) => {
+    if (req.user!.role === UserRole.TRANSPORT_MANAGER) {
+      return validateSearchSubContractorsQueries(req, res, next);
+    }
+    return validateSearchQueries(req, res, next);
+  },
+  getAllSubContractors
+);
 
 /**
- * @route GET /api/v1/subcontractor/get-subcontractor/:id
- * @description Get a subcontractor by ID
- * @access Public
- * @param {IdOrIdsInput['id']} id - The ID of the subcontractor to retrieve
- * @param {function} validation - ['validateId']
- * @param {function} controller - ['getSubcontractorById']
+ * @route   GET /api/v1/subContractor/get-sub-contractor/:subContractorId
+ * @desc    Get a single sub-contractor by ID
+ * @access  Transport Manager & Standalone User
  */
-router.get("/get-subcontractor/:id", validateId, getSubcontractorById);
+router.get(
+  '/get-sub-contractor/:subContractorId',
+  authorizedRoles([UserRole.STANDALONE_USER, UserRole.TRANSPORT_MANAGER]),
+  (req: AuthenticatedRequest, res, next) => {
+    if (req.user!.role === UserRole.TRANSPORT_MANAGER) {
+      return validateClientForManagerMiddleware(req, res, next);
+    }
+    next();
+  },
+  validateSubContractorIdParam,
+  getSubContractorById
+);
 
-// Export the router
 module.exports = router;

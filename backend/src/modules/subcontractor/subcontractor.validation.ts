@@ -1,93 +1,230 @@
 import { isMongoId } from 'validator';
 import { z } from 'zod';
-import { validateBody } from '../../handlers/zod-error-handler';
+import { validateBody, validateParams, validateQuery } from '../../handlers/zod-error-handler';
+import { zodSearchQuerySchema } from '../../handlers/common-zod-validator';
 
 /**
- * Subcontractor Validation Schemas and Types
+ * SubContractor Validation Schemas
  *
- * This module defines Zod schemas for validating subcontractor related
- * requests such as creation (single + bulk) and updates (single + bulk).
- * It also exports corresponding TypeScript types inferred from these schemas.
- * Each schema includes detailed validation rules and custom error messages
- * to ensure data integrity and provide clear feedback to API consumers.
- *
- * Named validator middleware functions are exported for direct use in Express routes.
+ * Supports both Transport Manager and Standalone User roles.
+ * Fields: companyName, contactPerson, phone, email, insurancePolicyNumber,
+ *         insuranceExpiryDate, gitPolicyNumber, gitExpiryDate, gitCoverPerTonne,
+ *         hiabAvailable, otherCapabilities, startDateOfAgreement, rating,
+ *         checkedBy, notes
  */
 
-/**
- * Zod schema for validating data when **creating** a single subcontractor.
- *
- * → Add all **required** fields here
- */
-const zodCreateSubcontractorSchema = z
+// ─── Param schemas ───────────────────────────────────────────────────
+
+/** Standalone user: single subContractorId param */
+const zodSubContractorIdParamSchema = z
   .object({
-    insurancePolicyNumber: z.string().optional(),
-    insuranceExpiryDate: z.coerce.date({ message: 'insurance expiry date is required' }),
-    gitPolicyNumber: z.string().optional(),
-    gitExpiryDate: z.coerce.date({ message: 'git expiry date is required' }),
-    gitCover: z.number().optional(),
-    hiabAvailable: z.boolean().optional(),
-    otherCapabilities: z.string().optional(),
-    startDateOfAgreement: z.coerce.date({ message: 'start date of agreement is required' }),
-    rating: z.number().min(0).max(5).optional(),
+    subContractorId: z
+      .string({ message: 'SubContractor id is required' })
+      .refine(isMongoId, { message: 'Please provide a valid MongoDB ObjectId' }),
+  })
+  .strict();
+
+export type SubContractorIdParamInput = z.infer<typeof zodSubContractorIdParamSchema>;
+
+/** TM: subContractorId + standAloneId params */
+const zodSubContractorAndManagerIdParamSchema = z
+  .object({
+    subContractorId: z
+      .string({ message: 'SubContractor id is required' })
+      .refine(isMongoId, { message: 'Please provide a valid MongoDB ObjectId for subContractorId' }),
     standAloneId: z
-      .string()
+      .string({ message: 'standAloneId is required' })
       .refine(isMongoId, { message: 'Please provide a valid MongoDB ObjectId for standAloneId' }),
-    checkedBy: z.string().optional(),
   })
   .strict();
-export type CreateSubcontractorInput = z.infer<typeof zodCreateSubcontractorSchema>;
 
-/**
- * Zod schema for validating **bulk creation** (array of subcontractor objects).
- */
-const zodCreateManySubcontractorSchema = z
-  .array(zodCreateSubcontractorSchema)
-  .min(1, { message: 'At least one subcontractor must be provided for bulk creation' });
+export type SubContractorAndManagerIdParamInput = z.infer<typeof zodSubContractorAndManagerIdParamSchema>;
 
-export type CreateManySubcontractorInput = z.infer<typeof zodCreateManySubcontractorSchema>;
+// ─── Body schemas ────────────────────────────────────────────────────
 
-/**
- * Zod schema for validating data when **updating** an existing subcontractor.
- *
- * → All fields should usually be .optional()
- */
-const zodUpdateSubcontractorSchema = z
+/** Base sub-contractor fields (shared between TM and standalone create) */
+const baseSubContractorFields = {
+  companyName: z
+    .string({ message: 'Company name is required' })
+    .min(1, 'Company name must be at least 1 character')
+    .max(200, 'Company name must not exceed 200 characters'),
+  contactPerson: z
+    .string({ message: 'Contact person is required' })
+    .min(1, 'Contact person must be at least 1 character')
+    .max(150, 'Contact person must not exceed 150 characters'),
+  phone: z
+    .string({ message: 'Phone number is required' })
+    .min(1, 'Phone number must be at least 1 character')
+    .max(30, 'Phone number must not exceed 30 characters'),
+  email: z
+    .string({ message: 'Email is required' })
+    .email({ message: 'Please provide a valid email address' }),
+  insurancePolicyNumber: z
+    .string({ message: 'Insurance policy number is required' })
+    .min(1, 'Insurance policy number must be at least 1 character')
+    .max(100, 'Insurance policy number must not exceed 100 characters'),
+  insuranceExpiryDate: z
+    .string({ message: 'Insurance expiry date is required' })
+    .datetime({ message: 'Insurance expiry date must be a valid ISO date string' }),
+  gitPolicyNumber: z
+    .string({ message: 'GIT policy number must be a string' })
+    .max(100, 'GIT policy number must not exceed 100 characters')
+    .optional(),
+  gitExpiryDate: z
+    .string({ message: 'GIT expiry date must be a string' })
+    .datetime({ message: 'GIT expiry date must be a valid ISO date string' })
+    .optional(),
+  gitCoverPerTonne: z
+    .number({ message: 'GIT cover per tonne must be a number' })
+    .nonnegative('GIT cover per tonne must be a non-negative number')
+    .optional(),
+  hiabAvailable: z
+    .boolean({ message: 'HIAB available must be a boolean' })
+    .optional(),
+  otherCapabilities: z
+    .string({ message: 'Other capabilities must be a string' })
+    .max(500, 'Other capabilities must not exceed 500 characters')
+    .optional(),
+  startDateOfAgreement: z
+    .string({ message: 'Start date of agreement is required' })
+    .datetime({ message: 'Start date of agreement must be a valid ISO date string' }),
+  rating: z
+    .number({ message: 'Rating must be a number' })
+    .int('Rating must be an integer')
+    .min(1, 'Rating must be between 1 and 5')
+    .max(5, 'Rating must be between 1 and 5')
+    .optional(),
+  checkedBy: z
+    .string({ message: 'Checked by is required' })
+    .min(1, 'Checked by must be at least 1 character')
+    .max(150, 'Checked by must not exceed 150 characters'),
+  notes: z
+    .string({ message: 'Notes must be a string' })
+    .max(1000, 'Notes must not exceed 1000 characters')
+    .optional(),
+};
+
+/** TM create: standAloneId is REQUIRED */
+const zodCreateSubContractorAsManagerSchema = z
   .object({
-    // Example fields — replace / expand as needed:
-    // name: z.string().min(2, 'Name must be at least 2 characters').max(100).optional(),
-    // email: z.string().email({ message: 'Invalid email format' }).optional(),
-    // age: z.number().int().positive().optional(),
-    // status: z.enum(['active', 'inactive', 'pending']).optional(),
+    ...baseSubContractorFields,
+    standAloneId: z
+      .string({ message: 'standAloneId is required for transport manager' })
+      .refine(isMongoId, { message: 'standAloneId must be a valid MongoDB ObjectId' }),
   })
   .strict();
 
-export type UpdateSubcontractorInput = z.infer<typeof zodUpdateSubcontractorSchema>;
+export type CreateSubContractorAsManagerInput = z.infer<typeof zodCreateSubContractorAsManagerSchema>;
 
-/**
- * Zod schema for validating bulk updates (array of partial subcontractor objects).
- */
-const zodUpdateManySubcontractorForBulkSchema = zodUpdateSubcontractorSchema
-  .extend({
-    id: z.string().refine(isMongoId, { message: 'Please provide a valid MongoDB ObjectId' }),
+/** Standalone create: no standAloneId needed */
+const zodCreateSubContractorAsStandAloneSchema = z
+  .object({
+    ...baseSubContractorFields,
   })
-  .refine((data) => Object.keys(data).length > 1, {
-    message: 'At least one field to update must be provided',
+  .strict();
+
+export type CreateSubContractorAsStandAloneInput = z.infer<typeof zodCreateSubContractorAsStandAloneSchema>;
+
+// Legacy union type
+export type CreateSubContractorInput = CreateSubContractorAsManagerInput | CreateSubContractorAsStandAloneInput;
+
+/** Update sub-contractor (shared for both roles) — all fields optional, at least 1 required */
+const zodUpdateSubContractorSchema = z
+  .object({
+    companyName: z
+      .string({ message: 'Company name must be a string' })
+      .min(1, 'Company name must be at least 1 character')
+      .max(200, 'Company name must not exceed 200 characters')
+      .optional(),
+    contactPerson: z
+      .string({ message: 'Contact person must be a string' })
+      .min(1, 'Contact person must be at least 1 character')
+      .max(150, 'Contact person must not exceed 150 characters')
+      .optional(),
+    phone: z
+      .string({ message: 'Phone must be a string' })
+      .min(1, 'Phone must be at least 1 character')
+      .max(30, 'Phone must not exceed 30 characters')
+      .optional(),
+    email: z
+      .string({ message: 'Email must be a string' })
+      .email({ message: 'Please provide a valid email address' })
+      .optional(),
+    insurancePolicyNumber: z
+      .string({ message: 'Insurance policy number must be a string' })
+      .max(100, 'Insurance policy number must not exceed 100 characters')
+      .optional(),
+    insuranceExpiryDate: z
+      .string({ message: 'Insurance expiry date must be a string' })
+      .datetime({ message: 'Insurance expiry date must be a valid ISO date string' })
+      .optional(),
+    gitPolicyNumber: z
+      .string({ message: 'GIT policy number must be a string' })
+      .max(100, 'GIT policy number must not exceed 100 characters')
+      .optional(),
+    gitExpiryDate: z
+      .string({ message: 'GIT expiry date must be a string' })
+      .datetime({ message: 'GIT expiry date must be a valid ISO date string' })
+      .optional(),
+    gitCoverPerTonne: z
+      .number({ message: 'GIT cover per tonne must be a number' })
+      .nonnegative('GIT cover per tonne must be a non-negative number')
+      .optional(),
+    hiabAvailable: z
+      .boolean({ message: 'HIAB available must be a boolean' })
+      .optional(),
+    otherCapabilities: z
+      .string({ message: 'Other capabilities must be a string' })
+      .max(500, 'Other capabilities must not exceed 500 characters')
+      .optional(),
+    startDateOfAgreement: z
+      .string({ message: 'Start date of agreement must be a string' })
+      .datetime({ message: 'Start date of agreement must be a valid ISO date string' })
+      .optional(),
+    rating: z
+      .number({ message: 'Rating must be a number' })
+      .int('Rating must be an integer')
+      .min(1, 'Rating must be between 1 and 5')
+      .max(5, 'Rating must be between 1 and 5')
+      .optional(),
+    checkedBy: z
+      .string({ message: 'Checked by must be a string' })
+      .max(150, 'Checked by must not exceed 150 characters')
+      .optional(),
+    notes: z
+      .string({ message: 'Notes must be a string' })
+      .max(1000, 'Notes must not exceed 1000 characters')
+      .optional(),
+  })
+  .strict()
+  .refine((data) => Object.keys(data).length > 0, {
+    message: 'At least one field must be provided for update',
   });
 
-/**
- * Zod schema for validating an array of multiple subcontractor updates.
- */
-const zodUpdateManySubcontractorSchema = z
-  .array(zodUpdateManySubcontractorForBulkSchema)
-  .min(1, { message: 'At least one subcontractor update object must be provided' });
+export type UpdateSubContractorInput = z.infer<typeof zodUpdateSubContractorSchema>;
 
-export type UpdateManySubcontractorInput = z.infer<typeof zodUpdateManySubcontractorSchema>;
+// ─── Search query schema ────────────────────────────────────────────
 
-/**
- * Named validators — use these directly in your Express routes
- */
-export const validateCreateSubcontractor = validateBody(zodCreateSubcontractorSchema);
-export const validateCreateManySubcontractor = validateBody(zodCreateManySubcontractorSchema);
-export const validateUpdateSubcontractor = validateBody(zodUpdateSubcontractorSchema);
-export const validateUpdateManySubcontractor = validateBody(zodUpdateManySubcontractorSchema);
+/** Extends base search query with standAloneId for TM filtering */
+const zodSearchSubContractorsSchema = zodSearchQuerySchema.extend({
+  standAloneId: z
+    .string()
+    .refine(isMongoId, { message: 'Please provide a valid MongoDB ObjectId for standAloneId' })
+    .optional(),
+});
+
+export type SearchSubContractorsQueryInput = z.infer<typeof zodSearchSubContractorsSchema>;
+
+// ─── Validators ─────────────────────────────────────────────────────
+
+// Param validators
+export const validateSubContractorIdParam = validateParams(zodSubContractorIdParamSchema);
+export const validateSubContractorAndManagerIdParam = validateParams(zodSubContractorAndManagerIdParamSchema);
+
+// Body validators
+export const validateCreateSubContractorAsManager = validateBody(zodCreateSubContractorAsManagerSchema);
+export const validateCreateSubContractorAsStandAlone = validateBody(zodCreateSubContractorAsStandAloneSchema);
+export const validateUpdateSubContractor = validateBody(zodUpdateSubContractorSchema);
+
+// Search query validators
+export const validateSearchSubContractorsQueries = validateQuery(zodSearchSubContractorsSchema);

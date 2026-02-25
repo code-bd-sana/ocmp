@@ -1,198 +1,231 @@
-// Import the model
 import mongoose from 'mongoose';
-import { IdOrIdsInput, SearchQueryInput } from '../../handlers/common-zod-validator';
-import {
-  CreateSubcontractorInput,
-  CreateManySubcontractorInput,
-  UpdateSubcontractorInput,
-  UpdateManySubcontractorInput,
-} from './subcontractor.validation';
 import { SubContractor, ISubContractor } from '../../models';
+import {
+  CreateSubContractorAsManagerInput,
+  CreateSubContractorAsStandAloneInput,
+  UpdateSubContractorInput,
+  SearchSubContractorsQueryInput,
+} from './subContractor.validation';
+
+// ═══════════════════════════════════════════════════════════════
+// CREATE
+// ═══════════════════════════════════════════════════════════════
 
 /**
- * Service function to create a new subcontractor.
- *
- * @param {CreateSubcontractorInput} data - The data to create a new subcontractor.
- * @returns {Promise<ISubContractor>} - The created subcontractor.
+ * Service: Create a sub-contractor as a Transport Manager.
+ * The TM's createdBy is set in controller; standAloneId comes from body.
  */
-const createSubcontractor = async (data: CreateSubcontractorInput): Promise<ISubContractor> => {
-  const newSubcontractor = new SubContractor(data);
-  const savedSubcontractor = await newSubcontractor.save();
-  return savedSubcontractor;
-};
-
-/**
- * Service function to update a single subcontractor by ID.
- *
- * @param {IdOrIdsInput['id']} id - The ID of the subcontractor to update.
- * @param {UpdateSubcontractorInput} data - The updated data for the subcontractor.
- * @returns {Promise<Partial<ISubContractor>>} - The updated subcontractor.
- */
-const updateSubcontractor = async (
-  id: IdOrIdsInput['id'],
-  data: UpdateSubcontractorInput
-): Promise<Partial<ISubContractor | null>> => {
-  // Check for duplicate (filed) combination
-  const existingSubcontractor = await SubContractor.findOne({
-    _id: { $ne: id }, // Exclude the current document
-    $or: [
-      {
-        /* filedName: data.filedName, */
-      },
-    ],
-  }).lean();
-  // Prevent duplicate updates
-  if (existingSubcontractor) {
-    throw new Error(
-      'Duplicate detected: Another subcontractor with the same fieldName already exists.'
-    );
-  }
-  // Proceed to update the subcontractor
-  const updatedSubcontractor = await SubContractor.findByIdAndUpdate(id, data, { new: true });
-  return updatedSubcontractor;
-};
-
-/**
- * Service function to update multiple subcontractor.
- *
- * @param {UpdateManySubcontractorInput} data - An array of data to update multiple subcontractor.
- * @returns {Promise<Partial<ISubContractor>[]>} - The updated subcontractor.
- */
-const updateManySubcontractor = async (
-  data: UpdateManySubcontractorInput
-): Promise<Partial<ISubContractor>[]> => {
-  // Early return if no data provided
-  if (data.length === 0) {
-    return [];
-  }
-  // Convert string ids to ObjectId (for safety)
-  const objectIds = data.map((item) => new mongoose.Types.ObjectId(item.id));
-  // Check for duplicates (filedName) excluding the documents being updated
-  const existingSubcontractor = await SubContractor.find({
-    _id: { $nin: objectIds }, // Exclude documents being updated
-    $or: data.flatMap((item) => [
-      // { filedName: item.filedName },
-    ]),
-  }).lean();
-  // If any duplicates found, throw error
-  if (existingSubcontractor.length > 0) {
-    throw new Error(
-      'Duplicate detected: One or more subcontractor with the same fieldName already exist.'
-    );
-  }
-  // Prepare bulk operations
-  const operations = data.map((item) => ({
-    updateOne: {
-      filter: { _id: new mongoose.Types.ObjectId(item.id) },
-      update: { $set: item },
-      upsert: false,
-    },
-  }));
-  // Execute bulk update
-  const bulkResult = await SubContractor.bulkWrite(operations, {
-    ordered: true, // keep order of operations
-  });
-  // check if all succeeded
-  if (bulkResult.matchedCount !== data.length) {
-    throw new Error('Some documents were not found or updated');
-  }
-  // Fetch the freshly updated documents
-  const updatedDocs = await SubContractor.find({ _id: { $in: objectIds } })
-    .lean()
-    .exec();
-  // Map back to original input order
-  const resultMap = new Map<string, any>(updatedDocs.map((doc) => [doc._id.toString(), doc]));
-  // Ensure the result array matches the input order
-  const orderedResults = data.map((item) => {
-    const updated = resultMap.get(item.id);
-    return updated || { _id: item.id };
-  });
-  return orderedResults as Partial<ISubContractor>[];
-};
-
-/**
- * Service function to delete a single subcontractor by ID.
- *
- * @param {IdOrIdsInput['id']} id - The ID of the subcontractor to delete.
- * @returns {Promise<Partial<ISubContractor>>} - The deleted subcontractor.
- */
-const deleteSubcontractor = async (
-  id: IdOrIdsInput['id']
-): Promise<Partial<ISubContractor | null>> => {
-  const deletedSubcontractor = await SubContractor.findByIdAndDelete(id);
-  return deletedSubcontractor;
-};
-
-/**
- * Service function to delete multiple subcontractor.
- *
- * @param {IdOrIdsInput['ids']} ids - An array of IDs of subcontractor to delete.
- * @returns {Promise<Partial<ISubContractor>[]>} - The deleted subcontractor.
- */
-const deleteManySubcontractor = async (
-  ids: IdOrIdsInput['ids']
-): Promise<Partial<ISubContractor>[]> => {
-  const subcontractorToDelete = await SubContractor.find({ _id: { $in: ids } });
-  if (!subcontractorToDelete.length) throw new Error('No subcontractor found to delete');
-  await SubContractor.deleteMany({ _id: { $in: ids } });
-  return subcontractorToDelete;
-};
-
-/**
- * Service function to retrieve a single subcontractor by ID.
- *
- * @param {IdOrIdsInput['id']} id - The ID of the subcontractor to retrieve.
- * @returns {Promise<Partial<ISubContractor>>} - The retrieved subcontractor.
- */
-const getSubcontractorById = async (
-  id: IdOrIdsInput['id']
-): Promise<Partial<ISubContractor | null>> => {
-  const subcontractor = await SubContractor.findById(id);
-  return subcontractor;
-};
-
-/**
- * Service function to retrieve multiple subcontractor based on query parameters.
- *
- * @param {SearchQueryInput} query - The query parameters for filtering subcontractor.
- * @returns {Promise<Partial<ISubContractor>[]>} - The retrieved subcontractor
- */
-const getManySubcontractor = async (
-  query: SearchQueryInput
-): Promise<{
-  subcontractors: Partial<ISubContractor>[];
-  totalData: number;
-  totalPages: number;
-}> => {
-  const { searchKey = '', showPerPage = 10, pageNo = 1 } = query;
-  // Build the search filter based on the search key
-  const searchFilter = {
-    $or: [
-      // { fieldName: { $regex: searchKey, $options: 'i' } },
-      // Add more fields as needed
-    ],
+const createSubContractorAsManager = async (
+  data: CreateSubContractorAsManagerInput & { createdBy: mongoose.Types.ObjectId }
+): Promise<ISubContractor> => {
+  const doc: Record<string, any> = {
+    companyName: data.companyName,
+    contactPerson: data.contactPerson,
+    phone: data.phone,
+    email: data.email,
+    insurancePolicyNumber: data.insurancePolicyNumber,
+    insuranceExpiryDate: new Date(data.insuranceExpiryDate),
+    startDateOfAgreement: new Date(data.startDateOfAgreement),
+    checkedBy: data.checkedBy,
+    hiabAvailable: data.hiabAvailable ?? false,
+    standAloneId: new mongoose.Types.ObjectId(data.standAloneId),
+    createdBy: data.createdBy,
   };
-  // Calculate the number of items to skip based on the page number
-  const skipItems = (pageNo - 1) * showPerPage;
-  // Find the total count of matching subcontractor
-  const totalData = await SubContractor.countDocuments(searchFilter);
-  // Calculate the total number of pages
+  if (data.gitPolicyNumber !== undefined) doc.gitPolicyNumber = data.gitPolicyNumber;
+  if (data.gitExpiryDate !== undefined) doc.gitExpiryDate = new Date(data.gitExpiryDate);
+  if (data.gitCoverPerTonne !== undefined) doc.gitCoverPerTonne = data.gitCoverPerTonne;
+  if (data.otherCapabilities !== undefined) doc.otherCapabilities = data.otherCapabilities;
+  if (data.rating !== undefined) doc.rating = data.rating;
+  if (data.notes !== undefined) doc.notes = data.notes;
+
+  const newDoc = new SubContractor(doc);
+  return await newDoc.save();
+};
+
+/**
+ * Service: Create a sub-contractor as a Standalone User.
+ * No standAloneId needed; createdBy is set in controller.
+ */
+const createSubContractorAsStandAlone = async (
+  data: CreateSubContractorAsStandAloneInput & { createdBy: mongoose.Types.ObjectId }
+): Promise<ISubContractor> => {
+  const doc: Record<string, any> = {
+    companyName: data.companyName,
+    contactPerson: data.contactPerson,
+    phone: data.phone,
+    email: data.email,
+    insurancePolicyNumber: data.insurancePolicyNumber,
+    insuranceExpiryDate: new Date(data.insuranceExpiryDate),
+    startDateOfAgreement: new Date(data.startDateOfAgreement),
+    checkedBy: data.checkedBy,
+    hiabAvailable: data.hiabAvailable ?? false,
+    createdBy: data.createdBy,
+  };
+  if (data.gitPolicyNumber !== undefined) doc.gitPolicyNumber = data.gitPolicyNumber;
+  if (data.gitExpiryDate !== undefined) doc.gitExpiryDate = new Date(data.gitExpiryDate);
+  if (data.gitCoverPerTonne !== undefined) doc.gitCoverPerTonne = data.gitCoverPerTonne;
+  if (data.otherCapabilities !== undefined) doc.otherCapabilities = data.otherCapabilities;
+  if (data.rating !== undefined) doc.rating = data.rating;
+  if (data.notes !== undefined) doc.notes = data.notes;
+
+  const newDoc = new SubContractor(doc);
+  return await newDoc.save();
+};
+
+// ═══════════════════════════════════════════════════════════════
+// READ
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Service: Get all sub-contractors (paginated + searchable).
+ * Uses aggregation with $or access control and text search.
+ */
+const getAllSubContractors = async (
+  query: SearchSubContractorsQueryInput
+): Promise<{ subContractors: any[]; totalData: number; totalPages: number }> => {
+  const showPerPage = Number(query.showPerPage) || 10;
+  const pageNo = Number(query.pageNo) || 1;
+  const searchKey = query.searchKey;
+  const { standAloneId } = query;
+
+  const basePipeline: mongoose.PipelineStage[] = [];
+
+  // Access control
+  if (standAloneId) {
+    const objectId = new mongoose.Types.ObjectId(standAloneId);
+    basePipeline.push({
+      $match: {
+        $or: [{ standAloneId: objectId }, { createdBy: objectId }],
+      },
+    });
+  }
+
+  // Search filter on companyName, contactPerson, email, phone
+  if (searchKey) {
+    basePipeline.push({
+      $match: {
+        $or: [
+          { companyName: { $regex: searchKey, $options: 'i' } },
+          { contactPerson: { $regex: searchKey, $options: 'i' } },
+          { email: { $regex: searchKey, $options: 'i' } },
+          { phone: { $regex: searchKey, $options: 'i' } },
+        ],
+      },
+    });
+  }
+
+  const [result] = await SubContractor.aggregate([
+    ...basePipeline,
+    {
+      $facet: {
+        metadata: [{ $count: 'total' }],
+        data: [
+          { $sort: { createdAt: -1 } },
+          { $skip: (pageNo - 1) * showPerPage },
+          { $limit: showPerPage },
+        ],
+      },
+    },
+  ]);
+
+  const totalData = result.metadata[0]?.total ?? 0;
   const totalPages = Math.ceil(totalData / showPerPage);
-  // Find subcontractors based on the search filter with pagination
-  const subcontractors = await SubContractor.find(searchFilter)
-    .skip(skipItems)
-    .limit(showPerPage)
-    .select(''); // Keep/Exclude any field if needed
-  return { subcontractors, totalData, totalPages };
+
+  return { subContractors: result.data, totalData, totalPages };
 };
 
-export const subcontractorServices = {
-  createSubcontractor,
-  updateSubcontractor,
-  updateManySubcontractor,
-  deleteSubcontractor,
-  deleteManySubcontractor,
-  getSubcontractorById,
-  getManySubcontractor,
+/**
+ * Service: Get a single sub-contractor by ID.
+ * Uses $or access control on createdBy / standAloneId.
+ */
+const getSubContractorById = async (
+  subContractorId: string,
+  accessId?: string
+): Promise<ISubContractor> => {
+  const filter: any = { _id: new mongoose.Types.ObjectId(subContractorId) };
+
+  if (accessId) {
+    const objectId = new mongoose.Types.ObjectId(accessId);
+    filter.$or = [{ createdBy: objectId }, { standAloneId: objectId }];
+  }
+
+  const doc = await SubContractor.findOne(filter);
+  if (!doc) throw new Error('Sub-contractor not found or access denied');
+  return doc;
 };
 
+// ═══════════════════════════════════════════════════════════════
+// UPDATE
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Service: Update a sub-contractor.
+ * Uses $or access control on createdBy / standAloneId.
+ */
+const updateSubContractor = async (
+  subContractorId: string,
+  data: UpdateSubContractorInput,
+  accessId: string
+): Promise<ISubContractor> => {
+  const objectId = new mongoose.Types.ObjectId(accessId);
+
+  const updateFields: Record<string, any> = {};
+  if (data.companyName !== undefined) updateFields.companyName = data.companyName;
+  if (data.contactPerson !== undefined) updateFields.contactPerson = data.contactPerson;
+  if (data.phone !== undefined) updateFields.phone = data.phone;
+  if (data.email !== undefined) updateFields.email = data.email;
+  if (data.insurancePolicyNumber !== undefined) updateFields.insurancePolicyNumber = data.insurancePolicyNumber;
+  if (data.insuranceExpiryDate !== undefined) updateFields.insuranceExpiryDate = new Date(data.insuranceExpiryDate);
+  if (data.gitPolicyNumber !== undefined) updateFields.gitPolicyNumber = data.gitPolicyNumber;
+  if (data.gitExpiryDate !== undefined) updateFields.gitExpiryDate = new Date(data.gitExpiryDate);
+  if (data.gitCoverPerTonne !== undefined) updateFields.gitCoverPerTonne = data.gitCoverPerTonne;
+  if (data.hiabAvailable !== undefined) updateFields.hiabAvailable = data.hiabAvailable;
+  if (data.otherCapabilities !== undefined) updateFields.otherCapabilities = data.otherCapabilities;
+  if (data.startDateOfAgreement !== undefined) updateFields.startDateOfAgreement = new Date(data.startDateOfAgreement);
+  if (data.rating !== undefined) updateFields.rating = data.rating;
+  if (data.checkedBy !== undefined) updateFields.checkedBy = data.checkedBy;
+  if (data.notes !== undefined) updateFields.notes = data.notes;
+
+  const updated = await SubContractor.findOneAndUpdate(
+    {
+      _id: new mongoose.Types.ObjectId(subContractorId),
+      $or: [{ createdBy: objectId }, { standAloneId: objectId }],
+    },
+    { $set: updateFields },
+    { returnDocument: 'after' }
+  );
+
+  if (!updated) throw new Error('Sub-contractor not found or access denied');
+  return updated;
+};
+
+// ═══════════════════════════════════════════════════════════════
+// DELETE
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Service: Delete a sub-contractor.
+ * Uses $or access control on createdBy / standAloneId.
+ */
+const deleteSubContractor = async (
+  subContractorId: string,
+  accessId: string
+): Promise<void> => {
+  const objectId = new mongoose.Types.ObjectId(accessId);
+
+  const deleted = await SubContractor.findOneAndDelete({
+    _id: new mongoose.Types.ObjectId(subContractorId),
+    $or: [{ createdBy: objectId }, { standAloneId: objectId }],
+  });
+
+  if (!deleted) throw new Error('Sub-contractor not found or access denied');
+};
+
+export const subContractorServices = {
+  createSubContractorAsManager,
+  createSubContractorAsStandAlone,
+  getAllSubContractors,
+  getSubContractorById,
+  updateSubContractor,
+  deleteSubContractor,
+};
