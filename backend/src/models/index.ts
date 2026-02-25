@@ -78,6 +78,10 @@ export {
 export { default as FuelUsage, IFuelUsage } from './vehicle-transport/fuelUsage.schema';
 export { ISubContractor, default as SubContractor } from './vehicle-transport/subContractor.schema';
 export {
+  IPolicyProcedure,
+  default as PolicyProcedure,
+} from './vehicle-transport/policyProcedure.schema';
+export {
   IVehicle,
   OwnerShipStatus,
   default as Vehicle,
@@ -127,3 +131,8 @@ export {
   default as ParticipantRole,
   IParticipantRole,
 } from './training/participantRole.schema';
+export {
+  default as TrainingRegister,
+  ITrainingRegister,
+  TrainingRegisterStatus,
+} from './training/trainingRegister.schema';

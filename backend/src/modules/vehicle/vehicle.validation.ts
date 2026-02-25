@@ -1,6 +1,7 @@
 import { isMongoId } from 'validator';
 import { z } from 'zod';
-import { validateBody, validateParams } from '../../handlers/zod-error-handler';
+import { validateBody, validateParams, validateQuery } from '../../handlers/zod-error-handler';
+import { zodSearchQuerySchema } from '../../handlers/common-zod-validator';
 import { OwnerShipStatus, VehicleStatus } from '../../models';
 
 const additionalDetailsSchema = z
@@ -24,6 +25,13 @@ const additionalDetailsSchema = z
     serviceDueDate: z.coerce.date({ message: 'serviceDueDate must be a valid date' }).optional(),
   })
   .strict();
+
+const additionalDetailsRequiredSchema = z.preprocess(
+  (value) => (value === undefined || value === null ? {} : value),
+  additionalDetailsSchema
+);
+
+const additionalDetailsUpdateSchema = additionalDetailsSchema.partial().strict();
 
 /**
  * Vehicle Validation Schemas and Types
@@ -54,7 +62,7 @@ const baseVehicleFields = {
     .min(1, 'License plate is required')
     .max(50, 'License plate must not exceed 50 characters'),
   status: z.enum(VehicleStatus, { message: 'status must be a valid vehicle status' }),
-  additionalDetails: additionalDetailsSchema,
+  additionalDetails: additionalDetailsRequiredSchema,
   driverPack: z.boolean({ message: 'driverPack must be a boolean' }),
   notes: z.string({ message: 'notes must be a string' }).optional(),
   driverIds: z.array(
@@ -96,10 +104,6 @@ export type CreateVehicleAsTransportManagerInput = z.infer<
 const zodCreateVehicleAsStandAloneSchema = z
   .object({
     ...baseVehicleFields,
-    standAloneId: z
-      .string()
-      .refine(isMongoId, { message: 'Please provide a valid MongoDB ObjectId' })
-      .optional(),
   })
   .strict();
 
@@ -111,7 +115,7 @@ const zodUpdateVehicleSchema = z
     vehicleType: baseVehicleFields.vehicleType.optional(),
     licensePlate: baseVehicleFields.licensePlate.optional(),
     status: baseVehicleFields.status.optional(),
-    additionalDetails: baseVehicleFields.additionalDetails.optional(),
+    additionalDetails: additionalDetailsUpdateSchema.optional(),
     driverPack: baseVehicleFields.driverPack.optional(),
     notes: baseVehicleFields.notes.optional(),
     driverIds: baseVehicleFields.driverIds.optional(),
@@ -120,6 +124,17 @@ const zodUpdateVehicleSchema = z
   .strict();
 
 export type UpdateVehicleInput = z.infer<typeof zodUpdateVehicleSchema>;
+
+/**
+ * Zod schema for validating search query parameters when retrieving multiple vehicles.
+ */
+const zodSearchVehicleSchema = zodSearchQuerySchema.extend({
+  standAloneId: z
+    .string()
+    .refine(isMongoId, { message: 'Please provide a valid MongoDB ObjectId for standAloneId' }),
+});
+
+export type SearchVehicleQueryInput = z.infer<typeof zodSearchVehicleSchema>;
 
 /**
  * Zod schema for validating the deletion of a vehicle, ensuring the provided IDs are valid MongoDB ObjectIds.
@@ -147,6 +162,20 @@ const zodUpdateVehicleIdSchema = zodVehicleAndManagerIdSchema.strict();
 
 export type UpdateVehicleInputWithIds = z.infer<typeof zodUpdateVehicleIdSchema>;
 
+const zodGetVehicleByIdParamsSchema = z
+  .object({
+    id: z
+      .string({ message: 'Id is required' })
+      .refine(isMongoId, { message: 'Please provide a valid MongoDB ObjectId for vehicle ID' }),
+    standAloneId: z
+      .string()
+      .refine(isMongoId, { message: 'Please provide a valid MongoDB ObjectId for standAloneId' })
+      .optional(),
+  })
+  .strict();
+
+export type GetVehicleByIdParamsInput = z.infer<typeof zodGetVehicleByIdParamsSchema>;
+
 /**
  * Named validators — use these directly in your Express routes
  */
@@ -157,3 +186,5 @@ export const validateCreateVehicleAsStandAlone = validateBody(zodCreateVehicleAs
 export const validateUpdateVehicle = validateBody(zodUpdateVehicleSchema);
 export const validateDeleteVehicle = validateParams(zodDeleteVehicleSchema);
 export const validateUpdateVehicleIds = validateParams(zodUpdateVehicleIdSchema);
+export const validateGetVehicleByIdParams = validateParams(zodGetVehicleByIdParamsSchema);
+export const validateSearchVehicleQueries = validateQuery(zodSearchVehicleSchema);

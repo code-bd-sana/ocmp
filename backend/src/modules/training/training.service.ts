@@ -48,7 +48,7 @@ const createTrainingAsManager = async (
 ): Promise<ITrainingSheet> => {
   const parsedDays = parseIntervalDays(data.intervalDays);
 
-  return TrainingSheet.create({
+  return await TrainingSheet.create({
     trainingName: data.trainingName,
     intervalDays: parsedDays,
     createdBy: data.createdBy,
@@ -65,7 +65,7 @@ const createTrainingAsStandAlone = async (
 ): Promise<ITrainingSheet> => {
   const parsedDays = parseIntervalDays(data.intervalDays);
 
-  return TrainingSheet.create({
+  return await TrainingSheet.create({
     trainingName: data.trainingName,
     intervalDays: parsedDays,
     createdBy: data.createdBy,
