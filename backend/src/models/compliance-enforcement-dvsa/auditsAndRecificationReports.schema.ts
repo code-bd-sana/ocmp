@@ -1,10 +1,19 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
+// status can be In Progress, Completed, Pending Enum
+export enum AuditStatus {
+  IN_PROGRESS = 'In Progress',
+  COMPLETED = 'Completed',
+  PENDING = 'Pending',
+}
+
 // Define and export an interface representing a AuditsAndRectificationReports document
 export interface IAuditsAndRectificationReports extends Document {
-  title: string;
-  type?: string;
+  auditDate: Date;
+  auditTitle: string;
+  status?: AuditStatus;
   responsiblePerson?: string;
+  finalizeDate?: Date;
   attachments?: mongoose.Types.ObjectId[];
   standAloneId?: mongoose.Types.ObjectId;
   createdBy: mongoose.Types.ObjectId;
@@ -13,15 +22,23 @@ export interface IAuditsAndRectificationReports extends Document {
 // Define the AuditsAndRectificationReports schema
 const AuditsAndRectificationReportsSchema: Schema<IAuditsAndRectificationReports> = new Schema(
   {
-    title: {
+    auditDate: {
+      type: Date,
+      required: true,
+    },
+    auditTitle: {
       type: String,
       required: true,
     },
-    type: {
+    status: {
       type: String,
+      enum: Object.values(AuditStatus),
     },
     responsiblePerson: {
       type: String,
+    },
+    finalizeDate: {
+      type: Date,
     },
     attachments: [
       {
