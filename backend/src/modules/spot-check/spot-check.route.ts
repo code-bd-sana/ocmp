@@ -24,6 +24,7 @@ import { validateClientForManagerMiddleware } from '../../middlewares/validate-c
 import { UserRole } from '../../models';
 import { validateId, validateSearchQueries } from '../../handlers/common-zod-validator';
 import isAuthorized, { AuthenticatedRequest } from '../../middlewares/is-authorized';
+import ServerResponse from '../../helpers/responses/custom-response';
 
 // Initialize router
 const router = Router();
@@ -78,7 +79,7 @@ router.patch('/update-spot-check/:id', validateId, validateUpdateSpotCheck, upda
 router.delete('/delete-spot-check/:id', validateId, deleteSpotCheck);
 
 /**
- * @route GET /api/v1/spot-check/get-spot-check/many/:standAloneId
+ * @route GET /api/v1/spot-check/get-spot-check/many
  * @description Get multiple spot-checks for Transport Manager (includes standAloneId for additional Transport Manager filter)
  * @access Public
  * @param {function} validation - ['validateSearchQueries']
@@ -88,6 +89,14 @@ router.get(
   '/get-spot-check/many',
   authorizedRoles([UserRole.STANDALONE_USER, UserRole.TRANSPORT_MANAGER]),
   (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    if (req.user!.role === UserRole.STANDALONE_USER && req.query?.standAloneId) {
+      return ServerResponse(
+        res,
+        false,
+        403,
+        'Forbidden: standAloneId is only allowed for transport managers'
+      );
+    }
     if (req.user!.role === UserRole.TRANSPORT_MANAGER)
       return validateClientForManagerMiddleware(req, res, next);
     next();
