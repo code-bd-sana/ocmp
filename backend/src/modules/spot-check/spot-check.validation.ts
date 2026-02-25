@@ -1,6 +1,6 @@
 import { isMongoId } from 'validator';
 import { z } from 'zod';
-import { validateBody, validateQuery } from '../../handlers/zod-error-handler';
+import { validateBody, validateQuery, validateParams } from '../../handlers/zod-error-handler';
 import { zodSearchQuerySchema } from '../../handlers/common-zod-validator';
 
 /**
@@ -101,6 +101,31 @@ const zodSearchSpotChecksSchema = zodSearchQuerySchema.extend({
 
 export type SearchSpotChecksQueryInput = z.infer<typeof zodSearchSpotChecksSchema>;
 
+// Param schemas
+
+const zodSpotCheckIdParamSchema = z
+  .object({
+    id: z.string({ message: 'spotCheck id is required' }).refine(isMongoId, {
+      message: 'Please provide a valid MongoDB ObjectId',
+    }),
+  })
+  .strict();
+
+export type SpotCheckIdParamInput = z.infer<typeof zodSpotCheckIdParamSchema>;
+
+const zodSpotCheckAndManagerIdParamSchema = z
+  .object({
+    id: z.string({ message: 'spotCheck id is required' }).refine(isMongoId, {
+      message: 'Please provide a valid MongoDB ObjectId for spotCheck id',
+    }),
+    standAloneId: z.string({ message: 'standAloneId is required' }).refine(isMongoId, {
+      message: 'Please provide a valid MongoDB ObjectId for standAloneId',
+    }),
+  })
+  .strict();
+
+export type SpotCheckAndManagerIdParamInput = z.infer<typeof zodSpotCheckAndManagerIdParamSchema>;
+
 // Validators
 export const validateCreateSpotCheckAsManager = validateBody(zodCreateSpotCheckAsManagerSchema);
 export const validateCreateSpotCheckAsStandAlone = validateBody(
@@ -108,3 +133,7 @@ export const validateCreateSpotCheckAsStandAlone = validateBody(
 );
 export const validateUpdateSpotCheck = validateBody(zodUpdateSpotCheckSchema);
 export const validateSearchSpotChecksQueries = validateQuery(zodSearchSpotChecksSchema);
+export const validateSpotCheckIdParam = validateParams(zodSpotCheckIdParamSchema);
+export const validateSpotCheckAndManagerIdParam = validateParams(
+  zodSpotCheckAndManagerIdParamSchema
+);

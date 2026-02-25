@@ -1,5 +1,5 @@
 // Import Router from express
-import { Router } from 'express';
+import { Router, Response, NextFunction } from 'express';
 
 // Import controller from corresponding module
 import {
@@ -17,12 +17,13 @@ import {
   validateCreateSpotCheckAsStandAlone,
   validateUpdateSpotCheck,
   validateSearchSpotChecksQueries,
+  validateSpotCheckAndManagerIdParam,
 } from './spot-check.validation';
 import authorizedRoles from '../../middlewares/authorized-roles';
 import { validateClientForManagerMiddleware } from '../../middlewares/validate-client-for-manager';
 import { UserRole } from '../../models';
-import { validateId } from '../../handlers/common-zod-validator';
-import isAuthorized from '../../middlewares/is-authorized';
+import { validateId, validateSearchQueries } from '../../handlers/common-zod-validator';
+import isAuthorized, { AuthenticatedRequest } from '../../middlewares/is-authorized';
 
 // Initialize router
 const router = Router();
@@ -77,23 +78,59 @@ router.patch('/update-spot-check/:id', validateId, validateUpdateSpotCheck, upda
 router.delete('/delete-spot-check/:id', validateId, deleteSpotCheck);
 
 /**
- * @route GET /api/v1/spot-check/get-spot-check/many
- * @description Get multiple spot-checks
+ * @route GET /api/v1/spot-check/get-spot-check/many/:standAloneId
+ * @description Get multiple spot-checks for Transport Manager (includes standAloneId for additional Transport Manager filter)
  * @access Public
  * @param {function} validation - ['validateSearchQueries']
  * @param {function} controller - ['getManySpotCheck']
  */
-router.get('/get-spot-check/many', validateSearchSpotChecksQueries, getManySpotCheck);
+router.get(
+  '/get-spot-check/many',
+  authorizedRoles([UserRole.STANDALONE_USER, UserRole.TRANSPORT_MANAGER]),
+  (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    if (req.user!.role === UserRole.TRANSPORT_MANAGER)
+      return validateClientForManagerMiddleware(req, res, next);
+    next();
+  },
+  (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    if (req.user!.role === UserRole.TRANSPORT_MANAGER)
+      return validateSearchSpotChecksQueries(req, res, next);
+    return validateSearchQueries(req, res, next);
+  },
+  getManySpotCheck
+);
 
 /**
- * @route GET /api/v1/spot-check/get-spot-check/:id
- * @description Get a spot-check by ID
+ * @route GET /api/v1/spot-check/get-spot-check/:spotCheckId/:standAloneId
+ * @description Get a spot-check by ID for Transport Manager (includes standAloneId for additional Transport Manager filter)
  * @access Public
  * @param {IdOrIdsInput['id']} id - The ID of the spot-check to retrieve
  * @param {function} validation - ['validateId']
  * @param {function} controller - ['getSpotCheckById']
  */
-router.get('/get-spot-check/:id', validateId, getSpotCheckById);
+router.get(
+  '/get-spot-check/:id/:standAloneId',
+  authorizedRoles([UserRole.TRANSPORT_MANAGER]),
+  validateClientForManagerMiddleware,
+  // validate both params (spotCheck id + standAloneId) to avoid strict validation errors
+  validateSpotCheckAndManagerIdParam,
+  getSpotCheckById
+);
+
+/**
+ * @route GET /api/v1/spot-check/get-spot-check/:id
+ * @description Get a spot-check by ID for Standalone User
+ * @access Public
+ * @param {IdOrIdsInput['id']} id - The ID of the spot-check to retrieve
+ * @param {function} validation - ['validateId']
+ * @param {function} controller - ['getSpotCheckById']
+ */
+router.get(
+  '/get-spot-check/:id',
+  authorizedRoles([UserRole.STANDALONE_USER]),
+  validateId,
+  getSpotCheckById
+);
 
 // Export the router
 module.exports = router;

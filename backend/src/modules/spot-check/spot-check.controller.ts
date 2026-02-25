@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import mongoose from 'mongoose';
 import { spotCheckServices } from './spot-check.service';
 import { SearchQueryInput } from '../../handlers/common-zod-validator';
+import { SearchSpotChecksQueryInput } from './spot-check.validation';
 import ServerResponse from '../../helpers/responses/custom-response';
 import catchAsync from '../../utils/catch-async/catch-async';
 import { AuthenticatedRequest } from '../../middlewares/is-authorized';
@@ -81,12 +82,21 @@ export const deleteSpotCheck = catchAsync(async (req: Request, res: Response) =>
  * @returns {Promise<Partial<ISpotCheck>>} - The retrieved spot-check.
  * @throws {Error} - Throws an error if the spot-check retrieval fails.
  */
-export const getSpotCheckById = catchAsync(async (req: Request, res: Response) => {
-  const { id } = req.params;
-  // Call the service method to get the spot-check by ID and get the result
-  const result = await spotCheckServices.getSpotCheckById(id as string);
+export const getSpotCheckById = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+  const paramToString = (p?: string | string[]) => (Array.isArray(p) ? p[0] : p);
+  const spotCheckId = paramToString(req.params.spotCheckId || req.params.id);
+
+  let accessId: string | undefined;
+  if (req.user?.role === UserRole.STANDALONE_USER) {
+    accessId = req.user._id;
+  }
+  if (req.user?.role === UserRole.TRANSPORT_MANAGER) {
+    accessId =
+      paramToString(req.params.standAloneId) || (req.query?.standAloneId as string | undefined);
+  }
+
+  const result = await spotCheckServices.getSpotCheckById(spotCheckId as string, accessId);
   if (!result) throw new Error('Spot-check not found');
-  // Send a success response with the retrieved resource data
   ServerResponse(res, true, 200, 'Spot-check retrieved successfully', result);
 });
 
@@ -98,13 +108,17 @@ export const getSpotCheckById = catchAsync(async (req: Request, res: Response) =
  * @returns {Promise<Partial<ISpotCheck>[]>} - The retrieved spot-checks.
  * @throws {Error} - Throws an error if the spot-checks retrieval fails.
  */
-export const getManySpotCheck = catchAsync(async (req: Request, res: Response) => {
-  // Use the validated and transformed query from Zod middleware
-  const query = (req as any).validatedQuery as SearchQueryInput;
-  // Call the service method to get multiple spot-checks based on query parameters and get the result
+export const getManySpotCheck = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+  const query = { ...((req as any).validatedQuery as SearchSpotChecksQueryInput) };
+
+  // Standalone: restrict to own user
+  if (req.user?.role === UserRole.STANDALONE_USER) {
+    query.standAloneId = req.user._id;
+  }
+  // TM: standAloneId may come from validated query or params (middleware ensures it's valid)
+
   const { spotChecks, totalData, totalPages } = await spotCheckServices.getManySpotCheck(query);
   if (!spotChecks) throw new Error('Failed to retrieve spot-checks');
-  // Send a success response with the retrieved spot-checks data
   ServerResponse(res, true, 200, 'Spot-checks retrieved successfully', {
     spotChecks,
     totalData,

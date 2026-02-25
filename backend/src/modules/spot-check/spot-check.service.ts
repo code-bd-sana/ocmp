@@ -112,9 +112,20 @@ const deleteSpotCheck = async (id: IdOrIdsInput['id']): Promise<Partial<ISpotChe
  * @param {IdOrIdsInput['id']} id - The ID of the spot-check to retrieve.
  * @returns {Promise<Partial<ISpotCheck>>} - The retrieved spot-check.
  */
-const getSpotCheckById = async (id: IdOrIdsInput['id']): Promise<Partial<ISpotCheck | null>> => {
-  const spotCheck = await SpotCheckModel.findById(id);
-  return spotCheck;
+const getSpotCheckById = async (
+  id: IdOrIdsInput['id'],
+  accessId?: string
+): Promise<Partial<ISpotCheck | null>> => {
+  const spotCheck = await SpotCheckModel.findById(id).lean();
+  if (!spotCheck) return null;
+  if (accessId) {
+    const accessIdStr = String(accessId);
+    const ownerMatch =
+      (spotCheck as any).standAloneId?.toString?.() === accessIdStr ||
+      (spotCheck as any).createdBy?.toString?.() === accessIdStr;
+    if (!ownerMatch) return null;
+  }
+  return spotCheck as any;
 };
 
 /**
@@ -126,25 +137,29 @@ const getSpotCheckById = async (id: IdOrIdsInput['id']): Promise<Partial<ISpotCh
 const getManySpotCheck = async (
   query: SearchQueryInput
 ): Promise<{ spotChecks: Partial<ISpotCheck>[]; totalData: number; totalPages: number }> => {
-  const { searchKey = '', showPerPage = 10, pageNo = 1 } = query;
-  // Build the search filter based on the search key
-  const searchFilter = {
-    $or: [
-      // { fieldName: { $regex: searchKey, $options: 'i' } },
-      // Add more fields as needed
-    ],
-  };
-  // Calculate the number of items to skip based on the page number
+  const { searchKey = '', showPerPage = 10, pageNo = 1, standAloneId } = query as any;
   const skipItems = (pageNo - 1) * showPerPage;
-  // Find the total count of matching spot-check
+
+  const baseOr: any[] = [];
+  // Add searchable fields here if needed
+
+  const searchFilter: any = {};
+  if (baseOr.length > 0) searchFilter.$or = baseOr;
+
+  // If standAloneId filter is present, restrict to docs where createdBy OR standAloneId matches
+  if (standAloneId) {
+    searchFilter.$and = searchFilter.$and || [];
+    searchFilter.$and.push({
+      $or: [
+        { standAloneId: new mongoose.Types.ObjectId(standAloneId) },
+        { createdBy: new mongoose.Types.ObjectId(standAloneId) },
+      ],
+    });
+  }
+
   const totalData = await SpotCheckModel.countDocuments(searchFilter);
-  // Calculate the total number of pages
   const totalPages = Math.ceil(totalData / showPerPage);
-  // Find spot-checks based on the search filter with pagination
-  const spotChecks = await SpotCheckModel.find(searchFilter)
-    .skip(skipItems)
-    .limit(showPerPage)
-    .select(''); // Keep/Exclude any field if needed
+  const spotChecks = await SpotCheckModel.find(searchFilter).skip(skipItems).limit(showPerPage);
   return { spotChecks, totalData, totalPages };
 };
 
