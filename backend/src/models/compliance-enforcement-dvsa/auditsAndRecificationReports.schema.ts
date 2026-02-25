@@ -33,6 +33,7 @@ const AuditsAndRectificationReportsSchema: Schema<IAuditsAndRectificationReports
     status: {
       type: String,
       enum: Object.values(AuditStatus),
+      default: AuditStatus.PENDING,
     },
     responsiblePerson: {
       type: String,
