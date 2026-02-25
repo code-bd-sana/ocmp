@@ -75,22 +75,7 @@ const updateSpotCheck = async (
   id: IdOrIdsInput['id'],
   data: UpdateSpotCheckInput
 ): Promise<Partial<ISpotCheck | null>> => {
-  // Check for duplicate (filed) combination
-  const existingSpotCheck = await SpotCheckModel.findOne({
-    _id: { $ne: id }, // Exclude the current document
-    $or: [
-      {
-        /* filedName: data.filedName, */
-      },
-    ],
-  }).lean();
-  // Prevent duplicate updates
-  if (existingSpotCheck) {
-    throw new Error(
-      'Duplicate detected: Another spot-check with the same fieldName already exists.'
-    );
-  }
-  // Proceed to update the spot-check
+  // Proceed to update the spot-check (no global duplicate check needed)
   const updatedSpotCheck = await SpotCheckModel.findByIdAndUpdate(id, data, { new: true });
   return updatedSpotCheck;
 };

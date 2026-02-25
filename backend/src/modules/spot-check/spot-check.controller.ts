@@ -52,7 +52,7 @@ export const updateSpotCheck = catchAsync(async (req: Request, res: Response) =>
   const { id } = req.params;
   // Call the service method to update the spot-check by ID and get the result
   const result = await spotCheckServices.updateSpotCheck(id as string, req.body);
-  if (!result) throw new Error('Failed to update spot-check');
+  if (!result) throw new Error('Spot-check not found');
   // Send a success response with the updated spot-check data
   ServerResponse(res, true, 200, 'Spot-check updated successfully', result);
 });
@@ -69,7 +69,7 @@ export const deleteSpotCheck = catchAsync(async (req: Request, res: Response) =>
   const { id } = req.params;
   // Call the service method to delete the spot-check by ID
   const result = await spotCheckServices.deleteSpotCheck(id as string);
-  if (!result) throw new Error('Failed to delete spot-check');
+  if (!result) throw new Error('Spot-check not found');
   // Send a success response confirming the deletion
   ServerResponse(res, true, 200, 'Spot-check deleted successfully');
 });

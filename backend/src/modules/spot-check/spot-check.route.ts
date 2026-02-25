@@ -17,6 +17,8 @@ import {
   validateCreateSpotCheckAsStandAlone,
   validateUpdateSpotCheck,
   validateSearchSpotChecksQueries,
+  validateSpotCheckIdParam,
+  validateSpotCheckAndManagerIdParam,
 } from './spot-check.validation';
 import authorizedRoles from '../../middlewares/authorized-roles';
 import { validateClientForManagerMiddleware } from '../../middlewares/validate-client-for-manager';
@@ -58,14 +60,37 @@ router.post(
 );
 
 /**
- * @route PATCH /api/v1/spot-check/update-spot-check/:id
- * @description Update spot-check information
+ * @route PATCH /api/v1/spot-check/update-spot-check/:id/:standAloneId
+ * @description Update spot-check information (Transport Manager - includes standAloneId for additional Transport Manager filter)
  * @access Public
  * @param {IdOrIdsInput['id']} id - The ID of the spot-check to update
  * @param {function} validation - ['validateId', 'validateUpdateSpotCheck']
  * @param {function} controller - ['updateSpotCheck']
  */
-router.patch('/update-spot-check/:id', validateId, validateUpdateSpotCheck, updateSpotCheck);
+router.patch(
+  '/update-spot-check/:id/:standAloneId',
+  authorizedRoles([UserRole.TRANSPORT_MANAGER]),
+  validateClientForManagerMiddleware,
+  validateSpotCheckAndManagerIdParam,
+  validateUpdateSpotCheck,
+  updateSpotCheck
+);
+
+/**
+ * @route PATCH /api/v1/spot-check/update-spot-check/:id
+ * @description Update spot-check information (Standalone User)
+ * @access Public
+ * @param {IdOrIdsInput['id']} id - The ID of the spot-check to update
+ * @param {function} validation - ['validateId', 'validateUpdateSpotCheck']
+ * @param {function} controller - ['updateSpotCheck']
+ */
+router.patch(
+  '/update-spot-check/:id',
+  authorizedRoles([UserRole.STANDALONE_USER]),
+  validateId,
+  validateUpdateSpotCheck,
+  updateSpotCheck
+);
 
 /**
  * @route DELETE /api/v1/spot-check/delete-spot-check/:id
@@ -75,7 +100,20 @@ router.patch('/update-spot-check/:id', validateId, validateUpdateSpotCheck, upda
  * @param {function} validation - ['validateId']
  * @param {function} controller - ['deleteSpotCheck']
  */
-router.delete('/delete-spot-check/:id', validateId, deleteSpotCheck);
+router.delete(
+  '/delete-spot-check/:id/:standAloneId',
+  authorizedRoles([UserRole.TRANSPORT_MANAGER]),
+  validateClientForManagerMiddleware,
+  validateSpotCheckAndManagerIdParam,
+  deleteSpotCheck
+);
+
+router.delete(
+  '/delete-spot-check/:id',
+  authorizedRoles([UserRole.STANDALONE_USER]),
+  validateId,
+  deleteSpotCheck
+);
 
 /**
  * @route GET /api/v1/spot-check/get-spot-check/many
