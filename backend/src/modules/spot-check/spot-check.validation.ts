@@ -20,6 +20,10 @@ const baseSpotCheckFields = {
     .max(2000, 'issueDetails is too long')
     .trim(),
   // Optional fields
+  reportedBy: z
+    .string()
+    .refine(isMongoId, { message: 'reportedBy must be a valid MongoDB ObjectId' })
+    .optional(),
   rectificationRequired: z.string().optional(),
   actionTaken: z.string().optional(),
   dateCompleted: z.string().optional(),

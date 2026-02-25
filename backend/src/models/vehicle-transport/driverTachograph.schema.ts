@@ -35,7 +35,7 @@ const DriverTachographSchema: Schema<IDriverTachograph> = new Schema(
     },
     reviewedBy: {
       type: Schema.Types.ObjectId,
-      required: true,
+      // required: true,
       ref: 'User', // Reference from User model
     },
     Signed: {
