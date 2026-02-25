@@ -17,7 +17,6 @@ import {
   validateCreateSpotCheckAsStandAlone,
   validateUpdateSpotCheck,
   validateSearchSpotChecksQueries,
-  validateSpotCheckAndManagerIdParam,
 } from './spot-check.validation';
 import authorizedRoles from '../../middlewares/authorized-roles';
 import { validateClientForManagerMiddleware } from '../../middlewares/validate-client-for-manager';
@@ -118,26 +117,26 @@ router.get(
  * @param {function} controller - ['getSpotCheckById']
  */
 router.get(
-  '/get-spot-check/:id/:standAloneId',
-  authorizedRoles([UserRole.TRANSPORT_MANAGER]),
-  validateClientForManagerMiddleware,
-  // validate both params (spotCheck id + standAloneId) to avoid strict validation errors
-  validateSpotCheckAndManagerIdParam,
-  getSpotCheckById
-);
-
-/**
- * @route GET /api/v1/spot-check/get-spot-check/:id
- * @description Get a spot-check by ID for Standalone User
- * @access Public
- * @param {IdOrIdsInput['id']} id - The ID of the spot-check to retrieve
- * @param {function} validation - ['validateId']
- * @param {function} controller - ['getSpotCheckById']
- */
-router.get(
   '/get-spot-check/:id',
-  authorizedRoles([UserRole.STANDALONE_USER]),
-  validateId,
+  authorizedRoles([UserRole.STANDALONE_USER, UserRole.TRANSPORT_MANAGER]),
+  (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    // Standalone users must NOT supply standAloneId
+    if (req.user!.role === UserRole.STANDALONE_USER && req.query?.standAloneId) {
+      return ServerResponse(
+        res,
+        false,
+        403,
+        'Forbidden: standAloneId is only allowed for transport managers'
+      );
+    }
+    // Transport managers MUST supply standAloneId (in query) and be validated
+    if (req.user!.role === UserRole.TRANSPORT_MANAGER) {
+      if (!req.query?.standAloneId)
+        return ServerResponse(res, false, 400, 'standAloneId is required for transport managers');
+      return validateClientForManagerMiddleware(req, res, next);
+    }
+    next();
+  },
   getSpotCheckById
 );
 
