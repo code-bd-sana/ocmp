@@ -1,10 +1,11 @@
 import { Request, Response } from 'express';
 import mongoose from 'mongoose';
-import { SearchQueryInput } from '../../handlers/common-zod-validator';
 import ServerResponse from '../../helpers/responses/custom-response';
 import { AuthenticatedRequest } from '../../middlewares/is-authorized';
+import { UserRole } from '../../models';
 import catchAsync from '../../utils/catch-async/catch-async';
 import { vehicleServices } from './vehicle.service';
+import { SearchVehicleQueryInput } from './vehicle.validation';
 
 /**
  * Controller function to handle the creation of a new vehicle as a transport manager.
@@ -56,10 +57,19 @@ export const createVehicleAsStandAlone = catchAsync(
  * @throws {Error} - Throws an error if the vehicle update fails.
  */
 export const updateVehicle = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-  const { id } = req.params;
+  const paramToString = (p?: string | string[]) => (Array.isArray(p) ? p[0] : p);
+  const vehicleId = paramToString(req.params.vehicleId ?? req.params.id);
+  const standAloneId = paramToString(req.params.standAloneId);
   // Call the service method to update the vehicle by ID and get the result
-  const result = await vehicleServices.updateVehicle(id as string, req.body, req.user!._id);
-  if (!result) throw new Error('Failed to update vehicle');
+  const result = await vehicleServices.updateVehicle(
+    vehicleId as string,
+    req.body,
+    req.user!._id,
+    standAloneId
+  );
+  if (!result) {
+    return ServerResponse(res, false, 404, 'Vehicle not found or access denied');
+  }
   // Send a success response with the updated vehicle data
   ServerResponse(res, true, 200, 'Vehicle updated successfully', result);
 });
@@ -73,11 +83,19 @@ export const updateVehicle = catchAsync(async (req: AuthenticatedRequest, res: R
  * @throws {Error} - Throws an error if the vehicle deletion fails.
  *
  */
-export const deleteVehicle = catchAsync(async (req: Request, res: Response) => {
-  const { id } = req.params;
+export const deleteVehicle = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+  const paramToString = (p?: string | string[]) => (Array.isArray(p) ? p[0] : p);
+  const vehicleId = paramToString(req.params.vehicleId ?? req.params.id);
+  const standAloneId = paramToString(req.params.standAloneId);
   // Call the service method to delete the vehicle by ID
-  const result = await vehicleServices.deleteVehicle(id as string);
-  if (!result) throw new Error('Failed to delete vehicle');
+  const result = await vehicleServices.deleteVehicle(
+    vehicleId as string,
+    req.user!._id,
+    standAloneId
+  );
+  if (!result) {
+    return ServerResponse(res, false, 404, 'Vehicle not found or access denied');
+  }
   // Send a success response confirming the deletion
   ServerResponse(res, true, 200, 'Vehicle deleted successfully');
 });
@@ -90,10 +108,23 @@ export const deleteVehicle = catchAsync(async (req: Request, res: Response) => {
  * @returns {Promise<Partial<IVehicle>>} - The retrieved vehicle.
  * @throws {Error} - Throws an error if the vehicle retrieval fails.
  */
-export const getVehicleById = catchAsync(async (req: Request, res: Response) => {
+export const getVehicleById = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+  const paramToString = (p?: string | string[]) => (Array.isArray(p) ? p[0] : p);
   const { id } = req.params;
+  let standAloneId: string | undefined;
+  let createdBy: string | undefined;
+
+  if (req.user?.role === UserRole.STANDALONE_USER) {
+    standAloneId = req.user._id;
+  }
+
+  if (req.user?.role === UserRole.TRANSPORT_MANAGER) {
+    createdBy = req.user._id;
+    standAloneId = paramToString(req.params.standAloneId);
+  }
+
   // Call the service method to get the vehicle by ID and get the result
-  const result = await vehicleServices.getVehicleById(id as string);
+  const result = await vehicleServices.getVehicleById(id as string, standAloneId, createdBy);
   if (!result) throw new Error('Vehicle not found');
   // Send a success response with the retrieved resource data
   ServerResponse(res, true, 200, 'Vehicle retrieved successfully', result);
@@ -107,9 +138,21 @@ export const getVehicleById = catchAsync(async (req: Request, res: Response) => 
  * @returns {Promise<Partial<IVehicle>[]>} - The retrieved vehicles.
  * @throws {Error} - Throws an error if the vehicles retrieval fails.
  */
-export const getManyVehicle = catchAsync(async (req: Request, res: Response) => {
+export const getManyVehicle = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
   // Use the validated and transformed query from Zod middleware
-  const query = (req as any).validatedQuery as SearchQueryInput;
+  type VehicleSearchQuery = SearchVehicleQueryInput & { createdBy?: string };
+  const query: VehicleSearchQuery = {
+    ...((req as any).validatedQuery as SearchVehicleQueryInput),
+  };
+
+  if (req.user?.role === UserRole.STANDALONE_USER) {
+    query.standAloneId = req.user._id;
+  }
+
+  if (req.user?.role === UserRole.TRANSPORT_MANAGER) {
+    query.createdBy = req.user._id;
+    query.standAloneId = (req as any).validatedQuery.standAloneId;
+  }
   // Call the service method to get multiple vehicles based on query parameters and get the result
   const { vehicles, totalData, totalPages } = await vehicleServices.getManyVehicle(query);
   if (!vehicles) throw new Error('Failed to retrieve vehicles');

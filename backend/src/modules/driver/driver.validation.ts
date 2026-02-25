@@ -168,6 +168,20 @@ const zodUpdateDriverIdSchema = zodDriverAndManagerIdSchema.strict();
 
 export type UpdateDriverInputWithIds = z.infer<typeof zodUpdateDriverIdSchema>;
 
+const zodGetDriverByIdParamsSchema = z
+  .object({
+    id: z
+      .string({ message: 'Id is required' })
+      .refine(isMongoId, { message: 'Please provide a valid MongoDB ObjectId for driver ID' }),
+    standAloneId: z
+      .string()
+      .refine(isMongoId, { message: 'Please provide a valid MongoDB ObjectId for standAloneId' })
+      .optional(),
+  })
+  .strict();
+
+export type GetDriverByIdParamsInput = z.infer<typeof zodGetDriverByIdParamsSchema>;
+
 /**
  * Named validators — use these directly in your Express routes
  */
@@ -179,3 +193,4 @@ export const validateUpdateDriver = validateBody(zodUpdateDriverSchema);
 export const validateSearchDriverQueries = validateQuery(zodSearchDriverSchema);
 export const validateDeleteDriverIds = validateParams(zodDeleteDriverSchema);
 export const validateUpdateDriverIds = validateParams(zodUpdateDriverIdSchema);
+export const validateGetDriverByIdParams = validateParams(zodGetDriverByIdParamsSchema);

@@ -22,6 +22,7 @@ import {
   validateCreateDriverAsStandAlone,
   validateCreateDriverAsTransportManager,
   validateDeleteDriverIds,
+  validateGetDriverByIdParams,
   validateSearchDriverQueries,
   validateUpdateDriver,
   validateUpdateDriverIds,
@@ -151,35 +152,43 @@ router.get(
     next();
   },
   (req: AuthenticatedRequest, res, next) => {
-    // For transport managers, ensure they can only access drivers of their approved clients
+    // Validate query based on role
     if (req.user!.role === UserRole.TRANSPORT_MANAGER) {
       return validateSearchDriverQueries(req, res, next);
     }
-    next();
+    return validateSearchQueries(req, res, next);
   },
-  validateSearchQueries,
   getManyDriver
 );
 
 /**
+ * @route GET /api/v1/driver/get-driver/:id/:standAloneId
  * @route GET /api/v1/driver/get-driver/:id
  * @description Get a driver by ID
  * @access Private
  * @param {IdOrIdsInput['id']} id - The ID of the driver to retrieve
- * @param {function} validation - ['validateId']
+ * @param {function} validation - ['validateGetDriverByIdParams']
  * @param {function} controller - ['getDriverById']
  */
 router.get(
+  '/get-driver/:id/:standAloneId',
+  authorizedRoles([UserRole.TRANSPORT_MANAGER]),
+  validateClientForManagerMiddleware,
+  validateGetDriverByIdParams,
+  getDriverById
+);
+
+/**
+ * @route GET /api/v1/driver/get-driver/:id
+ * @description Get a driver as stand alone user by ID
+ * @access Private
+ * @param {IdOrIdsInput['id']} id - The ID of the driver to retrieve
+ */
+
+router.get(
   '/get-driver/:id',
-  authorizedRoles([UserRole.STANDALONE_USER, UserRole.TRANSPORT_MANAGER]),
-  (req: AuthenticatedRequest, res, next) => {
-    // For transport managers, ensure they can only access drivers of their approved clients
-    if (req.user!.role === UserRole.TRANSPORT_MANAGER) {
-      return validateClientForManagerMiddleware(req, res, next);
-    }
-    next();
-  },
-  validateId,
+  authorizedRoles([UserRole.STANDALONE_USER]),
+  validateGetDriverByIdParams,
   getDriverById
 );
 
