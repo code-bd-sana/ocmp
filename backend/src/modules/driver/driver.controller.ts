@@ -57,10 +57,19 @@ export const createDriverAsStandAlone = catchAsync(
  * @throws {Error} - Throws an error if the driver update fails.
  */
 export const updateDriver = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-  const { id } = req.params;
+  const paramToString = (p?: string | string[]) => (Array.isArray(p) ? p[0] : p);
+  const driverId = paramToString(req.params.driverId ?? req.params.id);
+  const standAloneId = paramToString(req.params.standAloneId);
   // Call the service method to update the driver by ID and get the result
-  const result = await driverServices.updateDriver(id as string, req.body, req.user!._id);
-  if (!result) throw new Error('Failed to update driver');
+  const result = await driverServices.updateDriver(
+    driverId as string,
+    req.body,
+    req.user!._id,
+    standAloneId
+  );
+  if (!result) {
+    return ServerResponse(res, false, 404, 'Driver not found or access denied');
+  }
   // Send a success response with the updated driver data
   ServerResponse(res, true, 200, 'Driver updated successfully', result);
 });
@@ -78,7 +87,9 @@ export const deleteDriver = catchAsync(async (req: AuthenticatedRequest, res: Re
   const driverId = paramToString(req.params.driverId ?? req.params.id);
   // Call the service method to delete the driver by ID
   const result = await driverServices.deleteDriver(driverId as string, req.user!._id);
-  if (!result) throw new Error('Failed to delete driver');
+  if (!result) {
+    return ServerResponse(res, false, 404, 'Driver not found or access denied');
+  }
   // Send a success response confirming the deletion
   ServerResponse(res, true, 200, 'Driver deleted successfully');
 });
@@ -92,6 +103,7 @@ export const deleteDriver = catchAsync(async (req: AuthenticatedRequest, res: Re
  * @throws {Error} - Throws an error if the driver retrieval fails.
  */
 export const getDriverById = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+  const paramToString = (p?: string | string[]) => (Array.isArray(p) ? p[0] : p);
   const { id } = req.params;
   let standAloneId: string | undefined;
   let createdBy: string | undefined;
@@ -100,6 +112,7 @@ export const getDriverById = catchAsync(async (req: AuthenticatedRequest, res: R
   }
   if (req.user?.role === UserRole.TRANSPORT_MANAGER) {
     createdBy = req.user._id;
+    standAloneId = paramToString(req.params.standAloneId);
   }
   // Call the service method to get the driver by ID and get the result
   const result = await driverServices.getDriverById(id as string, standAloneId, createdBy);
@@ -126,6 +139,7 @@ export const getManyDriver = catchAsync(async (req: AuthenticatedRequest, res: R
   }
   if (req.user?.role === UserRole.TRANSPORT_MANAGER) {
     query.createdBy = req.user._id;
+    query.standAloneId = (req as any).validatedQuery.standAloneId;
   }
   // Call the service method to get multiple drivers based on query parameters and get the result
   const { drivers, totalData, totalPages } = await driverServices.getManyDriver(query);

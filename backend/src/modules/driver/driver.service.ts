@@ -73,7 +73,8 @@ const createDriverAsStandAlone = async (
 const updateDriver = async (
   id: IdOrIdsInput['id'],
   data: UpdateDriverInput,
-  userId: string
+  userId: string,
+  standAloneId?: string
 ): Promise<Partial<IDriver | null>> => {
   // Build $or conditions only for fields provided in `data`
   const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -125,17 +126,36 @@ const updateDriver = async (
       throw new Error('Duplicate detected: Another driver with the same field(s) already exists.');
     }
   }
+  const accessFilters: Record<string, unknown>[] = [
+    { createdBy: userId },
+    { standAloneId: userId },
+  ];
+
+  if (mongoose.Types.ObjectId.isValid(userId)) {
+    const userObjectId = new mongoose.Types.ObjectId(userId);
+    accessFilters.push({ createdBy: userObjectId });
+    accessFilters.push({ standAloneId: userObjectId });
+  }
+
+  if (standAloneId) {
+    accessFilters.push({ standAloneId });
+    accessFilters.push({ createdBy: standAloneId });
+
+    if (mongoose.Types.ObjectId.isValid(standAloneId)) {
+      const standAloneObjectId = new mongoose.Types.ObjectId(standAloneId);
+      accessFilters.push({ standAloneId: standAloneObjectId });
+      accessFilters.push({ createdBy: standAloneObjectId });
+    }
+  }
+
   // Proceed to update the driver
   const updatedDriver = await DriverModel.findOneAndUpdate(
     {
       _id: id,
-      $or: [
-        { createdBy: new mongoose.Types.ObjectId(userId) },
-        { standAloneId: new mongoose.Types.ObjectId(userId) },
-      ],
+      $or: accessFilters,
     },
     data,
-    { new: true }
+    { returnDocument: 'after' }
   );
   return updatedDriver;
 };
@@ -146,6 +166,9 @@ const updateDriver = async (
  * @param {IdOrIdsInput['id']} id - The ID of the driver to delete.
  * @returns {Promise<Partial<IDriver>>} - The deleted driver.
  */
+
+// TODO: Before deleting a driver, we should check if there are any related records in DriverTachograph, FuelUsage, or Vehicle collections. If there are related records, we should prevent deletion and throw an error to maintain data integrity.
+
 const deleteDriver = async (
   id: IdOrIdsInput['id'],
   userId: string
@@ -169,12 +192,20 @@ const deleteDriver = async (
     );
   }
 
+  const ownershipFilters: Record<string, unknown>[] = [
+    { createdBy: userId },
+    { standAloneId: userId },
+  ];
+
+  if (mongoose.Types.ObjectId.isValid(userId)) {
+    const userObjectId = new mongoose.Types.ObjectId(userId);
+    ownershipFilters.push({ createdBy: userObjectId });
+    ownershipFilters.push({ standAloneId: userObjectId });
+  }
+
   const deletedDriver = await DriverModel.findOneAndDelete({
     _id: id,
-    $or: [
-      { createdBy: new mongoose.Types.ObjectId(userId) },
-      { standAloneId: new mongoose.Types.ObjectId(userId) },
-    ],
+    $or: ownershipFilters,
   });
   return deletedDriver;
 };
@@ -192,13 +223,26 @@ const getDriverById = async (
   standAloneId?: IdOrIdsInput['id'],
   createdBy?: IdOrIdsInput['id']
 ): Promise<Partial<IDriver | null>> => {
-  const driver = await DriverModel.findById(id, {
-    $or: [
-      { standAloneId: standAloneId ? new mongoose.Types.ObjectId(standAloneId) : null },
-      { createdBy: standAloneId ? new mongoose.Types.ObjectId(standAloneId) : null },
-      { createdBy: createdBy ? new mongoose.Types.ObjectId(createdBy) : null },
-    ],
-  });
+  const accessFilters: Record<string, mongoose.Types.ObjectId>[] = [];
+
+  if (standAloneId) {
+    const standAloneObjectId = new mongoose.Types.ObjectId(standAloneId);
+    accessFilters.push({ standAloneId: standAloneObjectId });
+    accessFilters.push({ createdBy: standAloneObjectId });
+  }
+
+  if (createdBy) {
+    accessFilters.push({ createdBy: new mongoose.Types.ObjectId(createdBy) });
+  }
+
+  const filter = accessFilters.length
+    ? {
+        _id: id,
+        $or: accessFilters,
+      }
+    : { _id: id };
+
+  const driver = await DriverModel.findOne(filter);
   return driver;
 };
 
@@ -231,19 +275,20 @@ const getManyDriver = async (
     });
   }
 
-  // Standalone filter (can be in standAloneId OR createdBy)
+  // Get drivers for transport manager based on standAloneId or createdBy (standAloneId is used for both stand alone user and transport manager to filter their own drivers)
   if (standAloneId) {
-    const objectId = new mongoose.Types.ObjectId(standAloneId);
-
     andConditions.push({
-      $or: [{ standAloneId: objectId }, { createdBy: objectId }],
+      $or: [
+        { standAloneId: new mongoose.Types.ObjectId(standAloneId) },
+        { createdBy: new mongoose.Types.ObjectId(standAloneId) },
+        { createdBy: new mongoose.Types.ObjectId(createdBy!) },
+      ],
     });
-  }
-
-  // CreatedBy filter
-  if (createdBy) {
-    const objectId = new mongoose.Types.ObjectId(createdBy);
-    andConditions.push({ createdBy: objectId });
+  } else {
+    // get drivers as stand alone user based on createdBy (which is the same as standAloneId for stand alone users)
+    if (createdBy) {
+      andConditions.push({ createdBy: new mongoose.Types.ObjectId(createdBy) });
+    }
   }
 
   // Final filter build
