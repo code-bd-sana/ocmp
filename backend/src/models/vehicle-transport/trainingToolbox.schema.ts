@@ -7,7 +7,7 @@ export enum ToolBoxType {
 }
 
 // Define and export an interface representing a DriverTachograph document
-export interface ITrainingToolBox extends Document {
+export interface ITrainingToolbox extends Document {
   date: Date;
   driverId: mongoose.Types.ObjectId;
   toolboxTitle: string;
@@ -22,7 +22,7 @@ export interface ITrainingToolBox extends Document {
 }
 
 // Define the TrainingToolBox schema
-const TrainingToolBoxSchema: Schema<ITrainingToolBox> = new Schema(
+const TrainingToolBoxSchema: Schema<ITrainingToolbox> = new Schema(
   {
     date: {
       type: Date,
@@ -77,8 +77,8 @@ const TrainingToolBoxSchema: Schema<ITrainingToolBox> = new Schema(
   { timestamps: true, versionKey: false }
 );
 
-// Create the TrainingToolBox model
-const TrainingToolBox = mongoose.model<ITrainingToolBox>('TrainingToolBox', TrainingToolBoxSchema);
+// Create the TrainingToolbox model
+const TrainingToolbox = mongoose.model<ITrainingToolbox>('TrainingToolbox', TrainingToolBoxSchema);
 
-// Export the TrainingToolBox model
-export default TrainingToolBox;
+// Export the TrainingToolbox model
+export default TrainingToolbox;

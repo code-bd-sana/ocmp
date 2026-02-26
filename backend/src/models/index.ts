@@ -1,5 +1,3 @@
-import { ITrainingToolBox } from './vehicle-transport/trainingToolbox.schema';
-
 export * from './document.schema';
 
 // users accounts
@@ -84,8 +82,8 @@ export {
   default as PolicyProcedure,
 } from './vehicle-transport/policyProcedure.schema';
 export {
-  ITrainingToolBox,
-  default as TrainingToolBox,
+  ITrainingToolbox,
+  default as TrainingToolbox,
 } from './vehicle-transport/trainingToolbox.schema';
 export {
   IVehicle,
