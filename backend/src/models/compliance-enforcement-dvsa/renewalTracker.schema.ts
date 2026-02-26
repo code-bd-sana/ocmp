@@ -1,4 +1,5 @@
 import mongoose, { Document, Schema } from 'mongoose';
+import { Mongoose } from 'mongoose';
 
 // Define and export an interface representing a RenewalTracker document
 export interface IRenewalTracker extends Document {
@@ -6,6 +7,7 @@ export interface IRenewalTracker extends Document {
   item: string;
   description?: string;
   refOrPolicyNo?: string;
+  responsiblePerson?: string;
   providerOrIssuer?: string;
   startDate?: Date;
   expiryOrDueDate?: Date;
@@ -32,7 +34,12 @@ const RenewalTrackerSchema: Schema<IRenewalTracker> = new Schema(
       type: String,
     },
     refOrPolicyNo: {
-      type: String,
+      type: Schema.Types.ObjectId,
+      ref: 'PolicyProcedure',
+    },
+    responsiblePerson: {
+      type: Schema.Types.ObjectId,
+      ref: 'PolicyProcedure',
     },
     providerOrIssuer: {
       type: String,
@@ -43,12 +50,12 @@ const RenewalTrackerSchema: Schema<IRenewalTracker> = new Schema(
     expiryOrDueDate: {
       type: Date,
     },
-    reminderSet: {
-      type: Boolean,
-    },
-    reminderDate: {
-      type: Date,
-    },
+    // reminderSet: {
+    //   type: Boolean,
+    // },
+    // reminderDate: {
+    //   type: Date,
+    // },
     status: {
       type: Boolean,
     },
