@@ -1,19 +1,26 @@
 import mongoose, { Document, Schema } from 'mongoose';
-import { Mongoose } from 'mongoose';
+
+// enum values of status field in RenewalTracker
+export enum RenewalTrackerStatus {
+  ACTIVE = 'Active',
+  SCHEDULED = 'Scheduled',
+  DUE_SOON = 'Due Soon',
+  EXPIRED = 'Expired',
+}
 
 // Define and export an interface representing a RenewalTracker document
 export interface IRenewalTracker extends Document {
   type: string;
   item: string;
   description?: string;
-  refOrPolicyNo?: string;
-  responsiblePerson?: string;
+  refOrPolicyNo?: mongoose.Types.ObjectId;
+  responsiblePerson?: mongoose.Types.ObjectId;
   providerOrIssuer?: string;
   startDate?: Date;
   expiryOrDueDate?: Date;
   reminderSet?: Boolean;
   reminderDate?: Date;
-  status?: Boolean;
+  status?: RenewalTrackerStatus;
   notes?: string;
   standAloneId?: mongoose.Types.ObjectId;
   createdBy: mongoose.Types.ObjectId;
@@ -50,14 +57,15 @@ const RenewalTrackerSchema: Schema<IRenewalTracker> = new Schema(
     expiryOrDueDate: {
       type: Date,
     },
-    // reminderSet: {
-    //   type: Boolean,
-    // },
-    // reminderDate: {
-    //   type: Date,
-    // },
-    status: {
+    reminderSet: {
       type: Boolean,
+    },
+    reminderDate: {
+      type: Date,
+    },
+    status: {
+      enum: RenewalTrackerStatus,
+      type: String,
     },
     notes: {
       type: String,
