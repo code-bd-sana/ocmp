@@ -109,16 +109,10 @@ export default function SignUpPage() {
     }
 
     setIsLoading(true);
-
-    try {
-      const resp = await AuthAction.RegisterUser(formData);
-      console.log(resp, "form data logged");
-      // In real app: router.push("/verify-email");
-    } catch (error) {
-      console.error("Sign up failed:", error);
-      alert("Sign up failed. Please try again.");
-    } finally {
-      setIsLoading(false);
+    const resp = await AuthAction.RegisterUser(formData);
+    console.log(resp, "rakib vudai");
+    if (resp.status === "error") {
+      console.log(resp.message);
     }
   };
 
