@@ -111,8 +111,8 @@ export default function SignUpPage() {
     setIsLoading(true);
 
     try {
-      await AuthAction.RegisterUser(formData);
-      console.log(formData, "form data logged");
+      const resp = await AuthAction.RegisterUser(formData);
+      console.log(resp, "form data logged");
       // In real app: router.push("/verify-email");
     } catch (error) {
       console.error("Sign up failed:", error);
