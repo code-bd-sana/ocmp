@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import { toast, Toaster } from "sonner";
 
 export default function SignUpPage() {
   const [formData, setFormData] = useState({
@@ -111,8 +112,10 @@ export default function SignUpPage() {
     setIsLoading(true);
     const resp = await AuthAction.RegisterUser(formData);
     console.log(resp, "rakib vudai");
+    toast.success("User Create Successfully");
     if (resp.status === "error") {
       console.log(resp.message);
+      toast.error(resp.message);
     }
   };
 
@@ -127,6 +130,7 @@ export default function SignUpPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 p-4 dark:from-gray-900 dark:to-gray-800">
+      <Toaster />
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="space-y-1">
           <CardTitle className="text-center text-2xl font-bold">
