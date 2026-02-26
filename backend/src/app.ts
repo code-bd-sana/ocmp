@@ -16,6 +16,7 @@ import morgan from 'morgan';
 import PathNotFound from './helpers/responses/path-not-found';
 import { loggerStream } from './utils/logger/logger';
 import { connectRedis } from './utils/redis/redis-client';
+import { startRenewalTrackerStatusCron } from './modules/renewal-tracker/renewal-tracker.cron';
 
 // Terminal colors
 const GREEN = '\x1b[32m';
@@ -179,6 +180,8 @@ app.listen(config.PORT, async () => {
   await mongoose.connect(config.DB_CONNECTION_URI);
   // Connect to Redis
   await connectRedis();
+  // Start renewal-tracker status scheduler (daily)
+  startRenewalTrackerStatusCron();
   console.log(
     `${GREEN}✔${RESET} ${WHITE}Connected to MongoDB successfully.${RESET}\n`,
     `${GREEN}✔${RESET} ${WHITE}Connected to Redis successfully.${RESET}\n`,

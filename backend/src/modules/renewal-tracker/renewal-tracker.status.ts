@@ -1,6 +1,6 @@
 import { RenewalTrackerStatus } from '../../models/compliance-enforcement-dvsa/renewalTracker.schema';
 
-const DAY_IN_MS = 24 * 60 * 60 * 1000;
+const DAY_IN_MS = 24 * 60 * 60 * 1000;  // Number of milliseconds in a day
 
 const getStartOfToday = () => {
   const today = new Date();
