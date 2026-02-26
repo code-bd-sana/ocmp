@@ -12,7 +12,11 @@ const RegisterUser = async (data: IRegister) => {
   try {
     const response = await axios.post(`${base_url}/auth/register`, data);
     console.log(response, "Register success");
-    return response.data;
+
+    if (response.data.status === 201) {
+      window.location("/signin");
+    }
+    return response;
   } catch (error) {
     throw error;
   }
