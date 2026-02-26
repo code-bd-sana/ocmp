@@ -87,6 +87,10 @@ export {
   default as Vehicle,
   VehicleStatus,
 } from './vehicle-transport/vehicle.schema';
+export {
+  IWorkingTimeDirective,
+  default as WorkingTimeDirective,
+} from './vehicle-transport/workingTimeDirective.schema';
 
 // compliance, enforcement & dvsa
 export {
