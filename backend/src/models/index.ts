@@ -1,3 +1,5 @@
+import { ITrainingToolBox } from './vehicle-transport/trainingToolbox.schema';
+
 export * from './document.schema';
 
 // users accounts
@@ -82,6 +84,10 @@ export {
   default as PolicyProcedure,
 } from './vehicle-transport/policyProcedure.schema';
 export {
+  ITrainingToolBox,
+  default as TrainingToolBox,
+} from './vehicle-transport/trainingToolbox.schema';
+export {
   IVehicle,
   OwnerShipStatus,
   default as Vehicle,
@@ -119,18 +125,9 @@ export {
 } from './compliance-enforcement-dvsa/wheelRetorquePolicyMonitoring.schema';
 
 // training
-export {
-  default as TrainingSheet,
-  ITrainingSheet,
-} from './training/trainingSheet.schema';
-export {
-  default as Participant,
-  IParticipant,
-} from './training/participant.schema';
-export {
-  default as ParticipantRole,
-  IParticipantRole,
-} from './training/participantRole.schema';
+export { default as TrainingSheet, ITrainingSheet } from './training/trainingSheet.schema';
+export { default as Participant, IParticipant } from './training/participant.schema';
+export { default as ParticipantRole, IParticipantRole } from './training/participantRole.schema';
 export {
   default as TrainingRegister,
   ITrainingRegister,

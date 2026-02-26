@@ -732,7 +732,7 @@ async function seedDriverTachographs() {
       details: "Reduced daily rest period by 15 minutes",
       actionTaken: "Driver counseled on importance of proper rest",
       reviewedBy: ids.users[1]._id,
-      Signed: true,
+      signed: true,
     },
     {
       driverId: ids.drivers[1]._id,
@@ -741,7 +741,7 @@ async function seedDriverTachographs() {
       details: "Exceeded continuous driving time by 10 minutes",
       actionTaken: "Written warning issued, additional training scheduled",
       reviewedBy: ids.users[1]._id,
-      Signed: true,
+      signed: true,
     },
     {
       driverId: ids.drivers[0]._id,
@@ -750,7 +750,7 @@ async function seedDriverTachographs() {
       details: "All compliance requirements met",
       actionTaken: "No action required",
       reviewedBy: ids.users[1]._id,
-      Signed: false,
+      signed: false,
     },
   ]);
 

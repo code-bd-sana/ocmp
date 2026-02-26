@@ -8,7 +8,7 @@ export interface IDriverTachograph extends Document {
   details?: string;
   actionTaken?: string;
   reviewedBy: mongoose.Types.ObjectId;
-  Signed?: boolean;
+  signed?: boolean;
 }
 
 // Define the DriverTachograph schema
@@ -38,11 +38,10 @@ const DriverTachographSchema: Schema<IDriverTachograph> = new Schema(
       // required: true,
       ref: 'User', // Reference from User model
     },
-    Signed: {
+    signed: {
       type: Boolean,
       default: false,
     },
-    
   },
   { timestamps: true, versionKey: false }
 );

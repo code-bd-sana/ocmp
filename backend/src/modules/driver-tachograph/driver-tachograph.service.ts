@@ -165,7 +165,7 @@ const getManyDriverTachograph = async (
     requesterRole?: UserRole;
   }
 ): Promise<{
-  driverTachographs: Partial<IDriverTachograph>[];
+  driverTachographs: any[];
   totalData: number;
   totalPages: number;
 }> => {
@@ -177,16 +177,16 @@ const getManyDriverTachograph = async (
     requesterId,
     requesterRole,
   } = query;
-  // Build the search filter based on searchable fields
-  const baseOr = [
-    { typeOfInfringement: { $regex: searchKey, $options: 'i' } },
-    { details: { $regex: searchKey, $options: 'i' } },
-    { actionTaken: { $regex: searchKey, $options: 'i' } },
-  ];
 
-  const searchFilter: any = {};
-  if (searchKey && searchKey.trim()) {
-    searchFilter.$or = baseOr;
+  const matchStage: any = {};
+
+  // Search
+  if (searchKey?.trim()) {
+    matchStage.$or = [
+      { typeOfInfringement: { $regex: searchKey, $options: 'i' } },
+      { details: { $regex: searchKey, $options: 'i' } },
+      { actionTaken: { $regex: searchKey, $options: 'i' } },
+    ];
   }
 
   const ownerIds = new Set<string>();
@@ -200,26 +200,11 @@ const getManyDriverTachograph = async (
 
     if (standAloneId) {
       ownerIds.add(String(standAloneId));
-    } else {
-      const managerClients = await ClientManagement.findOne({
-        managerId: new mongoose.Types.ObjectId(requesterId),
-      })
-        .select('clients.clientId clients.status')
-        .lean();
-
-      const approvedClientIds = (managerClients?.clients || [])
-        .filter((client: any) => client?.status === ClientStatus.APPROVED)
-        .map((client: any) => client.clientId?.toString())
-        .filter(Boolean);
-
-      approvedClientIds.forEach((id: string) => ownerIds.add(id));
     }
   }
 
   if (ownerIds.size > 0) {
-    const ownerObjectIds = Array.from(ownerIds)
-      .filter((id) => mongoose.Types.ObjectId.isValid(id))
-      .map((id) => new mongoose.Types.ObjectId(id));
+    const ownerObjectIds = Array.from(ownerIds).map((id) => new mongoose.Types.ObjectId(id));
 
     const accessibleVehicles = await Vehicle.find({
       $or: [{ standAloneId: { $in: ownerObjectIds } }, { createdBy: { $in: ownerObjectIds } }],
@@ -227,23 +212,63 @@ const getManyDriverTachograph = async (
       .select('_id')
       .lean();
 
-    const accessibleVehicleIds = accessibleVehicles.map((vehicle: any) => vehicle._id);
+    const accessibleVehicleIds = accessibleVehicles.map((v) => v._id);
 
-    searchFilter.$and = searchFilter.$and || [];
-    searchFilter.$and.push({ vehicleId: { $in: accessibleVehicleIds } });
+    matchStage.vehicleId = { $in: accessibleVehicleIds };
   }
 
-  // Calculate the number of items to skip based on the page number
   const skipItems = (pageNo - 1) * showPerPage;
-  // Find the total count of matching driver-tachograph
-  const totalData = await DriverTachographModel.countDocuments(searchFilter);
-  // Calculate the total number of pages
+
+  const result = await DriverTachographModel.aggregate([
+    { $match: matchStage },
+
+    // Join User
+    {
+      $lookup: {
+        from: 'users', // collection name (lowercase plural)
+        localField: 'reviewedBy',
+        foreignField: '_id',
+        as: 'reviewedUser',
+      },
+    },
+
+    { $unwind: { path: '$reviewedUser', preserveNullAndEmptyArrays: true } },
+
+    // Create string field
+    {
+      $addFields: {
+        reviewedBy: {
+          $cond: [
+            { $ifNull: ['$reviewedUser', false] },
+            {
+              $concat: ['$reviewedUser.fullName', ' (', '$reviewedUser.role', ')'],
+            },
+            null,
+          ],
+        },
+      },
+    },
+
+    // 🧹 Remove raw user object
+    {
+      $project: {
+        reviewedUser: 0,
+      },
+    },
+
+    // Pagination + Count
+    {
+      $facet: {
+        data: [{ $skip: skipItems }, { $limit: showPerPage }],
+        totalCount: [{ $count: 'count' }],
+      },
+    },
+  ]);
+
+  const driverTachographs = result[0].data;
+  const totalData = result[0].totalCount[0]?.count || 0;
   const totalPages = Math.ceil(totalData / showPerPage);
-  // Find driver-tachographs based on the search filter with pagination
-  const driverTachographs = await DriverTachographModel.find(searchFilter)
-    .skip(skipItems)
-    .limit(showPerPage)
-    .select(''); // Keep/Exclude any field if needed
+
   return { driverTachographs, totalData, totalPages };
 };
 
