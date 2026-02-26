@@ -102,7 +102,7 @@ export {
   default as ComplianceTimeTable,
   IComplianceTimeTable,
 } from './compliance-enforcement-dvsa/complianceTimeTable.schema';
-export { IOrsPlan, default as OrsPlan } from './compliance-enforcement-dvsa/orsPlan.schema';
+export { IOcrsPlan, default as OcrsPlan } from './compliance-enforcement-dvsa/ocrsPlan.schema';
 export {
   Ipg9AndPg13Plan,
   PG9AndPG13IssueType,

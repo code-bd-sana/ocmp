@@ -1,7 +1,7 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
-// Define and export an interface representing a OrsPlan document
-export interface IOrsPlan extends Document {
+// Define and export an interface representing a OcrsPlan document
+export interface IOcrsPlan extends Document {
   roadWorthinessScore?: string;
   overallTrafficScore?: string;
   actionRequired?: string;
@@ -17,7 +17,7 @@ export interface IOrsPlan extends Document {
 }
 
 // Define the OrsPlan schema
-const OrsPlanSchema: Schema<IOrsPlan> = new Schema(
+const OcrsPlanSchema: Schema<IOcrsPlan> = new Schema(
   {
     roadWorthinessScore: {
       type: String,
@@ -61,8 +61,8 @@ const OrsPlanSchema: Schema<IOrsPlan> = new Schema(
   { timestamps: true, versionKey: false }
 );
 
-// Create the OrsPlan model
-const OrsPlan = mongoose.model<IOrsPlan>('OrsPlan', OrsPlanSchema);
+// Create the OcrsPlan model
+const OcrsPlan = mongoose.model<IOcrsPlan>('OcrsPlan', OcrsPlanSchema);
 
-// Export the OrsPlan model
-export default OrsPlan;
+// Export the OcrsPlan model
+export default OcrsPlan;
