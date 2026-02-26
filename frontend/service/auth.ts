@@ -1,3 +1,5 @@
+import { base_url } from "@/lib/utils";
+import axios from "axios";
 export interface IRegister {
   firstName: string;
   lastName: string;
@@ -5,3 +7,12 @@ export interface IRegister {
   phoneNumber: string;
   password: string;
 }
+
+const RegisterUser = async (data: IRegister) => {
+  try {
+    const response = await axios.post(`${base_url}/auth/register`);
+    console.log(response, "Login success");
+  } catch (error) {
+    return error;
+  }
+};
