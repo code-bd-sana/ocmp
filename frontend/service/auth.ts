@@ -9,6 +9,7 @@ export interface IRegister {
 }
 
 const RegisterUser = async (data: IRegister) => {
+  console.log("hit");
   try {
     const response = await axios.post(`${base_url}/auth/register`, data);
     console.log(response, "Register success");
@@ -18,6 +19,7 @@ const RegisterUser = async (data: IRegister) => {
     }
     return response;
   } catch (error) {
+    console.log(error, "hi");
     return error;
   }
 };
