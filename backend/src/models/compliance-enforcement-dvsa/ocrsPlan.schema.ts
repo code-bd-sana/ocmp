@@ -16,7 +16,7 @@ export interface IOcrsPlan extends Document {
   createdBy: mongoose.Types.ObjectId;
 }
 
-// Define the OrsPlan schema
+// Define the OcrsPlan schema
 const OcrsPlanSchema: Schema<IOcrsPlan> = new Schema(
   {
     roadWorthinessScore: {
