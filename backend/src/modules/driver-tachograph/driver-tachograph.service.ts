@@ -10,7 +10,6 @@ import { ClientManagement, ClientStatus, UserRole } from '../../models';
 import {
   CreateDriverTachographInput,
   UpdateDriverTachographInput,
-  UpdateDriverTachographReviewedByInput,
 } from './driver-tachograph.validation';
 
 const resolveOwnerId = (entity: any): string | null => {
@@ -94,6 +93,7 @@ const createDriverTachograph = async (
 const updateDriverTachograph = async (
   id: IdOrIdsInput['id'],
   data: UpdateDriverTachographInput,
+  userId: IdOrIdsInput['id'],
   standAloneId?: string
 ): Promise<Partial<IDriverTachograph | null>> => {
   const existing = await DriverTachographModel.findById(id).select('vehicleId driverId').lean();
@@ -101,37 +101,16 @@ const updateDriverTachograph = async (
 
   const effectiveVehicleId = (data.vehicleId || (existing as any).vehicleId)?.toString();
   const effectiveDriverId = (data.driverId || (existing as any).driverId)?.toString();
+  const accessOwnerId = standAloneId || String(userId);
 
   if (effectiveVehicleId && effectiveDriverId) {
-    await validateVehicleDriverAndOwner(effectiveVehicleId, effectiveDriverId, standAloneId);
+    await validateVehicleDriverAndOwner(effectiveVehicleId, effectiveDriverId, accessOwnerId);
   }
 
   // Proceed to update the driver-tachograph
   const updatedDriverTachograph = await DriverTachographModel.findByIdAndUpdate(id, data, {
     new: true,
   });
-  return updatedDriverTachograph;
-};
-
-const updateDriverTachographReviewedBy = async (
-  id: IdOrIdsInput['id'],
-  data: UpdateDriverTachographReviewedByInput,
-  standAloneId?: string
-): Promise<Partial<IDriverTachograph | null>> => {
-  const existing = await DriverTachographModel.findById(id).select('vehicleId driverId').lean();
-  if (!existing) return null;
-
-  await validateVehicleDriverAndOwner(
-    (existing as any).vehicleId?.toString(),
-    (existing as any).driverId?.toString(),
-    standAloneId
-  );
-
-  const updatedDriverTachograph = await DriverTachographModel.findByIdAndUpdate(
-    id,
-    { reviewedBy: data.reviewedBy },
-    { new: true }
-  );
   return updatedDriverTachograph;
 };
 
@@ -142,8 +121,20 @@ const updateDriverTachographReviewedBy = async (
  * @returns {Promise<Partial<IDriverTachograph>>} - The deleted driver-tachograph.
  */
 const deleteDriverTachograph = async (
-  id: IdOrIdsInput['id']
+  id: IdOrIdsInput['id'],
+  userId: IdOrIdsInput['id'],
+  standAloneId?: IdOrIdsInput['id']
 ): Promise<Partial<IDriverTachograph | null>> => {
+  const existing = await DriverTachographModel.findById(id).select('vehicleId driverId').lean();
+  if (!existing) return null;
+
+  const accessOwnerId = String(standAloneId || userId);
+  await validateVehicleDriverAndOwner(
+    (existing as any).vehicleId?.toString(),
+    (existing as any).driverId?.toString(),
+    accessOwnerId
+  );
+
   const deletedDriverTachograph = await DriverTachographModel.findByIdAndDelete(id);
   return deletedDriverTachograph;
 };
@@ -259,7 +250,6 @@ const getManyDriverTachograph = async (
 export const driverTachographServices = {
   createDriverTachograph,
   updateDriverTachograph,
-  updateDriverTachographReviewedBy,
   deleteDriverTachograph,
   getDriverTachographById,
   getManyDriverTachograph,

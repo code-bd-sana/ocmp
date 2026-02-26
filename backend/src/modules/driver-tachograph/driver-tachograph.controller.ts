@@ -16,9 +16,6 @@ import { UserRole } from '../../models';
  */
 export const createDriverTachograph = catchAsync(
   async (req: AuthenticatedRequest, res: Response) => {
-    if (!req.body?.reviewedBy && req.user?._id) {
-      req.body.reviewedBy = req.user._id;
-    }
     // Call the service method to create a new driver-tachograph and get the result
     const result = await driverTachographServices.createDriverTachograph(req.body);
     if (!result) throw new Error('Failed to create driver-tachograph');
@@ -35,36 +32,27 @@ export const createDriverTachograph = catchAsync(
  * @returns {Promise<Partial<IDriverTachograph>>} - The updated driver-tachograph.
  * @throws {Error} - Throws an error if the driver-tachograph update fails.
  */
-export const updateDriverTachograph = catchAsync(async (req: Request, res: Response) => {
-  const { id } = req.params;
-  const standAloneId = (req.params as any).standAloneId || (req.query as any)?.standAloneId;
-  // Call the service method to update the driver-tachograph by ID and get the result
-  const result = await driverTachographServices.updateDriverTachograph(
-    id as string,
-    req.body,
-    standAloneId as string | undefined
-  );
-  if (!result) throw new Error('Driver-tachograph not found');
-  // Send a success response with the updated driver-tachograph data
-  ServerResponse(res, true, 200, 'Driver-tachograph updated successfully', result);
-});
-
-export const updateDriverTachographReviewedBy = catchAsync(
+export const updateDriverTachograph = catchAsync(
   async (req: AuthenticatedRequest, res: Response) => {
-    const { id } = req.params;
-    const standAloneId = (req.params as any).standAloneId || (req.query as any)?.standAloneId;
+    const paramToString = (p?: string | string[]) => (Array.isArray(p) ? p[0] : p);
+    const id = paramToString(req.params.id);
+    const standAloneId = paramToString((req.params as any).standAloneId);
 
-    const reviewedBy = (req.body?.reviewedBy || req.user?._id) as string;
-
-    const result = await driverTachographServices.updateDriverTachographReviewedBy(
+    if (req.user?._id) {
+      req.body.reviewedBy = req.user._id;
+    }
+    // Call the service method to update the driver-tachograph by ID and get the result
+    const result = await driverTachographServices.updateDriverTachograph(
       id as string,
-      { reviewedBy },
+      req.body,
+      req.user!._id,
       standAloneId as string | undefined
     );
-
-    if (!result) throw new Error('Driver-tachograph not found');
-
-    ServerResponse(res, true, 200, 'Driver-tachograph reviewedBy updated successfully', result);
+    if (!result) {
+      return ServerResponse(res, false, 404, 'Driver-tachograph not found or access denied');
+    }
+    // Send a success response with the updated driver-tachograph data
+    ServerResponse(res, true, 200, 'Driver-tachograph updated successfully', result);
   }
 );
 
@@ -76,14 +64,24 @@ export const updateDriverTachographReviewedBy = catchAsync(
  * @returns {Promise<Partial<IDriverTachograph>>} - The deleted driver-tachograph.
  * @throws {Error} - Throws an error if the driver-tachograph deletion fails.
  */
-export const deleteDriverTachograph = catchAsync(async (req: Request, res: Response) => {
-  const { id } = req.params;
-  // Call the service method to delete the driver-tachograph by ID
-  const result = await driverTachographServices.deleteDriverTachograph(id as string);
-  if (!result) throw new Error('Driver-tachograph not found');
-  // Send a success response confirming the deletion
-  ServerResponse(res, true, 200, 'Driver-tachograph deleted successfully');
-});
+export const deleteDriverTachograph = catchAsync(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const paramToString = (p?: string | string[]) => (Array.isArray(p) ? p[0] : p);
+    const id = paramToString(req.params.id);
+    const standAloneId = paramToString((req.params as any).standAloneId);
+    // Call the service method to delete the driver-tachograph by ID
+    const result = await driverTachographServices.deleteDriverTachograph(
+      id as string,
+      req.user!._id,
+      standAloneId
+    );
+    if (!result) {
+      return ServerResponse(res, false, 404, 'Driver-tachograph not found or access denied');
+    }
+    // Send a success response confirming the deletion
+    ServerResponse(res, true, 200, 'Driver-tachograph deleted successfully');
+  }
+);
 
 /**
  * Controller function to handle the retrieval of a single driver-tachograph by ID.

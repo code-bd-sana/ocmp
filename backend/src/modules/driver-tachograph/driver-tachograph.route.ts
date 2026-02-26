@@ -5,7 +5,6 @@ import { Router, Response, NextFunction } from 'express';
 import {
   createDriverTachograph,
   updateDriverTachograph,
-  updateDriverTachographReviewedBy,
   deleteDriverTachograph,
   getDriverTachographById,
   getManyDriverTachograph,
@@ -16,7 +15,6 @@ import {
   validateCreateDriverTachographAsManager,
   validateCreateDriverTachographAsStandAlone,
   validateUpdateDriverTachograph,
-  validateUpdateDriverTachographReviewedBy,
   validateSearchDriverTachographQueries,
   validateDriverTachographAndManagerIdParam,
   validateDriverTachographIdParam,
@@ -88,23 +86,6 @@ router.patch(
   validateDriverTachographIdParam,
   validateUpdateDriverTachograph,
   updateDriverTachograph
-);
-
-router.patch(
-  '/update-driver-tachograph-reviewed-by/:id/:standAloneId',
-  authorizedRoles([UserRole.TRANSPORT_MANAGER]),
-  validateClientForManagerMiddleware,
-  validateDriverTachographAndManagerIdParam,
-  validateUpdateDriverTachographReviewedBy,
-  updateDriverTachographReviewedBy
-);
-
-router.patch(
-  '/update-driver-tachograph-reviewed-by/:id',
-  authorizedRoles([UserRole.STANDALONE_USER]),
-  validateDriverTachographIdParam,
-  validateUpdateDriverTachographReviewedBy,
-  updateDriverTachographReviewedBy
 );
 
 /**
