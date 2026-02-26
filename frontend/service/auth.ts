@@ -14,7 +14,7 @@ const RegisterUser = async (data: IRegister) => {
     console.log(response, "Register success");
 
     if (response.data.status === 201) {
-      window.location("/signin");
+      window.location.href = "/signin";
     }
     return response;
   } catch (error) {
