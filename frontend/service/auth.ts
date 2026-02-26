@@ -16,3 +16,7 @@ const RegisterUser = async (data: IRegister) => {
     return error;
   }
 };
+
+export const authAction = {
+  RegisterUser,
+};
