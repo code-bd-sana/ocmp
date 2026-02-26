@@ -1,19 +1,20 @@
 import { base_url } from "@/lib/utils";
 import axios from "axios";
 export interface IRegister {
-  firstName: string;
-  lastName: string;
+  fullName: string;
   email: string;
-  phoneNumber: string;
+  phone?: string;
   password: string;
+  role: string;
 }
 
 const RegisterUser = async (data: IRegister) => {
   try {
-    const response = await axios.post(`${base_url}/auth/register`);
-    console.log(response, "Login success");
+    const response = await axios.post(`${base_url}/auth/register`, data);
+    console.log(response, "Register success");
+    return response.data;
   } catch (error) {
-    return error;
+    throw error;
   }
 };
 

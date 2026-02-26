@@ -10,41 +10,37 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { AuthAction } from "@/service/auth";
-import { Check, Eye, EyeOff, Loader2, Lock, Mail, User } from "lucide-react";
+import {
+  Building2,
+  Check,
+  Eye,
+  EyeOff,
+  Loader2,
+  Lock,
+  Mail,
+  User,
+  UserCircle,
+} from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
 export default function SignUpPage() {
-  /**
-   * State Variables
-   *
-   * formData: Stores the user's input for name, email, password, and confirm password.
-   * showPassword: Toggles the visibility of the password input.
-   * showConfirmPassword: Toggles the visibility of the confirm password input.
-   * isLoading: Indicates if the form submission is in progress.
-   * errors: Holds validation error messages for the form fields.
-   *
-   * Functions
-   *
-   * checkPasswordStrength: Evaluates the strength of the password and updates the strength state.
-   * validateForm: Validates the form inputs, setting error messages as needed.
-   * handleChange: Updates formData state and clears errors on input change.
-   * handleSubmit: Handles form submission, including validation and simulating an API call.
-   *
-   * Return JSX
-   *
-   * Renders the sign-up form with fields for name, email, password, and confirm password, a password strength meter, a terms agreement checkbox, and a submit button.
-   */
   const [formData, setFormData] = useState({
-    name: "",
+    fullName: "",
     email: "",
     password: "",
-    confirmPassword: "",
+    role: "",
   });
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [strength, setStrength] = useState(0);
@@ -63,16 +59,16 @@ export default function SignUpPage() {
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
-    if (!formData.name.trim()) {
-      newErrors.name = "Name is required";
-    } else if (formData.name.trim().length < 2) {
-      newErrors.name = "Name must be at least 2 characters";
+    if (!formData.fullName.trim()) {
+      newErrors.fullName = "Full name is required";
+    } else if (formData.fullName.trim().length < 2) {
+      newErrors.fullName = "Full name must be at least 2 characters";
     }
 
     if (!formData.email) {
       newErrors.email = "Email is required";
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = "Please enter a valid email address";
+      newErrors.email = "Invalid email format";
     }
 
     if (!formData.password) {
@@ -83,8 +79,8 @@ export default function SignUpPage() {
       newErrors.password = "Password is too weak";
     }
 
-    if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = "Passwords do not match";
+    if (!formData.role) {
+      newErrors.role = "Please select a role";
     }
 
     setErrors(newErrors);
@@ -116,7 +112,7 @@ export default function SignUpPage() {
 
     try {
       await AuthAction.RegisterUser(formData);
-
+      console.log(formData, "form data logged");
       // In real app: router.push("/verify-email");
     } catch (error) {
       console.error("Sign up failed:", error);
@@ -150,28 +146,28 @@ export default function SignUpPage() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-4">
-              {/* Name Field */}
+              {/* Full Name Field */}
               <div className="space-y-2">
-                <Label htmlFor="name" className="flex items-center gap-2">
+                <Label htmlFor="fullName" className="flex items-center gap-2">
                   <User className="h-4 w-4" />
                   Full Name
                 </Label>
                 <Input
-                  id="name"
+                  id="fullName"
                   type="text"
                   placeholder="John Doe"
-                  value={formData.name}
-                  onChange={(e) => handleChange("name", e.target.value)}
+                  value={formData.fullName}
+                  onChange={(e) => handleChange("fullName", e.target.value)}
                   className={`bg-input h-11 ${
-                    errors.name
+                    errors.fullName
                       ? "border-destructive focus-visible:ring-destructive"
                       : "border-input-foreground"
                   }`}
                   disabled={isLoading}
                   autoComplete="name"
                 />
-                {errors.name && (
-                  <p className="text-destructive text-sm">{errors.name}</p>
+                {errors.fullName && (
+                  <p className="text-destructive text-sm">{errors.fullName}</p>
                 )}
               </div>
 
@@ -197,6 +193,52 @@ export default function SignUpPage() {
                 />
                 {errors.email && (
                   <p className="text-destructive text-sm">{errors.email}</p>
+                )}
+              </div>
+
+              {/* Role Selection Field */}
+              <div className="space-y-2">
+                <Label htmlFor="role" className="flex items-center gap-2">
+                  <UserCircle className="h-4 w-4" />
+                  Select Role
+                </Label>
+                <Select
+                  onValueChange={(value) => handleChange("role", value)}
+                  value={formData.role}
+                  disabled={isLoading}
+                >
+                  <SelectTrigger
+                    className={`bg-input h-11 ${
+                      errors.role
+                        ? "border-destructive focus-visible:ring-destructive"
+                        : "border-input-foreground"
+                    }`}
+                  >
+                    <SelectValue placeholder="Choose your role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem
+                      value="TRANSPORT_MANAGER"
+                      className="cursor-pointer"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Building2 className="h-4 w-4" />
+                        <span>Transport Manager</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem
+                      value="STANDALONE_USER"
+                      className="cursor-pointer"
+                    >
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4" />
+                        <span>Standalone User</span>
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                {errors.role && (
+                  <p className="text-destructive text-sm">{errors.role}</p>
                 )}
               </div>
 
@@ -296,53 +338,6 @@ export default function SignUpPage() {
 
                 {errors.password && (
                   <p className="text-destructive text-sm">{errors.password}</p>
-                )}
-              </div>
-
-              {/* Confirm Password Field */}
-              <div className="space-y-2">
-                <Label
-                  htmlFor="confirmPassword"
-                  className="flex items-center gap-2"
-                >
-                  <Lock className="h-4 w-4" />
-                  Confirm Password
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="confirmPassword"
-                    type={showConfirmPassword ? "text" : "password"}
-                    placeholder="••••••••"
-                    value={formData.confirmPassword}
-                    onChange={(e) =>
-                      handleChange("confirmPassword", e.target.value)
-                    }
-                    className={`bg-input h-11 pr-10 ${
-                      errors.confirmPassword
-                        ? "border-destructive focus-visible:ring-destructive"
-                        : "border-input-foreground"
-                    }`}
-                    disabled={isLoading}
-                    autoComplete="new-password"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute top-1/2 right-3 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                    tabIndex={-1}
-                    disabled={isLoading}
-                  >
-                    {showConfirmPassword ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
-                  </button>
-                </div>
-                {errors.confirmPassword && (
-                  <p className="text-destructive text-sm">
-                    {errors.confirmPassword}
-                  </p>
                 )}
               </div>
             </div>
