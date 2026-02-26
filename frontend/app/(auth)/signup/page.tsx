@@ -111,11 +111,16 @@ export default function SignUpPage() {
 
     setIsLoading(true);
     const resp = await AuthAction.RegisterUser(formData);
-    console.log(resp, "rakib vudai");
-    toast.success("User Create Successfully");
+    console.log(resp, "resp is here");
+    if (resp?.status === 201) {
+      toast.success("User Create Successfully");
+      setIsLoading(false);
+    }
     if (resp.status === "error") {
       console.log(resp.message);
       toast.error(resp.message);
+      setIsLoading(false);
+      return;
     }
   };
 
