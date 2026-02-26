@@ -17,7 +17,6 @@ const RegisterUser = async (data: IRegister) => {
   }
 };
 
-export const authAction = {
+export const AuthAction = {
   RegisterUser,
 };
-///

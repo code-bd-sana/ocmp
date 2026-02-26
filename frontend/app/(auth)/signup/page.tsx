@@ -11,6 +11,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { AuthAction } from "@/service/auth";
 import { Check, Eye, EyeOff, Loader2, Lock, Mail, User } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
@@ -114,11 +115,8 @@ export default function SignUpPage() {
     setIsLoading(true);
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      console.log("Signing up with:", formData);
-      alert(
-        "Account created successfully! Please check your email to verify your account."
-      );
+      await AuthAction.RegisterUser(formData);
+
       // In real app: router.push("/verify-email");
     } catch (error) {
       console.error("Sign up failed:", error);
@@ -138,109 +136,110 @@ export default function SignUpPage() {
   };
 
   return (
-    <div className='min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-4'>
-      <Card className='w-full max-w-md shadow-xl'>
-        <CardHeader className='space-y-1'>
-          <CardTitle className='text-2xl font-bold text-center'>
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 p-4 dark:from-gray-900 dark:to-gray-800">
+      <Card className="w-full max-w-md shadow-xl">
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-center text-2xl font-bold">
             Create Account
           </CardTitle>
-          <CardDescription className='text-center text-foreground'>
+          <CardDescription className="text-foreground text-center">
             Fill in your details to get started
           </CardDescription>
         </CardHeader>
 
         <CardContent>
-          <form onSubmit={handleSubmit} className='space-y-6'>
-            <div className='space-y-4'>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-4">
               {/* Name Field */}
-              <div className='space-y-2'>
-                <Label htmlFor='name' className='flex items-center gap-2'>
-                  <User className='h-4 w-4' />
+              <div className="space-y-2">
+                <Label htmlFor="name" className="flex items-center gap-2">
+                  <User className="h-4 w-4" />
                   Full Name
                 </Label>
                 <Input
-                  id='name'
-                  type='text'
-                  placeholder='John Doe'
+                  id="name"
+                  type="text"
+                  placeholder="John Doe"
                   value={formData.name}
                   onChange={(e) => handleChange("name", e.target.value)}
-                  className={`h-11 bg-input ${
+                  className={`bg-input h-11 ${
                     errors.name
                       ? "border-destructive focus-visible:ring-destructive"
                       : "border-input-foreground"
                   }`}
                   disabled={isLoading}
-                  autoComplete='name'
+                  autoComplete="name"
                 />
                 {errors.name && (
-                  <p className='text-sm text-destructive'>{errors.name}</p>
+                  <p className="text-destructive text-sm">{errors.name}</p>
                 )}
               </div>
 
               {/* Email Field */}
-              <div className='space-y-2'>
-                <Label htmlFor='email' className='flex items-center gap-2'>
-                  <Mail className='h-4 w-4' />
+              <div className="space-y-2">
+                <Label htmlFor="email" className="flex items-center gap-2">
+                  <Mail className="h-4 w-4" />
                   Email Address
                 </Label>
                 <Input
-                  id='email'
-                  type='email'
-                  placeholder='name@example.com'
+                  id="email"
+                  type="email"
+                  placeholder="name@example.com"
                   value={formData.email}
                   onChange={(e) => handleChange("email", e.target.value)}
-                  className={`h-11 bg-input ${
+                  className={`bg-input h-11 ${
                     errors.email
                       ? "border-destructive focus-visible:ring-destructive"
                       : "border-input-foreground"
                   }`}
                   disabled={isLoading}
-                  autoComplete='email'
+                  autoComplete="email"
                 />
                 {errors.email && (
-                  <p className='text-sm text-destructive'>{errors.email}</p>
+                  <p className="text-destructive text-sm">{errors.email}</p>
                 )}
               </div>
 
               {/* Password Field */}
-              <div className='space-y-2'>
-                <Label htmlFor='password' className='flex items-center gap-2'>
-                  <Lock className='h-4 w-4' />
+              <div className="space-y-2">
+                <Label htmlFor="password" className="flex items-center gap-2">
+                  <Lock className="h-4 w-4" />
                   Password
                 </Label>
-                <div className='relative'>
+                <div className="relative">
                   <Input
-                    id='password'
+                    id="password"
                     type={showPassword ? "text" : "password"}
-                    placeholder='••••••••'
+                    placeholder="••••••••"
                     value={formData.password}
                     onChange={(e) => handleChange("password", e.target.value)}
-                    className={`h-11 pr-10 bg-input ${
+                    className={`bg-input h-11 pr-10 ${
                       errors.password
                         ? "border-destructive focus-visible:ring-destructive"
                         : "border-input-foreground"
                     }`}
                     disabled={isLoading}
-                    autoComplete='new-password'
+                    autoComplete="new-password"
                   />
                   <button
-                    type='button'
+                    type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className='absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700'
+                    className="absolute top-1/2 right-3 -translate-y-1/2 text-gray-500 hover:text-gray-700"
                     tabIndex={-1}
-                    disabled={isLoading}>
+                    disabled={isLoading}
+                  >
                     {showPassword ? (
-                      <EyeOff className='h-4 w-4' />
+                      <EyeOff className="h-4 w-4" />
                     ) : (
-                      <Eye className='h-4 w-4' />
+                      <Eye className="h-4 w-4" />
                     )}
                   </button>
                 </div>
 
                 {/* Password Strength Meter */}
                 {formData.password && (
-                  <div className='space-y-2'>
-                    <div className='flex gap-1'>
+                  <div className="space-y-2">
+                    <div className="flex gap-1">
                       {[1, 2, 3, 4].map((i) => (
                         <div
                           key={i}
@@ -250,8 +249,8 @@ export default function SignUpPage() {
                         />
                       ))}
                     </div>
-                    <div className='grid grid-cols-2 gap-2 text-xs text-foreground'>
-                      <div className='flex items-center gap-1'>
+                    <div className="text-foreground grid grid-cols-2 gap-2 text-xs">
+                      <div className="flex items-center gap-1">
                         <Check
                           className={`h-3 w-3 ${
                             formData.password.length >= 8
@@ -261,7 +260,7 @@ export default function SignUpPage() {
                         />
                         <span>8+ characters</span>
                       </div>
-                      <div className='flex items-center gap-1'>
+                      <div className="flex items-center gap-1">
                         <Check
                           className={`h-3 w-3 ${
                             /[A-Z]/.test(formData.password)
@@ -271,7 +270,7 @@ export default function SignUpPage() {
                         />
                         <span>Uppercase</span>
                       </div>
-                      <div className='flex items-center gap-1'>
+                      <div className="flex items-center gap-1">
                         <Check
                           className={`h-3 w-3 ${
                             /[0-9]/.test(formData.password)
@@ -281,7 +280,7 @@ export default function SignUpPage() {
                         />
                         <span>Number</span>
                       </div>
-                      <div className='flex items-center gap-1'>
+                      <div className="flex items-center gap-1">
                         <Check
                           className={`h-3 w-3 ${
                             /[^A-Za-z0-9]/.test(formData.password)
@@ -296,50 +295,52 @@ export default function SignUpPage() {
                 )}
 
                 {errors.password && (
-                  <p className='text-sm text-destructive'>{errors.password}</p>
+                  <p className="text-destructive text-sm">{errors.password}</p>
                 )}
               </div>
 
               {/* Confirm Password Field */}
-              <div className='space-y-2'>
+              <div className="space-y-2">
                 <Label
-                  htmlFor='confirmPassword'
-                  className='flex items-center gap-2'>
-                  <Lock className='h-4 w-4' />
+                  htmlFor="confirmPassword"
+                  className="flex items-center gap-2"
+                >
+                  <Lock className="h-4 w-4" />
                   Confirm Password
                 </Label>
-                <div className='relative'>
+                <div className="relative">
                   <Input
-                    id='confirmPassword'
+                    id="confirmPassword"
                     type={showConfirmPassword ? "text" : "password"}
-                    placeholder='••••••••'
+                    placeholder="••••••••"
                     value={formData.confirmPassword}
                     onChange={(e) =>
                       handleChange("confirmPassword", e.target.value)
                     }
-                    className={`h-11 pr-10 bg-input ${
+                    className={`bg-input h-11 pr-10 ${
                       errors.confirmPassword
                         ? "border-destructive focus-visible:ring-destructive"
                         : "border-input-foreground"
                     }`}
                     disabled={isLoading}
-                    autoComplete='new-password'
+                    autoComplete="new-password"
                   />
                   <button
-                    type='button'
+                    type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className='absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700'
+                    className="absolute top-1/2 right-3 -translate-y-1/2 text-gray-500 hover:text-gray-700"
                     tabIndex={-1}
-                    disabled={isLoading}>
+                    disabled={isLoading}
+                  >
                     {showConfirmPassword ? (
-                      <EyeOff className='h-4 w-4' />
+                      <EyeOff className="h-4 w-4" />
                     ) : (
-                      <Eye className='h-4 w-4' />
+                      <Eye className="h-4 w-4" />
                     )}
                   </button>
                 </div>
                 {errors.confirmPassword && (
-                  <p className='text-sm text-destructive'>
+                  <p className="text-destructive text-sm">
                     {errors.confirmPassword}
                   </p>
                 )}
@@ -347,37 +348,40 @@ export default function SignUpPage() {
             </div>
 
             {/* Terms Agreement */}
-            <div className='flex items-start space-x-2 w-full font-light'>
+            <div className="flex w-full items-start space-x-2 font-light">
               <input
-                type='checkbox'
-                id='terms'
-                className='mt-0.5 h-4 w-4 rounded border-gray-300'
+                type="checkbox"
+                id="terms"
+                className="mt-0.5 h-4 w-4 rounded border-gray-300"
                 required
                 disabled={isLoading}
               />
-              <Label htmlFor='terms' className='text-sm font-normal!'>
+              <Label htmlFor="terms" className="text-sm font-normal!">
                 I agree to the{" "}
                 <Link
-                  href='/terms'
-                  className='text-primary hover:underline font-medium'>
+                  href="/terms"
+                  className="text-primary font-medium hover:underline"
+                >
                   Terms of Service
                 </Link>{" "}
                 and{" "}
                 <Link
-                  href='/privacy'
-                  className='text-primary hover:underline font-medium'>
+                  href="/privacy"
+                  className="text-primary font-medium hover:underline"
+                >
                   Privacy Policy
                 </Link>
               </Label>
             </div>
 
             <Button
-              type='submit'
-              className='w-full h-11 text-base bg-primary cursor-pointer'
-              disabled={isLoading}>
+              type="submit"
+              className="bg-primary h-11 w-full cursor-pointer text-base"
+              disabled={isLoading}
+            >
               {isLoading ? (
                 <>
-                  <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Creating Account...
                 </>
               ) : (
@@ -387,15 +391,16 @@ export default function SignUpPage() {
           </form>
         </CardContent>
 
-        <CardFooter className='flex flex-col space-y-4'>
+        <CardFooter className="flex flex-col space-y-4">
           <Separator />
 
-          <div className='text-center text-sm'>
+          <div className="text-center text-sm">
             Already have an account?{" "}
             <Link
-              href='/signin'
-              className='font-semibold text-primary hover:underline'
-              tabIndex={isLoading ? -1 : 0}>
+              href="/signin"
+              className="text-primary font-semibold hover:underline"
+              tabIndex={isLoading ? -1 : 0}
+            >
               Sign in
             </Link>
           </div>
