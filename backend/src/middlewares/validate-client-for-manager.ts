@@ -17,7 +17,12 @@ export const validateClientForManagerMiddleware = async (
 
     // Validate standAloneId is a valid ObjectId before querying
     if (!standAloneId || !mongoose.Types.ObjectId.isValid(standAloneId)) {
-      return ServerResponse(res, false, 400, 'Invalid or missing standAloneId — must be a valid ObjectId');
+      return ServerResponse(
+        res,
+        false,
+        400,
+        'Invalid or missing standAloneId — must be a valid ObjectId'
+      );
     }
 
     const isClientExist = await ClientManagement.exists({
@@ -27,7 +32,12 @@ export const validateClientForManagerMiddleware = async (
     });
 
     if (!isClientExist) {
-      return ServerResponse(res, false, 403, 'Client not found in your clients list or not approved');
+      return ServerResponse(
+        res,
+        false,
+        403,
+        'Client not found in your clients list or not approved'
+      );
     }
 
     next();
