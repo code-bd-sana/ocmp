@@ -7,7 +7,7 @@ import {
   getSubContractorById,
   updateSubContractor,
   deleteSubContractor,
-} from './subContractor.controller';
+} from './subcontractor.controller';
 
 import {
   validateSubContractorIdParam,

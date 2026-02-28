@@ -90,8 +90,8 @@ export {
 
 // compliance, enforcement & dvsa
 export {
-  default as AuditsAndRectificationReports,
-  IAuditsAndRectificationReports,
+  default as AuditsAndRecificationReports,
+  IAuditsAndRecificationReport,
 } from './compliance-enforcement-dvsa/auditsAndRecificationReports.schema';
 export {
   ComplianceStatus,
