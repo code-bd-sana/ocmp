@@ -1,6 +1,7 @@
 import { isMongoId } from 'validator';
 import { z } from 'zod';
-import { validateBody } from '../../handlers/zod-error-handler';
+import { validateBody, validateParams, validateQuery } from '../../handlers/zod-error-handler';
+import { zodSearchQuerySchema } from '../../handlers/common-zod-validator';
 
 /**
  * Traffic-commissioner-communication Validation Schemas and Types
@@ -97,16 +98,79 @@ export type CreateTrafficCommissionerCommunicationInput =
  */
 const zodUpdateTrafficCommissionerCommunicationSchema = z
   .object({
-    // Example fields — replace / expand as needed:
-    // name: z.string().min(2, 'Name must be at least 2 characters').max(100).optional(),
-    // email: z.string().email({ message: 'Invalid email format' }).optional(),
-    // age: z.number().int().positive().optional(),
-    // status: z.enum(['active', 'inactive', 'pending']).optional(),
+    type: z
+      .string()
+      .trim()
+      .min(2, 'Communication type must be at least 2 characters')
+      .max(50, 'Communication type must not exceed 50 characters')
+      .optional(),
+    contactedPerson: z
+      .string()
+      .trim()
+      .min(2, 'Contacted person must be at least 2 characters')
+      .max(100, 'Contacted person must not exceed 100 characters')
+      .optional(),
+    reason: z
+      .string()
+      .trim()
+      .min(5, 'Reason must be at least 5 characters')
+      .max(500, 'Reason must not exceed 500 characters')
+      .optional(),
+    communicationDate: z.coerce.date().optional(),
+    attachments: z
+      .array(
+        z.string().refine(isMongoId, { message: 'Attachments must be valid MongoDB ObjectIds' })
+      )
+      .optional(),
+    comments: z.coerce.date({ message: 'Comments must be a valid date string' }).optional(),
+  })
+  .refine((data) => Object.keys(data).length > 0, {
+    message: 'At least one field must be provided for update',
   })
   .strict();
 
 export type UpdateTrafficCommissionerCommunicationInput = z.infer<
   typeof zodUpdateTrafficCommissionerCommunicationSchema
+>;
+
+const zodSearchTrafficCommissionerCommunicationSchema = zodSearchQuerySchema.extend({
+  standAloneId: z
+    .string()
+    .refine(isMongoId, {
+      message: 'Please provide a valid MongoDB ObjectId for standAloneId',
+    })
+    .optional(),
+});
+
+export type SearchTrafficCommissionerCommunicationQueryInput = z.infer<
+  typeof zodSearchTrafficCommissionerCommunicationSchema
+>;
+
+const zodTrafficCommissionerCommunicationIdParamSchema = z
+  .object({
+    id: z.string({ message: 'Communication id is required' }).refine(isMongoId, {
+      message: 'Please provide a valid MongoDB ObjectId',
+    }),
+  })
+  .strict();
+
+export type TrafficCommissionerCommunicationIdParamInput = z.infer<
+  typeof zodTrafficCommissionerCommunicationIdParamSchema
+>;
+
+const zodTrafficCommissionerCommunicationAndManagerIdParamSchema = z
+  .object({
+    id: z.string({ message: 'Communication id is required' }).refine(isMongoId, {
+      message: 'Please provide a valid MongoDB ObjectId for communication id',
+    }),
+    standAloneId: z.string({ message: 'standAloneId is required' }).refine(isMongoId, {
+      message: 'Please provide a valid MongoDB ObjectId for standAloneId',
+    }),
+  })
+  .strict();
+
+export type TrafficCommissionerCommunicationAndManagerIdParamInput = z.infer<
+  typeof zodTrafficCommissionerCommunicationAndManagerIdParamSchema
 >;
 
 /**
@@ -121,5 +185,14 @@ export const validateCreateTrafficCommissionerCommunicationAsStandAlone = valida
 );
 export const validateUpdateTrafficCommissionerCommunication = validateBody(
   zodUpdateTrafficCommissionerCommunicationSchema
+);
+export const validateSearchTrafficCommissionerCommunicationQueries = validateQuery(
+  zodSearchTrafficCommissionerCommunicationSchema
+);
+export const validateTrafficCommissionerCommunicationIdParam = validateParams(
+  zodTrafficCommissionerCommunicationIdParamSchema
+);
+export const validateTrafficCommissionerCommunicationAndManagerIdParam = validateParams(
+  zodTrafficCommissionerCommunicationAndManagerIdParamSchema
 );
 

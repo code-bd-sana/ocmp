@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import TrafficCommissionerCommunicationModel, {
   ITrafficCommissionerCommunication,
 } from '../../models/compliance-enforcement-dvsa/trafficCommissionerCommunication.schema';
@@ -7,6 +8,14 @@ import {
   CreateTrafficCommissionerCommunicationAsTransportManagerInput,
   UpdateTrafficCommissionerCommunicationInput,
 } from './traffic-commissioner-communication.validation';
+
+const hasOwnerAccess = (doc: any, accessId?: string) => {
+  if (!accessId) return true;
+  const accessIdStr = String(accessId);
+  return (
+    doc?.standAloneId?.toString?.() === accessIdStr || doc?.createdBy?.toString?.() === accessIdStr
+  );
+};
 
 /**
  * Service function to create a new traffic-commissioner-communication as a Transport Manager.
@@ -45,8 +54,21 @@ const createTrafficCommissionerCommunicationAsStandAlone = async (
  */
 const updateTrafficCommissionerCommunication = async (
   id: IdOrIdsInput['id'],
-  data: UpdateTrafficCommissionerCommunicationInput
+  data: UpdateTrafficCommissionerCommunicationInput,
+  userId: IdOrIdsInput['id'],
+  standAloneId?: string
 ): Promise<Partial<ITrafficCommissionerCommunication | null>> => {
+  const existingTrafficCommissionerCommunication =
+    await TrafficCommissionerCommunicationModel.findById(id)
+      .select('standAloneId createdBy')
+      .lean();
+  if (!existingTrafficCommissionerCommunication) return null;
+
+  const accessOwnerId = standAloneId || String(userId);
+  if (!hasOwnerAccess(existingTrafficCommissionerCommunication, accessOwnerId)) {
+    return null;
+  }
+
   const updatedTrafficCommissionerCommunication =
     await TrafficCommissionerCommunicationModel.findByIdAndUpdate(id, data, { new: true });
   return updatedTrafficCommissionerCommunication;
@@ -59,8 +81,21 @@ const updateTrafficCommissionerCommunication = async (
  * @returns {Promise<Partial<ITrafficCommissionerCommunication>>} - The deleted traffic-commissioner-communication.
  */
 const deleteTrafficCommissionerCommunication = async (
-  id: IdOrIdsInput['id']
+  id: IdOrIdsInput['id'],
+  userId: IdOrIdsInput['id'],
+  standAloneId?: IdOrIdsInput['id']
 ): Promise<Partial<ITrafficCommissionerCommunication | null>> => {
+  const existingTrafficCommissionerCommunication =
+    await TrafficCommissionerCommunicationModel.findById(id)
+      .select('standAloneId createdBy')
+      .lean();
+  if (!existingTrafficCommissionerCommunication) return null;
+
+  const accessOwnerId = String(standAloneId || userId);
+  if (!hasOwnerAccess(existingTrafficCommissionerCommunication, accessOwnerId)) {
+    return null;
+  }
+
   const deletedTrafficCommissionerCommunication =
     await TrafficCommissionerCommunicationModel.findByIdAndDelete(id);
   return deletedTrafficCommissionerCommunication;
@@ -73,9 +108,12 @@ const deleteTrafficCommissionerCommunication = async (
  * @returns {Promise<Partial<ITrafficCommissionerCommunication>>} - The retrieved traffic-commissioner-communication.
  */
 const getTrafficCommissionerCommunicationById = async (
-  id: IdOrIdsInput['id']
+  id: IdOrIdsInput['id'],
+  accessId?: string
 ): Promise<Partial<ITrafficCommissionerCommunication | null>> => {
   const trafficCommissionerCommunication = await TrafficCommissionerCommunicationModel.findById(id);
+  if (!trafficCommissionerCommunication) return null;
+  if (!hasOwnerAccess(trafficCommissionerCommunication, accessId)) return null;
   return trafficCommissionerCommunication;
 };
 
@@ -86,13 +124,13 @@ const getTrafficCommissionerCommunicationById = async (
  * @returns {Promise<Partial<ITrafficCommissionerCommunication>[]>} - The retrieved traffic-commissioner-communication
  */
 const getManyTrafficCommissionerCommunication = async (
-  query: SearchQueryInput
+  query: SearchQueryInput & { standAloneId?: string }
 ): Promise<{
   trafficCommissionerCommunications: Partial<ITrafficCommissionerCommunication>[];
   totalData: number;
   totalPages: number;
 }> => {
-  const { searchKey = '', showPerPage = 10, pageNo = 1 } = query;
+  const { searchKey = '', showPerPage = 10, pageNo = 1, standAloneId } = query;
   const searchFilter = searchKey
     ? {
         $or: [
@@ -102,16 +140,33 @@ const getManyTrafficCommissionerCommunication = async (
         ],
       }
     : {};
+
+  const filter: any = { ...searchFilter };
+
+  if (standAloneId) {
+    const ownerFilter = {
+      $or: [
+        { standAloneId: new mongoose.Types.ObjectId(standAloneId) },
+        { createdBy: new mongoose.Types.ObjectId(standAloneId) },
+      ],
+    };
+
+    if (Object.keys(filter).length > 0) {
+      Object.assign(filter, { $and: [searchFilter, ownerFilter] });
+      delete filter.$or;
+    } else {
+      Object.assign(filter, ownerFilter);
+    }
+  }
+
   // Calculate the number of items to skip based on the page number
   const skipItems = (pageNo - 1) * showPerPage;
   // Find the total count of matching traffic-commissioner-communication
-  const totalData = await TrafficCommissionerCommunicationModel.countDocuments(searchFilter);
+  const totalData = await TrafficCommissionerCommunicationModel.countDocuments(filter);
   // Calculate the total number of pages
   const totalPages = Math.ceil(totalData / showPerPage);
   // Find traffic-commissioner-communications based on the search filter with pagination
-  const trafficCommissionerCommunications = await TrafficCommissionerCommunicationModel.find(
-    searchFilter
-  )
+  const trafficCommissionerCommunications = await TrafficCommissionerCommunicationModel.find(filter)
     .skip(skipItems)
     .limit(showPerPage)
     .select(''); // Keep/Exclude any field if needed
