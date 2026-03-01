@@ -131,3 +131,7 @@ export {
   ITrainingRegister,
   TrainingRegisterStatus,
 } from './training/trainingRegister.schema';
+export {
+  default as TransportManagerTraining,
+  ITransportManagerTraining,
+} from './training/transportManagerTraining.schema';
