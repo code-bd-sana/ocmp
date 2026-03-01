@@ -44,7 +44,8 @@ const TransportManagerTrainingSchema: Schema<ITransportManagerTraining> = new Sc
       required: true,
     },
 
-    // TODO: Transport manager can upload their own document
+    // TODO: Need to understand.. how document is working
+    // TODO: Cause Transport manager can upload their own document, Not from the document module!
     attachments: [
       {
         type: Schema.Types.ObjectId,
