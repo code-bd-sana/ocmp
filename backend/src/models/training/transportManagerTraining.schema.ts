@@ -13,8 +13,8 @@ export interface ITransportManagerTraining extends Document {
   unitTitle: string;
   completionDate: Date;
   renewalTracker: RenewalTracker;
-  nextDueDate?: Date;
-  attachments?: mongoose.Types.ObjectId[];
+  nextDueDate: Date;
+  attachments: mongoose.Types.ObjectId[];
   createdBy: mongoose.Types.ObjectId;
 }
 
@@ -43,6 +43,8 @@ const TransportManagerTrainingSchema: Schema<ITransportManagerTraining> = new Sc
       default: RenewalTracker.NO,
       required: true,
     },
+
+    // TODO: Transport manager can upload their own document
     attachments: [
       {
         type: Schema.Types.ObjectId,
