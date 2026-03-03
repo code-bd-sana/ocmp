@@ -119,12 +119,7 @@ router.delete(
  * @param {function} validation - ['validateId']
  * @param {function} controller - ['deleteMeetingNote']
  */
-router.delete(
-  '/:id',
-  authorizedRoles([UserRole.STANDALONE_USER]),
-  validateId,
-  deleteMeetingNote
-);
+router.delete('/:id', authorizedRoles([UserRole.STANDALONE_USER]), validateId, deleteMeetingNote);
 
 /**
  * @route GET /api/v1/meeting-note/get-all

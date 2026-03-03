@@ -4,7 +4,6 @@ import { IdOrIdsInput } from '../../handlers/common-zod-validator';
 import {
   CreateComplianceTimetableAsStandAloneInput,
   CreateComplianceTimetableAsTransportManagerInput,
-  CreateComplianceTimetableInput,
   SearchComplianceTimetableQueryInput,
   UpdateComplianceTimetableInput,
 } from './compliance-timetable.validation';
