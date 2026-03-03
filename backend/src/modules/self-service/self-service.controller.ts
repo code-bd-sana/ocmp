@@ -5,6 +5,7 @@ import ServerResponse from '../../helpers/responses/custom-response';
 import catchAsync from '../../utils/catch-async/catch-async';
 import { AuthenticatedRequest } from '../../middlewares/is-authorized';
 import mongoose from 'mongoose';
+import { UserRole } from '../../models';
 
 /**
  * Create a new self-service as a transport manager.
@@ -53,11 +54,19 @@ export const createSelfServiceAsStandAlone = catchAsync(
  * @returns {Promise<Partial<ISelfService>>} - The updated self-service.
  * @throws {Error} - Throws an error if the self-service update fails.
  */
-export const updateSelfService = catchAsync(async (req: Request, res: Response) => {
-  const { id } = req.params;
+export const updateSelfService = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+  const paramToString = (p?: string | string[]) => (Array.isArray(p) ? p[0] : p);
+  const id = paramToString(req.params.id);
+  const standAloneId = paramToString((req.params as any).standAloneId);
+
   // Call the service method to update the self-service by ID and get the result
-  const result = await selfServiceServices.updateSelfService(id as string, req.body);
-  if (!result) throw new Error('Failed to update self-service');
+  const result = await selfServiceServices.updateSelfService(
+    id as string,
+    req.body,
+    req.user!._id,
+    standAloneId
+  );
+  if (!result) throw new Error('Self service not found or you do not have permission to update it');
   // Send a success response with the updated self-service data
   ServerResponse(res, true, 200, 'Self-service updated successfully', result);
 });
@@ -104,9 +113,13 @@ export const getSelfServiceById = catchAsync(async (req: Request, res: Response)
  * @returns {Promise<Partial<ISelfService>[]>} - The retrieved self-services.
  * @throws {Error} - Throws an error if the self-services retrieval fails.
  */
-export const getManySelfService = catchAsync(async (req: Request, res: Response) => {
+export const getManySelfService = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
   // Use the validated and transformed query from Zod middleware
-  const query = (req as any).validatedQuery as SearchQueryInput;
+  const query = { ...(req as any).validatedQuery } as SearchQueryInput & { standAloneId?: string };
+
+  if (req.user?.role === UserRole.STANDALONE_USER) {
+    query.standAloneId = String(req.user._id);
+  }
   // Call the service method to get multiple self-services based on query parameters and get the result
   const { selfServices, totalData, totalPages } =
     await selfServiceServices.getManySelfService(query);

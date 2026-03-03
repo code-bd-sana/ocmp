@@ -11,6 +11,14 @@ import {
   UpdateSelfServiceInput,
 } from './self-service.validation';
 
+const hasOwnerAccess = (doc: any, accessId?: string) => {
+  if (!accessId) return true;
+  const accessIdStr = String(accessId);
+  return (
+    doc?.standAloneId?.toString?.() === accessIdStr || doc?.createdBy?.toString?.() === accessIdStr
+  );
+};
+
 /**
  * Service function to create a new self-service.
  *
@@ -62,23 +70,21 @@ const createSelfServiceAsStandAlone = async (
  */
 const updateSelfService = async (
   id: IdOrIdsInput['id'],
-  data: UpdateSelfServiceInput
+  data: UpdateSelfServiceInput,
+  userId: IdOrIdsInput['id'],
+  standAloneId?: string
 ): Promise<Partial<ISelfService | null>> => {
   // Check for duplicate (filed) combination
-  const existingSelfService = await SelfService.findOne({
-    _id: { $ne: id }, // Exclude the current document
-    $or: [
-      {
-        /* filedName: data.filedName, */
-      },
-    ],
-  }).lean();
-  // Prevent duplicate updates
-  if (existingSelfService) {
-    throw new Error(
-      'Duplicate detected: Another self-service with the same fieldName already exists.'
-    );
+  const existingSelfService = await SelfService.findById(id)
+    .select('standAloneId createdBy')
+    .lean();
+  if (!existingSelfService) return null;
+
+  const accessOwnerId = standAloneId || String(userId);
+  if (!hasOwnerAccess(existingSelfService, accessOwnerId)) {
+    return null;
   }
+
   // Proceed to update the self-service
   const updatedSelfService = await SelfService.findByIdAndUpdate(id, data, { new: true });
   return updatedSelfService;
@@ -115,27 +121,45 @@ const getSelfServiceById = async (
  * @returns {Promise<Partial<ISelfService>[]>} - The retrieved self-service
  */
 const getManySelfService = async (
-  query: SearchQueryInput
+  query: SearchQueryInput & { standAloneId?: string }
 ): Promise<{ selfServices: Partial<ISelfService>[]; totalData: number; totalPages: number }> => {
-  const { searchKey = '', showPerPage = 10, pageNo = 1 } = query;
-  // Build the search filter based on the search key
-  const searchFilter = {
-    $or: [
-      // { fieldName: { $regex: searchKey, $options: 'i' } },
-      // Add more fields as needed
-    ],
-  };
+  const { searchKey = '', showPerPage = 10, pageNo = 1, standAloneId } = query;
+  const searchFilter = searchKey
+    ? {
+        $or: [
+          { serviceName: { $regex: searchKey, $options: 'i' } },
+          { description: { $regex: searchKey, $options: 'i' } },
+          { serviceLink: { $regex: searchKey, $options: 'i' } },
+        ],
+      }
+    : {};
+
+  const filter: any = { ...searchFilter };
+
+  if (standAloneId) {
+    const ownerFilter = {
+      $or: [
+        { standAloneId: new mongoose.Types.ObjectId(standAloneId) },
+        { createdBy: new mongoose.Types.ObjectId(standAloneId) },
+      ],
+    };
+
+    if (Object.keys(filter).length > 0) {
+      Object.assign(filter, { $and: [searchFilter, ownerFilter] });
+      delete filter.$or;
+    } else {
+      Object.assign(filter, ownerFilter);
+    }
+  }
+
   // Calculate the number of items to skip based on the page number
   const skipItems = (pageNo - 1) * showPerPage;
   // Find the total count of matching self-service
-  const totalData = await SelfService.countDocuments(searchFilter);
+  const totalData = await SelfService.countDocuments(filter);
   // Calculate the total number of pages
   const totalPages = Math.ceil(totalData / showPerPage);
   // Find self-services based on the search filter with pagination
-  const selfServices = await SelfService.find(searchFilter)
-    .skip(skipItems)
-    .limit(showPerPage)
-    .select(''); // Keep/Exclude any field if needed
+  const selfServices = await SelfService.find(filter).skip(skipItems).limit(showPerPage).select(''); // Keep/Exclude any field if needed
   return { selfServices, totalData, totalPages };
 };
 

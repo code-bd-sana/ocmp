@@ -1,5 +1,5 @@
 // Import Router from express
-import { Router } from 'express';
+import { NextFunction, Response, Router } from 'express';
 
 // Import controller from corresponding module
 import {
@@ -15,13 +15,17 @@ import {
 import {
   validateCreateSelfServiceAsManager,
   validateCreateSelfServiceAsStandAlone,
+  validateSearchSelfServiceQueries,
+  validateSelfServiceAndManagerIdParam,
+  validateSelfServiceIdParam,
   validateUpdateSelfService,
 } from './self-service.validation';
 import { validateId, validateSearchQueries } from '../../handlers/common-zod-validator';
-import isAuthorized from '../../middlewares/is-authorized';
+import isAuthorized, { AuthenticatedRequest } from '../../middlewares/is-authorized';
 import authorizedRoles from '../../middlewares/authorized-roles';
 import { UserRole } from '../../models';
 import { validateClientForManagerMiddleware } from '../../middlewares/validate-client-for-manager';
+import ServerResponse from '../../helpers/responses/custom-response';
 
 // Initialize router
 const router = Router();
@@ -62,14 +66,36 @@ router.post(
 );
 
 /**
- * @route PUT /api/v1/self-service/update-self-service/:id
- * @description Update self-service information
+ * @route PATCH /api/v1/self-service/update-self-service/:id/:standAloneId
+ * @description Update self-service information as Transport Manager
  * @access Public
  * @param {IdOrIdsInput['id']} id - The ID of the self-service to update
  * @param {function} validation - ['validateId', 'validateUpdateSelfService']
  * @param {function} controller - ['updateSelfService']
  */
-router.put('/update-self-service/:id', validateId, validateUpdateSelfService, updateSelfService);
+router.patch(
+  '/update-self-service/:id/:standAloneId',
+  authorizedRoles([UserRole.TRANSPORT_MANAGER]),
+  validateClientForManagerMiddleware,
+  validateSelfServiceAndManagerIdParam,
+  validateUpdateSelfService,
+  updateSelfService
+);
+
+/**
+ * @route PATCH /api/v1/self-service/update-self-service/:id
+ * @description Update self-service information as Standalone User
+ * @access Public
+ * @param {IdOrIdsInput['id']} id - The ID of the self-service to update
+ * @param {function} validation - ['validateId', 'validateUpdateSelfService']
+ * @param {function} controller - ['updateSelfService']
+ */
+router.patch(
+  '/update-self-service/:id',
+  authorizedRoles([UserRole.STANDALONE_USER]),
+  validateUpdateSelfService,
+  updateSelfService
+);
 
 /**
  * @route DELETE /api/v1/self-service/delete-self-service/:id
@@ -88,7 +114,31 @@ router.delete('/delete-self-service/:id', validateId, deleteSelfService);
  * @param {function} validation - ['validateSearchQueries']
  * @param {function} controller - ['getManySelfService']
  */
-router.get('/get-self-service/many', validateSearchQueries, getManySelfService);
+router.get(
+  '/get-self-service/many',
+  authorizedRoles([UserRole.TRANSPORT_MANAGER, UserRole.STANDALONE_USER]),
+  (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    if (req.user!.role === UserRole.STANDALONE_USER && req.query?.standAloneId) {
+      return ServerResponse(
+        res,
+        false,
+        403,
+        'Forbidden: standAloneId is only allowed for transport managers'
+      );
+    }
+    if (req.user!.role === UserRole.TRANSPORT_MANAGER) {
+      return validateClientForManagerMiddleware(req, res, next);
+    }
+    next();
+  },
+  (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    if (req.user!.role === UserRole.TRANSPORT_MANAGER) {
+      return validateSearchSelfServiceQueries(req, res, next);
+    }
+    return validateSearchQueries(req, res, next);
+  },
+  getManySelfService
+);
 
 /**
  * @route GET /api/v1/self-service/get-self-service/:id/:standAloneId
@@ -98,7 +148,13 @@ router.get('/get-self-service/many', validateSearchQueries, getManySelfService);
  * @param {function} validation - ['validateId']
  * @param {function} controller - ['getSelfServiceById']
  */
-router.get('/get-self-service/:id/:standAloneId', validateId, getSelfServiceById);
+router.get(
+  '/get-self-service/:id/:standAloneId',
+  authorizedRoles([UserRole.TRANSPORT_MANAGER]),
+  validateClientForManagerMiddleware,
+  validateSelfServiceAndManagerIdParam,
+  getSelfServiceById
+);
 
 /**
  * @route GET /api/v1/self-service/get-self-service/:id
@@ -108,7 +164,12 @@ router.get('/get-self-service/:id/:standAloneId', validateId, getSelfServiceById
  * @param {function} validation - ['validateId']
  * @param {function} controller - ['getSelfServiceById']
  */
-router.get('/get-self-service/:id', validateId, getSelfServiceById);
+router.get(
+  '/get-self-service/:id',
+  authorizedRoles([UserRole.STANDALONE_USER]),
+  validateSelfServiceIdParam,
+  getSelfServiceById
+);
 
 // Export the router
 module.exports = router;

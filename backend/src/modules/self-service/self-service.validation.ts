@@ -1,6 +1,7 @@
 import { isMongoId } from 'validator';
 import { z } from 'zod';
-import { validateBody } from '../../handlers/zod-error-handler';
+import { validateBody, validateParams, validateQuery } from '../../handlers/zod-error-handler';
+import { zodSearchQuerySchema } from '../../handlers/common-zod-validator';
 
 /**
  * Self-service Validation Schemas and Types
@@ -80,6 +81,46 @@ const zodUpdateSelfServiceSchema = z
 
 export type UpdateSelfServiceInput = z.infer<typeof zodUpdateSelfServiceSchema>;
 
+const zodSearchSelfServiceSchema = zodSearchQuerySchema.extend({
+  standAloneId: z
+    .string()
+    .refine(isMongoId, {
+      message: 'Please provide a valid MongoDB ObjectId for standAloneId',
+    })
+    .optional(),
+});
+
+export type SearchSelfServiceQueryInput = z.infer<typeof zodSearchSelfServiceSchema>;
+
+const zodSelfServiceIdParamSchema = z
+  .object({
+    id: z.string({ message: 'Self service id is required' }).refine(isMongoId, {
+      message: 'Please provide a valid MongoDB ObjectId',
+    }),
+  })
+  .strict();
+
+export type SelfServiceIdParamInput = z.infer<typeof zodSelfServiceIdParamSchema>;
+
+const zodSelfServiceAndManagerIdParamSchema = z
+  .object({
+    id: z.string({ message: 'Self service id is required' }).refine(isMongoId, {
+      message: 'Please provide a valid MongoDB ObjectId for self service id',
+    }),
+    standAloneId: z.string({ message: 'standAloneId is required' }).refine(isMongoId, {
+      message: 'Please provide a valid MongoDB ObjectId for standAloneId',
+    }),
+  })
+  .strict();
+
+export type SelfServiceAndManagerIdParamInput = z.infer<
+  typeof zodSelfServiceAndManagerIdParamSchema
+>;
+
+/**
+ * Zod schema for validating search query parameters when retrieving multiple self-services.
+ */
+
 /**
  * Named validators — use these directly in your Express routes
  */
@@ -88,4 +129,9 @@ export const validateCreateSelfServiceAsStandAlone = validateBody(
   zodCreateSelfServiceAsStandAloneSchema
 );
 export const validateUpdateSelfService = validateBody(zodUpdateSelfServiceSchema);
+export const validateSearchSelfServiceQueries = validateQuery(zodSearchSelfServiceSchema);
+export const validateSelfServiceIdParam = validateParams(zodSelfServiceIdParamSchema);
+export const validateSelfServiceAndManagerIdParam = validateParams(
+  zodSelfServiceAndManagerIdParamSchema
+);
 
