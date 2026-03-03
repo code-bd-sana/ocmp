@@ -15,6 +15,7 @@ import mongoose from 'mongoose';
  * @param {Response} res - The response object used to send the response.
  * @returns {Promise<Partial<IComplianceTimetable>>} - The created compliance-timetable.
  * @throws {Error} - Throws an error if the compliance-timetable creation fails.
+ ** Transport Manager: require standAloneId in body and validate that it belongs to the TM's client(s)
  */
 export const createComplianceTimetableAsTransportManager = catchAsync(
   async (req: AuthenticatedRequest, res: Response) => {

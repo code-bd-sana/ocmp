@@ -10,7 +10,13 @@ import {
 } from './audit-and-recification-report.validation';
 import AuditsAndRecificationReport, { IAuditsAndRecificationReport } from '../../models/compliance-enforcement-dvsa/auditsAndRecificationReports.schema';
 
-
+/**
+ * Service function to get all audit and recification reports with pagination and optional search by title, type, or responsible person.
+ * If standAloneId is provided, it filters reports created by or associated with that standalone user.
+ * @param {SearchAuditAndRecificationReportsQueryInput} query - The query parameters for pagination and search
+ * @returns {Promise<{ AuditAndRecificationReports: any[]; totalData: number; totalPages: number }>} - The paginated list of reports and metadata
+ * @throws {Error} - Throws an error if there is an issue fetching the data
+ */
 const getAllAuditAndRecificationReport = async (
   query: SearchAuditAndRecificationReportsQueryInput
 ): Promise<{ AuditAndRecificationReports: any[]; totalData: number; totalPages: number }> => {
@@ -62,6 +68,15 @@ const getAllAuditAndRecificationReport = async (
   return { AuditAndRecificationReports: result.data, totalData, totalPages };
 };
 
+/**
+ * Service function to get a single audit and recification report by its ID.
+ * If accessId is provided, it checks that the report is either created by or associated with that ID (for standalone users).
+ * @param {string} id - The ID of the audit and recification report to retrieve
+ * @param {string} [accessId] - Optional ID for access control (matches createdBy or standAloneId)
+ * @returns {Promise<IAuditsAndRecificationReport>} - The requested audit and recification report document
+ * @throws {Error} - Throws an error if the report is not found or access is denied
+ * @info - Logs the filter used and the result for debugging purposes
+ */
 const getAuditAndRecificationReportById = async (
   id: string,
   accessId?: string
@@ -79,6 +94,13 @@ const getAuditAndRecificationReportById = async (
   return doc;
 };
 
+/**
+ * Service function to create a new audit and recification report as a manager (TM).
+ * The report will be associated with a standalone user via the standAloneId field.
+ * @param {CreateAuditAndRecificationReportAsManagerInput & { createdBy: mongoose.Types.ObjectId }} data - The data for the new report, including the creator's ID
+ * @returns {Promise<IAuditsAndRecificationReport>} - The created audit and recification report document
+ * @throws {Error} - Throws an error if there is an issue creating the report
+ */
 const createAuditAndRecificationReportAsManager = async (
   data: CreateAuditAndRecificationReportAsManagerInput & { createdBy: mongoose.Types.ObjectId }
 ): Promise<IAuditsAndRecificationReport> => {
@@ -107,6 +129,14 @@ const createAuditAndRecificationReportAsManager = async (
   return await newDoc.save();
 };
 
+/**
+ * Service function to create a new audit and recification report as a standalone user.
+ * The report will be associated with the creator's user ID via the createdBy field.
+ * @param {CreateAuditAndRecificationReportAsStandAloneInput & { createdBy: mongoose.Types.ObjectId }} data - The data for the new report, including the creator's ID
+ * @returns {Promise<IAuditsAndRecificationReport>} - The created audit and recification report document
+ * @throws {Error} - Throws an error if there is an issue creating the report
+ * @info - Logs the input data for debugging purposes
+ */
 const createAuditAndRecificationReportAsStandAlone = async (
   data: CreateAuditAndRecificationReportAsStandAloneInput & { createdBy: mongoose.Types.ObjectId }
 ): Promise<IAuditsAndRecificationReport> => {
@@ -134,6 +164,14 @@ const createAuditAndRecificationReportAsStandAlone = async (
   return await newDoc.save();
 };
 
+/**
+ * Service function to delete an audit and recification report by its ID.
+ * It checks that the report is either created by or associated with the provided accessId (for standalone users) before deletion.
+ * @param {string} id - The ID of the audit and recification report to delete
+ * @param {string} accessId - The ID for access control (matches createdBy or standAloneId)
+ * @returns {Promise<void>} - Resolves if deletion is successful, otherwise throws an error
+ * @throws {Error} - Throws an error if the report is not found or access is denied
+ */
 const deleteAuditAndRecificationReport = async (
   id: string,
   accessId: string
@@ -148,6 +186,17 @@ const deleteAuditAndRecificationReport = async (
   if (!deleted) throw new Error('Audit and recification report not found or access denied');
 };
 
+/**
+ * Service function to update an audit and recification report by its ID.
+ * It checks that the report is either created by or associated with the provided accessId (for standalone users) before updating.
+ * Only the fields provided in the data object will be updated (PATCH semantics).
+ * @param {string} id - The ID of the audit and recification report to update
+ * @param {UpdateAuditAndRecificationReportInput} data - The fields to update in the report
+ * @param {string} accessId - The ID for access control (matches createdBy or standAloneId)
+ * @returns {Promise<IAuditsAndRecificationReport>} - The updated audit and recification report document
+ * @throws {Error} - Throws an error if the report is not found or access is denied
+ * @info - Logs the update fields and access ID for debugging purposes
+ */
 const updateAuditAndRecificationReport = async (
   id: string,
   data: UpdateAuditAndRecificationReportInput,
@@ -179,6 +228,9 @@ const updateAuditAndRecificationReport = async (
   return updated;
 };
 
+/**
+ * Exporting the service functions as an object for use in controllers.
+ */
 export const auditAndRecificationReportServices = {
   getAllAuditAndRecificationReport,
   getAuditAndRecificationReportById,

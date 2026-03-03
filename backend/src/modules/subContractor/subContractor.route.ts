@@ -3,24 +3,24 @@ import { Router } from 'express';
 import {
   createSubContractorAsManager,
   createSubContractorAsStandAlone,
+  deleteSubContractor,
   getAllSubContractors,
   getSubContractorById,
   updateSubContractor,
-  deleteSubContractor,
-} from './subContractor.controller';
+} from './subcontractor.controller';
 
+import { validateSearchQueries } from '../../handlers/common-zod-validator';
 import {
-  validateSubContractorIdParam,
-  validateSubContractorAndManagerIdParam,
   validateCreateSubContractorAsManager,
   validateCreateSubContractorAsStandAlone,
-  validateUpdateSubContractor,
   validateSearchSubContractorsQueries,
+  validateSubContractorAndManagerIdParam,
+  validateSubContractorIdParam,
+  validateUpdateSubContractor,
 } from './subContractor.validation';
-import { validateSearchQueries } from '../../handlers/common-zod-validator';
 
-import isAuthorized, { AuthenticatedRequest } from '../../middlewares/is-authorized';
 import authorizedRoles from '../../middlewares/authorized-roles';
+import isAuthorized, { AuthenticatedRequest } from '../../middlewares/is-authorized';
 import { validateClientForManagerMiddleware } from '../../middlewares/validate-client-for-manager';
 import { UserRole } from '../../models';
 

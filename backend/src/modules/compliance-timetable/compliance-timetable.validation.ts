@@ -18,6 +18,7 @@ import { zodSearchQuerySchema } from '../../handlers/common-zod-validator';
 
 /**
  * Base Zod schema for common compliance-timetable fields
+ * This is used as a foundation for both Transport Manager and Stand-Alone user schemas, with adjustments for required/optional fields as needed.
  */
 const baseComplianceTimetableFields = {
   task: z

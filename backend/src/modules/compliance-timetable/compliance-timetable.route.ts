@@ -33,15 +33,16 @@ import ServerResponse from '../../helpers/responses/custom-response';
 
 // Initialize router
 const router = Router();
+// Apply isAuthorized middleware to all routes in this router
 router.use(isAuthorized());
 
 
 // Define route handlers
 /**
  * @route POST /api/v1/compliance-timetable/create-as-manager
- * @description Create a new compliance-timetable
+ * @description Create a new compliance-timetable as transport manager
  * @access Private (Transport Manager)
- * @param {function} validation - ['validateCreateComplianceTimetableAsTransportManager']
+ * @param {function} validation - ['validateCreateComplianceTimetableAsTransportManager', 'validateClientForManagerMiddleware']
  * @param {function} controller - ['createComplianceTimetableAsTransportManager']
  */
 router.post(
@@ -54,12 +55,11 @@ router.post(
 
 /**
  * @route POST /api/v1/compliance-timetable/create-as-standalone
- * @description Create a new compliance-timetable as standalone user
- * @access Private (Stand Alone User)
+ * @description Create a new compliance-timetable as stand-alone user
+ * @access Private (Stand-Alone User)
  * @param {function} validation - ['validateCreateComplianceTimetableAsStandAlone']
  * @param {function} controller - ['createComplianceTimetableAsStandAlone']
  */
-// router.post("/create-compliance-timetable/many", validateCreateManyComplianceTimetable, createManyComplianceTimetable);
 router.post(
   '/create-as-standalone',
   authorizedRoles([UserRole.STANDALONE_USER]),
@@ -74,7 +74,6 @@ router.post(
  * @param {function} validation - ['validateUpdateComplianceTimetableIds', 'validateUpdateComplianceTimetable']
  * @param {function} controller - ['updateComplianceTimetable']
  */
-
 router.patch(
   '/update-as-manager/:id/:standAloneId',
   authorizedRoles([UserRole.TRANSPORT_MANAGER]),

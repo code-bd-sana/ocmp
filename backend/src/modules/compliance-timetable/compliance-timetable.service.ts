@@ -15,9 +15,10 @@ const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 /**
  * Service function to create a new compliance-timetable.
- *
- * @param {CreateComplianceTimetableInput} data - The data to create a new compliance-timetable.
+ * It checks for duplicates based on the task field (case-insensitive) before creating a new document.
+ * @param {CreateComplianceTimetableAsStandAloneInput | CreateComplianceTimetableAsTransportManagerInput} data - The data for the new compliance-timetable.
  * @returns {Promise<Partial<IComplianceTimeTable>>} - The created compliance-timetable.
+ * @throws {Error} - Throws an error if a duplicate compliance-timetable is found.
  */
 const createComplianceTimetable = async (
   data:
@@ -41,11 +42,16 @@ const createComplianceTimetable = async (
 };
 
 /**
- * Service function to update a single compliance-timetable by ID.
+ * Service function to update a compliance-timetable by ID.
+ * It checks for duplicates based on the task field (case-insensitive) before updating the document.
+ * Access control is enforced by ensuring the user has ownership (createdBy or standAloneId).
  *
  * @param {IdOrIdsInput['id']} id - The ID of the compliance-timetable to update.
  * @param {UpdateComplianceTimetableInput} data - The updated data for the compliance-timetable.
+ * @param {IdOrIdsInput['id']} userId - The ID of the user making the request (for access control).
+ * @param {IdOrIdsInput['id']} [standAloneId] - The stand-alone ID for additional access control (optional).
  * @returns {Promise<Partial<IComplianceTimeTable>>} - The updated compliance-timetable.
+ * @throws {Error} - Throws an error if a duplicate compliance-timetable is found or if the user does not have access.
  */
 const updateComplianceTimetable = async (
   id: IdOrIdsInput['id'],
@@ -114,10 +120,14 @@ const updateComplianceTimetable = async (
 };
 
 /**
- * Service function to delete a single compliance-timetable by ID.
+ * Service function to delete a compliance-timetable by ID.
+ * Access control is enforced by ensuring the user has ownership (createdBy or standAloneId).
  *
  * @param {IdOrIdsInput['id']} id - The ID of the compliance-timetable to delete.
- * @returns {Promise<Partial<IComplianceTimeTable>>} - The deleted compliance-timetable.
+ * @param {IdOrIdsInput['id']} userId - The ID of the user making the request (for access control).
+ * @param {IdOrIdsInput['id']} [standAloneId] - The stand-alone ID for additional access control (optional).
+ * @returns {Promise<Partial<IComplianceTimeTable | null>>} - The deleted compliance-timetable.
+ * @throws {Error} - Throws an error if the user does not have access or if the compliance-timetable is not found.
  */
 const deleteComplianceTimetable = async (
   id: IdOrIdsInput['id'],
@@ -157,9 +167,13 @@ const deleteComplianceTimetable = async (
 
 /**
  * Service function to retrieve a single compliance-timetable by ID.
+ * Access control is enforced by ensuring the user has ownership (createdBy or standAloneId).
  *
  * @param {IdOrIdsInput['id']} id - The ID of the compliance-timetable to retrieve.
- * @returns {Promise<Partial<IComplianceTimeTable>>} - The retrieved compliance-timetable.
+ * @param {IdOrIdsInput['id']} [standAloneId] - The stand-alone ID for additional access control (optional).
+ * @param {IdOrIdsInput['id']} [createdBy] - The createdBy ID for additional access control (optional).
+ * @returns {Promise<Partial<IComplianceTimeTable | null>>} - The retrieved compliance-timetable.
+ * @throws {Error} - Throws an error if the user does not have access or if the compliance-timetable is not found.
  */
 const getComplianceTimetableById = async (
   id: IdOrIdsInput['id'],
@@ -190,10 +204,12 @@ const getComplianceTimetableById = async (
 };
 
 /**
- * Service function to retrieve multiple compliance-timetable based on query parameters.
+ * Service function to retrieve all compliance-timetable with pagination and search.
+ * It supports searching by task and responsibleParty fields (case-insensitive) and filtering by standAloneId or createdBy for access control.
  *
- * @param {SearchQueryInput} query - The query parameters for filtering compliance-timetable.
- * @returns {Promise<Partial<IComplianceTimeTable>[]>} - The retrieved compliance-timetable
+ * @param {SearchComplianceTimetableQueryInput & { createdBy?: string }} query - The search and pagination parameters, including optional createdBy for access control.
+ * @returns {Promise<{ complianceTimetables: Partial<IComplianceTimeTable>[]; totalData: number; totalPages: number }>} - The retrieved compliance-timetable along with pagination info.
+ * @throws {Error} - Throws an error if the query parameters are invalid.
  */
 const getAllComplianceTimetable = async (
   query: SearchComplianceTimetableQueryInput & { createdBy?: string }
@@ -251,6 +267,9 @@ const getAllComplianceTimetable = async (
   return { complianceTimetables, totalData, totalPages };
 };
 
+/**
+ * Exporting all service functions related to compliance-timetable as an object for easy import in controllers.
+ */
 export const complianceTimetableServices = {
   createComplianceTimetable,
   updateComplianceTimetable,
