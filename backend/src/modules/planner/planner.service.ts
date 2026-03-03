@@ -1,0 +1,108 @@
+// Import the model
+import mongoose from 'mongoose';
+import PlannerSchema, { IPlanner } from '../../models/vehicle-transport/planner.schema';
+import { IdOrIdsInput, SearchQueryInput } from '../../handlers/common-zod-validator';
+import { CreatePlannerInput, UpdatePlannerInput } from './planner.validation';
+
+/**
+ * Service function to create a new planner.
+ *
+ * @param {CreatePlannerInput} data - The data to create a new planner.
+ * @returns {Promise<Partial<IPlanner>>} - The created planner.
+ */
+const createPlanner = async (data: CreatePlannerInput): Promise<Partial<IPlanner>> => {
+  const newPlanner = new PlannerSchema(data);
+  const savedPlanner = await newPlanner.save();
+  return savedPlanner;
+};
+
+/**
+ * Service function to update a single planner by ID.
+ *
+ * @param {IdOrIdsInput['id']} id - The ID of the planner to update.
+ * @param {UpdatePlannerInput} data - The updated data for the planner.
+ * @returns {Promise<Partial<IPlanner>>} - The updated planner.
+ */
+const updatePlanner = async (
+  id: IdOrIdsInput['id'],
+  data: UpdatePlannerInput
+): Promise<Partial<IPlanner | null>> => {
+  // Check for duplicate (filed) combination
+  const existingPlanner = await PlannerSchema.findOne({
+    _id: { $ne: id }, // Exclude the current document
+    $or: [
+      {
+        /* filedName: data.filedName, */
+      },
+    ],
+  }).lean();
+  // Prevent duplicate updates
+  if (existingPlanner) {
+    throw new Error('Duplicate detected: Another planner with the same fieldName already exists.');
+  }
+  // Proceed to update the planner
+  const updatedPlanner = await PlannerSchema.findByIdAndUpdate(id, data, { new: true });
+  return updatedPlanner;
+};
+
+/**
+ * Service function to delete a single planner by ID.
+ *
+ * @param {IdOrIdsInput['id']} id - The ID of the planner to delete.
+ * @returns {Promise<Partial<IPlanner>>} - The deleted planner.
+ */
+const deletePlanner = async (id: IdOrIdsInput['id']): Promise<Partial<IPlanner | null>> => {
+  const deletedPlanner = await PlannerSchema.findByIdAndDelete(id);
+  return deletedPlanner;
+};
+
+/**
+ * Service function to retrieve a single planner by ID.
+ *
+ * @param {IdOrIdsInput['id']} id - The ID of the planner to retrieve.
+ * @returns {Promise<Partial<IPlanner>>} - The retrieved planner.
+ */
+const getPlannerById = async (id: IdOrIdsInput['id']): Promise<Partial<IPlanner | null>> => {
+  const planner = await PlannerSchema.findById(id);
+  return planner;
+};
+
+/**
+ * Service function to retrieve multiple planner based on query parameters.
+ *
+ * @param {SearchQueryInput} query - The query parameters for filtering planner.
+ * @returns {Promise<Partial<IPlanner>[]>} - The retrieved planner
+ */
+const getManyPlanner = async (
+  query: SearchQueryInput
+): Promise<{ planners: Partial<IPlanner>[]; totalData: number; totalPages: number }> => {
+  const { searchKey = '', showPerPage = 10, pageNo = 1 } = query;
+  // Build the search filter based on the search key
+  const searchFilter = {
+    $or: [
+      // { fieldName: { $regex: searchKey, $options: 'i' } },
+      // Add more fields as needed
+    ],
+  };
+  // Calculate the number of items to skip based on the page number
+  const skipItems = (pageNo - 1) * showPerPage;
+  // Find the total count of matching planner
+  const totalData = await PlannerSchema.countDocuments(searchFilter);
+  // Calculate the total number of pages
+  const totalPages = Math.ceil(totalData / showPerPage);
+  // Find planners based on the search filter with pagination
+  const planners = await PlannerSchema.find(searchFilter)
+    .skip(skipItems)
+    .limit(showPerPage)
+    .select(''); // Keep/Exclude any field if needed
+  return { planners, totalData, totalPages };
+};
+
+export const plannerServices = {
+  createPlanner,
+  updatePlanner,
+  deletePlanner,
+  getPlannerById,
+  getManyPlanner,
+};
+
