@@ -187,4 +187,3 @@ router.get(
 
 // Export the router
 module.exports = router;
-

@@ -146,3 +146,9 @@ export {
   default as TransportManagerTraining,
   ITransportManagerTraining,
 } from './training/transportManagerTraining.schema';
+
+// maintenance provider communication
+export {
+  default as MaintenanceProviderCommunication,
+  IMaintenanceProviderCommunication,
+} from './maintenance/maintenance-provider-communication.schema';

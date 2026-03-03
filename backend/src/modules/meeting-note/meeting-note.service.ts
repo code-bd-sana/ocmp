@@ -2,7 +2,11 @@
 import mongoose from 'mongoose';
 import MeetingNoteModel, { IMeetingNote } from '../../models/meeting-note/meetingNote.schema';
 import { IdOrIdsInput, SearchQueryInput } from '../../handlers/common-zod-validator';
-import { CreateMeetingNoteInput, SearchMeetingNoteQueryInput, UpdateMeetingNoteInput } from './meeting-note.validation';
+import {
+  CreateMeetingNoteInput,
+  SearchMeetingNoteQueryInput,
+  UpdateMeetingNoteInput,
+} from './meeting-note.validation';
 
 const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -16,7 +20,11 @@ const createMeetingNote = async (data: CreateMeetingNoteInput): Promise<Partial<
   const or: any[] = [];
   // Add any unique fields to the or condition for duplicate check
   if (data.keyDiscussionPoints) {
-    or.push({ keyDiscussionPoints: { $regex: new RegExp(`^${escapeRegex(data.keyDiscussionPoints)}$`, 'i') } });
+    or.push({
+      keyDiscussionPoints: {
+        $regex: new RegExp(`^${escapeRegex(data.keyDiscussionPoints)}$`, 'i'),
+      },
+    });
   }
   // Add more fields as needed
 
@@ -26,7 +34,7 @@ const createMeetingNote = async (data: CreateMeetingNoteInput): Promise<Partial<
   }
 
   const newMeetingNote = new MeetingNoteModel(data);
-  
+
   const savedMeetingNote = await newMeetingNote.save();
   return savedMeetingNote;
 };
@@ -38,11 +46,20 @@ const createMeetingNote = async (data: CreateMeetingNoteInput): Promise<Partial<
  * @param {UpdateMeetingNoteInput} data - The updated data for the meeting-note.
  * @returns {Promise<Partial<IMeetingNote>>} - The updated meeting-note.
  */
-const updateMeetingNote = async (id: IdOrIdsInput['id'], data: UpdateMeetingNoteInput, userId: IdOrIdsInput['id'], standAloneId: IdOrIdsInput['id']): Promise<Partial<IMeetingNote | null>> => {
+const updateMeetingNote = async (
+  id: IdOrIdsInput['id'],
+  data: UpdateMeetingNoteInput,
+  userId: IdOrIdsInput['id'],
+  standAloneId: IdOrIdsInput['id']
+): Promise<Partial<IMeetingNote | null>> => {
   // Check for duplicate (filed) combination
   const orConditions: any[] = [];
   if (data.keyDiscussionPoints) {
-    orConditions.push({ keyDiscussionPoints: { $regex: new RegExp(`^${escapeRegex(data.keyDiscussionPoints)}$`, 'i') } });
+    orConditions.push({
+      keyDiscussionPoints: {
+        $regex: new RegExp(`^${escapeRegex(data.keyDiscussionPoints)}$`, 'i'),
+      },
+    });
   }
   // Add more fields as needed
 
@@ -52,44 +69,47 @@ const updateMeetingNote = async (id: IdOrIdsInput['id'], data: UpdateMeetingNote
       $or: orConditions,
     }).lean();
     if (existingMeetingNote) {
-      throw new Error('Duplicate detected: Another meeting-note with the same keyDiscussionPoints already exists.');
+      throw new Error(
+        'Duplicate detected: Another meeting-note with the same keyDiscussionPoints already exists.'
+      );
     }
   }
 
   const accessFilters: Record<string, unknown>[] = [];
-  
-    if (userId) {
-      accessFilters.push({ createdBy: userId });
-      accessFilters.push({ standAloneId: userId });
-  
-      if (mongoose.Types.ObjectId.isValid(userId)) {
-        const userObjectId = new mongoose.Types.ObjectId(userId);
-        accessFilters.push({ createdBy: userObjectId });
-        accessFilters.push({ standAloneId: userObjectId });
-      }
+
+  if (userId) {
+    accessFilters.push({ createdBy: userId });
+    accessFilters.push({ standAloneId: userId });
+
+    if (mongoose.Types.ObjectId.isValid(userId)) {
+      const userObjectId = new mongoose.Types.ObjectId(userId);
+      accessFilters.push({ createdBy: userObjectId });
+      accessFilters.push({ standAloneId: userObjectId });
     }
-  
-    if (standAloneId) {
-      accessFilters.push({ standAloneId });
-      accessFilters.push({ createdBy: standAloneId });
-  
-      if (mongoose.Types.ObjectId.isValid(standAloneId)) {
-        const standAloneObjectId = new mongoose.Types.ObjectId(standAloneId);
-        accessFilters.push({ standAloneId: standAloneObjectId });
-        accessFilters.push({ createdBy: standAloneObjectId });
-      }
+  }
+
+  if (standAloneId) {
+    accessFilters.push({ standAloneId });
+    accessFilters.push({ createdBy: standAloneId });
+
+    if (mongoose.Types.ObjectId.isValid(standAloneId)) {
+      const standAloneObjectId = new mongoose.Types.ObjectId(standAloneId);
+      accessFilters.push({ standAloneId: standAloneObjectId });
+      accessFilters.push({ createdBy: standAloneObjectId });
     }
-  
+  }
+
   // Proceed to update the meeting-note
 
   // const updatedMeetingNote = await MeetingNoteModel.findByIdAndUpdate(id, data, { new: true });
-  const updatedMeetingNote = await MeetingNoteModel.findOneAndUpdate({
-    _id: id,
-    $or: accessFilters,
-  },
-  data,
-  {returnDocument: 'after'}
-);
+  const updatedMeetingNote = await MeetingNoteModel.findOneAndUpdate(
+    {
+      _id: id,
+      $or: accessFilters,
+    },
+    data,
+    { returnDocument: 'after' }
+  );
   return updatedMeetingNote;
 };
 
@@ -105,28 +125,28 @@ const deleteMeetingNote = async (
   standAloneId: IdOrIdsInput['id']
 ): Promise<Partial<IMeetingNote | null>> => {
   const accessFilters: Record<string, unknown>[] = [];
-  
-    if (userId) {
-      accessFilters.push({ createdBy: userId });
-      accessFilters.push({ standAloneId: userId });
-  
-      if (mongoose.Types.ObjectId.isValid(userId)) {
-        const userObjectId = new mongoose.Types.ObjectId(userId);
-        accessFilters.push({ createdBy: userObjectId });
-        accessFilters.push({ standAloneId: userObjectId });
-      }
+
+  if (userId) {
+    accessFilters.push({ createdBy: userId });
+    accessFilters.push({ standAloneId: userId });
+
+    if (mongoose.Types.ObjectId.isValid(userId)) {
+      const userObjectId = new mongoose.Types.ObjectId(userId);
+      accessFilters.push({ createdBy: userObjectId });
+      accessFilters.push({ standAloneId: userObjectId });
     }
-  
-    if (standAloneId) {
-      accessFilters.push({ standAloneId });
-      accessFilters.push({ createdBy: standAloneId });
-  
-      if (mongoose.Types.ObjectId.isValid(standAloneId)) {
-        const standAloneObjectId = new mongoose.Types.ObjectId(standAloneId);
-        accessFilters.push({ standAloneId: standAloneObjectId });
-        accessFilters.push({ createdBy: standAloneObjectId });
-      }
+  }
+
+  if (standAloneId) {
+    accessFilters.push({ standAloneId });
+    accessFilters.push({ createdBy: standAloneId });
+
+    if (mongoose.Types.ObjectId.isValid(standAloneId)) {
+      const standAloneObjectId = new mongoose.Types.ObjectId(standAloneId);
+      accessFilters.push({ standAloneId: standAloneObjectId });
+      accessFilters.push({ createdBy: standAloneObjectId });
     }
+  }
   const deletedMeetingNote = await MeetingNoteModel.findOneAndDelete({
     _id: id,
     $or: accessFilters,
@@ -141,29 +161,29 @@ const deleteMeetingNote = async (
  * @returns {Promise<Partial<IMeetingNote>>} - The retrieved meeting-note.
  */
 const getMeetingNoteById = async (
-   id: IdOrIdsInput['id'],
-    standAloneId?: IdOrIdsInput['id'],
-    createdBy?: IdOrIdsInput['id']
+  id: IdOrIdsInput['id'],
+  standAloneId?: IdOrIdsInput['id'],
+  createdBy?: IdOrIdsInput['id']
 ): Promise<Partial<IMeetingNote | null>> => {
   const accessFilters: Record<string, mongoose.Types.ObjectId>[] = [];
-  
-    if (standAloneId) {
-      const standAloneObjectId = new mongoose.Types.ObjectId(standAloneId);
-      accessFilters.push({ standAloneId: standAloneObjectId });
-      accessFilters.push({ createdBy: standAloneObjectId });
-    }
-  
-    if (createdBy) {
-      accessFilters.push({ createdBy: new mongoose.Types.ObjectId(createdBy) });
-    }
-  
-    const filter = accessFilters.length
-      ? {
-          _id: id,
-          $or: accessFilters,
-        }
-      : { _id: id };
-      console.log("filter for get by id========>", JSON.stringify(filter));
+
+  if (standAloneId) {
+    const standAloneObjectId = new mongoose.Types.ObjectId(standAloneId);
+    accessFilters.push({ standAloneId: standAloneObjectId });
+    accessFilters.push({ createdBy: standAloneObjectId });
+  }
+
+  if (createdBy) {
+    accessFilters.push({ createdBy: new mongoose.Types.ObjectId(createdBy) });
+  }
+
+  const filter = accessFilters.length
+    ? {
+        _id: id,
+        $or: accessFilters,
+      }
+    : { _id: id };
+
   const meetingNote = await MeetingNoteModel.findOne(filter);
   return meetingNote;
 };
@@ -175,46 +195,47 @@ const getMeetingNoteById = async (
  * @returns {Promise<Partial<IMeetingNote>[]>} - The retrieved meeting-note
  */
 const getAllMeetingNote = async (
-  query:  SearchMeetingNoteQueryInput & { createdBy?: string }
+  query: SearchMeetingNoteQueryInput & { createdBy?: string }
 ): Promise<{
-  meetingNotes: Partial<IMeetingNote>[]; 
-  totalData: number; 
-  totalPages: number }> => {
+  meetingNotes: Partial<IMeetingNote>[];
+  totalData: number;
+  totalPages: number;
+}> => {
   const { searchKey = '', showPerPage = 10, pageNo = 1, standAloneId, createdBy } = query;
   // Build the search filter based on the search key
-    const searchConditions: any[] = [];
-    const andConditions: any[] = [];
-  
-    if (searchKey) {
-      searchConditions.push({
-        $or: [
-          { task: { $regex: searchKey, $options: 'i' } },
-          { responsibleParty: { $regex: searchKey, $options: 'i' } },
-        ],
-      });
-    }
-  
-    if (standAloneId) {
-      andConditions.push({
-        $or: [
-          { standAloneId: new mongoose.Types.ObjectId(standAloneId) },
-          { createdBy: new mongoose.Types.ObjectId(standAloneId) },
-          { createdBy: new mongoose.Types.ObjectId(createdBy!) },
-        ],
-      });
-    } else if (createdBy) {
-      andConditions.push({ createdBy: new mongoose.Types.ObjectId(createdBy) });
-    }
-  
-    const searchFilter: any = {};
-  
-    if (searchConditions.length) {
-      searchFilter.$and = searchConditions;
-    }
-  
-    if (andConditions.length) {
-      searchFilter.$and = [...(searchFilter.$and || []), ...andConditions];
-    }
+  const searchConditions: any[] = [];
+  const andConditions: any[] = [];
+
+  if (searchKey) {
+    searchConditions.push({
+      $or: [
+        { task: { $regex: searchKey, $options: 'i' } },
+        { responsibleParty: { $regex: searchKey, $options: 'i' } },
+      ],
+    });
+  }
+
+  if (standAloneId) {
+    andConditions.push({
+      $or: [
+        { standAloneId: new mongoose.Types.ObjectId(standAloneId) },
+        { createdBy: new mongoose.Types.ObjectId(standAloneId) },
+        { createdBy: new mongoose.Types.ObjectId(createdBy!) },
+      ],
+    });
+  } else if (createdBy) {
+    andConditions.push({ createdBy: new mongoose.Types.ObjectId(createdBy) });
+  }
+
+  const searchFilter: any = {};
+
+  if (searchConditions.length) {
+    searchFilter.$and = searchConditions;
+  }
+
+  if (andConditions.length) {
+    searchFilter.$and = [...(searchFilter.$and || []), ...andConditions];
+  }
 
   // Calculate the number of items to skip based on the page number
   const skipItems = (pageNo - 1) * showPerPage;
@@ -223,7 +244,6 @@ const getAllMeetingNote = async (
   // Calculate the total number of pages
   const totalPages = Math.ceil(totalData / showPerPage);
   // Find meeting-notes based on the search filter with pagination
-  console.log('Search Filter===========>', JSON.stringify(searchFilter)); 
   const meetingNotes = await MeetingNoteModel.find(searchFilter)
     .skip(skipItems)
     .limit(showPerPage)

@@ -262,7 +262,7 @@ const getAllComplianceTimetable = async (
   const complianceTimetables = await ComplianceTimeTableModel.find(searchFilter)
     .skip(skipItems)
     .limit(showPerPage)
-    .select('') // Keep/Exclude any field if needed
+    .select(''); // Keep/Exclude any field if needed
   return { complianceTimetables, totalData, totalPages };
 };
 

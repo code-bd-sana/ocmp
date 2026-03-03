@@ -1,6 +1,5 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { meetingNoteServices } from './meeting-note.service';
-import { SearchQueryInput } from '../../handlers/common-zod-validator';
 import ServerResponse from '../../helpers/responses/custom-response';
 import catchAsync from '../../utils/catch-async/catch-async';
 import { AuthenticatedRequest } from '../../middlewares/is-authorized';
@@ -11,8 +10,8 @@ import { SearchMeetingNoteQueryInput } from './meeting-note.validation';
 /**
  * Controller function to handle the creation of a single meeting-note.
  *
- * @param {Request} req - The request object containing meeting-note data in the body.
- * @param {Response} res - The response object used to send the response.
+ * @param {AuthenticatedRequest} req - The request object containing meeting-note data in the body.
+ * @param {AuthenticatedRequest} res - The response object used to send the response.
  * @returns {Promise<Partial<IMeetingNote>>} - The created meeting-note.
  * @throws {Error} - Throws an error if the meeting-note creation fails.
  */
@@ -25,7 +24,6 @@ export const createMeetingNoteAsManager = catchAsync(
     const providedStandAloneId = req.body.standAloneId;
     if (!providedStandAloneId) throw new Error('standAloneId is required');
     req.body.standAloneId = new mongoose.Types.ObjectId(providedStandAloneId);
-    console.log("Request body for creating meeting-note as manager========>", JSON.stringify(req.body));
     const result = await meetingNoteServices.createMeetingNote(req.body);
     if (!result) throw new Error('Failed to create meeting-note');
     // Send a success response with the created meeting-note data
@@ -46,8 +44,7 @@ export const createMeetingNoteAsStandalone = catchAsync(
     // Call the service method to create a new meeting-note and get the result
     const userId = req.user!._id;
     req.body.createdBy = new mongoose.Types.ObjectId(userId);
-    console.log("Request body for creating meeting-note as standalone========>", JSON.stringify(req.body));
-
+    req.body.standAloneId = new mongoose.Types.ObjectId(userId);
     const result = await meetingNoteServices.createMeetingNote(req.body);
     // return;
     if (!result) throw new Error('Failed to create meeting-note');
@@ -59,8 +56,8 @@ export const createMeetingNoteAsStandalone = catchAsync(
 /**
  * Controller function to handle the update operation for a single meeting-note.
  *
- * @param {Request} req - The request object containing the ID of the meeting-note to update in URL parameters and the updated data in the body.
- * @param {Response} res - The response object used to send the response.
+ * @param {AuthenticatedRequest} req - The request object containing the ID of the meeting-note to update in URL parameters and the updated data in the body.
+ * @param {AuthenticatedRequest} res - The response object used to send the response.
  * @returns {Promise<Partial<IMeetingNote>>} - The updated meeting-note.
  * @throws {Error} - Throws an error if the meeting-note update fails.
  */
@@ -85,8 +82,8 @@ export const updateMeetingNote = catchAsync(async (req: AuthenticatedRequest, re
 /**
  * Controller function to handle the deletion of a single meeting-note.
  *
- * @param {Request} req - The request object containing the ID of the meeting-note to delete in URL parameters.
- * @param {Response} res - The response object used to send the response.
+ * @param {AuthenticatedRequest} req - The request object containing the ID of the meeting-note to delete in URL parameters.
+ * @param {AuthenticatedRequest} res - The response object used to send the response.
  * @returns {Promise<Partial<IMeetingNote>>} - The deleted meeting-note.
  * @throws {Error} - Throws an error if the meeting-note deletion fails.
  */
@@ -110,8 +107,8 @@ export const deleteMeetingNote = catchAsync(async (req: AuthenticatedRequest, re
 /**
  * Controller function to handle the retrieval of a single meeting-note by ID.
  *
- * @param {Request} req - The request object containing the ID of the meeting-note to retrieve in URL parameters.
- * @param {Response} res - The response object used to send the response.
+ * @param {AuthenticatedRequest} req - The request object containing the ID of the meeting-note to retrieve in URL parameters.
+ * @param {AuthenticatedRequest} res - The response object used to send the response.
  * @returns {Promise<Partial<IMeetingNote>>} - The retrieved meeting-note.
  * @throws {Error} - Throws an error if the meeting-note retrieval fails.
  */
@@ -142,8 +139,8 @@ export const getMeetingNoteById = catchAsync(async (req: AuthenticatedRequest, r
 /**
  * Controller function to handle the retrieval of multiple meeting-notes.
  *
- * @param {Request} req - The request object containing query parameters for filtering.
- * @param {Response} res - The response object used to send the response.
+ * @param {AuthenticatedRequest} req - The request object containing query parameters for filtering.
+ * @param {AuthenticatedRequest} res - The response object used to send the response.
  * @returns {Promise<Partial<IMeetingNote>[]>} - The retrieved meeting-notes.
  * @throws {Error} - Throws an error if the meeting-notes retrieval fails.
  */
