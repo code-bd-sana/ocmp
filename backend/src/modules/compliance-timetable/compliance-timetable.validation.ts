@@ -128,7 +128,7 @@ export type UpdateComplianceTimetableInputWithIds = z.infer<
   typeof zodUpdateComplianceTimetableIdSchema
 >;
 
-/** Standalone user: single registerId param */
+/** Standalone user: single id param */
 const zodComplianceTimetableIdParamSchema = z
   .object({
     id: z

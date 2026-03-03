@@ -68,11 +68,11 @@ router.post(
 );
 
 /**
- * @route PATCH /api/v1/vehicle/update-vehicle/:vehicleId/:standAloneId
- * @description Update a vehicle by ID (Transport Manager can only update vehicles of their approved clients)
+ * @route PATCH /api/v1/compliance-timetable/update-as-manager/:id/:standAloneId
+ * @description Update a compliance-timetable by ID (Transport Manager can only update compliance-timetables of their approved clients)
  * @access Private (Transport Manager)
- * @param {function} validation - ['validateUpdateVehicleIds', 'validateUpdateVehicle']
- * @param {function} controller - ['updateVehicle']
+ * @param {function} validation - ['validateUpdateComplianceTimetableIds', 'validateUpdateComplianceTimetable']
+ * @param {function} controller - ['updateComplianceTimetable']
  */
 
 router.patch(
@@ -85,11 +85,11 @@ router.patch(
 );
 
 /**
- * @route PATCH /api/v1/vehicle/update-vehicle/:id
- * @description Update a vehicle by ID (Standalone User)
+ * @route PATCH /api/v1/compliance-timetable/update-as-standalone/:id
+ * @description Update a compliance-timetable by ID (Standalone User)
  * @access Private (Standalone User)
- * @param {function} validation - ['validateId', 'validateUpdateVehicle']
- * @param {function} controller - ['updateVehicle']
+ * @param {function} validation - ['validateId', 'validateUpdateComplianceTimetable']
+ * @param {function} controller - ['updateComplianceTimetable']
  */
 router.patch(
   '/update-as-standalone/:id',
@@ -111,7 +111,6 @@ router.patch(
 router.delete(
   '/:id/:standAloneId',
   authorizedRoles([UserRole.TRANSPORT_MANAGER]),
-  // checkSubscriptionValidity,
   validateClientForManagerMiddleware,
   validateDeleteComplianceTimetableIds,
   deleteComplianceTimetable
@@ -128,7 +127,6 @@ router.delete(
 router.delete(
   '/:id',
   authorizedRoles([UserRole.STANDALONE_USER]),
-  // checkSubscriptionValidity,
   validateId,
   deleteComplianceTimetable
 );

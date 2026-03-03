@@ -106,24 +106,6 @@ export const deleteComplianceTimetable = catchAsync(
 );
 
 /**
- * Controller function to handle the deletion of multiple compliance-timetables.
- *
- * @param {Request} req - The request object containing an array of IDs of compliance-timetable to delete in the body.
- * @param {Response} res - The response object used to send the response.
- * @returns {Promise<Partial<IComplianceTimetable>[]>} - The deleted compliance-timetables.
- * @throws {Error} - Throws an error if the compliance-timetable deletion fails.
- */
-export const deleteManyComplianceTimetable = catchAsync(async (req: Request, res: Response) => {
-  // Extract ids from request body
-  const { ids } = req.body;
-  // Call the service method to delete multiple compliance-timetables and get the result
-  const result = await complianceTimetableServices.deleteManyComplianceTimetable(ids);
-  if (!result) throw new Error('Failed to delete multiple compliance-timetables');
-  // Send a success response confirming the deletions
-  ServerResponse(res, true, 200, 'Compliance-timetables deleted successfully');
-});
-
-/**
  * Controller function to handle the retrieval of a single compliance-timetable by ID.
  *
  * @param {Request} req - The request object containing the ID of the compliance-timetable to retrieve in URL parameters.

@@ -156,22 +156,6 @@ const deleteComplianceTimetable = async (
 };
 
 /**
- * Service function to delete multiple compliance-timetable.
- *
- * @param {IdOrIdsInput['ids']} ids - An array of IDs of compliance-timetable to delete.
- * @returns {Promise<Partial<IComplianceTimeTable>[]>} - The deleted compliance-timetable.
- */
-const deleteManyComplianceTimetable = async (
-  ids: IdOrIdsInput['ids']
-): Promise<Partial<IComplianceTimeTable>[]> => {
-  const complianceTimetableToDelete = await ComplianceTimeTableModel.find({ _id: { $in: ids } });
-  if (!complianceTimetableToDelete.length)
-    throw new Error('No compliance-timetable found to delete');
-  await ComplianceTimeTableModel.deleteMany({ _id: { $in: ids } });
-  return complianceTimetableToDelete;
-};
-
-/**
  * Service function to retrieve a single compliance-timetable by ID.
  *
  * @param {IdOrIdsInput['id']} id - The ID of the compliance-timetable to retrieve.
@@ -271,7 +255,6 @@ export const complianceTimetableServices = {
   createComplianceTimetable,
   updateComplianceTimetable,
   deleteComplianceTimetable,
-  deleteManyComplianceTimetable,
   getComplianceTimetableById,
   getAllComplianceTimetable,
 };

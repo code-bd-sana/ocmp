@@ -136,3 +136,9 @@ export {
   ITrainingRegister,
   TrainingRegisterStatus,
 } from './training/trainingRegister.schema';
+
+// meeting note
+export {
+  default as MeetingNote,
+  IMeetingNote,
+} from './meeting-note/meetingNote.schema';
