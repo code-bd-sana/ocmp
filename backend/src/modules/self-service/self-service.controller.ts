@@ -79,11 +79,18 @@ export const updateSelfService = catchAsync(async (req: AuthenticatedRequest, re
  * @returns {Promise<Partial<ISelfService>>} - The deleted self-service.
  * @throws {Error} - Throws an error if the self-service deletion fails.
  */
-export const deleteSelfService = catchAsync(async (req: Request, res: Response) => {
-  const { id } = req.params;
+export const deleteSelfService = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+  const paramToString = (p?: string | string[]) => (Array.isArray(p) ? p[0] : p);
+  const id = paramToString(req.params.id);
+  const standAloneId = paramToString((req.params as any).standAloneId);
+
   // Call the service method to delete the self-service by ID
-  const result = await selfServiceServices.deleteSelfService(id as string);
-  if (!result) throw new Error('Failed to delete self-service');
+  const result = await selfServiceServices.deleteSelfService(
+    id as string,
+    req.user!._id,
+    standAloneId
+  );
+  if (!result) throw new Error('Self service not found or you do not have permission to delete it');
   // Send a success response confirming the deletion
   ServerResponse(res, true, 200, 'Self-service deleted successfully');
 });

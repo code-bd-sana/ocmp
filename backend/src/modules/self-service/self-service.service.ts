@@ -96,7 +96,21 @@ const updateSelfService = async (
  * @param {IdOrIdsInput['id']} id - The ID of the self-service to delete.
  * @returns {Promise<Partial<ISelfService>>} - The deleted self-service.
  */
-const deleteSelfService = async (id: IdOrIdsInput['id']): Promise<Partial<ISelfService | null>> => {
+const deleteSelfService = async (
+  id: IdOrIdsInput['id'],
+  userId: IdOrIdsInput['id'],
+  standAloneId?: IdOrIdsInput['id']
+): Promise<Partial<ISelfService | null>> => {
+  const existingDeletedSelfService = await SelfService.findById(id)
+    .select('standAloneId createdBy')
+    .lean();
+  if (!existingDeletedSelfService) return null;
+
+  const accessOwnerId = standAloneId || String(userId);
+  if (!hasOwnerAccess(existingDeletedSelfService, accessOwnerId)) {
+    return null;
+  }
+
   const deletedSelfService = await SelfService.findByIdAndDelete(id);
   return deletedSelfService;
 };

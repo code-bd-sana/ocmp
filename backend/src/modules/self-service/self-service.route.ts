@@ -98,14 +98,35 @@ router.patch(
 );
 
 /**
- * @route DELETE /api/v1/self-service/delete-self-service/:id
- * @description Delete a self-service
+ * @route DELETE /api/v1/self-service/delete-self-service/:id/:standAloneId
+ * @description Delete a self-service as Transport Manager
  * @access Public
  * @param {IdOrIdsInput['id']} id - The ID of the self-service to delete
  * @param {function} validation - ['validateId']
  * @param {function} controller - ['deleteSelfService']
  */
-router.delete('/delete-self-service/:id', validateId, deleteSelfService);
+router.delete(
+  '/delete-self-service/:id/:standAloneId',
+  authorizedRoles([UserRole.TRANSPORT_MANAGER]),
+  validateClientForManagerMiddleware,
+  validateSelfServiceAndManagerIdParam,
+  deleteSelfService
+);
+
+/**
+ * @route DELETE /api/v1/self-service/delete-self-service/:id
+ * @description Delete a self-service as Standalone User
+ * @access Public
+ * @param {IdOrIdsInput['id']} id - The ID of the self-service to delete
+ * @param {function} validation - ['validateId']
+ * @param {function} controller - ['deleteSelfService']
+ */
+router.delete(
+  '/delete-self-service/:id',
+  authorizedRoles([UserRole.STANDALONE_USER]),
+  validateSelfServiceIdParam,
+  deleteSelfService
+);
 
 /**
  * @route GET /api/v1/self-service/get-self-service/many
