@@ -82,11 +82,19 @@ export {
   default as PolicyProcedure,
 } from './vehicle-transport/policyProcedure.schema';
 export {
+  ITrainingToolbox,
+  default as TrainingToolbox,
+} from './vehicle-transport/trainingToolbox.schema';
+export {
   IVehicle,
   OwnerShipStatus,
   default as Vehicle,
   VehicleStatus,
 } from './vehicle-transport/vehicle.schema';
+export {
+  IWorkingTimeDirective,
+  default as WorkingTimeDirective,
+} from './vehicle-transport/workingTimeDirective.schema';
 
 // compliance, enforcement & dvsa
 export {
@@ -98,7 +106,7 @@ export {
   default as ComplianceTimeTable,
   IComplianceTimeTable,
 } from './compliance-enforcement-dvsa/complianceTimeTable.schema';
-export { IOrsPlan, default as OrsPlan } from './compliance-enforcement-dvsa/orsPlan.schema';
+export { IOcrsPlan, default as OcrsPlan } from './compliance-enforcement-dvsa/ocrsPlan.schema';
 export {
   Ipg9AndPg13Plan,
   PG9AndPG13IssueType,
@@ -119,18 +127,9 @@ export {
 } from './compliance-enforcement-dvsa/wheelRetorquePolicyMonitoring.schema';
 
 // training
-export {
-  default as TrainingSheet,
-  ITrainingSheet,
-} from './training/trainingSheet.schema';
-export {
-  default as Participant,
-  IParticipant,
-} from './training/participant.schema';
-export {
-  default as ParticipantRole,
-  IParticipantRole,
-} from './training/participantRole.schema';
+export { default as TrainingSheet, ITrainingSheet } from './training/trainingSheet.schema';
+export { default as Participant, IParticipant } from './training/participant.schema';
+export { default as ParticipantRole, IParticipantRole } from './training/participantRole.schema';
 export {
   default as TrainingRegister,
   ITrainingRegister,
@@ -142,3 +141,8 @@ export {
   default as MeetingNote,
   IMeetingNote,
 } from './meeting-note/meetingNote.schema';
+
+export {
+  default as TransportManagerTraining,
+  ITransportManagerTraining,
+} from './training/transportManagerTraining.schema';

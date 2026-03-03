@@ -1,15 +1,22 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
+// communication types
+export enum CommunicationType {
+  Email = 'Email',
+  PhoneCall = 'Phone Call',
+  Letter = 'Letter',
+}
+
 // Define and export an interface representing a TrafficCommissionerCommunication document
 export interface ITrafficCommissionerCommunication extends Document {
-  type: string;
+  type: CommunicationType;
   contactedPerson: string;
   reason: string;
   communicationDate: Date;
   attachments?: mongoose.Types.ObjectId[];
-  notes?: Date;
+  comments?: Date;
   standAloneId?: mongoose.Types.ObjectId;
-  createdBy: mongoose.Types.ObjectId;
+  createdBy?: mongoose.Types.ObjectId;
 }
 
 // Define the TrafficCommissionerCommunication schema
@@ -18,6 +25,7 @@ const TrafficCommissionerCommunicationSchema: Schema<ITrafficCommissionerCommuni
     {
       type: {
         type: String,
+        enum: Object.values(CommunicationType),
         required: true,
       } /* Type of communication */,
       contactedPerson: {
@@ -38,7 +46,7 @@ const TrafficCommissionerCommunicationSchema: Schema<ITrafficCommissionerCommuni
           ref: 'Document', // Reference from Document model
         },
       ],
-      notes: {
+      comments: {
         type: Date,
       },
       standAloneId: {
@@ -47,7 +55,6 @@ const TrafficCommissionerCommunicationSchema: Schema<ITrafficCommissionerCommuni
       },
       createdBy: {
         type: Schema.Types.ObjectId,
-        required: true,
         ref: 'User', // Reference from User model
       },
     },

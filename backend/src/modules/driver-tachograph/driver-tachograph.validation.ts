@@ -34,7 +34,7 @@ const baseDriverTachographFields = {
     .string()
     .refine(isMongoId, { message: 'reviewedBy must be a valid MongoDB ObjectId' })
     .optional(),
-  Signed: z.boolean().optional(),
+  signed: z.boolean().optional(),
 };
 
 const zodCreateDriverTachographAsManagerSchema = z
@@ -96,7 +96,7 @@ const zodUpdateDriverTachographSchema = z
       .string()
       .refine(isMongoId, { message: 'reviewedBy must be a valid MongoDB ObjectId' })
       .optional(),
-    Signed: z.boolean().optional(),
+    signed: z.boolean().optional(),
   })
   .strict()
   .refine((data) => Object.keys(data).length > 0, {
