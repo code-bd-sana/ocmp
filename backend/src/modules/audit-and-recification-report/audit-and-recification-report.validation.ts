@@ -4,6 +4,10 @@ import { validateBody, validateParams, validateQuery } from '../../handlers/zod-
 import { zodSearchQuerySchema } from '../../handlers/common-zod-validator';
 import { AuditStatus } from '../../models/compliance-enforcement-dvsa/auditsAndRecificationReports.schema';
 
+/**
+ * zod schema for validating search queries when searching for audit-and-recification-reports.
+ * Supports pagination, filtering by standAloneId, and any other common search query parameters defined in zodSearchQuerySchema.
+ */
 const zodSearchAuditAndRecificationReportsSchema = zodSearchQuerySchema.extend({
   standAloneId: z
     .string()
@@ -12,7 +16,11 @@ const zodSearchAuditAndRecificationReportsSchema = zodSearchQuerySchema.extend({
 });
 export type SearchAuditAndRecificationReportsQueryInput = z.infer<typeof zodSearchAuditAndRecificationReportsSchema>;
 
-
+/**
+ * Zod schemas and types for audit-and-recification-report module.
+ * Includes validation for creating, updating, and searching audit-and-recification-reports.
+ * Also includes param validation for routes that require audit-and-recification-report IDs.
+ */
 const zodAuditAndRecificationReportIdParamSchema = z
   .object({
     id: z
@@ -23,6 +31,10 @@ const zodAuditAndRecificationReportIdParamSchema = z
 
   export type AuditAndRecificationReportIdParamInput = z.infer<typeof zodAuditAndRecificationReportIdParamSchema>;
 
+/**
+ * Zod schema for validating both audit-and-recification-report ID and standAloneId in URL params (for manager routes).
+ * Used in routes where a Transport Manager is accessing an audit-and-recification-report for a specific standalone user.
+ */
 const zodAuditAndRecificationReportAndManagerIdParamSchema = z
   .object({
     id: z
@@ -36,7 +48,12 @@ const zodAuditAndRecificationReportAndManagerIdParamSchema = z
 
 export type AuditAndRecificationReportAsManagerIdParamInput = z.infer<typeof zodAuditAndRecificationReportAndManagerIdParamSchema>;
 
-
+/**
+ * Base fields for creating an audit-and-recification-report, shared between standalone users and transport managers.
+ * Transport Managers must also provide a standAloneId to specify which standalone user's record they are creating for.
+ * All fields are optional in the base schema, but you can add .refine() or .superRefine() for conditional validation if needed (e.g., certain fields required based on status).
+ * Note: attachments is currently defined as a string for simplicity, but in a real application it would likely be an array of file URLs or IDs.
+ */
 const baseAuditAndRecificationReportFields = {
   auditDate: z
     .string({ message: 'Audit date date is required' })
@@ -69,6 +86,10 @@ const baseAuditAndRecificationReportFields = {
     .optional(),
 };
 
+/**
+ * Zod schema for validating data when creating a new audit-and-recification-report.
+ * Separate schemas for standalone users and transport managers, since transport managers must provide a standAloneId.
+ */
 const zodCreateAuditAndRecificationReportAsStandAloneSchema = z
   .object({
     ...baseAuditAndRecificationReportFields,
@@ -84,6 +105,12 @@ const zodCreateAuditAndRecificationReportAsManagerSchema = z
   })
   .strict();
 
+/**
+ * Zod schema for validating data when **updating** an existing audit-and-recification-report.
+ * All fields are optional, but you can add .refine() or .superRefine() for conditional validation if needed (e.g., certain fields required based on status).
+ * Note: attachments is currently defined as a string for simplicity, but in a real application it would likely be an array of file URLs or IDs.
+ * Also includes a .refine() to ensure that at least one field is being updated (since all are optional).
+ */
 const validateUpdateAuditAndRecificationReportSchema = z
   .object({
     auditDate: z
