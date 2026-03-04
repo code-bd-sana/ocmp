@@ -16,10 +16,16 @@ export enum RequestStatus {
   REJECTED = 'REJECTED',
 }
 
+export enum PlannerStatus {
+  SCHEDULED = 'SCHEDULED',
+  DUE = 'DUE',
+}
+
 export interface IPlanner extends Document {
   vehicleId: mongoose.Types.ObjectId;
   plannerType: PlannerType;
   plannerDate: Date;
+  PlannerStatus: PlannerStatus;
   requestedDate?: Date;
   requestedReason?: string;
   requestStatus?: RequestStatus;
@@ -41,6 +47,12 @@ const PlannerSchema: Schema<IPlanner> = new Schema({
   },
   plannerDate: {
     type: Date,
+    required: true,
+  },
+  PlannerStatus: {
+    type: String,
+    enum: Object.values(PlannerStatus),
+    default: PlannerStatus.SCHEDULED,
     required: true,
   },
   requestedDate: {

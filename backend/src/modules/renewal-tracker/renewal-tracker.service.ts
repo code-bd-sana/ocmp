@@ -1,11 +1,13 @@
 // Import the model
 import mongoose from 'mongoose';
-import RenewalTrackerModel, {
-  IRenewalTracker,
-} from '../../models/compliance-enforcement-dvsa/renewalTracker.schema';
-import PolicyProcedure from '../../models/vehicle-transport/policyProcedure.schema';
 import { IdOrIdsInput, SearchQueryInput } from '../../handlers/common-zod-validator';
-import { UserRole } from '../../models';
+import {
+  IRenewalTracker,
+  PolicyProcedure,
+  RenewalTracker,
+  RenewalTrackerStatus,
+  UserRole,
+} from '../../models';
 import { CreateRenewalTrackerInput, UpdateRenewalTrackerInput } from './renewal-tracker.validation';
 import { deriveRenewalTrackerStatus } from './renewal-tracker.status';
 
@@ -75,7 +77,7 @@ const createRenewalTracker = async (
     reminderDate: payload.reminderDate,
   });
 
-  const newRenewalTracker = new RenewalTrackerModel(payload);
+  const newRenewalTracker = new RenewalTracker(payload);
   const savedRenewalTracker = await newRenewalTracker.save();
   return savedRenewalTracker;
 };
@@ -93,7 +95,7 @@ const updateRenewalTracker = async (
   userId: IdOrIdsInput['id'],
   standAloneId?: string
 ): Promise<Partial<IRenewalTracker | null>> => {
-  const existingRenewalTracker = await RenewalTrackerModel.findById(id)
+  const existingRenewalTracker = await RenewalTracker.findById(id)
     .select('standAloneId createdBy')
     .lean();
   if (!existingRenewalTracker) return null;
@@ -108,7 +110,7 @@ const updateRenewalTracker = async (
     responsiblePerson: data.responsiblePerson,
   });
 
-  const existingDates = await RenewalTrackerModel.findById(id)
+  const existingDates = await RenewalTracker.findById(id)
     .select('startDate expiryOrDueDate reminderSet reminderDate')
     .lean();
 
@@ -131,34 +133,44 @@ const updateRenewalTracker = async (
     reminderDate: nextReminderDate,
   });
 
-  const updatedRenewalTracker = await RenewalTrackerModel.findByIdAndUpdate(id, payload, {
+  const updatedRenewalTracker = await RenewalTracker.findByIdAndUpdate(id, payload, {
     new: true,
   });
   return updatedRenewalTracker;
 };
 
-const syncRenewalTrackerStatuses = async (): Promise<number> => {
-  const renewalTrackers = await RenewalTrackerModel.find({})
-    .select('_id startDate expiryOrDueDate reminderSet reminderDate status')
-    .lean();
+/**
+ * Service function to synchronize the status of all renewal-trackers based on their dates and reminder settings.
+ *
+ * @returns {Promise<number>} - The number of renewal-trackers that were updated.
+ * This function iterates through all renewal-trackers, derives their next status using the deriveRenewalTrackerStatus function, and updates the status in the database if it has changed. It returns the count of renewal-trackers that were updated.
+ * This function can be scheduled to run periodically (e.g., daily) to ensure that the statuses of renewal-trackers are always up-to-date based on their relevant dates and reminder settings.
+ */
+const syncRenewalTrackerStatus = async (): Promise<number> => {
+  // current date
+  const now = new Date();
 
-  let updatedCount = 0;
+ const renewalTrackers = await RenewalTracker.find({
+    expiryOrDueDate: { $lte: now },
+  });
+
+  let updateCount = 0;
 
   for (const tracker of renewalTrackers) {
     const nextStatus = deriveRenewalTrackerStatus({
-      startDate: (tracker as any).startDate,
-      expiryOrDueDate: (tracker as any).expiryOrDueDate,
-      reminderSet: (tracker as any).reminderSet,
-      reminderDate: (tracker as any).reminderDate,
+      startDate: tracker.startDate,
+      expiryOrDueDate: tracker.expiryOrDueDate,
+      reminderSet: tracker.reminderSet !== undefined ? !!tracker.reminderSet : undefined,
+      reminderDate: tracker.reminderDate,
     });
 
-    if ((tracker as any).status !== nextStatus) {
-      await RenewalTrackerModel.updateOne({ _id: tracker._id }, { $set: { status: nextStatus } });
-      updatedCount += 1;
+    if (tracker.status !== nextStatus) {
+      await RenewalTracker.findByIdAndUpdate(tracker._id, { status: nextStatus });
+      updateCount++;
     }
   }
 
-  return updatedCount;
+  return updateCount;
 };
 
 /**
@@ -172,7 +184,7 @@ const deleteRenewalTracker = async (
   userId: IdOrIdsInput['id'],
   standAloneId?: IdOrIdsInput['id']
 ): Promise<Partial<IRenewalTracker | null>> => {
-  const existingRenewalTracker = await RenewalTrackerModel.findById(id)
+  const existingRenewalTracker = await RenewalTracker.findById(id)
     .select('standAloneId createdBy')
     .lean();
   if (!existingRenewalTracker) return null;
@@ -182,7 +194,7 @@ const deleteRenewalTracker = async (
     return null;
   }
 
-  const deletedRenewalTracker = await RenewalTrackerModel.findByIdAndDelete(id);
+  const deletedRenewalTracker = await RenewalTracker.findByIdAndDelete(id);
   return deletedRenewalTracker;
 };
 
@@ -196,7 +208,7 @@ const getRenewalTrackerById = async (
   id: IdOrIdsInput['id'],
   accessId?: string
 ): Promise<Partial<IRenewalTracker | null>> => {
-  const renewalTracker = await RenewalTrackerModel.findById(id)
+  const renewalTracker = await RenewalTracker.findById(id)
     .populate({ path: 'responsiblePerson', select: 'responsiblePerson' })
     .lean();
   if (!renewalTracker) return null;
@@ -265,9 +277,9 @@ const getManyRenewalTracker = async (
   }
 
   const skipItems = (pageNo - 1) * showPerPage;
-  const totalData = await RenewalTrackerModel.countDocuments(searchFilter);
+  const totalData = await RenewalTracker.countDocuments(searchFilter);
   const totalPages = Math.ceil(totalData / showPerPage);
-  const renewalTrackers = await RenewalTrackerModel.find(searchFilter)
+  const renewalTrackers = await RenewalTracker.find(searchFilter)
     .populate({ path: 'responsiblePerson', select: 'responsiblePerson' })
     .skip(skipItems)
     .limit(showPerPage)
@@ -284,6 +296,6 @@ export const renewalTrackerServices = {
   deleteRenewalTracker,
   getRenewalTrackerById,
   getManyRenewalTracker,
-  syncRenewalTrackerStatuses,
+  syncRenewalTrackerStatus,
 };
 

@@ -90,7 +90,7 @@ export {
   IWorkingTimeDirective,
   default as WorkingTimeDirective,
 } from './vehicle-transport/workingTimeDirective.schema';
-export { RequestStatus, default as Planner, IPlanner } from './vehicle-transport/planner.schema';
+export { RequestStatus, PlannerStatus, default as Planner, IPlanner } from './vehicle-transport/planner.schema';
 
 // compliance, enforcement & dvsa
 export {
@@ -110,6 +110,7 @@ export {
 } from './compliance-enforcement-dvsa/pg9AndPg13Plan.schema';
 export {
   IRenewalTracker,
+  RenewalTrackerStatus,
   default as RenewalTracker,
 } from './compliance-enforcement-dvsa/renewalTracker.schema';
 export {

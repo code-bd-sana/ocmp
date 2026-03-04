@@ -8,7 +8,14 @@ import {
   RequestChangePlannerDateInput,
   UpdatePlannerAsManagerInput,
 } from './planner.validation';
-import { ClientManagement, ClientStatus, IPlanner, RequestStatus, Planner } from '../../models';
+import {
+  ClientManagement,
+  ClientStatus,
+  IPlanner,
+  RequestStatus,
+  Planner,
+  PlannerStatus,
+} from '../../models';
 import Notification, { NotificationType } from '../../models/notification.schema';
 import { AuthenticatedRequest } from '../../middlewares/is-authorized';
 import NotificationSchema from '../../models/notification.schema';
@@ -564,6 +571,25 @@ const rejectPlannerChangeRequest = async (
   return updatedPlanner;
 };
 
+/**
+ * Service function to update the status of planners to "DUE" if their plannerDate is less than the current date and their status is not already "DUE".
+ *
+ * This function is intended to be run as a scheduled job (e.g., using a cron job) to automatically update the status of planners that are past their due date.
+ * It checks all planners in the database and updates the status to "DUE" for those that meet the criteria.
+ */
+const plannerStatusUpdateToDue = async (): Promise<number> => {
+  // current date
+  const currentDate = new Date();
+
+  // Update all planners whose plannerDate is less than current date and status is not "DUE" to "DUE"
+  const result = await Planner.updateMany(
+    { plannerDate: { $lt: currentDate }, status: { $ne: PlannerStatus.DUE } },
+    { $set: { status: PlannerStatus.DUE } }
+  );
+
+  return result.modifiedCount; 
+};
+
 export const plannerServices = {
   createPlannerAsManager,
   createPlannerAsStandAlone,
@@ -576,5 +602,6 @@ export const plannerServices = {
   getAllRequestedPlanners,
   approvalForPlannerChangesRequest,
   rejectPlannerChangeRequest,
+  plannerStatusUpdateToDue,
 };
 
