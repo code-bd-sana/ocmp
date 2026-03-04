@@ -1,11 +1,11 @@
 import mongoose from 'mongoose';
-import { SubContractor, ISubContractor } from '../../models';
+import { ISubContractor, SubContractor } from '../../models';
 import {
   CreateSubContractorAsManagerInput,
   CreateSubContractorAsStandAloneInput,
-  UpdateSubContractorInput,
   SearchSubContractorsQueryInput,
-} from './subContractor.validation';
+  UpdateSubContractorInput,
+} from './sub-contractor.validation';
 
 // ═══════════════════════════════════════════════════════════════
 // CREATE

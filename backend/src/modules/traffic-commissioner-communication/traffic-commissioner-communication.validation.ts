@@ -179,7 +179,6 @@ export type TrafficCommissionerCommunicationAndManagerIdParamInput = z.infer<
 export const validateCreateTrafficCommissionerCommunicationAsTransportManager = validateBody(
   zodCreateTrafficCommissionerCommunicationAsTransportManagerSchema
 );
-
 export const validateCreateTrafficCommissionerCommunicationAsStandAlone = validateBody(
   zodCreateTrafficCommissionerCommunicationAsStandAloneSchema
 );

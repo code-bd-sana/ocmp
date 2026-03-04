@@ -95,6 +95,7 @@ export {
   IWorkingTimeDirective,
   default as WorkingTimeDirective,
 } from './vehicle-transport/workingTimeDirective.schema';
+export { IPlanner, default as Planner } from './vehicle-transport/planner.schema';
 
 // compliance, enforcement & dvsa
 export {
@@ -116,6 +117,10 @@ export {
   IRenewalTracker,
   default as RenewalTracker,
 } from './compliance-enforcement-dvsa/renewalTracker.schema';
+export {
+  ISelfService,
+  default as SelfService,
+} from './compliance-enforcement-dvsa/selfService.schema';
 export { ISpotCheck, default as SpotCheck } from './compliance-enforcement-dvsa/spotCheck.schema';
 export {
   ITrafficCommissionerCommunication,

@@ -3,24 +3,24 @@ import { Router } from 'express';
 import {
   createSubContractorAsManager,
   createSubContractorAsStandAlone,
+  deleteSubContractor,
   getAllSubContractors,
   getSubContractorById,
   updateSubContractor,
-  deleteSubContractor,
-} from './subContractor.controller';
+} from './sub-contractor.controller';
 
+import { validateSearchQueries } from '../../handlers/common-zod-validator';
 import {
-  validateSubContractorIdParam,
-  validateSubContractorAndManagerIdParam,
   validateCreateSubContractorAsManager,
   validateCreateSubContractorAsStandAlone,
-  validateUpdateSubContractor,
   validateSearchSubContractorsQueries,
-} from './subContractor.validation';
-import { validateSearchQueries } from '../../handlers/common-zod-validator';
+  validateSubContractorAndManagerIdParam,
+  validateSubContractorIdParam,
+  validateUpdateSubContractor,
+} from './sub-contractor.validation';
 
-import isAuthorized, { AuthenticatedRequest } from '../../middlewares/is-authorized';
 import authorizedRoles from '../../middlewares/authorized-roles';
+import isAuthorized, { AuthenticatedRequest } from '../../middlewares/is-authorized';
 import { validateClientForManagerMiddleware } from '../../middlewares/validate-client-for-manager';
 import { UserRole } from '../../models';
 
@@ -32,7 +32,7 @@ router.use(isAuthorized());
 // ═══════════════════════════════════════════════════════════════
 
 /**
- * @route   POST /api/v1/subContractor/create-sub-contractor
+ * @route   POST /api/v1/sub-contractor/create-sub-contractor
  * @desc    Create a sub-contractor as a Transport Manager
  * @access  Transport Manager
  */
@@ -45,7 +45,7 @@ router.post(
 );
 
 /**
- * @route   POST /api/v1/subContractor/create-stand-alone-sub-contractor
+ * @route   POST /api/v1/sub-contractor/create-stand-alone-sub-contractor
  * @desc    Create a sub-contractor as a Standalone User
  * @access  Standalone User
  */
@@ -61,7 +61,7 @@ router.post(
 // ═══════════════════════════════════════════════════════════════
 
 /**
- * @route   PATCH /api/v1/subContractor/update-sub-contractor-by-manager/:subContractorId/:standAloneId
+ * @route   PATCH /api/v1/sub-contractor/update-sub-contractor-by-manager/:subContractorId/:standAloneId
  * @desc    Update a sub-contractor as a Transport Manager
  * @access  Transport Manager
  */
@@ -75,7 +75,7 @@ router.patch(
 );
 
 /**
- * @route   PATCH /api/v1/subContractor/update-sub-contractor/:subContractorId
+ * @route   PATCH /api/v1/sub-contractor/update-sub-contractor/:subContractorId
  * @desc    Update a sub-contractor as a Standalone User
  * @access  Standalone User
  */
@@ -92,7 +92,7 @@ router.patch(
 // ═══════════════════════════════════════════════════════════════
 
 /**
- * @route   DELETE /api/v1/subContractor/delete-sub-contractor-by-manager/:subContractorId/:standAloneId
+ * @route   DELETE /api/v1/sub-contractor/delete-sub-contractor-by-manager/:subContractorId/:standAloneId
  * @desc    Delete a sub-contractor as a Transport Manager
  * @access  Transport Manager
  */
@@ -105,7 +105,7 @@ router.delete(
 );
 
 /**
- * @route   DELETE /api/v1/subContractor/delete-sub-contractor/:subContractorId
+ * @route   DELETE /api/v1/sub-contractor/delete-sub-contractor/:subContractorId
  * @desc    Delete a sub-contractor as a Standalone User
  * @access  Standalone User
  */
@@ -121,7 +121,7 @@ router.delete(
 // ═══════════════════════════════════════════════════════════════
 
 /**
- * @route   GET /api/v1/subContractor/get-sub-contractors
+ * @route   GET /api/v1/sub-contractor/get-sub-contractors
  * @desc    Get all sub-contractors (paginated + searchable)
  * @access  Transport Manager & Standalone User
  */
@@ -144,7 +144,7 @@ router.get(
 );
 
 /**
- * @route   GET /api/v1/subContractor/get-sub-contractor/:subContractorId
+ * @route   GET /api/v1/sub-contractor/get-sub-contractor/:subContractorId
  * @desc    Get a single sub-contractor by ID
  * @access  Transport Manager & Standalone User
  */

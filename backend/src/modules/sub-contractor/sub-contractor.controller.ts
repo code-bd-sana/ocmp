@@ -1,11 +1,11 @@
 import { Response } from 'express';
 import mongoose from 'mongoose';
-import { subContractorServices } from './subContractor.service';
 import ServerResponse from '../../helpers/responses/custom-response';
-import catchAsync from '../../utils/catch-async/catch-async';
 import { AuthenticatedRequest } from '../../middlewares/is-authorized';
 import { UserRole } from '../../models';
-import { SearchSubContractorsQueryInput } from './subContractor.validation';
+import catchAsync from '../../utils/catch-async/catch-async';
+import { subContractorServices } from './sub-contractor.service';
+import { SearchSubContractorsQueryInput } from './sub-contractor.validation';
 
 // ═══════════════════════════════════════════════════════════════
 // CREATE CONTROLLERS
