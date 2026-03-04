@@ -1,28 +1,50 @@
 import { NextFunction, Request, Response } from 'express';
+import mongoose from 'mongoose';
 import ServerResponse from '../helpers/responses/custom-response';
 import { getSubscriptionRemainingDays } from '../modules/subscription-remain/subscription-remain.service';
 import { AuthenticatedRequest } from './is-authorized';
+import { UserRole } from '../models/user.model';
+import ClientManagement from '../modules/client-management/client-management.model';
+import { ClientStatus } from '../modules/client-management/client-status.enum';
 
 /**
- * Middleware to check if the authenticated user has an active subscription or trial before allowing access to protected routes.
- * This middleware should be used after the isAuthorized middleware to ensure the user is authenticated.
- * @param req - The request object, which should include the authenticated user's details.
- * @param res - The response object used to send responses back to the client.
- * @param next - The next middleware function in the stack.
+ * Middleware to check if the user (or their connected Transport Manager, if they are a STANDALONE_USER) has an active subscription or trial.
+ * - If the user is a STANDALONE_USER, it first checks if they are connected to any Transport Manager with an approved connection. If so, it checks the subscription of that manager instead.
+ * - If the user (or their manager) has a lifetime subscription, access is granted.
+ * - If the subscription is expired, access is denied with a 403 response.
+ * - If there is any error during the process, a 500 response is returned.
  */
-const checkSubscriptionValidity = async (req: Request, res: Response, next: NextFunction) => {
-  // Get the user details from the request object
+const checkSubscriptionValidity = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   const authReq = req as AuthenticatedRequest;
   const user = authReq.user;
-  // If user details are not found on the request, return an unauthorized response
+
   if (!user?._id) {
     return res.status(401).json({ message: 'Unauthorized. User not found on request.' });
   }
-  // Validate user ID format
+
   try {
-    // Check the user last subscription plan from the database and calculate remaining days
-    const userSubscription = await getSubscriptionRemainingDays(user._id);
-    // If no active subscription or trial found, return a forbidden response
+    let subscriptionUserId = user._id; // Default: check own subscription
+
+    // If user is STANDALONE_USER, check if connected with any Transport Manager
+    if (user.role === UserRole.STANDALONE_USER) {
+      const clientConnection = await ClientManagement.findOne({
+        'clients.clientId': new mongoose.Types.ObjectId(user._id),
+        'clients.status': { $in: [ClientStatus.APPROVED] },
+      }).select('managerId');
+
+      // If connected → check manager subscription instead
+      if (clientConnection?.managerId) {
+        subscriptionUserId = clientConnection.managerId;
+      }
+    }
+
+    // Get subscription info (either own or manager’s)
+    const userSubscription = await getSubscriptionRemainingDays(subscriptionUserId);
+
     if (!userSubscription) {
       return ServerResponse(
         res,
@@ -31,27 +53,26 @@ const checkSubscriptionValidity = async (req: Request, res: Response, next: Next
         'Access denied. No active subscription or trial found.'
       );
     }
+
     const currentDate = new Date();
-    console.log('Current date:', currentDate);
-    console.log('User subscription end date:', userSubscription.endDate);
-    console.log(
-      'Subscription days remain:',
-      userSubscription.endDate
-        ? Math.ceil(
-            (userSubscription.endDate.getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24)
-          )
-        : 'N/A'
-    );
-    // If the subscription is lifetime, allow access directly
+
+    // Lifetime subscription → allow
     if (userSubscription.isLifetime) {
-      next();
+      return next();
     }
-    // Check if the subscription or trial has expired based on endDate
+
+    // Expired subscription
     if (userSubscription.endDate && userSubscription.endDate < currentDate) {
-      return ServerResponse(res, false, 403, 'Access denied. Subscription or trial has expired.');
+      return ServerResponse(
+        res,
+        false,
+        403,
+        'Access denied. Subscription or trial has expired.'
+      );
     }
-    // If the subscription is valid, proceed to the next middleware or route handler
-    next();
+
+    // Valid subscription
+    return next();
   } catch (error) {
     console.error('Subscription check error:', error);
     return ServerResponse(res, false, 500, 'Internal server error');

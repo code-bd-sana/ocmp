@@ -333,12 +333,19 @@ const deletePlanner = async (
   userId: IdOrIdsInput['id'],
   standAloneId?: IdOrIdsInput['id']
 ): Promise<Partial<IPlanner | null>> => {
-  const existingDeletedPlanner = await Planner.findById(id).select('standAloneId createdBy').lean();
-  if (!existingDeletedPlanner) return null;
+  const existingDeletedPlanner = await Planner.find({
+    _id: id,
+    $or: [
+      { standAloneId: new mongoose.Types.ObjectId(standAloneId!) },
+      { createdBy: new mongoose.Types.ObjectId(userId) },
+      { createdBy: new mongoose.Types.ObjectId(standAloneId) },
+    ],
+  })
+    .select('standAloneId createdBy')
+    .lean();
 
-  const accessOwnerId = standAloneId || String(userId);
-  if (!hasOwnerAccess(existingDeletedPlanner, accessOwnerId)) {
-    return null;
+  if (!existingDeletedPlanner) {
+    throw new Error('Planner not found');
   }
 
   const deletedPlanner = await Planner.findByIdAndDelete(id);
@@ -587,7 +594,7 @@ const plannerStatusUpdateToDue = async (): Promise<number> => {
     { $set: { status: PlannerStatus.DUE } }
   );
 
-  return result.modifiedCount; 
+  return result.modifiedCount;
 };
 
 export const plannerServices = {

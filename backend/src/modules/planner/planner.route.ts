@@ -163,14 +163,39 @@ router.patch(
 );
 
 /**
- * @route DELETE /api/v1/planner/delete-planner/:id
- * @description Delete a planner
+ * Delete a planner by Id as Transport Manager
+ *
+ * @route DELETE /api/v1/planner/delete-planner/:id/:standAloneId
+ * @description Delete a planner as Transport Manager
  * @access Private
  * @param {IdOrIdsInput['id']} id - The ID of the planner to delete
  * @param {function} validation - ['validateId']
  * @param {function} controller - ['deletePlanner']
  */
-router.delete('/delete-planner/:id', validateId, deletePlanner);
+router.delete(
+  '/delete-planner/:id/:standAloneId',
+  authorizedRoles([UserRole.TRANSPORT_MANAGER]),
+  validateClientForManagerMiddleware,
+  validateIdAndManagerParam,
+  deletePlanner
+);
+
+/**
+ * Delete a planner by Id as Standalone User
+ *
+ * @route DELETE /api/v1/planner/delete-planner/:id
+ * @description Delete a planner as Standalone User
+ * @access Private
+ * @param {IdOrIdsInput['id']} id - The ID of the planner to delete
+ * @param {function} validation - ['validateId']
+ * @param {function} controller - ['deletePlanner']
+ */
+router.delete(
+  '/delete-planner/:id',
+  authorizedRoles([UserRole.STANDALONE_USER]),
+  validateIdParam,
+  deletePlanner
+);
 
 /**
  * @route GET /api/v1/planner/get-planner/many

@@ -127,13 +127,17 @@ export const updatePlannerAsStandAlone = catchAsync(
  * @returns {Promise<Partial<IPlanner>>} - The deleted planner.
  * @throws {Error} - Throws an error if the planner deletion fails.
  */
-export const deletePlanner = catchAsync(async (req: Request, res: Response) => {
+export const deletePlanner = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
   const paramToString = (p?: string | string[]) => (Array.isArray(p) ? p[0] : p);
   const id = paramToString(req.params.id);
   const standAloneId = paramToString((req.params as any).standAloneId);
 
   // Call the service method to delete the planner by ID
-  const result = await plannerServices.deletePlanner(id as string, standAloneId as string);
+  const result = await plannerServices.deletePlanner(
+    id as string,
+    req.user!._id as string,
+    standAloneId as string
+  );
   if (!result) throw new Error('Planner not found or you do not have permission to delete it');
   // Send a success response confirming the deletion
   ServerResponse(res, true, 200, 'Planner deleted successfully');
