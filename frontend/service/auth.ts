@@ -27,6 +27,9 @@ export interface IVerifyEamil {
   email:string;
   token:string
 }
+export interface IResendEmail {
+  email:string
+}
 
 const RegisterUser = async (data: IRegister): Promise<IApiResponse> => {
   try {
@@ -78,8 +81,25 @@ const VerifyEmail = async(data:IVerifyEamil)=>{
   }
 }
 
+const ResendVerificationEmail = async(data:IResendEmail)=>{
+      try {
+    const response = await axios.post<IApiResponse>(
+      `${base_url}/auth/resend-verification-email`,
+      data,
+    );
+    return response.data;
+  } catch (error: unknown) {
+    if (axios.isAxiosError<IApiResponse>(error)) {
+      throw new Error(error.response?.data?.error || "Something went wrong");
+    }
+    throw new Error("Something went wrong");
+  }
+
+}
+
 export const AuthAction = {
   RegisterUser,
   LoginUser,
-  VerifyEmail
+  VerifyEmail,
+  ResendVerificationEmail
 };
