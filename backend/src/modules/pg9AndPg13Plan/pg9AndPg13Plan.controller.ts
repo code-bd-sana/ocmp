@@ -12,8 +12,8 @@ import catchAsync from '../../utils/catch-async/catch-async';
 import { AuthenticatedRequest } from '../../middlewares/is-authorized';
 
 /** Helper: extract a route param as a string. */
-const paramToString = (val: string | Record<string, string>): string =>
-  typeof val === 'object' ? String(Object.values(val)[0]) : String(val);
+const paramToString = (val: string | string[] | Record<string, string>): string =>
+  Array.isArray(val) ? String(val[0]) : typeof val === 'object' ? String(Object.values(val)[0]) : String(val);
 
 /**
  * Create a PG9 & PG13 plan as a Transport Manager.
