@@ -11,6 +11,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { AuthAction } from "@/service/auth";
 import { Eye, EyeOff, Loader2, Lock, Mail } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
@@ -74,9 +75,12 @@ export default function SignInPage() {
 
     // Simulate API call
     try {
-      console.log("Signing in with:", { email });
+      console.log("Signing in with:", { email, password });
       // Replace with actual API call
       // const response = await signIn({ email, password });
+      const payload = {email, password};
+      const resp = await AuthAction.LoginUser(payload);
+      console.log(resp, 'login resp');
 
       alert(`Successfully signed in as ${email}`);
       // In a real app: router.push("/dashboard");
