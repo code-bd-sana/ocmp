@@ -4,11 +4,6 @@ export * from './document.schema';
 export { default as ActivityLog, IActivityLog } from './users-accounts/activityLog.schema';
 export { ILoginActivity, default as LoginActivity } from './users-accounts/loginActivity.schema';
 export {
-  INotification,
-  default as Notification,
-  NotificationType,
-} from './users-accounts/notification.schema';
-export {
   IRepositorySettings,
   default as RepositorySettings,
 } from './users-accounts/repositorySettings.schema';
@@ -95,7 +90,7 @@ export {
   IWorkingTimeDirective,
   default as WorkingTimeDirective,
 } from './vehicle-transport/workingTimeDirective.schema';
-export { IPlanner, default as Planner } from './vehicle-transport/planner.schema';
+export { RequestStatus, default as Planner, IPlanner } from './vehicle-transport/planner.schema';
 
 // compliance, enforcement & dvsa
 export {
@@ -144,3 +139,6 @@ export {
   default as TransportManagerTraining,
   ITransportManagerTraining,
 } from './training/transportManagerTraining.schema';
+
+// notification
+export * from './notification.schema';

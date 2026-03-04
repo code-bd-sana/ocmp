@@ -2,6 +2,7 @@ import { isMongoId } from 'validator';
 import { z } from 'zod';
 import { validateBody, validateParams, validateQuery } from '../../handlers/zod-error-handler';
 import { zodSearchQuerySchema } from '../../handlers/common-zod-validator';
+import e from 'express';
 
 /**
  * Planner Validation Schemas and Types
@@ -72,20 +73,68 @@ export type CreatePlannerInput = CreatePlannerAsStandAloneInput | CreatePlannerA
 
 /**
  * Zod schema for validating data when **updating** an existing planner.
- *
- * → All fields should usually be .optional()
  */
-const zodUpdatePlannerSchema = z
+
+// base fields for update (all optional)
+// const baseUpdatePlannerFields = {
+//   plannerDate: z
+//     .string()
+//     .refine(
+//       (date) => {
+//         return !isNaN(Date.parse(date));
+//       },
+//       { message: 'Planner date must be a valid date string' }
+//     )
+//     .optional(),
+//   requestedDate: z
+//     .string()
+//     .refine(
+//       (date) => {
+//         return !isNaN(Date.parse(date));
+//       },
+//       { message: 'Requested date must be a valid date string' }
+//     )
+//     .optional(),
+//   requestedReason: z
+//     .string()
+//     .max(1000, 'Requested reason must be at most 1000 characters')
+//     .optional(),
+//   missedReason: z.string().max(1000, 'Missed reason must be at most 1000 characters').optional(),
+// };
+
+// 2 different update schemas for Transport Manager (standAloneId required) and Standalone User (no standAloneId)
+
+// for Transport Manager updating a planner (standAloneId required)
+const zodUpdatePlannerAsManagerSchema = z
   .object({
-    // Example fields — replace / expand as needed:
-    // name: z.string().min(2, 'Name must be at least 2 characters').max(100).optional(),
-    // email: z.string().email({ message: 'Invalid email format' }).optional(),
-    // age: z.number().int().positive().optional(),
-    // status: z.enum(['active', 'inactive', 'pending']).optional(),
+    plannerDate: z
+      .string()
+      .refine(
+        (date) => {
+          return !isNaN(Date.parse(date));
+        },
+        { message: 'Planner date must be a valid date string' }
+      ),
   })
   .strict();
 
-export type UpdatePlannerInput = z.infer<typeof zodUpdatePlannerSchema>;
+export type UpdatePlannerAsManagerInput = z.infer<typeof zodUpdatePlannerAsManagerSchema>;
+
+const zodRequestChangePlannerDateSchema = z.object({
+  requestedDate: z
+    .string()
+    .refine(
+      (date) => {
+        return !isNaN(Date.parse(date));
+      },
+      { message: 'Requested date must be a valid date string' }
+    ),
+  requestedReason: z
+    .string()
+    .max(1000, 'Requested reason must be at most 1000 characters'),
+}).strict();
+
+export type RequestChangePlannerDateInput = z.infer<typeof zodRequestChangePlannerDateSchema>;
 
 // for validating search query parameters when retrieving multiple planners
 const zodSearchPlannerSchema = zodSearchQuerySchema.extend({
@@ -127,8 +176,11 @@ export type PlannerAndManagerIdParamInput = z.infer<typeof zodPlannerAndManagerI
  */
 export const validateCreatePlannerAsManager = validateBody(zodCreatePlannerAsManagerSchema);
 export const validateCreatePlannerAsStandAlone = validateBody(zodCreatePlannerAsStandAloneSchema);
-export const validateUpdatePlanner = validateBody(zodUpdatePlannerSchema);
+export const validateUpdatePlannerAsManager = validateBody(zodUpdatePlannerAsManagerSchema);
+export const validateUpdatePlannerAsStandAlone = validateBody(zodUpdatePlannerAsManagerSchema);
+// export const validateUpdatePlannerAsStandAlone = validateBody(zodUpdatePlannerAsStandAloneSchema);
 export const validateSearchPlannerQueries = validateQuery(zodSearchPlannerSchema);
 export const validateIdParam = validateParams(zodPlannerIdParamSchema);
 export const validateIdAndManagerParam = validateParams(zodPlannerAndManagerIdParamSchema);
-
+export const validationRequestChangePlannerDate = validateBody(zodRequestChangePlannerDateSchema);
+export const validateRequestChangePlannerPrams = validateParams(zodPlannerAndManagerIdParamSchema.pick({ standAloneId: true }));

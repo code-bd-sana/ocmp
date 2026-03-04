@@ -9,6 +9,11 @@ import {
   getManyPlanner,
   createPlannerAsManager,
   createPlannerAsStandAlone,
+  requestChangePlannerDate,
+  updatePlannerAsStandAlone,
+  getAllRequestedPlanners,
+  approvalForPlannerChangesRequest,
+  rejectPlannerChangeRequest,
 } from './planner.controller';
 
 //Import validation from corresponding module
@@ -17,7 +22,10 @@ import {
   validateCreatePlannerAsStandAlone,
   validateIdParam,
   validateIdAndManagerParam,
-  validateUpdatePlanner,
+  validationRequestChangePlannerDate,
+  validateUpdatePlannerAsManager,
+  validateUpdatePlannerAsStandAlone,
+  validateRequestChangePlannerPrams,
 } from './planner.validation';
 import { validateId, validateSearchQueries } from '../../handlers/common-zod-validator';
 import { validateSearchPlannerQueries } from './planner.validation';
@@ -66,14 +74,93 @@ router.post(
 );
 
 /**
- * @route PUT /api/v1/planner/update-planner/:id
- * @description Update planner information
+ * Request change of planner date as Standalone User
+ *
+ * @route POST /api/v1/planner/request-change-planner-date/:id
+ * @description Request change of planner date as Standalone User
+ * @access Private
+ * @param {IdOrIdsInput['id']} id - The ID of the planner to request change for
+ * @param {function} validation - ['validateId', 'validationRequestChangePlannerDate']
+ * @param {function} controller - ['requestChangePlannerDate']
+ */
+router.post(
+  '/request-change-planner-date/:id',
+  authorizedRoles([UserRole.STANDALONE_USER]),
+  validateIdParam,
+  validationRequestChangePlannerDate,
+  requestChangePlannerDate
+);
+
+/**
+ * Update planner information by Id as Transport Manager
+ *
+ * @route PATCH /api/v1/planner/update-planner/:id/:standAloneId
+ * @description Update planner information as Transport Manager
  * @access Private
  * @param {IdOrIdsInput['id']} id - The ID of the planner to update
- * @param {function} validation - ['validateId', 'validateUpdatePlanner']
+ * @param {function} validation - ['validateId', 'validateUpdatePlannerAsManager']
  * @param {function} controller - ['updatePlanner']
  */
-router.put('/update-planner/:id', validateId, validateUpdatePlanner, updatePlanner);
+router.patch(
+  '/update-planner/:id/:standAloneId',
+  authorizedRoles([UserRole.TRANSPORT_MANAGER]),
+  validateClientForManagerMiddleware,
+  validateIdAndManagerParam,
+  validateUpdatePlannerAsManager,
+  updatePlanner
+);
+
+/**
+ *
+ * Update planner information by Id as Standalone User, who is not under the transport manager
+ *
+ * @route PATCH /api/v1/planner/update-planner/:id
+ * @description Update planner information as Standalone User
+ * @access Private
+ * @param {IdOrIdsInput['id']} id - The ID of the planner to update
+ * @param {function} validation - ['validateId', 'validateUpdatePlannerAsStandAlone']
+ */
+router.patch(
+  '/update-planner/:id',
+  authorizedRoles([UserRole.STANDALONE_USER]),
+  validateIdParam,
+  validateUpdatePlannerAsStandAlone,
+  updatePlannerAsStandAlone
+);
+
+/**
+ * Update planner information by Id as Standalone User, who is under the transport manager, to request approval for the changes
+ *
+ * @route PATCH /api/v1/planner/request-approval/:id
+ * @description Update planner information as Standalone User to request approval for the changes
+ * @access Private
+ * @param {IdOrIdsInput['id']} id - The ID of the planner to update
+ * @param {function} validation - ['validateId']
+ * @param {function} controller - ['approvalForPlannerChangesRequest']
+ */
+router.patch(
+  '/request-approval/:id',
+  authorizedRoles([UserRole.TRANSPORT_MANAGER]),
+  validateIdParam,
+  approvalForPlannerChangesRequest
+);
+
+/**
+ * Reject planner change request by Id as Transport Manager
+ *
+ * @route PATCH /api/v1/planner/request-reject/:id
+ * @description Reject planner change request by Id as Transport Manager
+ * @access Private
+ * @param {IdOrIdsInput['id']} id - The ID of the planner change request to reject
+ * @param {function} validation - ['validateId']
+ * @param {function} controller - ['rejectPlannerChangeRequest']
+ */
+router.patch(
+  '/request-reject/:id',
+  authorizedRoles([UserRole.TRANSPORT_MANAGER]),
+  validateIdParam,
+  rejectPlannerChangeRequest
+);
 
 /**
  * @route DELETE /api/v1/planner/delete-planner/:id
@@ -117,6 +204,25 @@ router.get(
 );
 
 /**
+ * As a Transport Manager, Get all of the request planners that the stand alone users created who are under this transport manager
+ *
+ * @route GET /api/v1/planner/get-planner/requests/:standAloneId
+ * @description Get all of the request planners that the stand alone users created who are under this transport manager
+ * @access Private
+ * @param {IdOrIdsInput['id']} standAloneId - The ID of the standalone user to get the requested planners for
+ * @param {function} validation - ['validateRequestChangePlannerPrams']
+ * @param {function} middleware - ['validateClientForManagerMiddleware']
+ * @param {function} controller - ['getAllRequestedPlanners']
+ */
+router.get(
+  '/get-planner/requests/:standAloneId',
+  authorizedRoles([UserRole.TRANSPORT_MANAGER]),
+  validateRequestChangePlannerPrams,
+  validateClientForManagerMiddleware,
+  getAllRequestedPlanners
+);
+
+/**
  * Get a planner by ID as Transport Manager
  *
  * @route GET /api/v1/planner/get-planner/:id/:standAloneId
@@ -130,7 +236,6 @@ router.get(
   '/get-planner/:id/:standAloneId',
   authorizedRoles([UserRole.TRANSPORT_MANAGER]),
   validateClientForManagerMiddleware,
-  validateIdAndManagerParam,
   getPlannerById
 );
 
