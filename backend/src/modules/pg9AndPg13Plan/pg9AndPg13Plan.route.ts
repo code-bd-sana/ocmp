@@ -1,28 +1,28 @@
-import { Router } from 'express';
-import { isAuthorized } from '../../middlewares/is-authorized';
-import { authorizedRoles } from '../../middlewares/authorized-roles';
-import { UserRole } from '../../models';
+import { NextFunction, Request, Response, Router } from 'express';
+import authorizedRoles from '../../middlewares/authorized-roles';
+import isAuthorized from '../../middlewares/is-authorized';
 import { validateClientForManagerMiddleware } from '../../middlewares/validate-client-for-manager';
-import {
-  validateCreatePg9AndPg13PlanAsManager,
-  validateCreatePg9AndPg13PlanAsStandAlone,
-  validateUpdatePg9AndPg13Plan,
-  validatePg9AndPg13PlanIdParam,
-  validatePg9AndPg13PlanAndManagerIdParam,
-  validateSearchPg9AndPg13PlansQueries,
-} from './pg9AndPg13Plan.validation';
+import { UserRole } from '../../models';
 import {
   createPg9AndPg13PlanAsManager,
   createPg9AndPg13PlanAsStandAlone,
+  deletePg9AndPg13PlanAsManager,
+  deletePg9AndPg13PlanAsStandAlone,
   getAllPg9AndPg13PlansAsManager,
   getAllPg9AndPg13PlansAsStandAlone,
   getPg9AndPg13PlanByIdAsManager,
   getPg9AndPg13PlanByIdAsStandAlone,
   updatePg9AndPg13PlanAsManager,
   updatePg9AndPg13PlanAsStandAlone,
-  deletePg9AndPg13PlanAsManager,
-  deletePg9AndPg13PlanAsStandAlone,
 } from './pg9AndPg13Plan.controller';
+import {
+  validateCreatePg9AndPg13PlanAsManager,
+  validateCreatePg9AndPg13PlanAsStandAlone,
+  validatePg9AndPg13PlanAndManagerIdParam,
+  validatePg9AndPg13PlanIdParam,
+  validateSearchPg9AndPg13PlansQueries,
+  validateUpdatePg9AndPg13Plan,
+} from './pg9AndPg13Plan.validation';
 
 const router = Router();
 
@@ -34,7 +34,7 @@ const router = Router();
 router.post(
   '/create-pg9-and-pg13-plan',
   isAuthorized,
-  authorizedRoles(UserRole.TRANSPORT_MANAGER),
+  authorizedRoles([UserRole.TRANSPORT_MANAGER]),
   validateCreatePg9AndPg13PlanAsManager,
   validateClientForManagerMiddleware,
   createPg9AndPg13PlanAsManager
@@ -48,7 +48,7 @@ router.post(
 router.post(
   '/create-stand-alone-pg9-and-pg13-plan',
   isAuthorized,
-  authorizedRoles(UserRole.STANDALONE_USER),
+  authorizedRoles([UserRole.STANDALONE_USER]),
   validateCreatePg9AndPg13PlanAsStandAlone,
   createPg9AndPg13PlanAsStandAlone
 );
@@ -65,15 +65,15 @@ router.post(
 router.get(
   '/get-pg9-and-pg13-plans',
   isAuthorized,
-  authorizedRoles(UserRole.TRANSPORT_MANAGER, UserRole.STANDALONE_USER),
+  authorizedRoles([UserRole.TRANSPORT_MANAGER, UserRole.STANDALONE_USER]),
   validateSearchPg9AndPg13PlansQueries,
-  (req, _res, next) => {
+  (req: Request, _res: Response, next: NextFunction) => {
     if ((req as any).user?.role === UserRole.TRANSPORT_MANAGER) {
       return validateClientForManagerMiddleware(req, _res, next);
     }
     next();
   },
-  (req, res, next) => {
+  (req: Request, res: Response, next: NextFunction) => {
     if ((req as any).user?.role === UserRole.TRANSPORT_MANAGER) {
       return getAllPg9AndPg13PlansAsManager(req, res, next);
     }
@@ -89,7 +89,7 @@ router.get(
 router.get(
   '/get-pg9-and-pg13-plan/:pg9AndPg13PlanId/:standAloneId',
   isAuthorized,
-  authorizedRoles(UserRole.TRANSPORT_MANAGER),
+  authorizedRoles([UserRole.TRANSPORT_MANAGER]),
   validatePg9AndPg13PlanAndManagerIdParam,
   validateClientForManagerMiddleware,
   getPg9AndPg13PlanByIdAsManager
@@ -103,7 +103,7 @@ router.get(
 router.get(
   '/get-pg9-and-pg13-plan/:pg9AndPg13PlanId',
   isAuthorized,
-  authorizedRoles(UserRole.STANDALONE_USER),
+  authorizedRoles([UserRole.STANDALONE_USER]),
   validatePg9AndPg13PlanIdParam,
   getPg9AndPg13PlanByIdAsStandAlone
 );
@@ -120,7 +120,7 @@ router.get(
 router.patch(
   '/update-pg9-and-pg13-plan-by-manager/:pg9AndPg13PlanId/:standAloneId',
   isAuthorized,
-  authorizedRoles(UserRole.TRANSPORT_MANAGER),
+  authorizedRoles([UserRole.TRANSPORT_MANAGER]),
   validatePg9AndPg13PlanAndManagerIdParam,
   validateUpdatePg9AndPg13Plan,
   validateClientForManagerMiddleware,
@@ -135,7 +135,7 @@ router.patch(
 router.patch(
   '/update-pg9-and-pg13-plan/:pg9AndPg13PlanId',
   isAuthorized,
-  authorizedRoles(UserRole.STANDALONE_USER),
+  authorizedRoles([UserRole.STANDALONE_USER]),
   validatePg9AndPg13PlanIdParam,
   validateUpdatePg9AndPg13Plan,
   updatePg9AndPg13PlanAsStandAlone
@@ -153,7 +153,7 @@ router.patch(
 router.delete(
   '/delete-pg9-and-pg13-plan-by-manager/:pg9AndPg13PlanId/:standAloneId',
   isAuthorized,
-  authorizedRoles(UserRole.TRANSPORT_MANAGER),
+  authorizedRoles([UserRole.TRANSPORT_MANAGER]),
   validatePg9AndPg13PlanAndManagerIdParam,
   validateClientForManagerMiddleware,
   deletePg9AndPg13PlanAsManager
@@ -167,7 +167,7 @@ router.delete(
 router.delete(
   '/delete-pg9-and-pg13-plan/:pg9AndPg13PlanId',
   isAuthorized,
-  authorizedRoles(UserRole.STANDALONE_USER),
+  authorizedRoles([UserRole.STANDALONE_USER]),
   validatePg9AndPg13PlanIdParam,
   deletePg9AndPg13PlanAsStandAlone
 );
