@@ -1,7 +1,7 @@
 // Import the model
 import mongoose from 'mongoose';
 import MeetingNoteModel, { IMeetingNote } from '../../models/meeting-note/meetingNote.schema';
-import { IdOrIdsInput, SearchQueryInput } from '../../handlers/common-zod-validator';
+import { IdOrIdsInput } from '../../handlers/common-zod-validator';
 import {
   CreateMeetingNoteInput,
   SearchMeetingNoteQueryInput,

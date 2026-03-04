@@ -69,7 +69,6 @@ router.post(
  * @param {function} validation - ['validateUpdateMeetingNoteIds', 'validateUpdateMeetingNote']
  * @param {function} controller - ['updateMeetingNote']
  */
-
 router.patch(
   '/update-as-manager/:id/:standAloneId',
   authorizedRoles([UserRole.TRANSPORT_MANAGER]),
@@ -89,7 +88,6 @@ router.patch(
 router.patch(
   '/update-as-standalone/:id',
   authorizedRoles([UserRole.STANDALONE_USER]),
-  // checkSubscriptionValidity,
   validateId,
   validateUpdateMeetingNote,
   updateMeetingNote

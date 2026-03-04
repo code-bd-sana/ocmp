@@ -11,7 +11,7 @@ import { SearchMeetingNoteQueryInput } from './meeting-note.validation';
  * Controller function to handle the creation of a single meeting-note.
  *
  * @param {AuthenticatedRequest} req - The request object containing meeting-note data in the body.
- * @param {AuthenticatedRequest} res - The response object used to send the response.
+ * @param {Response} res - The response object used to send the response.
  * @returns {Promise<Partial<IMeetingNote>>} - The created meeting-note.
  * @throws {Error} - Throws an error if the meeting-note creation fails.
  */
@@ -34,7 +34,7 @@ export const createMeetingNoteAsManager = catchAsync(
 /**
  * Controller function to handle the creation of a single meeting-note.
  *
- * @param {Request} req - The request object containing meeting-note data in the body.
+ * @param {AuthenticatedRequest} req - The request object containing meeting-note data in the body.
  * @param {Response} res - The response object used to send the response.
  * @returns {Promise<Partial<IMeetingNote>>} - The created meeting-note.
  * @throws {Error} - Throws an error if the meeting-note creation fails.
@@ -57,7 +57,7 @@ export const createMeetingNoteAsStandalone = catchAsync(
  * Controller function to handle the update operation for a single meeting-note.
  *
  * @param {AuthenticatedRequest} req - The request object containing the ID of the meeting-note to update in URL parameters and the updated data in the body.
- * @param {AuthenticatedRequest} res - The response object used to send the response.
+ * @param {Response} res - The response object used to send the response.
  * @returns {Promise<Partial<IMeetingNote>>} - The updated meeting-note.
  * @throws {Error} - Throws an error if the meeting-note update fails.
  */
@@ -83,7 +83,7 @@ export const updateMeetingNote = catchAsync(async (req: AuthenticatedRequest, re
  * Controller function to handle the deletion of a single meeting-note.
  *
  * @param {AuthenticatedRequest} req - The request object containing the ID of the meeting-note to delete in URL parameters.
- * @param {AuthenticatedRequest} res - The response object used to send the response.
+ * @param {Response} res - The response object used to send the response.
  * @returns {Promise<Partial<IMeetingNote>>} - The deleted meeting-note.
  * @throws {Error} - Throws an error if the meeting-note deletion fails.
  */
@@ -108,7 +108,7 @@ export const deleteMeetingNote = catchAsync(async (req: AuthenticatedRequest, re
  * Controller function to handle the retrieval of a single meeting-note by ID.
  *
  * @param {AuthenticatedRequest} req - The request object containing the ID of the meeting-note to retrieve in URL parameters.
- * @param {AuthenticatedRequest} res - The response object used to send the response.
+ * @param {Response} res - The response object used to send the response.
  * @returns {Promise<Partial<IMeetingNote>>} - The retrieved meeting-note.
  * @throws {Error} - Throws an error if the meeting-note retrieval fails.
  */
@@ -140,7 +140,7 @@ export const getMeetingNoteById = catchAsync(async (req: AuthenticatedRequest, r
  * Controller function to handle the retrieval of multiple meeting-notes.
  *
  * @param {AuthenticatedRequest} req - The request object containing query parameters for filtering.
- * @param {AuthenticatedRequest} res - The response object used to send the response.
+ * @param {Response} res - The response object used to send the response.
  * @returns {Promise<Partial<IMeetingNote>[]>} - The retrieved meeting-notes.
  * @throws {Error} - Throws an error if the meeting-notes retrieval fails.
  */

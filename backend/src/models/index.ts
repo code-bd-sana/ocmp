@@ -157,3 +157,9 @@ export {
   default as MaintenanceProviderCommunication,
   IMaintenanceProviderCommunication,
 } from './maintenance/maintenance-provider-communication.schema';
+
+// maintenance provider communication
+export {
+  default as ContactLog,
+  IContactLog,
+} from './contact/contact-log.schema';
