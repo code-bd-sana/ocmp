@@ -11,9 +11,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { AuthAction } from "@/service/auth";
 import { Eye, EyeOff, Loader2, Lock, Mail } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { toast, Toaster } from "sonner";
 
 export default function SignInPage() {
   /**
@@ -39,8 +42,11 @@ export default function SignInPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>(
-    {}
+    {},
   );
+
+
+  const router = useRouter();
 
   // Validate form inputs
   function validateForm() {
@@ -72,47 +78,77 @@ export default function SignInPage() {
 
     setIsLoading(true);
 
-    // Simulate API call
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      console.log("Signing in with:", { email });
-      // Replace with actual API call
-      // const response = await signIn({ email, password });
+      const payload = { email, password };
+      const resp = await AuthAction.LoginUser(payload);
+      
+      if (resp.status) {
+        const token = resp.data?.token;
+        if (token) {
+          const secure = window.location.protocol === "https:" ? "; secure" : "";
+          document.cookie = `token=${encodeURIComponent(
+            token,
+          )}; path=/; max-age=604800; samesite=lax${secure}`;
+        }
 
-      alert(`Successfully signed in as ${email}`);
-      // In a real app: router.push("/dashboard");
+        toast.success(resp.message || "Successfully signed in!");
+        // Redirect to dashboard or home page
+        setTimeout(() => {
+          router.push("/dashboard"); // or wherever you want to redirect
+        }, 1000);
+      } else {
+        // Show error message from API
+        toast.error(resp.message || "Sign in failed. Please check your credentials.");
+        
+        // Set field-specific errors if provided by API
+        if (resp.error) {
+          if (typeof resp.error === "string") {
+            setErrors({ password: resp.error });
+          } else {
+            setErrors(resp.error);
+          }
+        } else {
+          // General error - clear password field
+          setPassword("");
+        }
+      }
     } catch (error) {
       console.error("Sign in failed:", error);
-      alert("Sign in failed. Please check your credentials.");
+      const errorMessage = error instanceof Error ? error.message : "Something went wrong";
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
   }
 
+const token = AuthAction.GetAuthToken();
+console.log(token, 'token');
+
   return (
-    <div className='min-h-screen flex items-center justify-center bg-linear-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-4'>
-      <Card className='w-full max-w-md shadow-xl'>
-        <CardHeader className='space-y-1'>
-          <CardTitle className='text-2xl font-bold text-center'>
+    <div className="flex min-h-screen items-center justify-center bg-linear-to-br from-gray-50 to-gray-100 p-4 dark:from-gray-900 dark:to-gray-800">
+      <Toaster/>
+      <Card className="w-full max-w-md shadow-xl">
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-center text-2xl font-bold">
             Welcome Back To Tim Tim!
           </CardTitle>
-          <CardDescription className='text-center'>
+          <CardDescription className="text-center">
             Enter your credentials to access your account
           </CardDescription>
         </CardHeader>
 
         <CardContent>
-          <form onSubmit={handleSubmit} className='space-y-6'>
-            <div className='space-y-4'>
-              <div className='space-y-2'>
-                <Label htmlFor='email' className='flex items-center gap-2'>
-                  <Mail className='h-4 w-4' />
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email" className="flex items-center gap-2">
+                  <Mail className="h-4 w-4" />
                   Email Address
                 </Label>
                 <Input
-                  id='email'
-                  type='email'
-                  placeholder='name@example.com'
+                  id="email"
+                  type="email"
+                  placeholder="name@example.com"
                   value={email}
                   onChange={(e) => {
                     setEmail(e.target.value);
@@ -126,31 +162,32 @@ export default function SignInPage() {
                       : "border-input-foreground"
                   }`}
                   disabled={isLoading}
-                  autoComplete='email'
+                  autoComplete="email"
                 />
                 {errors.email && (
-                  <p className='text-sm text-destructive'>{errors.email}</p>
+                  <p className="text-destructive text-sm">{errors.email}</p>
                 )}
               </div>
 
-              <div className='space-y-2'>
-                <div className='flex items-center justify-between'>
-                  <Label htmlFor='password' className='flex items-center gap-2'>
-                    <Lock className='h-4 w-4' />
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password" className="flex items-center gap-2">
+                    <Lock className="h-4 w-4" />
                     Password
                   </Label>
                   <Link
-                    href='/forgot-password'
-                    className='text-sm text-primary! hover:underline'
-                    tabIndex={-1}>
+                    href="/forgot-password"
+                    className="text-primary! text-sm hover:underline"
+                    tabIndex={-1}
+                  >
                     Forgot password?
                   </Link>
                 </div>
-                <div className='relative'>
+                <div className="relative">
                   <Input
-                    id='password'
+                    id="password"
                     type={showPassword ? "text" : "password"}
-                    placeholder='••••••••'
+                    placeholder="••••••••"
                     value={password}
                     onChange={(e) => {
                       setPassword(e.target.value);
@@ -164,34 +201,36 @@ export default function SignInPage() {
                         : "border-input-foreground"
                     }`}
                     disabled={isLoading}
-                    autoComplete='current-password'
+                    autoComplete="current-password"
                   />
                   <button
-                    type='button'
+                    type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className='absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700'
+                    className="absolute top-1/2 right-3 -translate-y-1/2 text-gray-500 hover:text-gray-700"
                     tabIndex={-1}
-                    disabled={isLoading}>
+                    disabled={isLoading}
+                  >
                     {showPassword ? (
-                      <EyeOff className='h-4 w-4' />
+                      <EyeOff className="h-4 w-4" />
                     ) : (
-                      <Eye className='h-4 w-4' />
+                      <Eye className="h-4 w-4" />
                     )}
                   </button>
                 </div>
                 {errors.password && (
-                  <p className='text-sm text-destructive'>{errors.password}</p>
+                  <p className="text-destructive text-sm">{errors.password}</p>
                 )}
               </div>
             </div>
 
             <Button
-              type='submit'
-              className='w-full h-11 text-base bg-primary cursor-pointer'
-              disabled={isLoading}>
+              type="submit"
+              className="bg-primary h-11 w-full cursor-pointer text-base"
+              disabled={isLoading}
+            >
               {isLoading ? (
                 <>
-                  <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Signing in...
                 </>
               ) : (
@@ -201,30 +240,33 @@ export default function SignInPage() {
           </form>
         </CardContent>
 
-        <CardFooter className='flex flex-col space-y-4'>
-          <div className='text-center text-sm text-foreground'>
+        <CardFooter className="flex flex-col space-y-4">
+          <div className="text-foreground text-center text-sm">
             By continuing, you agree to our{" "}
             <Link
-              href='/terms'
-              className='underline hover:text-primary font-semibold'>
+              href="/terms"
+              className="hover:text-primary font-semibold underline"
+            >
               Terms of Service
             </Link>{" "}
             and{" "}
             <Link
-              href='/privacy'
-              className='underline hover:text-primary font-semibold'>
+              href="/privacy"
+              className="hover:text-primary font-semibold underline"
+            >
               Privacy Policy
             </Link>
           </div>
 
           <Separator />
 
-          <div className='text-center text-sm'>
+          <div className="text-center text-sm">
             Don&apos;t have an account?{" "}
             <Link
-              href='/signup'
-              className='font-semibold text-primary hover:underline'
-              tabIndex={isLoading ? -1 : 0}>
+              href="/signup"
+              className="text-primary font-semibold hover:underline"
+              tabIndex={isLoading ? -1 : 0}
+            >
               Sign up
             </Link>
           </div>
