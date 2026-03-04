@@ -1,29 +1,25 @@
-
-import path from "path";
 import {
-  S3Client,
-  GetObjectCommand,
   DeleteObjectCommand,
   DeleteObjectsCommand,
-} from "@aws-sdk/client-s3";
-import { Upload } from "@aws-sdk/lib-storage";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { v4 as uuidv4 } from "uuid";
-import type { Readable } from "stream";
+  GetObjectCommand,
+  S3Client,
+} from '@aws-sdk/client-s3';
+import { Upload } from '@aws-sdk/lib-storage';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import path from 'path';
+import type { Readable } from 'stream';
+import { v4 as uuidv4 } from 'uuid';
 
 // ────────────────────────────────────────────────
 // S3 CLIENT SETUP
 // ────────────────────────────────────────────────
 
-const region: string =
-  process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION || "us-west-1";
+const region: string = process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION || 'us-west-1';
 const bucket: string | undefined = process.env.AWS_S3_BUCKET;
 
 // Warn if bucket not set
 if (!bucket) {
-  console.warn(
-    "AWS_S3_BUCKET is not set. S3 operations will fail until configured.",
-  );
+  console.warn('AWS_S3_BUCKET is not set. S3 operations will fail until configured.');
 }
 
 // Create S3 client
@@ -42,17 +38,16 @@ const s3Client = new S3Client({
  * Sanitize S3 object key to prevent path traversal
  */
 export function sanitizeKey(key: string): string {
-  if (!key) return "";
+  if (!key) return '';
   // Remove leading/trailing slashes, prevent path traversal
-  return key.replace(/^\/+/ , "").replace(/\.\.+/g, "").replace(/\\/g, "/");
+  return key.replace(/^\/+/, '').replace(/\.\.+/g, '').replace(/\\/g, '/');
 }
-
 
 /**
  * Generate unique object key with optional folder prefix
  */
-function generateKey(originalName: string = "", folderPrefix: string = ""): string {
-  const ext = path.extname(originalName || "") || "";
+function generateKey(originalName: string = '', folderPrefix: string = ''): string {
+  const ext = path.extname(originalName || '') || '';
   const uniquePart = `${uuidv4()}${ext}`;
   if (folderPrefix) {
     const cleanPrefix = sanitizeKey(folderPrefix);
@@ -65,7 +60,6 @@ function generateKey(originalName: string = "", folderPrefix: string = ""): stri
 // SINGLE FILE FUNCTIONS
 // ────────────────────────────────────────────────
 
-
 /**
  * Upload buffer with optional folder prefix
  */
@@ -73,32 +67,31 @@ export async function uploadBuffer(
   buffer: Buffer,
   key?: string,
   contentType?: string,
-  folderPrefix: string = ""
+  folderPrefix: string = ''
 ): Promise<{ Bucket: string; Key: string; ETag: string; Location: string }> {
   if (!bucket) {
-    const err = new Error("S3 bucket not configured");
+    const err = new Error('S3 bucket not configured');
     (err as any).code = 500;
     throw err;
   }
-  const finalKey = key ? sanitizeKey(key) : generateKey("", folderPrefix);
+  const finalKey = key ? sanitizeKey(key) : generateKey('', folderPrefix);
   const upload = new Upload({
     client: s3Client,
     params: {
       Bucket: bucket,
       Key: finalKey,
       Body: buffer,
-      ContentType: contentType || "application/octet-stream",
+      ContentType: contentType || 'application/octet-stream',
     },
   });
   const result = await upload.done();
   return {
     Bucket: bucket,
     Key: finalKey,
-    ETag: result.ETag,
+    ETag: result.ETag || '',
     Location: `https://${bucket}.s3.${region}.amazonaws.com/${encodeURIComponent(finalKey)}`,
   };
 }
-
 
 /**
  * Upload stream with optional folder prefix
@@ -107,39 +100,38 @@ export async function uploadStream(
   stream: Readable,
   key?: string,
   contentType?: string,
-  folderPrefix: string = ""
+  folderPrefix: string = ''
 ): Promise<{ Bucket: string; Key: string; ETag: string; Location: string }> {
   if (!bucket) {
-    const err = new Error("S3 bucket not configured");
+    const err = new Error('S3 bucket not configured');
     (err as any).code = 500;
     throw err;
   }
-  const finalKey = key ? sanitizeKey(key) : generateKey("", folderPrefix);
+  const finalKey = key ? sanitizeKey(key) : generateKey('', folderPrefix);
   const upload = new Upload({
     client: s3Client,
     params: {
       Bucket: bucket,
       Key: finalKey,
       Body: stream,
-      ContentType: contentType || "application/octet-stream",
+      ContentType: contentType || 'application/octet-stream',
     },
   });
   const result = await upload.done();
   return {
     Bucket: bucket,
     Key: finalKey,
-    ETag: result.ETag,
+    ETag: result.ETag || '',
     Location: `https://${bucket}.s3.${region}.amazonaws.com/${encodeURIComponent(finalKey)}`,
   };
 }
-
 
 /**
  * Delete a single object
  */
 export async function deleteObject(key: string): Promise<any> {
   if (!bucket) {
-    const err = new Error("S3 bucket not configured");
+    const err = new Error('S3 bucket not configured');
     (err as any).code = 500;
     throw err;
   }
@@ -148,13 +140,12 @@ export async function deleteObject(key: string): Promise<any> {
   return s3Client.send(cmd);
 }
 
-
 /**
  * Get object as stream
  */
 export async function getObjectStream(key: string): Promise<Readable> {
   if (!bucket) {
-    const err = new Error("S3 bucket not configured");
+    const err = new Error('S3 bucket not configured');
     (err as any).code = 500;
     throw err;
   }
@@ -164,13 +155,12 @@ export async function getObjectStream(key: string): Promise<Readable> {
   return res.Body as Readable;
 }
 
-
 /**
  * Get signed download URL
  */
 export async function getSignedDownloadUrl(key: string, expiresIn: number = 900): Promise<string> {
   if (!bucket) {
-    const err = new Error("S3 bucket not configured");
+    const err = new Error('S3 bucket not configured');
     (err as any).code = 500;
     throw err;
   }
@@ -182,7 +172,6 @@ export async function getSignedDownloadUrl(key: string, expiresIn: number = 900)
 // ────────────────────────────────────────────────
 // BATCH / MULTIPLE FILE FUNCTIONS
 // ────────────────────────────────────────────────
-
 
 export interface UploadBufferItem {
   buffer: Buffer;
@@ -198,21 +187,23 @@ export interface UploadBufferItem {
 export async function uploadBuffers(
   items: UploadBufferItem[],
   concurrency: number = 5
-): Promise<Array<{ status: "fulfilled" | "rejected"; value?: any; reason?: any }>> {
+): Promise<Array<{ status: 'fulfilled' | 'rejected'; value?: any; reason?: any }>> {
   if (!bucket) {
-    const err = new Error("S3 bucket not configured");
+    const err = new Error('S3 bucket not configured');
     (err as any).code = 500;
     throw err;
   }
   if (!Array.isArray(items) || items.length === 0) return [];
-  const results: Array<{ status: "fulfilled" | "rejected"; value?: any; reason?: any }> = new Array(items.length);
+  const results: Array<{ status: 'fulfilled' | 'rejected'; value?: any; reason?: any }> = new Array(
+    items.length
+  );
   const queue = items.map((it, ix) => ({ item: it, ix }));
   async function processNext() {
     while (queue.length > 0) {
       const { item, ix } = queue.shift()!;
       try {
         const safeKey = sanitizeKey(
-          item.key || generateKey(item.originalName || "", item.folderPrefix || "")
+          item.key || generateKey(item.originalName || '', item.folderPrefix || '')
         );
         const upload = new Upload({
           client: s3Client,
@@ -220,32 +211,28 @@ export async function uploadBuffers(
             Bucket: bucket,
             Key: safeKey,
             Body: item.buffer,
-            ContentType: item.contentType || "application/octet-stream",
+            ContentType: item.contentType || 'application/octet-stream',
           },
         });
         const result = await upload.done();
         results[ix] = {
-          status: "fulfilled",
+          status: 'fulfilled',
           value: {
             Bucket: bucket,
             Key: safeKey,
-            ETag: result.ETag,
+            ETag: result.ETag || '',
             Location: `https://${bucket}.s3.${region}.amazonaws.com/${encodeURIComponent(safeKey)}`,
           },
         };
       } catch (err) {
-        results[ix] = { status: "rejected", reason: err };
+        results[ix] = { status: 'rejected', reason: err };
       }
     }
   }
-  const workers = Array.from(
-    { length: Math.min(concurrency, items.length) },
-    () => processNext(),
-  );
+  const workers = Array.from({ length: Math.min(concurrency, items.length) }, () => processNext());
   await Promise.all(workers);
   return results;
 }
-
 
 export interface UploadStreamItem {
   stream: Readable;
@@ -261,21 +248,23 @@ export interface UploadStreamItem {
 export async function uploadStreams(
   items: UploadStreamItem[],
   concurrency: number = 5
-): Promise<Array<{ status: "fulfilled" | "rejected"; value?: any; reason?: any }>> {
+): Promise<Array<{ status: 'fulfilled' | 'rejected'; value?: any; reason?: any }>> {
   if (!bucket) {
-    const err = new Error("S3 bucket not configured");
+    const err = new Error('S3 bucket not configured');
     (err as any).code = 500;
     throw err;
   }
   if (!Array.isArray(items) || items.length === 0) return [];
-  const results: Array<{ status: "fulfilled" | "rejected"; value?: any; reason?: any }> = new Array(items.length);
+  const results: Array<{ status: 'fulfilled' | 'rejected'; value?: any; reason?: any }> = new Array(
+    items.length
+  );
   const queue = items.map((it, ix) => ({ item: it, ix }));
   async function processNext() {
     while (queue.length > 0) {
       const { item, ix } = queue.shift()!;
       try {
         const safeKey = sanitizeKey(
-          item.key || generateKey(item.originalName || "", item.folderPrefix || "")
+          item.key || generateKey(item.originalName || '', item.folderPrefix || '')
         );
         const upload = new Upload({
           client: s3Client,
@@ -283,39 +272,35 @@ export async function uploadStreams(
             Bucket: bucket,
             Key: safeKey,
             Body: item.stream,
-            ContentType: item.contentType || "application/octet-stream",
+            ContentType: item.contentType || 'application/octet-stream',
           },
         });
         const result = await upload.done();
         results[ix] = {
-          status: "fulfilled",
+          status: 'fulfilled',
           value: {
             Bucket: bucket,
             Key: safeKey,
-            ETag: result.ETag,
+            ETag: result.ETag || '',
             Location: `https://${bucket}.s3.${region}.amazonaws.com/${encodeURIComponent(safeKey)}`,
           },
         };
       } catch (err) {
-        results[ix] = { status: "rejected", reason: err };
+        results[ix] = { status: 'rejected', reason: err };
       }
     }
   }
-  const workers = Array.from(
-    { length: Math.min(concurrency, items.length) },
-    () => processNext(),
-  );
+  const workers = Array.from({ length: Math.min(concurrency, items.length) }, () => processNext());
   await Promise.all(workers);
   return results;
 }
-
 
 /**
  * Delete multiple objects (batched)
  */
 export async function deleteObjects(keys: string[]): Promise<{ Deleted: any[]; Errors: any[] }> {
   if (!bucket) {
-    const err = new Error("S3 bucket not configured");
+    const err = new Error('S3 bucket not configured');
     (err as any).code = 500;
     throw err;
   }
@@ -340,6 +325,5 @@ export async function deleteObjects(keys: string[]): Promise<{ Deleted: any[]; E
   }
   return finalResult;
 }
-
 
 export { generateKey };
