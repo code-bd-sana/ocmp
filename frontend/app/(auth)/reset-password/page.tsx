@@ -11,13 +11,24 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { AuthAction } from "@/service/auth";
 import { ArrowLeft, Check, Eye, EyeOff, Loader2, Lock } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { toast, Toaster } from "sonner";
 
 export default function ResetPasswordPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  
+  // Get and decode parameters from URL
+  const rawEmail = searchParams.get("email") || "";
+  const token = searchParams.get("token") || "";
+  
+  // Decode email (handles %40 and other encoded characters)
+  const email = decodeURIComponent(rawEmail);
+  
   const [formData, setFormData] = useState({
     password: "",
     confirmPassword: "",
@@ -28,6 +39,14 @@ export default function ResetPasswordPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [strength, setStrength] = useState(0);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [urlError, setUrlError] = useState("");
+
+  // Check if URL parameters are valid
+  useEffect(() => {
+    if (!email || !token) {
+      setUrlError("Invalid reset link. Missing email or token.");
+    }
+  }, [email, token]);
 
   const checkPasswordStrength = (password: string) => {
     let score = 0;
@@ -72,6 +91,11 @@ export default function ResetPasswordPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (!email || !token) {
+      toast.error("Invalid reset link. Please request a new one.");
+      return;
+    }
+
     if (!validateForm()) {
       return;
     }
@@ -79,21 +103,29 @@ export default function ResetPasswordPage() {
     setIsLoading(true);
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      const response = await AuthAction.ResetForgetPassword({
+        email,
+        token,
+        password: formData.password,
+        confirmPassword: formData.confirmPassword,
+      });
 
-      // In real app, reset password with token from URL
-      console.log("Resetting password for token");
+      if (response.status) {
+        toast.success(response.message || "Password reset successfully!");
+        setIsSuccess(true);
 
-      setIsSuccess(true);
-
-      // Redirect to sign in after 3 seconds
-      setTimeout(() => {
-        router.push("/signin");
-      }, 3000);
+        // Redirect to sign in after 3 seconds
+        setTimeout(() => {
+          router.push("/signin");
+        }, 3000);
+      } else {
+        toast.error(response.message || "Failed to reset password");
+        setErrors({ password: response.message || "Failed to reset password" });
+      }
     } catch (error) {
-      console.error("Password reset failed:", error);
-      setErrors({ password: "Failed to reset password. Please try again." });
+      const errorMessage = error instanceof Error ? error.message : "Something went wrong";
+      toast.error(errorMessage);
+      setErrors({ password: errorMessage });
     } finally {
       setIsLoading(false);
     }
@@ -107,66 +139,128 @@ export default function ResetPasswordPage() {
     return "bg-green-500";
   };
 
+  // Show error if URL parameters are invalid
+  if (urlError) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-linear-to-br from-gray-50 to-gray-100 p-4 dark:from-gray-900 dark:to-gray-800">
+        <Toaster richColors position="top-center" />
+        <Card className="w-full max-w-md shadow-xl">
+          <div className="relative h-1.5 w-full overflow-hidden rounded-t-lg">
+            <div className="absolute inset-0 bg-gradient-to-r from-red-500 via-red-400 to-red-500 animate-gradient" />
+          </div>
+          <CardHeader className="space-y-1">
+            <CardTitle className="text-center text-2xl font-bold text-destructive">
+              Invalid Reset Link
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <Alert className="bg-red-50 border-red-200 dark:bg-red-950 dark:border-red-800">
+              <AlertDescription className="text-red-800 dark:text-red-200 text-center">
+                {urlError}
+              </AlertDescription>
+            </Alert>
+            <div className="text-center">
+              <Button asChild className="bg-primary hover:bg-primary/90">
+                <Link href="/forgot-password">Request New Reset Link</Link>
+              </Button>
+            </div>
+          </CardContent>
+          <CardFooter className="flex flex-col space-y-4 pt-2">
+            <div className="text-center text-sm">
+              <Link
+                href="/signin"
+                className="inline-flex items-center text-foreground hover:text-primary transition-colors"
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back to Sign In
+              </Link>
+            </div>
+          </CardFooter>
+        </Card>
+
+      
+      </div>
+    );
+  }
+
   if (isSuccess) {
     return (
-      <div className='min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-4'>
-        <Card className='w-full max-w-md shadow-xl'>
-          <CardHeader className='space-y-1'>
-            <div className='mx-auto w-12 h-12 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center mb-4'>
-              <Check className='h-6 w-6 text-green-600 dark:text-green-400' />
+      <div className="flex min-h-screen items-center justify-center bg-linear-to-br from-gray-50 to-gray-100 p-4 dark:from-gray-900 dark:to-gray-800">
+        <Toaster  />
+        <Card className="w-full max-w-md shadow-xl">
+          <div className="relative h-1.5 w-full overflow-hidden rounded-t-lg">
+            <div className="absolute inset-0 bg-gradient-to-r from-green-500 via-green-400 to-green-500 animate-gradient" />
+          </div>
+          <CardHeader className="space-y-1">
+            <div className="mx-auto w-12 h-12 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center mb-4">
+              <Check className="h-6 w-6 text-green-600 dark:text-green-400" />
             </div>
-            <CardTitle className='text-2xl font-bold text-center'>
+            <CardTitle className="text-2xl font-bold text-center">
               Password Reset
             </CardTitle>
-            <CardDescription className='text-center'>
+            <CardDescription className="text-center text-foreground">
               Your password has been successfully reset
             </CardDescription>
           </CardHeader>
 
-          <CardContent className='space-y-6'>
-            <Alert className='bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800'>
-              <AlertDescription className='text-green-800 dark:text-green-200 text-center'>
+          <CardContent className="space-y-6">
+            <Alert className="bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800">
+              <AlertDescription className="text-green-800 dark:text-green-200 text-center">
                 You will be redirected to the sign in page in a few seconds...
               </AlertDescription>
             </Alert>
 
-            <div className='text-center'>
-              <Button asChild className='w-full'>
-                <Link href='/signin'>Sign In Now</Link>
+            <div className="text-center">
+              <Button 
+                asChild 
+                className="bg-primary hover:bg-primary/90 w-full transition-all duration-300 hover:scale-105"
+              >
+                <Link href="/signin">Sign In Now</Link>
               </Button>
             </div>
           </CardContent>
         </Card>
+
+       
       </div>
     );
   }
 
   return (
-    <div className='min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-4'>
-      <Card className='w-full max-w-md shadow-xl'>
-        <CardHeader className='space-y-1'>
-          <CardTitle className='text-2xl font-bold text-center'>
+    <div className="flex min-h-screen items-center justify-center bg-linear-to-br from-gray-50 to-gray-100 p-4 dark:from-gray-900 dark:to-gray-800">
+      <Toaster richColors position="top-center" />
+      
+      <Card className="w-full max-w-md shadow-xl">
+   
+
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-center text-2xl font-bold">
             Create New Password
           </CardTitle>
-          <CardDescription className='text-center'>
+          <CardDescription className="text-center text-foreground">
             Enter your new password below
           </CardDescription>
+          {email && (
+            <p className="text-center text-xs text-gray-500 dark:text-gray-400 mt-1">
+              For <span className="font-medium">{email}</span>
+            </p>
+          )}
         </CardHeader>
 
         <CardContent>
-          <form onSubmit={handleSubmit} className='space-y-6'>
-            <div className='space-y-4'>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-4">
               {/* Password Field */}
-              <div className='space-y-2'>
-                <Label htmlFor='password' className='flex items-center gap-2'>
-                  <Lock className='h-4 w-4' />
+              <div className="space-y-2">
+                <Label htmlFor="password" className="flex items-center gap-2">
+                  <Lock className="h-4 w-4" />
                   New Password
                 </Label>
-                <div className='relative'>
+                <div className="relative">
                   <Input
-                    id='password'
+                    id="password"
                     type={showPassword ? "text" : "password"}
-                    placeholder='••••••••'
+                    placeholder="••••••••"
                     value={formData.password}
                     onChange={(e) => handleChange("password", e.target.value)}
                     className={`h-11 pr-10 ${
@@ -175,26 +269,26 @@ export default function ResetPasswordPage() {
                         : "border-input-foreground"
                     }`}
                     disabled={isLoading}
-                    autoComplete='new-password'
+                    autoComplete="new-password"
                   />
                   <button
-                    type='button'
+                    type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className='absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700'
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
                     tabIndex={-1}
                     disabled={isLoading}>
                     {showPassword ? (
-                      <EyeOff className='h-4 w-4' />
+                      <EyeOff className="h-4 w-4" />
                     ) : (
-                      <Eye className='h-4 w-4' />
+                      <Eye className="h-4 w-4" />
                     )}
                   </button>
                 </div>
 
                 {/* Password Strength Meter */}
                 {formData.password && (
-                  <div className='space-y-2'>
-                    <div className='flex gap-1'>
+                  <div className="space-y-2">
+                    <div className="flex gap-1">
                       {[1, 2, 3, 4].map((i) => (
                         <div
                           key={i}
@@ -204,8 +298,8 @@ export default function ResetPasswordPage() {
                         />
                       ))}
                     </div>
-                    <div className='grid grid-cols-2 gap-2 text-xs text-muted-foreground'>
-                      <div className='flex items-center gap-1'>
+                    <div className="grid grid-cols-2 gap-2 text-xs text-foreground">
+                      <div className="flex items-center gap-1">
                         <Check
                           className={`h-3 w-3 ${
                             formData.password.length >= 8
@@ -215,7 +309,7 @@ export default function ResetPasswordPage() {
                         />
                         <span>8+ characters</span>
                       </div>
-                      <div className='flex items-center gap-1'>
+                      <div className="flex items-center gap-1">
                         <Check
                           className={`h-3 w-3 ${
                             /[A-Z]/.test(formData.password)
@@ -225,7 +319,7 @@ export default function ResetPasswordPage() {
                         />
                         <span>Uppercase</span>
                       </div>
-                      <div className='flex items-center gap-1'>
+                      <div className="flex items-center gap-1">
                         <Check
                           className={`h-3 w-3 ${
                             /[0-9]/.test(formData.password)
@@ -235,7 +329,7 @@ export default function ResetPasswordPage() {
                         />
                         <span>Number</span>
                       </div>
-                      <div className='flex items-center gap-1'>
+                      <div className="flex items-center gap-1">
                         <Check
                           className={`h-3 w-3 ${
                             /[^A-Za-z0-9]/.test(formData.password)
@@ -250,23 +344,23 @@ export default function ResetPasswordPage() {
                 )}
 
                 {errors.password && (
-                  <p className='text-sm text-destructive'>{errors.password}</p>
+                  <p className="text-sm text-destructive">{errors.password}</p>
                 )}
               </div>
 
               {/* Confirm Password Field */}
-              <div className='space-y-2'>
+              <div className="space-y-2">
                 <Label
-                  htmlFor='confirmPassword'
-                  className='flex items-center gap-2'>
-                  <Lock className='h-4 w-4' />
+                  htmlFor="confirmPassword"
+                  className="flex items-center gap-2">
+                  <Lock className="h-4 w-4" />
                   Confirm New Password
                 </Label>
-                <div className='relative'>
+                <div className="relative">
                   <Input
-                    id='confirmPassword'
+                    id="confirmPassword"
                     type={showConfirmPassword ? "text" : "password"}
-                    placeholder='••••••••'
+                    placeholder="••••••••"
                     value={formData.confirmPassword}
                     onChange={(e) =>
                       handleChange("confirmPassword", e.target.value)
@@ -277,23 +371,23 @@ export default function ResetPasswordPage() {
                         : "border-input-foreground"
                     }`}
                     disabled={isLoading}
-                    autoComplete='new-password'
+                    autoComplete="new-password"
                   />
                   <button
-                    type='button'
+                    type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className='absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700'
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
                     tabIndex={-1}
                     disabled={isLoading}>
                     {showConfirmPassword ? (
-                      <EyeOff className='h-4 w-4' />
+                      <EyeOff className="h-4 w-4" />
                     ) : (
-                      <Eye className='h-4 w-4' />
+                      <Eye className="h-4 w-4" />
                     )}
                   </button>
                 </div>
                 {errors.confirmPassword && (
-                  <p className='text-sm text-destructive'>
+                  <p className="text-sm text-destructive">
                     {errors.confirmPassword}
                   </p>
                 )}
@@ -301,12 +395,13 @@ export default function ResetPasswordPage() {
             </div>
 
             <Button
-              type='submit'
-              className='w-full h-11 text-base bg-primary cursor-pointer'
-              disabled={isLoading}>
+              type="submit"
+              className="w-full h-11 text-base bg-primary hover:bg-primary/90 cursor-pointer transition-all duration-300 hover:scale-105"
+              disabled={isLoading || !email || !token}
+            >
               {isLoading ? (
                 <>
-                  <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Resetting Password...
                 </>
               ) : (
@@ -316,18 +411,20 @@ export default function ResetPasswordPage() {
           </form>
         </CardContent>
 
-        <CardFooter className='flex flex-col space-y-4'>
-          <div className='text-center text-sm'>
+        <CardFooter className="flex flex-col space-y-4 pt-2">
+          <div className="text-center text-sm">
             <Link
-              href='/signin'
-              className='inline-flex items-center text-foreground hover:underline'
+              href="/signin"
+              className="inline-flex items-center text-foreground hover:text-primary transition-colors"
               tabIndex={isLoading ? -1 : 0}>
-              <ArrowLeft className='mr-2 h-4 w-4' />
+              <ArrowLeft className="mr-2 h-4 w-4" />
               Back to Sign In
             </Link>
           </div>
         </CardFooter>
       </Card>
+
+    
     </div>
   );
 }

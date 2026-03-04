@@ -68,7 +68,7 @@ const LoginUser = async(data:ILogin) => {
 
 const VerifyEmail = async(data:IVerifyEamil)=>{
     try {
-    const response = await axios.post<IApiResponse>(
+    const response = await axios.patch<IApiResponse>(
       `${base_url}/auth/verify-email`,
       data,
     );
@@ -96,10 +96,42 @@ const ResendVerificationEmail = async(data:IResendEmail)=>{
   }
 
 }
+const ForgotPassword = async(data:IResendEmail)=>{
+      try {
+    const response = await axios.post<IApiResponse>(
+      `${base_url}/auth/forget-password`,
+      data,
+    );
+    return response.data;
+  } catch (error: unknown) {
+    if (axios.isAxiosError<IApiResponse>(error)) {
+      throw new Error(error.response?.data?.error || "Something went wrong");
+    }
+    throw new Error("Something went wrong");
+  }
+
+}
+const ResetForgetPassword = async(data:IResendEmail)=>{
+      try {
+    const response = await axios.post<IApiResponse>(
+      `${base_url}/auth/reset-password`,
+      data,
+    );
+    return response.data;
+  } catch (error: unknown) {
+    if (axios.isAxiosError<IApiResponse>(error)) {
+      throw new Error(error.response?.data?.error || "Something went wrong");
+    }
+    throw new Error("Something went wrong");
+  }
+
+}
 
 export const AuthAction = {
   RegisterUser,
   LoginUser,
   VerifyEmail,
-  ResendVerificationEmail
+  ResendVerificationEmail,
+  ForgotPassword,
+  ResetForgetPassword
 };

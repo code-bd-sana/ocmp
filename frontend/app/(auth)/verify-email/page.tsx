@@ -21,6 +21,8 @@ export default function VerifyEmailPage() {
   const [message, setMessage] = useState("");
   const [countdown, setCountdown] = useState(5);
   const [showContent, setShowContent] = useState(false);
+  const [isResending, setIsResending] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
 
   // Get and decode parameters
   const rawEmail = searchParams.get("email") || "";
@@ -78,6 +80,49 @@ export default function VerifyEmailPage() {
     verifyEmail();
   }, [email, token, router]);
 
+  // Resend verification email handler
+  const handleResendVerification = async () => {
+    if (!email) {
+      toast.error("Email address not found");
+      return;
+    }
+
+    if (resendCooldown > 0) {
+      toast.error(`Please wait ${resendCooldown} seconds before resending`);
+      return;
+    }
+
+    setIsResending(true);
+    try {
+      const response = await AuthAction.ResendVerificationEmail({ email });
+      
+      if (response.status) {
+        toast.success(response.message || "Verification email sent successfully!");
+        
+        // Set cooldown to prevent spam (60 seconds)
+        setResendCooldown(60);
+        
+        // Start cooldown timer
+        const timer = setInterval(() => {
+          setResendCooldown((prev) => {
+            if (prev <= 1) {
+              clearInterval(timer);
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+      } else {
+        toast.error(response.message || "Failed to resend verification email");
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Something went wrong";
+      toast.error(errorMessage);
+    } finally {
+      setIsResending(false);
+    }
+  };
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-linear-to-br from-gray-50 to-gray-100 p-4 dark:from-gray-900 dark:to-gray-800">
       <Toaster richColors position="top-center" />
@@ -87,7 +132,7 @@ export default function VerifyEmailPage() {
           showContent ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
         }`}
       >
-        <Card className="w-full shadow-xl overflow-hidden border-0">
+        <Card className="w-full  overflow-hidden border-0">
           {/* Animated gradient border */}
           <div className="relative h-1.5 w-full overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 animate-gradient" />
@@ -172,7 +217,7 @@ export default function VerifyEmailPage() {
               <div className="w-full">
                 <Button 
                   onClick={() => router.push("/signin")}
-                  className="bg-green-500 hover:bg-green-600 h-11 w-full text-base cursor-pointer group transition-all duration-300 hover:scale-105"
+                  className="bg-primary h-11 w-full text-base cursor-pointer group transition-all duration-300 hover:scale-105"
                 >
                   Go to Sign In
                   <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
@@ -189,15 +234,28 @@ export default function VerifyEmailPage() {
                   Back to Sign Up
                 </Button>
                 
-                <p className="text-center text-sm text-gray-500">
-                  Didn't receive the email?{" "}
-                  <Link 
-                    href="/resend-verification" 
-                    className="text-primary font-medium hover:underline hover:text-primary/80 transition-colors"
+                <div className="text-center">
+                  <p className="text-sm text-gray-500 mb-2">
+{                  `  Didn't receive the email?`}
+                  </p>
+                  <Button
+                    onClick={handleResendVerification}
+                    disabled={isResending || resendCooldown > 0}
+                    variant="outline"
+                    className="w-full border-primary text-primary hover:bg-primary hover:text-white transition-all duration-300"
                   >
-                    Resend verification
-                  </Link>
-                </p>
+                    {isResending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Sending...
+                      </>
+                    ) : resendCooldown > 0 ? (
+                      `Resend in ${resendCooldown}s`
+                    ) : (
+                      "Resend Verification Email"
+                    )}
+                  </Button>
+                </div>
               </div>
             )}
 
