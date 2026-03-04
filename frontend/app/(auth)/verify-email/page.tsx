@@ -11,10 +11,10 @@ import { AuthAction } from "@/service/auth";
 import { ArrowRight, CheckCircle2, Loader2, Mail, XCircle } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { toast, Toaster } from "sonner";
 
-export default function VerifyEmailPage() {
+function VerifyEmail() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
@@ -334,3 +334,17 @@ export default function VerifyEmailPage() {
     </div>
   );
 }
+
+import React from 'react';
+
+const VerifyEmailPage = () => {
+  return (
+
+ <Suspense fallback={<span>Loading....</span>}>
+       <VerifyEmail/>
+ </Suspense>
+
+  );
+};
+
+export default VerifyEmailPage;

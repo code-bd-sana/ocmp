@@ -15,10 +15,10 @@ import { AuthAction } from "@/service/auth";
 import { ArrowLeft, Check, Eye, EyeOff, Loader2, Lock } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { toast, Toaster } from "sonner";
 
-export default function ResetPasswordPage() {
+function ResetPassword() {
   const router = useRouter();
   const searchParams = useSearchParams();
   
@@ -428,3 +428,17 @@ export default function ResetPasswordPage() {
     </div>
   );
 }
+
+import React from 'react';
+
+const ResetPasswordPage = () => {
+  return (
+
+ <Suspense fallback={<span>Loading....</span>}>
+       <ResetPassword/>
+ </Suspense>
+
+  );
+};
+
+export default ResetPasswordPage;
