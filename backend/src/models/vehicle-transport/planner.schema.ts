@@ -9,13 +9,26 @@ export enum PlannerType {
   TACHO_CAL = 'TACHO_RECALIBRATION',
   VED = 'VED',
 }
+
+export enum RequestStatus {
+  PENDING = 'PENDING',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
+}
+
+export enum PlannerStatus {
+  SCHEDULED = 'SCHEDULED',
+  DUE = 'DUE',
+}
+
 export interface IPlanner extends Document {
   vehicleId: mongoose.Types.ObjectId;
   plannerType: PlannerType;
   plannerDate: Date;
+  PlannerStatus: PlannerStatus;
   requestedDate?: Date;
   requestedReason?: string;
-  missedReason?: string;
+  requestStatus?: RequestStatus;
   standAloneId?: mongoose.Types.ObjectId;
   createdBy: mongoose.Types.ObjectId;
 }
@@ -36,14 +49,21 @@ const PlannerSchema: Schema<IPlanner> = new Schema({
     type: Date,
     required: true,
   },
+  PlannerStatus: {
+    type: String,
+    enum: Object.values(PlannerStatus),
+    default: PlannerStatus.SCHEDULED,
+    required: true,
+  },
   requestedDate: {
     type: Date,
   },
   requestedReason: {
     type: String,
   },
-  missedReason: {
+  requestStatus: {
     type: String,
+    enum: Object.values(RequestStatus),
   },
   standAloneId: {
     type: mongoose.Types.ObjectId,
