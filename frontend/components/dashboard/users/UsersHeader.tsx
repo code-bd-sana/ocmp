@@ -13,7 +13,7 @@ export default function UsersHeader({
   onSearchChange,
 }: UsersHeaderProps) {
   return (
-    <div className="mb-8">
+    <div className="">
       <div className="flex flex-col justify-between gap-y-3 md:flex-row md:gap-x-3">
         <h1 className="text-primary mb-2 text-3xl font-bold">All Users</h1>
         <div className="relative flex max-w-xl items-center text-(--input-foreground)">

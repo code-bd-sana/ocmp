@@ -49,7 +49,7 @@ export function DashboardNav() {
   return (
     <nav className='w-full border-b bg-muted shadow-sm'>
       <div className='w-full '>
-        <div className=' h-20 md:h-24'>
+        <div className=' h-20 md:h-26'>
           {/* Scrollable navbar */}
           <div
             className='
