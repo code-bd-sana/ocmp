@@ -81,7 +81,6 @@ const zodUpdateContactLogSchema = zodCreateContactLogAsManagerSchema
     },
     { message: 'At least one field must be provided for update' }
   )
-  .partial()
   .strict();
 
 export type UpdateContactLogInput = z.infer<typeof zodUpdateContactLogSchema>;
