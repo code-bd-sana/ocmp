@@ -80,25 +80,29 @@ export const createMaintenanceProviderCommunicationAsStandalone = catchAsync(
  */
 export const updateMaintenanceProviderCommunication = catchAsync(
   async (req: AuthenticatedRequest, res: Response) => {
+    const { id } = req.params;
     const paramToString = (p?: string | string[]) => (Array.isArray(p) ? p[0] : p);
-    const id = paramToString(req.params?.id);
-    const standAloneId = paramToString(req.params?.standAloneId);
+    const subContractorId = paramToString(req.params.subContractorId);
+    // TM accesses through the client's standAloneId; standalone uses own ID
+    const accessId =
+      req.user!.role === UserRole.TRANSPORT_MANAGER
+        ? (paramToString(req.params.standAloneId) as string)
+        : req.user!._id;
     // Call the service method to update the maintenance-provider-communication by ID and get the result
     const result =
       await maintenanceProviderCommunicationServices.updateMaintenanceProviderCommunication(
         id as string,
         req.body,
-        req.user!._id,
-        standAloneId
+        accessId
       );
-    if (!result) {
-      return ServerResponse(
-        res,
-        false,
-        404,
-        'Maintenance-provider-communication not found or you do not have permission to update it'
-      );
-    }
+    // if (!result) {
+    //   return ServerResponse(
+    //     res,
+    //     false,
+    //     404,
+    //     'Maintenance-provider-communication not found or you do not have permission to update it'
+    //   );
+    // }
     // Send a success response with the updated maintenance-provider-communication data
     ServerResponse(
       res,
@@ -223,4 +227,3 @@ export const getAllMaintenanceProviderCommunication = catchAsync(
     });
   }
 );
-

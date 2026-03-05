@@ -37,38 +37,14 @@ const createMaintenanceProviderCommunication = async (
 const updateMaintenanceProviderCommunication = async (
   id: IdOrIdsInput['id'],
   data: UpdateMaintenanceProviderCommunicationInput,
-  userId: IdOrIdsInput['id'],
-  standAloneId: IdOrIdsInput['id']
+  accessId: IdOrIdsInput['id']
 ): Promise<Partial<IMaintenanceProviderCommunication | null>> => {
-  // Check for duplicate (filed) combination
-  const accessFilters: Record<string, unknown>[] = [];
-
-  if (userId) {
-    accessFilters.push({ createdBy: userId });
-    accessFilters.push({ standAloneId: userId });
-
-    if (mongoose.Types.ObjectId.isValid(userId)) {
-      const userObjectId = new mongoose.Types.ObjectId(userId);
-      accessFilters.push({ createdBy: userObjectId });
-      accessFilters.push({ standAloneId: userObjectId });
-    }
-  }
-
-  if (standAloneId) {
-    accessFilters.push({ standAloneId });
-    accessFilters.push({ createdBy: standAloneId });
-
-    if (mongoose.Types.ObjectId.isValid(standAloneId)) {
-      const standAloneObjectId = new mongoose.Types.ObjectId(standAloneId);
-      accessFilters.push({ standAloneId: standAloneObjectId });
-      accessFilters.push({ createdBy: standAloneObjectId });
-    }
-  }
+  const objectId = new mongoose.Types.ObjectId(accessId);
 
   // Proceed to update the maintenance-provider-communication
   const updatedMaintenanceProviderCommunication =
     await MaintenanceProviderCommunicationModel.findOneAndUpdate(
-      { _id: id, $or: accessFilters },
+      { _id: id, $or: [{ createdBy: objectId }, { standAloneId: objectId }] },
       data,
       { returnDocument: 'after' }
     );
@@ -173,8 +149,9 @@ const getAllMaintenanceProviderCommunication = async (
   if (searchKey) {
     searchConditions.push({
       $or: [
-        { task: { $regex: searchKey, $options: 'i' } },
-        { responsibleParty: { $regex: searchKey, $options: 'i' } },
+        { providerName: { $regex: searchKey, $options: 'i' } },
+        { type: { $regex: searchKey, $options: 'i' } },
+        { details: { $regex: searchKey, $options: 'i' } },
       ],
     });
   }
@@ -223,4 +200,3 @@ export const maintenanceProviderCommunicationServices = {
   getMaintenanceProviderCommunicationById,
   getAllMaintenanceProviderCommunication,
 };
-

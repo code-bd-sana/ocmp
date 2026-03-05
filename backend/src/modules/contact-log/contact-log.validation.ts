@@ -74,6 +74,13 @@ const zodUpdateContactLogSchema = zodCreateContactLogAsManagerSchema
     followUpRequired: true,
     followUpDate: true,
   })
+  .refine(
+    (data) => {
+      // Ensure at least one field is provided for update
+      return Object.keys(data).length > 0;
+    },
+    { message: 'At least one field must be provided for update' }
+  )
   .partial()
   .strict();
 

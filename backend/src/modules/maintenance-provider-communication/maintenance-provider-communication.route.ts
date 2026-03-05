@@ -92,7 +92,6 @@ router.patch(
 router.patch(
   '/update-as-standalone/:id',
   authorizedRoles([UserRole.STANDALONE_USER]),
-  // checkSubscriptionValidity,
   validateId,
   validateUpdateMaintenanceProviderCommunication,
   updateMaintenanceProviderCommunication
@@ -192,4 +191,3 @@ router.get(
 
 // Export the router
 module.exports = router;
-

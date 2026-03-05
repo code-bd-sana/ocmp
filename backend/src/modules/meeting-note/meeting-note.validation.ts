@@ -68,14 +68,21 @@ export type CreateMeetingNoteInput =
  *
  * → All fields should usually be .optional()
  */
-const zodUpdateMeetingNoteSchema = z
-  .object({
-    // Example fields — replace / expand as needed:
-    meetingNote: baseMeetingNoteFields.meetingDate.optional(),
-    attendance: baseMeetingNoteFields.attendance.optional(),
-    keyDiscussionPoints: baseMeetingNoteFields.keyDiscussionPoints.optional(),
-    discussion: baseMeetingNoteFields.discussion.optional(),
+const zodUpdateMeetingNoteSchema = zodCreateMeetingNoteAsManagerSchema
+  .pick({
+    meetingDate: true,
+    attendance: true,
+    keyDiscussionPoints: true,
+    discussion: true,
   })
+  .partial()
+  .refine(
+    (data) => {
+      // Ensure at least one field is provided for update
+      return Object.keys(data).length > 0;
+    },
+    { message: 'At least one field must be provided for update' }
+  )
   .strict();
 
 export type UpdateMeetingNoteInput = z.infer<typeof zodUpdateMeetingNoteSchema>;
@@ -150,9 +157,10 @@ export type UpdateMeetingNoteInputWithIds = z.infer<typeof zodUpdateMeetingNoteI
 export const validateGetMeetingNoteByIdParams = validateParams(zodGetMeetingNoteByIdParamsSchema);
 export const validateSearchMeetingNoteQueries = validateQuery(zodMeetingNoteSearchSchema);
 export const validateCreateMeetingNoteAsManager = validateBody(zodCreateMeetingNoteAsManagerSchema);
-export const validateCreateMeetingNoteAsStandalone = validateBody(zodCreateMeetingNoteAsStandaloneSchema);
+export const validateCreateMeetingNoteAsStandalone = validateBody(
+  zodCreateMeetingNoteAsStandaloneSchema
+);
 export const validateUpdateMeetingNote = validateBody(zodUpdateMeetingNoteSchema);
 export const validateUpdateMeetingNoteIds = validateParams(zodUpdateMeetingNoteIdSchema);
 export const validateDeleteMeetingNote = validateParams(zodDeleteMeetingNoteSchema);
 export const validateDeleteMeetingNoteIds = validateParams(zodDeleteMeetingNoteSchema);
-

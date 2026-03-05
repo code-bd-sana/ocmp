@@ -7,9 +7,7 @@ import {
   SearchComplianceTimetableQueryInput,
   UpdateComplianceTimetableInput,
 } from './compliance-timetable.validation';
-import ComplianceTimeTableModel, {
-  IComplianceTimeTable,
-} from '../../models/compliance-enforcement-dvsa/complianceTimeTable.schema';
+import { ComplianceTimeTable, IComplianceTimeTable } from '../../models';
 const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 /**
@@ -24,18 +22,7 @@ const createComplianceTimetable = async (
     | CreateComplianceTimetableAsStandAloneInput
     | CreateComplianceTimetableAsTransportManagerInput
 ): Promise<Partial<IComplianceTimeTable>> => {
-  // Prevent duplicates by task (case-insensitive)
-  const or: any[] = [];
-  if (data.task) {
-    or.push({ task: { $regex: new RegExp(`^${escapeRegex(data.task)}$`, 'i') } });
-  }
-
-  if (or.length > 0) {
-    const existingComplianceTimetable = await ComplianceTimeTableModel.findOne({ $or: or }).lean();
-    if (existingComplianceTimetable) throw new Error('Compliance-timetable already exists');
-  }
-
-  const newComplianceTimetable = new ComplianceTimeTableModel(data);
+  const newComplianceTimetable = new ComplianceTimeTable(data);
   const savedComplianceTimetable = await newComplianceTimetable.save();
   return savedComplianceTimetable;
 };
@@ -58,29 +45,6 @@ const updateComplianceTimetable = async (
   userId: IdOrIdsInput['id'],
   standAloneId?: IdOrIdsInput['id']
 ): Promise<Partial<IComplianceTimeTable | null>> => {
-  const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const orConditions: any[] = [];
-  if (data.task)
-    orConditions.push({
-      task: { $regex: new RegExp(`^${escapeRegex(data.task)}$`, 'i') },
-    });
-
-  if (orConditions.length > 0) {
-    const existingComplianceTimetable = await ComplianceTimeTableModel.findOne({
-      _id: { $ne: id }, // Exclude the current document
-      $or: [
-        {
-          task: data.task ? { $regex: new RegExp(`^${escapeRegex(data.task)}$`, 'i') } : undefined,
-        },
-      ],
-    }).lean();
-    if (existingComplianceTimetable) {
-      throw new Error(
-        'Duplicate detected: Another compliance-timetable with the same task already exists.'
-      );
-    }
-  }
-
   const accessFilters: Record<string, unknown>[] = [];
 
   if (userId) {
@@ -106,10 +70,9 @@ const updateComplianceTimetable = async (
   }
 
   // Proceed to update the compliance-timetable
-  const updatedComplianceTimetable = await ComplianceTimeTableModel.findOneAndUpdate(
+  const updatedComplianceTimetable = await ComplianceTimeTable.findOneAndUpdate(
     {
       _id: id,
-      $or: accessFilters,
     },
     data,
     { returnDocument: 'after' }
@@ -157,7 +120,7 @@ const deleteComplianceTimetable = async (
     }
   }
 
-  const deletedComplianceTimetable = await ComplianceTimeTableModel.findOneAndDelete({
+  const deletedComplianceTimetable = await ComplianceTimeTable.findOneAndDelete({
     _id: id,
     $or: accessFilters,
   });
@@ -198,7 +161,7 @@ const getComplianceTimetableById = async (
       }
     : { _id: id };
 
-  const complianceTimetable = await ComplianceTimeTableModel.findOne(filter);
+  const complianceTimetable = await ComplianceTimeTable.findOne(filter);
   return complianceTimetable;
 };
 
@@ -255,11 +218,11 @@ const getAllComplianceTimetable = async (
   // Calculate the number of items to skip based on the page number
   const skipItems = (pageNo - 1) * showPerPage;
   // Find the total count of matching compliance-timetable
-  const totalData = await ComplianceTimeTableModel.countDocuments(searchFilter);
+  const totalData = await ComplianceTimeTable.countDocuments(searchFilter);
   // Calculate the total number of pages
   const totalPages = Math.ceil(totalData / showPerPage);
   // Find compliance-timetables based on the search filter with pagination
-  const complianceTimetables = await ComplianceTimeTableModel.find(searchFilter)
+  const complianceTimetables = await ComplianceTimeTable.find(searchFilter)
     .skip(skipItems)
     .limit(showPerPage)
     .select(''); // Keep/Exclude any field if needed

@@ -24,6 +24,7 @@ const createMeetingNote = async (data: CreateMeetingNoteInput): Promise<Partial<
       keyDiscussionPoints: {
         $regex: new RegExp(`^${escapeRegex(data.keyDiscussionPoints)}$`, 'i'),
       },
+      attendance: data.attendance,
     });
   }
   // Add more fields as needed
@@ -209,8 +210,8 @@ const getAllMeetingNote = async (
   if (searchKey) {
     searchConditions.push({
       $or: [
-        { task: { $regex: searchKey, $options: 'i' } },
-        { responsibleParty: { $regex: searchKey, $options: 'i' } },
+        { attendance: { $regex: searchKey, $options: 'i' } },
+        { keyDiscussionPoints: { $regex: searchKey, $options: 'i' } },
       ],
     });
   }
