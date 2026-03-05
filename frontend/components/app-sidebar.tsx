@@ -50,7 +50,10 @@ export function AppSidebar() {
       .catch(() => {});
   }, []);
 
-  const activeClientId = pathname.split("/")[2] ?? "";
+  // URL: /dashboard/driver-details/[standAloneId] → segment [3]
+  const activeClientId = pathname.startsWith("/dashboard/driver-details/")
+    ? pathname.split("/")[3] ?? ""
+    : "";
 
   return (
     <Sidebar collapsible='icon' className='border-r bg-sidebar'>
@@ -102,7 +105,7 @@ export function AppSidebar() {
     }
   `}>
                         <Link
-                          href={`/dashboard/${client.id}`}
+                          href={`/dashboard/driver-details/${client.id}`}
                           className='block'>
                           {client.name}
                         </Link>
