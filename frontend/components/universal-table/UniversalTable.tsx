@@ -294,7 +294,7 @@ export default function UniversalTable<T>({
 
       <div className="w-full overflow-x-auto rounded-lg bg-[#F9F9FA] shadow-sm">
         {/* Inner */}
-        <div className="mx-auto p-5">
+        <div className="mx-auto">
           {/* Inner Action Groups */}
           {innerActionGroup.map((group, idx) => (
             <div key={idx} className="mb-4 flex items-center justify-between">
