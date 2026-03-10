@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { z } from "zod";
 import UniversalForm from "@/components/universal-form/UniversalForm";
 import { FieldConfig } from "@/components/universal-form/form.types";
@@ -10,22 +10,22 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Check, ChevronsUpDown, Loader2 } from "lucide-react";
-
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import { UpdateDriverTachographInput } from "@/lib/driver-tachograph/tachograph.types";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Loader2 } from "lucide-react";
+import {
+  DriverWithVehicles,
+  UpdateDriverTachographInput,
+} from "@/lib/driver-tachograph/tachograph.types";
 import { TachoGraphTableRow } from "./TachoGraphTable";
 import { DriverTachographAction } from "@/service/driver-tachograph";
 
 const editTachographSchema = z.object({
-  driverId: z.string().min(1, "Driver is required"),
   vehicleId: z.string().min(1, "Vehicle is required"),
   typeOfInfringement: z.string().optional(),
   details: z.string().optional(),
@@ -52,60 +52,55 @@ export default function EditTachographModal({
   loading,
   standAloneId,
 }: EditTachographModalProps) {
-  const [tachographOptions, setTachographOptions] = useState<
-    { label: string; value: string }[]
+  const [dataLoading, setDataLoading] = useState(false);
+  const [driversWithVehicles, setDriversWithVehicles] = useState<
+    DriverWithVehicles[]
   >([]);
-  const [tachographLoading, setTachographLoading] = useState(false);
-  const [selectedTachographId, setSelectedTachographId] = useState("");
-  const [tachographError, setTachographError] = useState("");
-  const [tachographPopoverOpen, setTachographPopoverOpen] = useState(false);
+  const [selectedDriverId, setSelectedDriverId] = useState("");
 
-  // Fetch tachographs when modal opens
+  // Fetch drivers with vehicles when modal opens
   useEffect(() => {
     if (!open) return;
-    setTachographError("");
-    setTachographLoading(true);
-    DriverTachographAction.getDriverTachographs(standAloneId, {
-      showPerPage: 100,
-    })
+    setDataLoading(true);
+    DriverTachographAction.getDriversWithVehicles(standAloneId)
       .then((res) => {
-        if (res.status && res.data?.tachographs) {
-          setTachographOptions(
-            res.data.tachographs.map((t) => ({
-              label: t.typeOfInfringement || `Tachograph ${t._id}`,
-              value: t._id,
-            })),
-          );
+        if (res.status && res.data) {
+          setDriversWithVehicles(res.data);
+        } else {
+          setDriversWithVehicles([]);
         }
       })
-      .catch(() => {})
-      .finally(() => setTachographLoading(false));
+      .catch(() => setDriversWithVehicles([]))
+      .finally(() => setDataLoading(false));
   }, [open, standAloneId]);
 
-  // Pre-fill selected tachographs when editing
+  // Pre-fill selected driver from existing tachograph
   useEffect(() => {
-    if (open && vehicle?.id) {
-      setSelectedTachographId(vehicle.id);
+    if (open && vehicle?.driverId) {
+      setSelectedDriverId(vehicle.driverId);
     }
   }, [open, vehicle]);
 
-  const selectTachograph = (id: string) => {
-    setSelectedTachographId(id);
-    setTachographError("");
-    setTachographPopoverOpen(false);
-  };
+  const vehicleOptions = useMemo(() => {
+    if (!selectedDriverId) return [];
+    const driver = driversWithVehicles.find((d) => d._id === selectedDriverId);
+    if (!driver) return [];
+    return driver.vehicles.map((v) => ({
+      label: `${v.vehicleRegId} — ${v.licensePlate}`,
+      value: v._id,
+    }));
+  }, [selectedDriverId, driversWithVehicles]);
 
   const fields: FieldConfig<EditTachographForm>[] = [
     {
-      name: "driverId",
-      label: "Driver",
-      type: "text",
-      required: true,
-    },
-    {
       name: "vehicleId",
       label: "Vehicle",
-      type: "text",
+      type: "select",
+      placeholder:
+        vehicleOptions.length > 0
+          ? "Select vehicle"
+          : "No vehicles for this driver",
+      options: vehicleOptions,
       required: true,
     },
     {
@@ -126,18 +121,19 @@ export default function EditTachographModal({
     {
       name: "signed",
       label: "Signed",
-      type: "checkbox",
+      type: "select",
+      options: [
+        { label: "Yes", value: "true" },
+        { label: "No", value: "false" },
+      ],
     },
   ];
 
   const handleSubmit = async (data: EditTachographForm) => {
-    if (!selectedTachographId) {
-      setTachographError("Please select a tachograph");
-      return;
-    }
+    if (!selectedDriverId) return;
     const payload: UpdateDriverTachographInput = {
-      id: selectedTachographId,
-      driverId: data.driverId,
+      id: vehicle?.id,
+      driverId: selectedDriverId,
       vehicleId: data.vehicleId,
       typeOfInfringement: data.typeOfInfringement,
       details: data.details,
@@ -170,92 +166,58 @@ export default function EditTachographModal({
           Edit Tachograph
         </DialogTitle>
         <DialogDescription className="sr-only">
-          Update tachograph details. Reviewer is assigned automatically from the
-          logged-in user.
+          Update tachograph details. Select a driver first, then choose a
+          vehicle assigned to that driver.
         </DialogDescription>
 
-        {tachographLoading ? (
+        {dataLoading ? (
           <div className="flex h-40 items-center justify-center">
             <Loader2 className="text-primary h-8 w-8 animate-spin" />
           </div>
         ) : (
           <>
-            {/* Tachograph selector */}
+            {/* Driver select — outside UniversalForm */}
             <div className="bg-white px-6 pb-4 dark:bg-gray-800">
               <div className="flex flex-col">
                 <label className="text-foreground mb-4 text-xl font-medium">
-                  Select Tachograph <span className="text-red-500"> *</span>
+                  Driver <span className="text-red-500">*</span>
                 </label>
-                <Popover
-                  open={tachographPopoverOpen}
-                  onOpenChange={setTachographPopoverOpen}
+                <Select
+                  value={selectedDriverId}
+                  onValueChange={(val) => setSelectedDriverId(val)}
                 >
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-between rounded-none font-normal",
-                        "border-input-border border",
-                        tachographError && "border-2 border-red-500",
-                      )}
-                    >
-                      {selectedTachographId
-                        ? tachographOptions.find(
-                            (o) => o.value === selectedTachographId,
-                          )?.label || "Select tachograph..."
-                        : "Select tachograph..."}
-                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-full min-w-75 p-1" align="start">
-                    {tachographOptions.length === 0 ? (
-                      <p className="text-muted-foreground p-2 text-sm">
-                        No tachographs found
-                      </p>
-                    ) : (
-                      tachographOptions.map((t) => (
-                        <div
-                          key={t.value}
-                          className="hover:bg-muted flex cursor-pointer items-center gap-2 rounded px-2 py-2"
-                          onClick={() => selectTachograph(t.value)}
-                        >
-                          <Checkbox
-                            checked={selectedTachographId === t.value}
-                            onCheckedChange={() => selectTachograph(t.value)}
-                          />
-                          <span className="text-sm">{t.label}</span>
-                          {selectedTachographId === t.value && (
-                            <Check className="text-primary ml-auto h-4 w-4" />
-                          )}
-                        </div>
-                      ))
-                    )}
-                  </PopoverContent>
-                </Popover>
-                {tachographError && (
-                  <p className="text-destructive mt-1 text-sm">
-                    {tachographError}
-                  </p>
-                )}
+                  <SelectTrigger className="border-input-border w-full rounded-none border">
+                    <SelectValue placeholder="Select driver first" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {driversWithVehicles.map((d) => (
+                      <SelectItem key={d._id} value={d._id}>
+                        {d.fullName} ({d.licenseNumber})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
-            <UniversalForm<EditTachographForm>
-              title="Driver Tachograph Details"
-              fields={fields}
-              schema={editTachographSchema}
-              defaultValues={{
-                driverId: vehicle.driverId || "",
-                vehicleId: vehicle.vehicleId || "",
-                typeOfInfringement: vehicle.typeOfInfringement || "",
-                details: vehicle.details || "",
-                actionTaken: vehicle.actionTaken || "",
-                signed: vehicle.signed || false,
-              }}
-              onSubmit={handleSubmit}
-              submitText="Update Tachograph"
-              setOpen={onOpenChange}
-            />
+            {selectedDriverId && (
+              <UniversalForm<EditTachographForm>
+                key={selectedDriverId}
+                title="Tachograph Details"
+                fields={fields}
+                schema={editTachographSchema}
+                defaultValues={{
+                  vehicleId: vehicle.vehicleId || "",
+                  typeOfInfringement: vehicle.typeOfInfringement || "",
+                  details: vehicle.details || "",
+                  actionTaken: vehicle.actionTaken || "",
+                  signed: vehicle.signed || false,
+                }}
+                onSubmit={handleSubmit}
+                submitText="Update Tachograph"
+                setOpen={onOpenChange}
+              />
+            )}
             <p className="text-muted-foreground px-6 pb-2 text-xs">
               Reviewed by is set automatically to the currently logged-in user
               on update.

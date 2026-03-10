@@ -8,15 +8,23 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { CreateDriverTachographInput } from "@/lib/driver-tachograph/tachograph.types";
-import { DriverAction } from "@/service/driver";
-import { VehicleAction } from "@/service/vehicle";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  CreateDriverTachographInput,
+  DriverWithVehicles,
+} from "@/lib/driver-tachograph/tachograph.types";
+import { DriverTachographAction } from "@/service/driver-tachograph";
 import { Loader2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { z } from "zod";
 
 const addTachographSchema = z.object({
-  driverId: z.string().min(1, "Driver is required"),
   vehicleId: z.string().min(1, "Vehicle is required"),
   typeOfInfringement: z.string().optional(),
   details: z.string().optional(),
@@ -39,66 +47,47 @@ export const AddTachographModal = ({
   onSubmit,
   standAloneId,
 }: AddTachographModalProps) => {
-  const [driversLoading, setDriversLoading] = useState(false);
-  const [driverOptions, setDriverOptions] = useState<
-    { label: string; value: string }[]
+  const [dataLoading, setDataLoading] = useState(false);
+  const [driversWithVehicles, setDriversWithVehicles] = useState<
+    DriverWithVehicles[]
   >([]);
-  const [vehicleOptions, setVehicleOptions] = useState<
-    { label: string; value: string }[]
-  >([]);
+  const [selectedDriverId, setSelectedDriverId] = useState("");
 
   useEffect(() => {
     if (!open) return;
-
-    setDriversLoading(true);
-    Promise.all([
-      DriverAction.getDrivers(standAloneId, { showPerPage: 100 }),
-      VehicleAction.getVehicles(standAloneId, { showPerPage: 100 }),
-    ])
-      .then(([driversRes, vehiclesRes]) => {
-        if (driversRes.status && driversRes.data?.drivers) {
-          setDriverOptions(
-            driversRes.data.drivers.map((driver) => ({
-              label: `${driver.fullName} (${driver._id})`,
-              value: driver._id,
-            })),
-          );
+    setSelectedDriverId("");
+    setDataLoading(true);
+    DriverTachographAction.getDriversWithVehicles(standAloneId)
+      .then((res) => {
+        if (res.status && res.data) {
+          setDriversWithVehicles(res.data);
         } else {
-          setDriverOptions([]);
-        }
-
-        if (vehiclesRes.status && vehiclesRes.data?.vehicles) {
-          setVehicleOptions(
-            vehiclesRes.data.vehicles.map((vehicle) => ({
-              label: `${vehicle.vehicleRegId} (${vehicle._id})`,
-              value: vehicle._id,
-            })),
-          );
-        } else {
-          setVehicleOptions([]);
+          setDriversWithVehicles([]);
         }
       })
-      .catch(() => {
-        setDriverOptions([]);
-        setVehicleOptions([]);
-      })
-      .finally(() => setDriversLoading(false));
+      .catch(() => setDriversWithVehicles([]))
+      .finally(() => setDataLoading(false));
   }, [open, standAloneId]);
 
+  const vehicleOptions = useMemo(() => {
+    if (!selectedDriverId) return [];
+    const driver = driversWithVehicles.find((d) => d._id === selectedDriverId);
+    if (!driver) return [];
+    return driver.vehicles.map((v) => ({
+      label: `${v.vehicleRegId} — ${v.licensePlate}`,
+      value: v._id,
+    }));
+  }, [selectedDriverId, driversWithVehicles]);
+
   const fields: FieldConfig<AddTachographForm>[] = [
-    {
-      name: "driverId",
-      label: "Driver",
-      type: "select",
-      placeholder: "Select driver",
-      options: driverOptions,
-      required: true,
-    },
     {
       name: "vehicleId",
       label: "Vehicle",
       type: "select",
-      placeholder: "Select vehicle",
+      placeholder:
+        vehicleOptions.length > 0
+          ? "Select vehicle"
+          : "No vehicles for this driver",
       options: vehicleOptions,
       required: true,
     },
@@ -132,8 +121,9 @@ export const AddTachographModal = ({
   ];
 
   const handleSubmit = async (data: AddTachographForm) => {
+    if (!selectedDriverId) return;
     const payload: CreateDriverTachographInput = {
-      driverId: data.driverId,
+      driverId: selectedDriverId,
       vehicleId: data.vehicleId,
       typeOfInfringement: data.typeOfInfringement,
       details: data.details,
@@ -154,31 +144,64 @@ export const AddTachographModal = ({
           Add New Tachograph
         </DialogTitle>
         <DialogDescription className="sr-only">
-          Create a new tachograph record by selecting an existing driver and
-          vehicle.
+          Create a new tachograph record by selecting a driver first, then a
+          vehicle assigned to that driver.
         </DialogDescription>
 
-        {driversLoading ? (
+        {dataLoading ? (
           <div className="flex h-40 items-center justify-center">
             <Loader2 className="text-primary h-8 w-8 animate-spin" />
           </div>
         ) : (
-          <UniversalForm<AddTachographForm>
-            title="Tachograph Details"
-            fields={fields}
-            schema={addTachographSchema}
-            defaultValues={{
-              driverId: "",
-              vehicleId: "",
-              typeOfInfringement: "",
-              details: "",
-              actionTaken: "",
-              signed: false,
-            }}
-            onSubmit={handleSubmit}
-            submitText="Create Tachograph"
-            setOpen={onOpenChange}
-          />
+          <>
+            {/* Driver select — outside UniversalForm */}
+            <div className="bg-white px-6 pb-4 dark:bg-gray-800">
+              <div className="flex flex-col">
+                <label className="text-foreground mb-4 text-xl font-medium">
+                  Driver <span className="text-red-500">*</span>
+                </label>
+                <Select
+                  value={selectedDriverId}
+                  onValueChange={(val) => setSelectedDriverId(val)}
+                >
+                  <SelectTrigger className="border-input-border w-full rounded-none border">
+                    <SelectValue placeholder="Select driver first" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {driversWithVehicles.map((d) => (
+                      <SelectItem key={d._id} value={d._id}>
+                        {d.fullName} ({d.licenseNumber})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {!selectedDriverId && (
+                  <p className="text-muted-foreground mt-1 text-xs">
+                    Select a driver to see their assigned vehicles
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {selectedDriverId && (
+              <UniversalForm<AddTachographForm>
+                key={selectedDriverId}
+                title="Tachograph Details"
+                fields={fields}
+                schema={addTachographSchema}
+                defaultValues={{
+                  vehicleId: "",
+                  typeOfInfringement: "",
+                  details: "",
+                  actionTaken: "",
+                  signed: false,
+                }}
+                onSubmit={handleSubmit}
+                submitText="Create Tachograph"
+                setOpen={onOpenChange}
+              />
+            )}
+          </>
         )}
       </DialogContent>
     </Dialog>

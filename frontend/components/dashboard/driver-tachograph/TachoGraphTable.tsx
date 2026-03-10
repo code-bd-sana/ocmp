@@ -2,42 +2,49 @@ import { Column, TableAction } from "@/components/universal-table/table.types";
 import UniversalTable, {
   HeaderActionGroup,
 } from "@/components/universal-table/UniversalTable";
+import { DriverTachographRow } from "@/lib/driver-tachograph/tachograph.types";
 import { CarFront, Eye, Pencil, Trash2 } from "lucide-react";
 
 export interface TachoGraphTableRow {
   id: string;
   driverId: string;
+  driverName: string;
   vehicleId: string;
-  typeOfInfringement?: string;
-  details?: string;
-  actionTaken?: string;
+  vehicleRegId: string;
+  typeOfInfringement: string;
+  details: string;
+  actionTaken: string;
   reviewedBy: string;
-  signed?: boolean;
+  reviewedByName: string;
+  signed: boolean;
 }
 
 /** Map API response to table row interface */
 export function toTachoGraphTableRows(
-  tachographEntries: TachoGraphTableRow[],
+  tachographs: DriverTachographRow[],
 ): TachoGraphTableRow[] {
-  return tachographEntries.map((entry) => ({
-    id: entry.id,
-    driverId: entry.driverId,
-    vehicleId: entry.vehicleId,
-    typeOfInfringement: entry.typeOfInfringement || "—",
-    details: entry.details || "—",
-    actionTaken: entry.actionTaken || "—",
-    reviewedBy: entry.reviewedBy,
-    signed: entry.signed || false,
+  return tachographs.map((t) => ({
+    id: t._id,
+    driverId: t.driverId,
+    driverName: t.driverName || "—",
+    vehicleId: t.vehicleId,
+    vehicleRegId: t.vehicleRegId || "—",
+    typeOfInfringement: t.typeOfInfringement || "—",
+    details: t.details || "—",
+    actionTaken: t.actionTaken || "—",
+    reviewedBy: t.reviewedBy,
+    reviewedByName: t.reviewedByName || "—",
+    signed: t.signed || false,
   }));
 }
 
 const columns: Column<TachoGraphTableRow>[] = [
-  { key: "driverId", title: "Driver ID" },
-  { key: "vehicleId", title: "Vehicle ID" },
+  { key: "driverName", title: "Driver" },
+  { key: "vehicleRegId", title: "Vehicle" },
   { key: "typeOfInfringement", title: "Type of Infringement" },
   { key: "details", title: "Details" },
   { key: "actionTaken", title: "Action Taken" },
-  { key: "reviewedBy", title: "Reviewed By" },
+  { key: "reviewedByName", title: "Reviewed By" },
   {
     key: "signed",
     title: "Signed",
