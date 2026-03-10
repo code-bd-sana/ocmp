@@ -69,7 +69,7 @@ export const SETTINGS_META: SettingMeta[] = [
   {
     key: "OCRSChecksAndRectification",
     label: "OCRS checks and rectification action plans",
-    href: "/dashboard/ocrs-checks",
+    href: "/dashboard/ocrs-plan",
   },
   {
     key: "trafficCommissionerCommunicate",

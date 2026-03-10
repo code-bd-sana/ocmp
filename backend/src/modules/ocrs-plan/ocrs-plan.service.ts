@@ -81,11 +81,28 @@ const deleteOcrsPlan = async (
  */
 const getOcrsPlanById = async (
   id: IdOrIdsInput['id'],
-  accessId?: string
+  options: {
+    requesterId: string;
+    requesterRole: UserRole;
+    standAloneId?: string;
+  }
 ): Promise<Partial<IOcrsPlan | null>> => {
-  const ocrsPlan = await OcrsPlanModel.findById(id).lean();
+  const ownerIdForScope =
+    options.requesterRole === UserRole.TRANSPORT_MANAGER
+      ? options.standAloneId
+      : options.requesterId;
+
+  if (!ownerIdForScope) return null;
+
+  const ownerObjectId = new mongoose.Types.ObjectId(String(ownerIdForScope));
+
+  const ocrsPlan = await OcrsPlanModel.findOne({
+    _id: id,
+    $or: [{ standAloneId: ownerObjectId }, { createdBy: ownerObjectId }],
+  }).lean();
+
   if (!ocrsPlan) return null;
-  if (!hasOwnerAccess(ocrsPlan, accessId)) return null;
+
   return ocrsPlan as any;
 };
 
@@ -129,12 +146,8 @@ const getManyOcrsPlan = async (
     ownerIds.add(String(requesterId));
   }
 
-  if (requesterRole === UserRole.TRANSPORT_MANAGER && requesterId) {
-    ownerIds.add(String(requesterId));
-
-    if (standAloneId) {
-      ownerIds.add(String(standAloneId));
-    }
+  if (requesterRole === UserRole.TRANSPORT_MANAGER && standAloneId) {
+    ownerIds.add(String(standAloneId));
   }
 
   if (ownerIds.size > 0) {
@@ -160,4 +173,3 @@ export const ocrsPlanServices = {
   getOcrsPlanById,
   getManyOcrsPlan,
 };
-
