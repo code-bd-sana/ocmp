@@ -44,6 +44,7 @@ const CLIENT_MODULES: { slug: string; label: string }[] = [
   { slug: "ocrs-plan", label: "OCRS Plan" },
   { slug: "traffic-commissioner", label: "Traffic Commissioner" },
   { slug: "policy-review-tracker", label: "Policy Review Tracker" },
+  { slug: "working-time-directive", label: "Working Time Directive" },
 ];
 
 export function AppSidebar() {
