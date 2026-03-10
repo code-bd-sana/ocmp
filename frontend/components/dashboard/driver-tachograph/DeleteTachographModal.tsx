@@ -15,7 +15,8 @@ import { Loader2 } from "lucide-react";
 interface DeleteTachographDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  tachographId: string;
+  driverName: string;
+  vehicleRegId: string;
   onConfirm: () => Promise<void> | void;
   loading: boolean;
 }
@@ -23,7 +24,8 @@ interface DeleteTachographDialogProps {
 export default function DeleteTachographDialog({
   open,
   onOpenChange,
-  tachographId,
+  driverName,
+  vehicleRegId,
   onConfirm,
   loading,
 }: DeleteTachographDialogProps) {
@@ -33,8 +35,9 @@ export default function DeleteTachographDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>Delete Tachograph</AlertDialogTitle>
           <AlertDialogDescription>
-            Are you sure you want to delete tachograph{" "}
-            <span className="font-semibold">{tachographId}</span>? This action
+            Are you sure you want to delete the tachograph record for driver{" "}
+            <span className="font-semibold">{driverName}</span> / vehicle{" "}
+            <span className="font-semibold">{vehicleRegId}</span>? This action
             cannot be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>

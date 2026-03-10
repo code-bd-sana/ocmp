@@ -7,6 +7,7 @@ import {
   CreateDriverTachographInput,
   DriverTachographListResponse,
   DriverTachographRow,
+  DriverWithVehicles,
   UpdateDriverTachographInput,
 } from "@/lib/driver-tachograph/tachograph.types";
 import axios from "axios";
@@ -190,10 +191,38 @@ const deleteDriverTachograph = async (
   }
 };
 
+/**
+ * GET /api/v1/working-time-directive/get-drivers-with-vehicles?standAloneId=...
+ * Fetches drivers and their assigned vehicles for a specific client.
+ */
+const getDriversWithVehicles = async (
+  standAloneId: string,
+): Promise<IApiResponse<DriverWithVehicles[]>> => {
+  const token = AuthAction.GetAuthToken();
+  if (!token) throw new Error("No authentication token found");
+
+  try {
+    const response = await axios.get<IApiResponse<DriverWithVehicles[]>>(
+      `${base_url}/working-time-directive/get-drivers-with-vehicles`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+        params: { standAloneId },
+      },
+    );
+    return response.data;
+  } catch (error: unknown) {
+    if (axios.isAxiosError<IApiResponse>(error)) {
+      throw new Error(extractApiError(error.response?.data));
+    }
+    throw new Error("Something went wrong");
+  }
+};
+
 export const DriverTachographAction = {
   getDriverTachographs,
   getDriverTachograph,
   createDriverTachograph,
   updateDriverTachograph,
   deleteDriverTachograph,
+  getDriversWithVehicles,
 };

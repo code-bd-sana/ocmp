@@ -147,9 +147,79 @@ const deleteDriverTachograph = async (
  */
 const getDriverTachographById = async (
   id: IdOrIdsInput['id']
-): Promise<Partial<IDriverTachograph | null>> => {
-  const driverTachograph = await DriverTachographModel.findById(id);
-  return driverTachograph;
+): Promise<any> => {
+  const result = await DriverTachographModel.aggregate([
+    { $match: { _id: new mongoose.Types.ObjectId(id as string) } },
+
+    // Join Driver
+    {
+      $lookup: {
+        from: 'drivers',
+        localField: 'driverId',
+        foreignField: '_id',
+        as: 'driverDoc',
+      },
+    },
+    { $unwind: { path: '$driverDoc', preserveNullAndEmptyArrays: true } },
+    {
+      $addFields: {
+        driverName: { $ifNull: ['$driverDoc.fullName', null] },
+      },
+    },
+
+    // Join Vehicle
+    {
+      $lookup: {
+        from: 'vehicles',
+        localField: 'vehicleId',
+        foreignField: '_id',
+        as: 'vehicleDoc',
+      },
+    },
+    { $unwind: { path: '$vehicleDoc', preserveNullAndEmptyArrays: true } },
+    {
+      $addFields: {
+        vehicleRegId: { $ifNull: ['$vehicleDoc.vehicleRegId', null] },
+        vehicleType: { $ifNull: ['$vehicleDoc.vehicleType', null] },
+        licensePlate: { $ifNull: ['$vehicleDoc.licensePlate', null] },
+      },
+    },
+
+    // Join User for reviewedBy
+    {
+      $lookup: {
+        from: 'users',
+        localField: 'reviewedBy',
+        foreignField: '_id',
+        as: 'reviewedUser',
+      },
+    },
+    { $unwind: { path: '$reviewedUser', preserveNullAndEmptyArrays: true } },
+    {
+      $addFields: {
+        reviewedByName: {
+          $cond: [
+            { $ifNull: ['$reviewedUser', false] },
+            {
+              $concat: ['$reviewedUser.fullName', ' (', '$reviewedUser.role', ')'],
+            },
+            null,
+          ],
+        },
+      },
+    },
+
+    // Remove joined doc objects
+    {
+      $project: {
+        driverDoc: 0,
+        vehicleDoc: 0,
+        reviewedUser: 0,
+      },
+    },
+  ]);
+
+  return result.length > 0 ? result[0] : null;
 };
 
 /**
@@ -222,22 +292,53 @@ const getManyDriverTachograph = async (
   const result = await DriverTachographModel.aggregate([
     { $match: matchStage },
 
-    // Join User
+    // Join Driver
     {
       $lookup: {
-        from: 'users', // collection name (lowercase plural)
+        from: 'drivers',
+        localField: 'driverId',
+        foreignField: '_id',
+        as: 'driverDoc',
+      },
+    },
+    { $unwind: { path: '$driverDoc', preserveNullAndEmptyArrays: true } },
+    {
+      $addFields: {
+        driverName: { $ifNull: ['$driverDoc.fullName', null] },
+      },
+    },
+
+    // Join Vehicle
+    {
+      $lookup: {
+        from: 'vehicles',
+        localField: 'vehicleId',
+        foreignField: '_id',
+        as: 'vehicleDoc',
+      },
+    },
+    { $unwind: { path: '$vehicleDoc', preserveNullAndEmptyArrays: true } },
+    {
+      $addFields: {
+        vehicleRegId: { $ifNull: ['$vehicleDoc.vehicleRegId', null] },
+        vehicleType: { $ifNull: ['$vehicleDoc.vehicleType', null] },
+        licensePlate: { $ifNull: ['$vehicleDoc.licensePlate', null] },
+      },
+    },
+
+    // Join User for reviewedBy
+    {
+      $lookup: {
+        from: 'users',
         localField: 'reviewedBy',
         foreignField: '_id',
         as: 'reviewedUser',
       },
     },
-
     { $unwind: { path: '$reviewedUser', preserveNullAndEmptyArrays: true } },
-
-    // Create string field
     {
       $addFields: {
-        reviewedBy: {
+        reviewedByName: {
           $cond: [
             { $ifNull: ['$reviewedUser', false] },
             {
@@ -249,9 +350,11 @@ const getManyDriverTachograph = async (
       },
     },
 
-    // 🧹 Remove raw user object
+    // Remove joined doc objects
     {
       $project: {
+        driverDoc: 0,
+        vehicleDoc: 0,
         reviewedUser: 0,
       },
     },

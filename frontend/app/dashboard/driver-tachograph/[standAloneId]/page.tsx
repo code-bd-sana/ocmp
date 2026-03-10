@@ -7,11 +7,11 @@ import TachoGraphHeader from "@/components/dashboard/driver-tachograph/TachoGrap
 import {
   default as TachoGraphTable,
   TachoGraphTableRow,
+  toTachoGraphTableRows,
 } from "@/components/dashboard/driver-tachograph/TachoGraphTable";
 import ViewTachographModal from "@/components/dashboard/driver-tachograph/ViewTachographModal";
 import {
   CreateDriverTachographInput,
-  DriverTachographRow,
   UpdateDriverTachographInput,
 } from "@/lib/driver-tachograph/tachograph.types";
 import { DriverTachographAction } from "@/service/driver-tachograph";
@@ -20,19 +20,6 @@ import { toast } from "sonner";
 
 interface PageProps {
   params: Promise<{ standAloneId: string }>;
-}
-
-function toTableRow(t: DriverTachographRow): TachoGraphTableRow {
-  return {
-    id: t._id,
-    driverId: t.driverId,
-    vehicleId: t.vehicleId,
-    typeOfInfringement: t.typeOfInfringement || "—",
-    details: t.details || "—",
-    actionTaken: t.actionTaken || "—",
-    reviewedBy: t.reviewedBy,
-    signed: t.signed || false,
-  };
 }
 
 export default function TachographListPage({ params }: PageProps) {
@@ -82,7 +69,7 @@ export default function TachographListPage({ params }: PageProps) {
           const tachographs = Array.isArray(res.data.tachographs)
             ? res.data.tachographs
             : [];
-          setRows(tachographs.map(toTableRow));
+          setRows(toTachoGraphTableRows(tachographs));
         } else {
           setError(res.message || "Failed to load tachographs");
         }
@@ -138,7 +125,7 @@ export default function TachographListPage({ params }: PageProps) {
         standAloneId,
       );
       if (res.status && res.data) {
-        setViewTachograph(toTableRow(res.data));
+        setViewTachograph(toTachoGraphTableRows([res.data])[0]);
       } else {
         toast.error(res.message || "Failed to load tachograph details");
         setViewOpen(false);
@@ -165,7 +152,7 @@ export default function TachographListPage({ params }: PageProps) {
         standAloneId,
       );
       if (res.status && res.data) {
-        setEditTachograph(toTableRow(res.data));
+        setEditTachograph(toTachoGraphTableRows([res.data])[0]);
       } else {
         toast.error(res.message || "Failed to load tachograph details");
         setEditOpen(false);
@@ -289,7 +276,6 @@ export default function TachographListPage({ params }: PageProps) {
         }}
         vehicle={viewTachograph}
         loading={viewLoading}
-        standAloneId={standAloneId}
       />
 
       <EditTachographModal
@@ -310,7 +296,8 @@ export default function TachographListPage({ params }: PageProps) {
           setDeleteOpen(open);
           if (!open) setDeleteTarget(null);
         }}
-        tachographId={deleteTarget?.id || ""}
+        driverName={deleteTarget?.driverName || ""}
+        vehicleRegId={deleteTarget?.vehicleRegId || ""}
         onConfirm={handleDeleteConfirm}
         loading={deleteLoading}
       />

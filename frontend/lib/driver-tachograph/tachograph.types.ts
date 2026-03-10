@@ -35,11 +35,16 @@
 export interface DriverTachographRow {
   _id: string;
   driverId: string;
+  driverName?: string;
   vehicleId: string;
+  vehicleRegId?: string;
+  vehicleType?: string;
+  licensePlate?: string;
   typeOfInfringement?: string;
   details?: string;
   actionTaken?: string;
   reviewedBy: string;
+  reviewedByName?: string;
   signed?: boolean;
   createdAt: string;
   updatedAt: string;
@@ -72,4 +77,18 @@ export interface UpdateDriverTachographInput {
   actionTaken?: string;
   reviewedBy?: string;
   signed?: boolean;
+}
+
+/** A driver with their assigned vehicles (from working-time-directive API) */
+export interface DriverWithVehicles {
+  _id: string;
+  fullName: string;
+  licenseNumber: string;
+  vehicles: {
+    _id: string;
+    vehicleRegId: string;
+    vehicleType: string;
+    licensePlate: string;
+    status: string;
+  }[];
 }
