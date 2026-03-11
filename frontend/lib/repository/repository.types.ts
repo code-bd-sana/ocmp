@@ -59,7 +59,7 @@ export const SETTINGS_META: SettingMeta[] = [
   {
     key: "trainingAndToolboxTalks",
     label: "Training and Toolbox Talks",
-    href: "/dashboard/training",
+    href: "/dashboard/transport-manager-training",
   },
   {
     key: "renewalsTracker",

@@ -135,9 +135,16 @@ const getSelfServiceById = async (
  * @returns {Promise<Partial<ISelfService>[]>} - The retrieved self-service
  */
 const getManySelfService = async (
-  query: SearchQueryInput & { standAloneId?: string }
+  query: SearchQueryInput & { standAloneId?: string; requesterId?: string; requesterRole?: string }
 ): Promise<{ selfServices: Partial<ISelfService>[]; totalData: number; totalPages: number }> => {
-  const { searchKey = '', showPerPage = 10, pageNo = 1, standAloneId } = query;
+  const {
+    searchKey = '',
+    showPerPage = 10,
+    pageNo = 1,
+    standAloneId,
+    requesterId,
+    requesterRole,
+  } = query;
   const searchFilter = searchKey
     ? {
         $or: [
@@ -150,15 +157,21 @@ const getManySelfService = async (
 
   const filter: any = { ...searchFilter };
 
-  if (standAloneId) {
+  const ownerIds = new Set<string>();
+
+  if (requesterRole === 'TRANSPORT_MANAGER' && standAloneId) {
+    ownerIds.add(String(standAloneId));
+  } else if (requesterId) {
+    ownerIds.add(String(requesterId));
+  }
+
+  if (ownerIds.size > 0) {
+    const ownerObjectIds = Array.from(ownerIds).map((id) => new mongoose.Types.ObjectId(id));
     const ownerFilter = {
-      $or: [
-        { standAloneId: new mongoose.Types.ObjectId(standAloneId) },
-        { createdBy: new mongoose.Types.ObjectId(standAloneId) },
-      ],
+      $or: [{ standAloneId: { $in: ownerObjectIds } }, { createdBy: { $in: ownerObjectIds } }],
     };
 
-    if (Object.keys(filter).length > 0) {
+    if (Object.keys(searchFilter).length > 0) {
       Object.assign(filter, { $and: [searchFilter, ownerFilter] });
       delete filter.$or;
     } else {
@@ -186,4 +199,3 @@ export const selfServiceServices = {
   getSelfServiceById,
   getManySelfService,
 };
-
