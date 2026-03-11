@@ -43,6 +43,7 @@ const CLIENT_MODULES: { slug: string; label: string }[] = [
   { slug: "renewal-tracker", label: "Renewal Tracker" },
   { slug: "ocrs-plan", label: "OCRS Plan" },
   { slug: "traffic-commissioner", label: "Traffic Commissioner" },
+  { slug: "self-service", label: "Self Service" },
   { slug: "transport-manager", label: "Transport Manager" },
   { slug: "policy-review-tracker", label: "Policy Review Tracker" },
   { slug: "working-time-directive", label: "Working Time Directive" },
