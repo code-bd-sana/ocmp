@@ -22,11 +22,6 @@ import { RenewalTracker } from '../../models/training/transportManagerTraining.s
  */
 const zodCreateTransportManagerTrainingSchema = z
   .object({
-    name: z
-      .string({ message: 'name is required' })
-      .min(1, 'name cannot be empty')
-      .max(200, 'name cannot exceed 200 characters')
-      .trim(),
     trainingCourse: z
       .string({ message: 'trainingCourse is required' })
       .min(1, 'trainingCourse cannot be empty')
@@ -72,12 +67,6 @@ export type CreateManyTransportManagerTrainingInput = z.infer<
  */
 const zodUpdateTransportManagerTrainingSchema = z
   .object({
-    name: z
-      .string()
-      .min(1, 'name cannot be empty')
-      .max(200, 'name cannot exceed 200 characters')
-      .trim()
-      .optional(),
     trainingCourse: z
       .string()
       .min(1, 'trainingCourse cannot be empty')
@@ -122,4 +111,3 @@ export const validateCreateManyTransportManagerTraining = validateBody(
 export const validateUpdateTransportManagerTraining = validateBody(
   zodUpdateTransportManagerTrainingSchema
 );
-
