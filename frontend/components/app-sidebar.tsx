@@ -40,6 +40,7 @@ const CLIENT_MODULES: { slug: string; label: string }[] = [
   { slug: "spot-checks", label: "Spot Checks" },
   { slug: "subcontractor-details", label: "Subcontractor Details" },
   { slug: "driver-tachograph", label: "Driver Tachograph" },
+  { slug: "training-toolbox", label: "Training Toolbox" },
   { slug: "renewal-tracker", label: "Renewal Tracker" },
   { slug: "ocrs-plan", label: "OCRS Plan" },
   { slug: "traffic-commissioner", label: "Traffic Commissioner" },
