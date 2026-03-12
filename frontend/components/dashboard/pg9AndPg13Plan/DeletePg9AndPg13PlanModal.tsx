@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Loader2 } from "lucide-react";
 
-interface DeleteToolboxModalProps {
+interface DeletePg9AndPg13PlanModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onConfirm: () => void;
@@ -20,13 +20,13 @@ interface DeleteToolboxModalProps {
   loading: boolean;
 }
 
-export default function DeleteToolboxDialog({
+export default function DeletePg9AndPg13PlanDialog({
   open,
   onOpenChange,
   onConfirm,
   itemName,
   loading,
-}: DeleteToolboxModalProps) {
+}: DeletePg9AndPg13PlanModalProps) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>

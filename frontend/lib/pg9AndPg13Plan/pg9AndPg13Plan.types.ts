@@ -14,7 +14,7 @@ export interface Pg9AndPg13PlanRow {
 }
 
 export interface Pg9AndPg13PlanListResponse {
-  pg9pg13Plans: Pg9AndPg13PlanRow[];
+  pg9AndPg13Plans: Pg9AndPg13PlanRow[];
   totalData: number;
   totalPages: number;
 }

@@ -19,7 +19,7 @@ interface Pg9AndPg13PlanListResponse {
   statusCode?: number;
   message: string;
   data?: {
-    pg9pg13Plans: Pg9AndPg13PlanRow[];
+    pg9AndPg13Plans: Pg9AndPg13PlanRow[];
     totalData: number;
     totalPages: number;
   };
@@ -232,7 +232,7 @@ export const Pg9AndPg13PlanAction = {
     if (!token) throw new Error("No authentication token found");
     try {
       const response = await axios.patch<Pg9AndPg13PlanResponse>(
-        `${base_url}//pg9AndPg13Plan/update-pg9-and-pg13-plan-by-manager/${planId}/${standAloneId}`,
+        `${base_url}/pg9AndPg13Plan/update-pg9-and-pg13-plan-by-manager/${planId}/${standAloneId}`,
         data,
         { headers: { Authorization: `Bearer ${token}` } },
       );

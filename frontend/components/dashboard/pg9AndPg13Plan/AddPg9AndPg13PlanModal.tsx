@@ -145,6 +145,9 @@ export default function AddPg9AndPg13PlanModal({
   const handleSubmit = async (data: AddPg9AndPg13PlanForm) => {
     const payload: CreatePg9AndPg13PlanInput = {
       ...data,
+      meetingDate: data.meetingDate
+        ? new Date(data.meetingDate).toISOString()
+        : undefined,
       standAloneId,
     };
     await onSubmit(payload);

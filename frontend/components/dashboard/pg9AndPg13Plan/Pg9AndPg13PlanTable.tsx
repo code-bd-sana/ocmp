@@ -22,7 +22,8 @@ export interface Pg9AndPg13PlanRow {
 }
 
 /** Map API response */
-export function toPg9AndPg13PlanRow(plan: Pg9AndPg13PlanRow[]) {
+export function toPg9AndPg13PlanRow(plan?: Pg9AndPg13PlanRow[]) {
+  if (!plan || !Array.isArray(plan)) return [];
   return plan.map((p) => ({
     _id: p._id,
     vehicleId: p.vehicleId,
