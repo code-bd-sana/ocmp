@@ -33,6 +33,33 @@ function extractApiError(data: IApiResponse | undefined): string {
   return "Something went wrong";
 }
 
+type DriverTachographListPayload = {
+  tachographs?: DriverTachographRow[];
+  driverTachographs?: DriverTachographRow[];
+  totalData?: number;
+  totalPages?: number;
+};
+
+function normalizeDriverTachographListResponse(
+  raw: IApiResponse<DriverTachographListPayload>,
+): IApiResponse<DriverTachographListResponse> {
+  const rawData = raw.data;
+  const normalizedTachographs = Array.isArray(rawData?.tachographs)
+    ? rawData.tachographs
+    : Array.isArray(rawData?.driverTachographs)
+      ? rawData.driverTachographs
+      : [];
+
+  return {
+    ...raw,
+    data: {
+      tachographs: normalizedTachographs,
+      totalData: rawData?.totalData ?? 0,
+      totalPages: rawData?.totalPages ?? 0,
+    },
+  };
+}
+
 /**
  * GET /api/v1/driver-tachograph/get-driver-tachograph/many?standAloneId=...
  * Fetches paginated driver tachographs for a specific client (standAloneId).
@@ -54,34 +81,20 @@ const getDriverTachographs = async (
   const token = AuthAction.GetAuthToken();
   if (!token) throw new Error("No authentication token found");
   try {
-    const response = await axios.get<
-      IApiResponse<DriverTachographListResponse>
-    >(`${base_url}/driver-tachograph/get-driver-tachograph/many`, {
-      headers: { Authorization: `Bearer ${token}` },
-      params: {
-        standAloneId,
-        searchKey: params?.searchKey || undefined,
-        showPerPage: params?.showPerPage || 10,
-        pageNo: params?.pageNo || 1,
+    const response = await axios.get<IApiResponse<DriverTachographListPayload>>(
+      `${base_url}/driver-tachograph/get-driver-tachograph/many`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+        params: {
+          standAloneId,
+          searchKey: params?.searchKey || undefined,
+          showPerPage: params?.showPerPage || 10,
+          pageNo: params?.pageNo || 1,
+        },
       },
-    });
-    const raw = response.data as any;
-    const rawData = raw?.data;
-    const normalizedTachographs = Array.isArray(rawData?.tachographs)
-      ? rawData.tachographs
-      : Array.isArray(rawData?.driverTachographs)
-        ? rawData.driverTachographs
-        : [];
+    );
 
-    return {
-      ...raw,
-      data: {
-        ...rawData,
-        tachographs: normalizedTachographs,
-        totalData: rawData?.totalData ?? 0,
-        totalPages: rawData?.totalPages ?? 0,
-      },
-    } as IApiResponse<DriverTachographListResponse>;
+    return normalizeDriverTachographListResponse(response.data);
   } catch (error: unknown) {
     if (axios.isAxiosError<IApiResponse>(error)) {
       throw new Error(extractApiError(error.response?.data));
@@ -103,33 +116,19 @@ const getDriverTachographsAsStandAlone = async (params?: {
   const token = AuthAction.GetAuthToken();
   if (!token) throw new Error("No authentication token found");
   try {
-    const response = await axios.get<
-      IApiResponse<DriverTachographListResponse>
-    >(`${base_url}/driver-tachograph/get-driver-tachograph/many`, {
-      headers: { Authorization: `Bearer ${token}` },
-      params: {
-        searchKey: params?.searchKey || undefined,
-        showPerPage: params?.showPerPage || 10,
-        pageNo: params?.pageNo || 1,
+    const response = await axios.get<IApiResponse<DriverTachographListPayload>>(
+      `${base_url}/driver-tachograph/get-driver-tachograph/many`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+        params: {
+          searchKey: params?.searchKey || undefined,
+          showPerPage: params?.showPerPage || 10,
+          pageNo: params?.pageNo || 1,
+        },
       },
-    });
-    const raw = response.data as any;
-    const rawData = raw?.data;
-    const normalizedTachographs = Array.isArray(rawData?.tachographs)
-      ? rawData.tachographs
-      : Array.isArray(rawData?.driverTachographs)
-        ? rawData.driverTachographs
-        : [];
+    );
 
-    return {
-      ...raw,
-      data: {
-        ...rawData,
-        tachographs: normalizedTachographs,
-        totalData: rawData?.totalData ?? 0,
-        totalPages: rawData?.totalPages ?? 0,
-      },
-    } as IApiResponse<DriverTachographListResponse>;
+    return normalizeDriverTachographListResponse(response.data);
   } catch (error: unknown) {
     if (axios.isAxiosError<IApiResponse>(error)) {
       throw new Error(extractApiError(error.response?.data));
@@ -252,7 +251,8 @@ const updateDriverTachograph = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
-    const { id: _ignoredId, ...updateBody } = data;
+    const updateBody = { ...data };
+    delete updateBody.id;
     const response = await axios.patch<IApiResponse>(
       `${base_url}/driver-tachograph/update-driver-tachograph/${tachographId}/${standAloneId}`,
       updateBody,
@@ -279,7 +279,8 @@ const updateDriverTachographAsStandAlone = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
-    const { id: _ignoredId, ...updateBody } = data;
+    const updateBody = { ...data };
+    delete updateBody.id;
     const response = await axios.patch<IApiResponse>(
       `${base_url}/driver-tachograph/update-driver-tachograph/${tachographId}`,
       updateBody,
