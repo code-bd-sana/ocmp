@@ -11,10 +11,7 @@ import {
  * Verifies the vehicle belongs to the standalone user.
  * Checks that Vehicle exists AND its standAloneId or createdBy matches accessId.
  */
-const verifyVehicleUnderStandalone = async (
-  vehicleId: string,
-  accessId: string
-): Promise<void> => {
+const verifyVehicleUnderStandalone = async (vehicleId: string, accessId: string): Promise<void> => {
   const vehicleObjectId = new mongoose.Types.ObjectId(vehicleId);
   const objectId = new mongoose.Types.ObjectId(accessId);
 
@@ -144,6 +141,24 @@ const getAllPg9AndPg13Plans = async (
           { $sort: { createdAt: -1 } },
           { $skip: (pageNo - 1) * showPerPage },
           { $limit: showPerPage },
+          {
+            $project: {
+              _id: { $toString: '$_id' },
+              vehicleId: { $toString: '$vehicleId' },
+              issueType: 1,
+              defectDescription: 1,
+              clearanceStatus: 1,
+              tcContactMade: 1,
+              maintenanceProvider: 1,
+              meetingDate: 1,
+              notes: 1,
+              followUp: 1,
+              standAloneId: { $toString: '$standAloneId' },
+              createdBy: { $toString: '$createdBy' },
+              createdAt: 1,
+              updatedAt: 1,
+            },
+          },
         ],
       },
     },
@@ -193,12 +208,14 @@ const updatePg9AndPg13Plan = async (
   }
 
   const updateFields: Record<string, any> = {};
-  if (data.vehicleId !== undefined) updateFields.vehicleId = new mongoose.Types.ObjectId(data.vehicleId);
+  if (data.vehicleId !== undefined)
+    updateFields.vehicleId = new mongoose.Types.ObjectId(data.vehicleId);
   if (data.issueType !== undefined) updateFields.issueType = data.issueType;
   if (data.defectDescription !== undefined) updateFields.defectDescription = data.defectDescription;
   if (data.clearanceStatus !== undefined) updateFields.clearanceStatus = data.clearanceStatus;
   if (data.tcContactMade !== undefined) updateFields.tcContactMade = data.tcContactMade;
-  if (data.maintenanceProvider !== undefined) updateFields.maintenanceProvider = data.maintenanceProvider;
+  if (data.maintenanceProvider !== undefined)
+    updateFields.maintenanceProvider = data.maintenanceProvider;
   if (data.meetingDate !== undefined) updateFields.meetingDate = new Date(data.meetingDate);
   if (data.notes !== undefined) updateFields.notes = data.notes;
   if (data.followUp !== undefined) updateFields.followUp = data.followUp;
@@ -224,10 +241,7 @@ const updatePg9AndPg13Plan = async (
  * Service: Delete a PG9 & PG13 plan.
  * Uses $or access control on createdBy / standAloneId.
  */
-const deletePg9AndPg13Plan = async (
-  pg9AndPg13PlanId: string,
-  accessId: string
-): Promise<void> => {
+const deletePg9AndPg13Plan = async (pg9AndPg13PlanId: string, accessId: string): Promise<void> => {
   const objectId = new mongoose.Types.ObjectId(accessId);
 
   const deleted = await pg9AndPg13Plan.findOneAndDelete({
