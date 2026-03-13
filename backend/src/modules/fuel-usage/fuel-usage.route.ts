@@ -94,14 +94,31 @@ router.patch(
 );
 
 /**
- * @route DELETE /api/v1/fuel-usage/delete-fuel-usage/:id
- * @description Delete a fuel-usage
- * @access Public
- * @param {IdOrIdsInput['id']} id - The ID of the fuel-usage to delete
- * @param {function} validation - ['validateId']
- * @param {function} controller - ['deleteFuelUsage']
+ * @route DELETE /api/v1/fuel-usage/delete-fuel-usage/:id/:standAloneId
+ * @description Delete a fuel-usage by ID as a Transport Manager
+ * @access Private (Transport Manager)
  */
-router.delete('/delete-fuel-usage/:id', validateId, deleteFuelUsage);
+router.delete(
+  '/delete-fuel-usage/:id/:standAloneId',
+  authorizedRoles([UserRole.TRANSPORT_MANAGER]),
+  // checkSubscriptionValidity,
+  validateClientForManagerMiddleware,
+  validateFuelUsageAndManagerIdParam,
+  deleteFuelUsage
+);
+
+/**
+ * @route DELETE /api/v1/fuel-usage/delete-fuel-usage/:id
+ * @description Delete a fuel-usage by ID as a Standalone User
+ * @access Private (Standalone User)
+ */
+router.delete(
+  '/delete-fuel-usage/:id',
+  authorizedRoles([UserRole.STANDALONE_USER]),
+  // checkSubscriptionValidity,
+  validateFuelUsageIdParam,
+  deleteFuelUsage
+);
 
 /**
  * @route GET /api/v1/fuel-usage/get-fuel-usages

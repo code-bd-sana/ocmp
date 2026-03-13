@@ -76,10 +76,18 @@ export const updateFuelUsage = catchAsync(async (req: AuthenticatedRequest, res:
  * @returns {Promise<Partial<IFuelUsage>>} - The deleted fuel-usage.
  * @throws {Error} - Throws an error if the fuel-usage deletion fails.
  */
-export const deleteFuelUsage = catchAsync(async (req: Request, res: Response) => {
-  const { id } = req.params;
+export const deleteFuelUsage = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+  const paramToString = (p?: string | string[]): string => (Array.isArray(p) ? p[0] : p || '');
+  const id = paramToString(req.params.id);
+
+  // Transport manager through the client's standAloneId; standalone uses own Id
+  const accessId =
+    req.user!.role === UserRole.TRANSPORT_MANAGER
+      ? (paramToString(req.params.standAloneId) as string)
+      : req.user!._id;
+
   // Call the service method to delete the fuel-usage by ID
-  const result = await fuelUsageServices.deleteFuelUsage(id as string);
+  const result = await fuelUsageServices.deleteFuelUsage(id as string, accessId);
   if (!result) throw new Error('Failed to delete fuel-usage');
   // Send a success response confirming the deletion
   ServerResponse(res, true, 200, 'Fuel-usage deleted successfully');
@@ -93,7 +101,7 @@ export const deleteFuelUsage = catchAsync(async (req: Request, res: Response) =>
  * @returns {Promise<Partial<IFuelUsage>>} - The retrieved fuel-usage.
  * @throws {Error} - Throws an error if the fuel-usage retrieval fails.
  */
-export const getFuelUsageById = catchAsync(async (req: Request, res: Response) => {
+export const getFuelUsageById = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
   const { id } = req.params;
   // Call the service method to get the fuel-usage by ID and get the result
   const result = await fuelUsageServices.getFuelUsageById(id as string);

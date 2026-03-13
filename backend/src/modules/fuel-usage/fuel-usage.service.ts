@@ -158,8 +158,31 @@ const updateFuelUsage = async (
  * @param {IdOrIdsInput['id']} id - The ID of the fuel-usage to delete.
  * @returns {Promise<Partial<IFuelUsage>>} - The deleted fuel-usage.
  */
-const deleteFuelUsage = async (id: IdOrIdsInput['id']): Promise<Partial<IFuelUsage | null>> => {
-  const deletedFuelUsage = await FuelUsageSchema.findByIdAndDelete(id);
+const deleteFuelUsage = async (
+  id: string,
+  accessId: string
+): Promise<Partial<IFuelUsage | null>> => {
+  const existing = await FuelUsage.findOne({
+    _id: new mongoose.Types.ObjectId(id),
+    $or: [
+      { standAloneId: new mongoose.Types.ObjectId(accessId) },
+      { createdBy: new mongoose.Types.ObjectId(accessId) },
+    ],
+  });
+
+  if (!existing) {
+    throw new Error('Fuel-usage not found or access denied');
+  }
+
+  const objectId = new mongoose.Types.ObjectId(accessId);
+
+  const deletedFuelUsage = await FuelUsageSchema.findOneAndDelete({
+    _id: new mongoose.Types.ObjectId(id),
+    $or: [{ standAloneId: objectId }, { createdBy: objectId }],
+  });
+  if (!deletedFuelUsage) {
+    throw new Error('Fuel-usage not found or access denied');
+  }
   return deletedFuelUsage;
 };
 
