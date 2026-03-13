@@ -6,6 +6,7 @@ import {
   CreateFuelUsageAsManagerInput,
   CreateFuelUsageAsStandAloneInput,
   CreateFuelUsageInput,
+  SearchFuelUsageInput,
   UpdateFuelUsageInput,
 } from './fuel-usage.validation';
 import { FuelUsage, Vehicle } from '../../models';
@@ -155,28 +156,79 @@ const getFuelUsageById = async (id: IdOrIdsInput['id']): Promise<Partial<IFuelUs
  * @returns {Promise<Partial<IFuelUsage>[]>} - The retrieved fuel-usage
  */
 const getManyFuelUsage = async (
-  query: SearchQueryInput
+  query: SearchFuelUsageInput
 ): Promise<{ fuelUsages: Partial<IFuelUsage>[]; totalData: number; totalPages: number }> => {
-  const { searchKey = '', showPerPage = 10, pageNo = 1 } = query;
-  // Build the search filter based on the search key
-  const searchFilter = {
-    $or: [
-      // { fieldName: { $regex: searchKey, $options: 'i' } },
-      // Add more fields as needed
-    ],
-  };
-  // Calculate the number of items to skip based on the page number
-  const skipItems = (pageNo - 1) * showPerPage;
-  // Find the total count of matching fuel-usage
-  const totalData = await FuelUsageSchema.countDocuments(searchFilter);
-  // Calculate the total number of pages
+  const showPerPage = Number(query.showPerPage) || 10;
+  const pageNo = Number(query.pageNo) || 1;
+  const searchKey = query.searchKey;
+  const { standAloneId } = query;
+
+  const basePipeline: mongoose.PipelineStage[] = [];
+
+  // Access Control
+  if (standAloneId) {
+    const objectId = new mongoose.Types.ObjectId(standAloneId);
+    basePipeline.push({
+      $match: {
+        $or: [{ standAloneId: objectId }, { createdBy: objectId }],
+      },
+    });
+  }
+
+  // Lookup driver details for search
+
+  basePipeline.push(
+    {
+      $lookup: {
+        from: 'drivers',
+        localField: 'driverId',
+        foreignField: '_id',
+        as: 'driver',
+      },
+    },
+    { $unwind: { path: '$driver', preserveNullAndEmptyArrays: true } },
+    {
+      $lookup: {
+        from: 'vehicles',
+        localField: 'vehicleId',
+        foreignField: '_id',
+        as: 'vehicle',
+      },
+    },
+    { $unwind: { path: '$vehicle', preserveNullAndEmptyArrays: true } }
+  );
+
+  // Search filter or driver fullName, vehicle vehicleRegId, complianceStatus
+  if (searchKey) {
+    basePipeline.push({
+      $match: {
+        $or: [
+          { 'driver.fullName': { $regex: searchKey, $options: 'i' } },
+          { 'vehicle.vehicleRegId': { $regex: searchKey, $options: 'i' } },
+          { complianceStatus: { $regex: searchKey, $options: 'i' } },
+        ],
+      },
+    });
+  }
+
+  const [result] = await FuelUsage.aggregate([
+    ...basePipeline,
+    {
+      $facet: {
+        metadata: [{ $count: 'total' }],
+        data: [
+          { $sort: { createdAt: -1 } },
+          { $skip: (pageNo - 1) * showPerPage },
+          { $limit: showPerPage },
+        ],
+      },
+    },
+  ]);
+
+  const totalData = result?.metadata[0]?.total || 0;
   const totalPages = Math.ceil(totalData / showPerPage);
-  // Find fuel-usages based on the search filter with pagination
-  const fuelUsages = await FuelUsageSchema.find(searchFilter)
-    .skip(skipItems)
-    .limit(showPerPage)
-    .select(''); // Keep/Exclude any field if needed
-  return { fuelUsages, totalData, totalPages };
+
+  return { fuelUsages: result?.data || [], totalData, totalPages };
 };
 
 export const fuelUsageServices = {

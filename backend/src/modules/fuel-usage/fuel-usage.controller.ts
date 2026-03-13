@@ -5,6 +5,8 @@ import ServerResponse from '../../helpers/responses/custom-response';
 import catchAsync from '../../utils/catch-async/catch-async';
 import { AuthenticatedRequest } from '../../middlewares/is-authorized';
 import mongoose from 'mongoose';
+import { SearchFuelUsageInput } from './fuel-usage.validation';
+import { UserRole } from '../../models';
 
 /**
  * Controller: Create a fuel-usage record as a Transport Manager
@@ -100,9 +102,19 @@ export const getFuelUsageById = catchAsync(async (req: Request, res: Response) =
  * @returns {Promise<Partial<IFuelUsage>[]>} - The retrieved fuel-usages.
  * @throws {Error} - Throws an error if the fuel-usages retrieval fails.
  */
-export const getManyFuelUsage = catchAsync(async (req: Request, res: Response) => {
+export const getManyFuelUsage = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
   // Use the validated and transformed query from Zod middleware
-  const query = (req as any).validatedQuery as SearchQueryInput;
+  const query = { ...((req as any).validatedQuery as SearchFuelUsageInput) };
+
+  // StandAlone: use own userId for access control
+  if (req.user?.role === UserRole.STANDALONE_USER) {
+    query.standAloneId = req.user._id;
+  }
+
+  // Transport Manager: standAloneId already comes from validated query params
+
+  // const result = await fuelUsageServices.getManyFuelUsage(query);
+
   // Call the service method to get multiple fuel-usages based on query parameters and get the result
   const { fuelUsages, totalData, totalPages } = await fuelUsageServices.getManyFuelUsage(query);
   if (!fuelUsages) throw new Error('Failed to retrieve fuel-usages');

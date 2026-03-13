@@ -16,9 +16,10 @@ import {
   validateCreateFuelUsageAsManager,
   validateCreateFuelUsageAsStandAlone,
   validateUpdateFuelUsage,
+  validateSearchFuelUsage,
 } from './fuel-usage.validation';
-import { validateId, validateSearchQueries } from '../../handlers/common-zod-validator';
-import isAuthorized from '../../middlewares/is-authorized';
+import { validateId } from '../../handlers/common-zod-validator';
+import isAuthorized, { AuthenticatedRequest } from '../../middlewares/is-authorized';
 import { validateClientForManagerMiddleware } from '../../middlewares/validate-client-for-manager';
 import authorizedRoles from '../../middlewares/authorized-roles';
 import { UserRole } from '../../models';
@@ -81,13 +82,30 @@ router.put('/update-fuel-usage/:id', validateId, validateUpdateFuelUsage, update
 router.delete('/delete-fuel-usage/:id', validateId, deleteFuelUsage);
 
 /**
- * @route GET /api/v1/fuel-usage/get-fuel-usage/many
- * @description Get multiple fuel-usages
+ * @route GET /api/v1/fuel-usage/get-fuel-usages
+ * @description Get all fuel-usage records (paginated + searchable)
  * @access Public
  * @param {function} validation - ['validateSearchQueries']
  * @param {function} controller - ['getManyFuelUsage']
  */
-router.get('/get-fuel-usage/many', validateSearchQueries, getManyFuelUsage);
+router.get(
+  '/get-fuel-usages',
+  authorizedRoles([UserRole.TRANSPORT_MANAGER, UserRole.STANDALONE_USER]),
+  (req: AuthenticatedRequest, res, next) => {
+    if (req.user!.role === UserRole.TRANSPORT_MANAGER) {
+      return validateClientForManagerMiddleware(req, res, next);
+    }
+    next();
+  },
+  (req: AuthenticatedRequest, res, next) => {
+    // Use module-specific search validator that accepts `standAloneId`
+    if (req.user!.role === UserRole.TRANSPORT_MANAGER) {
+      return validateSearchFuelUsage(req, res, next);
+    }
+    return validateSearchFuelUsage(req, res, next);
+  },
+  getManyFuelUsage
+);
 
 /**
  * @route GET /api/v1/fuel-usage/get-fuel-usage/:id

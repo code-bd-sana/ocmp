@@ -1,6 +1,7 @@
 import { z } from 'zod';
-import { validateBody } from '../../handlers/zod-error-handler';
+import { validateBody, validateQuery } from '../../handlers/zod-error-handler';
 import { isMongoId } from 'validator';
+import { zodSearchQuerySchema } from '../../handlers/common-zod-validator';
 
 /**
  * Fuel-usage Validation Schemas and Types
@@ -106,6 +107,19 @@ const zodUpdateFuelUsageSchema = z
   .strict();
 
 export type UpdateFuelUsageInput = z.infer<typeof zodUpdateFuelUsageSchema>;
+
+/** Extend base search query with standAloneId for Transport Manager filtering */
+const zodSearchFuelUsageSchema = zodSearchQuerySchema.extend({
+  standAloneId: z
+    .string({ message: 'standAloneId must be a string' })
+    .refine(isMongoId, { message: 'standAloneId must be a valid MongoDB ObjectId' })
+    .optional(),
+});
+
+export type SearchFuelUsageInput = z.infer<typeof zodSearchFuelUsageSchema>;
+
+// Query validator for searching/filtering fuel usage
+export const validateSearchFuelUsage = validateQuery(zodSearchFuelUsageSchema);
 
 /**
  * Named validators — use these directly in your Express routes
