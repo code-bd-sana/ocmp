@@ -6,4 +6,12 @@
  */
 export interface TFuelUsage {
   // Add fields as needed
+  vehicleId: string;
+  driverId: string;
+  date: Date;
+  adBlueUsed?: number;
+  fuelUsed?: number;
+  standAloneId?: string;
+  createdBy: string;
 }
+

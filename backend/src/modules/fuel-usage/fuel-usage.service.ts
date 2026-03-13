@@ -3,20 +3,96 @@ import mongoose from 'mongoose';
 import FuelUsageSchema, { IFuelUsage } from '../../models/vehicle-transport/fuelUsage.schema';
 import { IdOrIdsInput, SearchQueryInput } from '../../handlers/common-zod-validator';
 import {
+  CreateFuelUsageAsManagerInput,
+  CreateFuelUsageAsStandAloneInput,
   CreateFuelUsageInput,
   UpdateFuelUsageInput,
 } from './fuel-usage.validation';
+import { FuelUsage, Vehicle } from '../../models';
 
 /**
- * Service function to create a new fuel-usage.
+ * Verifies the vehicle is assigned to the driver
+ * The vehicle schema has `driverIds: ObjectId[]` field which contains the IDs of assigned drivers.
  *
- * @param {CreateFuelUsageInput} data - The data to create a new fuel-usage.
- * @returns {Promise<Partial<IFuelUsage>>} - The created fuel-usage.
  */
-const createFuelUsage = async (data: CreateFuelUsageInput): Promise<Partial<IFuelUsage>> => {
-  const newFuelUsage = new FuelUsageSchema(data);
-  const savedFuelUsage = await newFuelUsage.save();
-  return savedFuelUsage;
+
+const verifyVehicleUnderDriver = async (driverId: string, vehicleId: string): Promise<void> => {
+  const driverObjectId = new mongoose.Types.ObjectId(driverId);
+  const vehicleObjectId = new mongoose.Types.ObjectId(vehicleId);
+
+  // Confirm the driver exists
+  const driverExists = await mongoose.model('Driver').exists({ _id: driverObjectId });
+  if (!driverExists) {
+    throw new Error('Driver not found');
+  }
+
+  // Confirm the vehicle exists and is assigned to the driver
+  const vehicle = await Vehicle.exists({
+    _id: vehicleObjectId,
+    driverIds: driverObjectId,
+  });
+  if (!vehicle) {
+    throw new Error('Vehicle not found or not assigned to the driver');
+  }
+};
+
+// CREATE
+
+/**
+ * Service: Create a new fuel-usage record as a Transport Manager
+ * - Verifies the vehicle is assigned to the driver before creating the fuel-usage record.
+ *
+ * @param {CreateFuelUsageAsManagerInput} data - The data for the new fuel-usage record.
+ * @returns {Promise<IFuelUsage>} - The created fuel-usage record.
+ * @throws {Error} - Throws an error if the vehicle is not assigned to the driver or if creation fails.
+ */
+
+const createFuelUsageAsManager = async (
+  data: CreateFuelUsageAsManagerInput & { createdBy: mongoose.Types.ObjectId }
+): Promise<IFuelUsage> => {
+  // Verify the vehicle is assigned to the driver
+  await verifyVehicleUnderDriver(data.driverId, data.vehicleId);
+
+  const doc: Record<string, any> = {
+    vehicleId: new mongoose.Types.ObjectId(data.vehicleId),
+    driverId: new mongoose.Types.ObjectId(data.driverId),
+    date: data.date,
+    adBlueUsed: data.adBlueUsed,
+    fuelUsed: data.fuelUsed,
+    standAloneId: new mongoose.Types.ObjectId(data.standAloneId),
+    createdBy: data.createdBy,
+  };
+
+  const newDoc = await FuelUsage.create(doc);
+  return newDoc.save();
+};
+
+/**
+ * Service: Create a new fuel-usage record as a Standalone User
+ * - Verifies the vehicle is assigned to the driver before creating the fuel-usage record.
+ *
+ * @param {CreateFuelUsageAsStandAloneInput} data - The data for the new fuel-usage record.
+ * @returns {Promise<IFuelUsage>} - The created fuel-usage record.
+ * @throws {Error} - Throws an error if the vehicle is not assigned to the driver or if creation fails.
+ */
+
+const createFuelUsageAsStandAlone = async (
+  data: CreateFuelUsageAsStandAloneInput & { createdBy: mongoose.Types.ObjectId }
+): Promise<IFuelUsage> => {
+  // Verify the vehicle is assigned to the driver
+  await verifyVehicleUnderDriver(data.driverId, data.vehicleId);
+
+  const doc: Record<string, any> = {
+    vehicleId: new mongoose.Types.ObjectId(data.vehicleId),
+    driverId: new mongoose.Types.ObjectId(data.driverId),
+    date: data.date,
+    adBlueUsed: data.adBlueUsed,
+    fuelUsed: data.fuelUsed,
+    createdBy: data.createdBy,
+  };
+
+  const newDoc = await FuelUsage.create(doc);
+  return newDoc.save();
 };
 
 /**
@@ -104,7 +180,8 @@ const getManyFuelUsage = async (
 };
 
 export const fuelUsageServices = {
-  createFuelUsage,
+  createFuelUsageAsManager,
+  createFuelUsageAsStandAlone,
   updateFuelUsage,
   deleteFuelUsage,
   getFuelUsageById,

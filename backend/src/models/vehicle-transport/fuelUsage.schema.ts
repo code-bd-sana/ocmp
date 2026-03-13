@@ -7,6 +7,7 @@ export interface IFuelUsage extends Document {
   date: Date;
   adBlueUsed?: Number;
   fuelUsed?: Number;
+  standAloneId?: mongoose.Types.ObjectId;
   createdBy: mongoose.Types.ObjectId;
 }
 
@@ -34,6 +35,10 @@ const FuelUsageSchema: Schema<IFuelUsage> = new Schema(
     fuelUsed: {
       type: Number,
     } /* In Liter */,
+    standAloneId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User', // Reference from User model
+    },
     createdBy: {
       type: Schema.Types.ObjectId,
       required: true,

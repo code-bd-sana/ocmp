@@ -3,22 +3,43 @@ import { fuelUsageServices } from './fuel-usage.service';
 import { SearchQueryInput } from '../../handlers/common-zod-validator';
 import ServerResponse from '../../helpers/responses/custom-response';
 import catchAsync from '../../utils/catch-async/catch-async';
+import { AuthenticatedRequest } from '../../middlewares/is-authorized';
+import mongoose from 'mongoose';
 
 /**
- * Controller function to handle the creation of a single fuel-usage.
- *
- * @param {Request} req - The request object containing fuel-usage data in the body.
- * @param {Response} res - The response object used to send the response.
- * @returns {Promise<Partial<IFuelUsage>>} - The created fuel-usage.
- * @throws {Error} - Throws an error if the fuel-usage creation fails.
+ * Controller: Create a fuel-usage record as a Transport Manager
  */
-export const createFuelUsage = catchAsync(async (req: Request, res: Response) => {
-  // Call the service method to create a new fuel-usage and get the result
-  const result = await fuelUsageServices.createFuelUsage(req.body);
-  if (!result) throw new Error('Failed to create fuel-usage');
-  // Send a success response with the created fuel-usage data
-  ServerResponse(res, true, 201, 'Fuel-usage created successfully', result);
-});
+export const createFuelUsageAsManager = catchAsync(
+  async (req: AuthenticatedRequest, res: Response) => {
+    // Call the service method to create a new fuel-usage and get the result
+
+    const userId = req.user!._id;
+    req.body.createdBy = new mongoose.Types.ObjectId(userId);
+    req.body.standAloneId = new mongoose.Types.ObjectId(req.body.standAloneId);
+
+    const result = await fuelUsageServices.createFuelUsageAsManager(req.body);
+    if (!result) throw new Error('Failed to create fuel-usage');
+    // Send a success response with the created fuel-usage data
+    ServerResponse(res, true, 201, 'Fuel-usage created successfully', result);
+  }
+);
+
+/**
+ * Controller: Create a fuel-usage record as a Standalone User
+ */
+export const createFuelUsageAsStandAlone = catchAsync(
+  async (req: AuthenticatedRequest, res: Response) => {
+    // Call the service method to create a new fuel-usage and get the result
+
+    const userId = req.user!._id;
+    req.body.createdBy = new mongoose.Types.ObjectId(userId);
+
+    const result = await fuelUsageServices.createFuelUsageAsStandAlone(req.body);
+    if (!result) throw new Error('Failed to create fuel-usage');
+    // Send a success response with the created fuel-usage data
+    ServerResponse(res, true, 201, 'Fuel-usage created successfully', result);
+  }
+);
 
 /**
  * Controller function to handle the update operation for a single fuel-usage.
@@ -86,5 +107,10 @@ export const getManyFuelUsage = catchAsync(async (req: Request, res: Response) =
   const { fuelUsages, totalData, totalPages } = await fuelUsageServices.getManyFuelUsage(query);
   if (!fuelUsages) throw new Error('Failed to retrieve fuel-usages');
   // Send a success response with the retrieved fuel-usages data
-  ServerResponse(res, true, 200, 'Fuel-usages retrieved successfully', { fuelUsages, totalData, totalPages });
+  ServerResponse(res, true, 200, 'Fuel-usages retrieved successfully', {
+    fuelUsages,
+    totalData,
+    totalPages,
+  });
 });
+

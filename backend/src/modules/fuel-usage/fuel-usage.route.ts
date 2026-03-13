@@ -3,7 +3,8 @@ import { Router } from 'express';
 
 // Import controller from corresponding module
 import {
-  createFuelUsage,
+  createFuelUsageAsManager,
+  createFuelUsageAsStandAlone,
   updateFuelUsage,
   deleteFuelUsage,
   getFuelUsageById,
@@ -11,16 +12,23 @@ import {
 } from './fuel-usage.controller';
 
 //Import validation from corresponding module
-import { validateCreateFuelUsage, validateUpdateFuelUsage } from './fuel-usage.validation';
 import {
-  validateId,
-  validateSearchQueries,
-} from '../../handlers/common-zod-validator';
+  validateCreateFuelUsageAsManager,
+  validateCreateFuelUsageAsStandAlone,
+  validateUpdateFuelUsage,
+} from './fuel-usage.validation';
+import { validateId, validateSearchQueries } from '../../handlers/common-zod-validator';
+import isAuthorized from '../../middlewares/is-authorized';
+import { validateClientForManagerMiddleware } from '../../middlewares/validate-client-for-manager';
+import authorizedRoles from '../../middlewares/authorized-roles';
+import { UserRole } from '../../models';
 
 // Initialize router
 const router = Router();
+router.use(isAuthorized());
 
 // Define route handlers
+
 /**
  * @route POST /api/v1/fuel-usage/create-fuel-usage
  * @description Create a new fuel-usage
@@ -28,11 +36,33 @@ const router = Router();
  * @param {function} validation - ['validateCreateFuelUsage']
  * @param {function} controller - ['createFuelUsage']
  */
-router.post('/create-fuel-usage', validateCreateFuelUsage, createFuelUsage);
+router.post(
+  '/create-fuel-usage',
+  authorizedRoles([UserRole.TRANSPORT_MANAGER]),
+  // checkSubscriptionValidity,
+  validateCreateFuelUsageAsManager,
+  validateClientForManagerMiddleware,
+  createFuelUsageAsManager
+);
+
+/**
+ * @route POST /api/v1/fuel-usage/create-stand-alone-fuel-usage
+ * @description Create a new standalone fuel-usage as a Standalone User
+ * @access Public
+ * @param {function} validation - ['validateCreateFuelUsage']
+ * @param {function} controller - ['createFuelUsage']
+ */
+router.post(
+  '/create-stand-alone-fuel-usage',
+  authorizedRoles([UserRole.STANDALONE_USER]),
+  // checkSubscriptionValidity,
+  validateCreateFuelUsageAsStandAlone,
+  createFuelUsageAsStandAlone
+);
 
 /**
  * @route PUT /api/v1/fuel-usage/update-fuel-usage/:id
- * @description Update fuel-usage information
+ * @description Update fuel-usage information as Transport Manager
  * @access Public
  * @param {IdOrIdsInput['id']} id - The ID of the fuel-usage to update
  * @param {function} validation - ['validateId', 'validateUpdateFuelUsage']
@@ -71,3 +101,4 @@ router.get('/get-fuel-usage/:id', validateId, getFuelUsageById);
 
 // Export the router
 module.exports = router;
+

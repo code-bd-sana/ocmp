@@ -8,7 +8,8 @@ import { zodSearchQuerySchema } from '../../handlers/common-zod-validator';
  *
  * Supports both Transport Manager and Standalone User roles.
  * Fields: driverId, vehicleId, workingHours, restHours (optional),
- *         complianceStatus (optional), tachoReportAvailable (optional)
+ *         
+ * complianceStatus (optional), tachoReportAvailable (optional)
  */
 
 // ─── Param schemas ───────────────────────────────────────────────────
