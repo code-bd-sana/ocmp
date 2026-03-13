@@ -4,6 +4,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 export interface IFuelUsage extends Document {
   vehicleId: mongoose.Types.ObjectId;
   driverId: mongoose.Types.ObjectId;
+  date: Date;
   adBlueUsed?: Number;
   fuelUsed?: Number;
   createdBy: mongoose.Types.ObjectId;
@@ -21,6 +22,11 @@ const FuelUsageSchema: Schema<IFuelUsage> = new Schema(
       type: Schema.Types.ObjectId,
       required: true,
       ref: 'Driver', // Reference from Driver model
+    },
+    date: {
+      type: Date,
+      default: Date.now,
+      required: true,
     },
     adBlueUsed: {
       type: Number,
