@@ -104,27 +104,52 @@ const createFuelUsageAsStandAlone = async (
  * @returns {Promise<Partial<IFuelUsage>>} - The updated fuel-usage.
  */
 const updateFuelUsage = async (
-  id: IdOrIdsInput['id'],
-  data: UpdateFuelUsageInput
+  id: string,
+  data: UpdateFuelUsageInput,
+  accessId: string
 ): Promise<Partial<IFuelUsage | null>> => {
-  // Check for duplicate (filed) combination
-  const existingFuelUsage = await FuelUsageSchema.findOne({
-    _id: { $ne: id }, // Exclude the current document
-    $or: [
-      {
-        /* filedName: data.filedName, */
-      },
-    ],
-  }).lean();
-  // Prevent duplicate updates
-  if (existingFuelUsage) {
-    throw new Error(
-      'Duplicate detected: Another fuel-usage with the same fieldName already exists.'
-    );
+  const objectId = new mongoose.Types.ObjectId(accessId);
+
+  // If either driverId or vehicleId changes, we need to verify the relationship
+  if (data.driverId || data.vehicleId) {
+    // Fetch the existing document to fill the unchanged side
+    const existing = await FuelUsage.findOne({
+      _id: new mongoose.Types.ObjectId(id),
+      $or: [{ standAloneId: objectId }, { createdBy: objectId }],
+    });
+
+    if (!existing) {
+      throw new Error('Fuel-usage not found or access denied');
+    }
+
+    const driverId = data.driverId || existing.driverId.toString();
+    const vehicleId = data.vehicleId || existing.vehicleId.toString();
+
+    // Verify the vehicle is assigned to the driver
+    await verifyVehicleUnderDriver(driverId, vehicleId);
   }
-  // Proceed to update the fuel-usage
-  const updatedFuelUsage = await FuelUsageSchema.findByIdAndUpdate(id, data, { new: true });
-  return updatedFuelUsage;
+
+  const updatedFields: Record<string, any> = {};
+  if (data.driverId) updatedFields.driverId = new mongoose.Types.ObjectId(data.driverId);
+  if (data.vehicleId) updatedFields.vehicleId = new mongoose.Types.ObjectId(data.vehicleId);
+  if (data.date) updatedFields.date = data.date;
+  if (data.adBlueUsed !== undefined) updatedFields.adBlueUsed = data.adBlueUsed;
+  if (data.fuelUsed !== undefined) updatedFields.fuelUsed = data.fuelUsed;
+
+  const updated = await FuelUsage.findOneAndUpdate(
+    {
+      _id: new mongoose.Types.ObjectId(id),
+      $or: [{ standAloneId: objectId }, { createdBy: objectId }],
+    },
+    { $set: updatedFields },
+    { returnDocument: 'after' }
+  );
+
+  if (!updated) {
+    throw new Error('Fuel-usage not found or access denied');
+  }
+
+  return updated;
 };
 
 /**
@@ -145,8 +170,42 @@ const deleteFuelUsage = async (id: IdOrIdsInput['id']): Promise<Partial<IFuelUsa
  * @returns {Promise<Partial<IFuelUsage>>} - The retrieved fuel-usage.
  */
 const getFuelUsageById = async (id: IdOrIdsInput['id']): Promise<Partial<IFuelUsage | null>> => {
-  const fuelUsage = await FuelUsageSchema.findById(id);
-  return fuelUsage;
+  const result = await FuelUsage.aggregate([
+    { $match: { _id: new mongoose.Types.ObjectId(id as string) } },
+
+    // Join Driver
+    {
+      $lookup: {
+        from: 'drivers',
+        localField: 'driverId',
+        foreignField: '_id',
+        as: 'driver',
+      },
+    },
+    { $unwind: { path: '$driver', preserveNullAndEmptyArrays: true } },
+    {
+      $unwind: { path: '$driverDoc', preserveNullAndEmptyArrays: true },
+    },
+    // Join Vehicle
+    {
+      $lookup: {
+        from: 'vehicles',
+        localField: 'vehicleId',
+        foreignField: '_id',
+        as: 'vehicleDoc',
+      },
+    },
+    { $unwind: { path: '$vehicleDoc', preserveNullAndEmptyArrays: true } },
+    {
+      $addFields: {
+        vehicleRegId: { $ifNull: ['$vehicleDoc.vehicleRegId', null] },
+        vehicleType: { $ifNull: ['$vehicleDoc.vehicleType', null] },
+        licensePlate: { $ifNull: ['$vehicleDoc.licensePlate', null] },
+      },
+    },
+  ]);
+
+  return result.length > 0 ? result[0] : null;
 };
 
 /**

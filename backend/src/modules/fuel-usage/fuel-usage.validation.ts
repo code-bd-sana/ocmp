@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { validateBody, validateQuery } from '../../handlers/zod-error-handler';
+import { validateBody, validateParams, validateQuery } from '../../handlers/zod-error-handler';
 import { isMongoId } from 'validator';
 import { zodSearchQuerySchema } from '../../handlers/common-zod-validator';
 
@@ -15,24 +15,24 @@ import { zodSearchQuerySchema } from '../../handlers/common-zod-validator';
  * Named validator middleware functions are exported for direct use in Express routes.
  */
 
-/** Standalone user: single fuelUsageId param */
+/** Standalone user: single fuel-usage id param */
 const zodFuelUsageIdParamSchema = z
   .object({
-    fuelUsageId: z.string().uuid({ message: 'Invalid fuel-usage ID format' }).refine(isMongoId, {
-      message: 'Please provide a valid MongoDB ObjectId',
+    id: z.string({ message: 'fuel-usage id is required' }).refine(isMongoId, {
+      message: 'Please provide a valid MongoDB ObjectId for fuel-usage id',
     }),
   })
   .strict();
 export type FuelUsageIdParamInput = z.infer<typeof zodFuelUsageIdParamSchema>;
 
-/** Transport Manager: fuelUsageId + standAloneId params */
+/** Transport Manager: fuel-usage id + standAloneId params */
 const zodFuelUsageAndManagerIdParamSchema = z
   .object({
-    fuelUsageId: z.string().uuid({ message: 'Invalid fuel-usage ID format' }).refine(isMongoId, {
-      message: 'Please provide a valid MongoDB ObjectId',
+    id: z.string({ message: 'fuel-usage id is required' }).refine(isMongoId, {
+      message: 'Please provide a valid MongoDB ObjectId for fuel-usage id',
     }),
-    standAloneId: z.string().uuid({ message: 'Invalid standalone ID format' }).refine(isMongoId, {
-      message: 'Please provide a valid MongoDB ObjectId',
+    standAloneId: z.string({ message: 'standAloneId is required' }).refine(isMongoId, {
+      message: 'Please provide a valid MongoDB ObjectId for standAloneId',
     }),
   })
   .strict();
@@ -98,13 +98,31 @@ export type CreateFuelUsageInput = CreateFuelUsageAsManagerInput | CreateFuelUsa
  */
 const zodUpdateFuelUsageSchema = z
   .object({
-    // Example fields — replace / expand as needed:
-    // name: z.string().min(2, 'Name must be at least 2 characters').max(100).optional(),
-    // email: z.string().email({ message: 'Invalid email format' }).optional(),
-    // age: z.number().int().positive().optional(),
-    // status: z.enum(['active', 'inactive', 'pending']).optional(),
+    vehicleId: z
+      .string({ message: 'Vehicle ID must be a string' })
+      .refine(isMongoId, { message: 'vehicleId must be a valid MongoDB ObjectId' })
+      .optional(),
+    driverId: z
+      .string({ message: 'Driver ID must be a string' })
+      .refine(isMongoId, { message: 'driverId must be a valid MongoDB ObjectId' })
+      .optional(),
+    date: z.preprocess(
+      (arg) => {
+        if (typeof arg === 'string' || typeof arg === 'number' || arg instanceof Date) {
+          const d = new Date(arg as any);
+          return isNaN(d.getTime()) ? arg : d;
+        }
+        return arg;
+      },
+      z.date({ message: 'Date must be a valid date' }).optional()
+    ),
+    adBlueUsed: z.number().nonnegative('adBlueUsed must be non-negative').optional(),
+    fuelUsed: z.number().nonnegative('fuelUsed must be non-negative').optional(),
   })
-  .strict();
+  .strict()
+  .refine((data) => Object.keys(data).length > 0, {
+    message: 'At least one field must be provided for update',
+  });
 
 export type UpdateFuelUsageInput = z.infer<typeof zodUpdateFuelUsageSchema>;
 
@@ -125,8 +143,10 @@ export const validateSearchFuelUsage = validateQuery(zodSearchFuelUsageSchema);
  * Named validators — use these directly in your Express routes
  */
 // Param validators
-export const validateFuelUsageIdParam = validateBody(zodFuelUsageIdParamSchema);
-export const validateFuelUsageAndManagerIdParam = validateBody(zodFuelUsageAndManagerIdParamSchema);
+export const validateFuelUsageIdParam = validateParams(zodFuelUsageIdParamSchema);
+export const validateFuelUsageAndManagerIdParam = validateParams(
+  zodFuelUsageAndManagerIdParamSchema
+);
 
 // Body validators
 export const validateCreateFuelUsageAsManager = validateBody(zodCreateFuelUsageAsManagerSchema);

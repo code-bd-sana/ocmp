@@ -51,10 +51,18 @@ export const createFuelUsageAsStandAlone = catchAsync(
  * @returns {Promise<Partial<IFuelUsage>>} - The updated fuel-usage.
  * @throws {Error} - Throws an error if the fuel-usage update fails.
  */
-export const updateFuelUsage = catchAsync(async (req: Request, res: Response) => {
-  const { id } = req.params;
+export const updateFuelUsage = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+  const paramRToString = (p?: string | string[]): string => (Array.isArray(p) ? p[0] : p || '');
+  const id = paramRToString(req.params.id);
+
+  // Transport manager through the client's standAloneId; standalone uses own Id
+  const accessId =
+    req.user!.role === UserRole.TRANSPORT_MANAGER
+      ? (paramRToString(req.params.standAloneId) as string)
+      : req.user!._id;
+
   // Call the service method to update the fuel-usage by ID and get the result
-  const result = await fuelUsageServices.updateFuelUsage(id as string, req.body);
+  const result = await fuelUsageServices.updateFuelUsage(id as string, req.body, accessId);
   if (!result) throw new Error('Failed to update fuel-usage');
   // Send a success response with the updated fuel-usage data
   ServerResponse(res, true, 200, 'Fuel-usage updated successfully', result);

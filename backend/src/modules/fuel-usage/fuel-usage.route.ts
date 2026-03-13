@@ -17,6 +17,8 @@ import {
   validateCreateFuelUsageAsStandAlone,
   validateUpdateFuelUsage,
   validateSearchFuelUsage,
+  validateFuelUsageIdParam,
+  validateFuelUsageAndManagerIdParam,
 } from './fuel-usage.validation';
 import { validateId } from '../../handlers/common-zod-validator';
 import isAuthorized, { AuthenticatedRequest } from '../../middlewares/is-authorized';
@@ -62,14 +64,34 @@ router.post(
 );
 
 /**
- * @route PUT /api/v1/fuel-usage/update-fuel-usage/:id
- * @description Update fuel-usage information as Transport Manager
- * @access Public
- * @param {IdOrIdsInput['id']} id - The ID of the fuel-usage to update
- * @param {function} validation - ['validateId', 'validateUpdateFuelUsage']
- * @param {function} controller - ['updateFuelUsage']
+ * @route PATCH /api/v1/fuel-usage/update-fuel-usage/:id/:standAloneId
+ * @description Update a fuel-usage by ID as a Transport Manager
+ * @access Private (Transport Manager)
  */
-router.put('/update-fuel-usage/:id', validateId, validateUpdateFuelUsage, updateFuelUsage);
+router.patch(
+  '/update-fuel-usage/:id/:standAloneId',
+  authorizedRoles([UserRole.TRANSPORT_MANAGER]),
+  // checkSubscriptionValidity,
+  validateClientForManagerMiddleware,
+  validateFuelUsageAndManagerIdParam,
+  validateUpdateFuelUsage,
+  updateFuelUsage
+);
+
+/**
+ * @route PATCH /api/v1/fuel-usage/update-fuel-usage/:id
+ * @description Update a fuel-usage by ID as a Standalone User
+ * @access Private (Standalone User)
+ */
+
+router.patch(
+  '/update-fuel-usage/:id',
+  authorizedRoles([UserRole.STANDALONE_USER]),
+  // checkSubscriptionValidity,
+  validateFuelUsageIdParam,
+  validateUpdateFuelUsage,
+  updateFuelUsage
+);
 
 /**
  * @route DELETE /api/v1/fuel-usage/delete-fuel-usage/:id
@@ -108,14 +130,30 @@ router.get(
 );
 
 /**
- * @route GET /api/v1/fuel-usage/get-fuel-usage/:id
- * @description Get a fuel-usage by ID
- * @access Public
- * @param {IdOrIdsInput['id']} id - The ID of the fuel-usage to retrieve
- * @param {function} validation - ['validateId']
- * @param {function} controller - ['getFuelUsageById']
+ * @route GET /api/v1/fuel-usage/get-fuel-usage/:id/:standAloneId
+ * @description Get a fuel-usage by ID (Transport Manager)
+ * @access Private (Transport Manager)
  */
-router.get('/get-fuel-usage/:id', validateId, getFuelUsageById);
+router.get(
+  '/get-fuel-usage/:id/:standAloneId',
+  authorizedRoles([UserRole.TRANSPORT_MANAGER]),
+  // checkSubscriptionValidity,
+  validateClientForManagerMiddleware,
+  validateFuelUsageAndManagerIdParam,
+  getFuelUsageById
+);
+
+/**
+ * @route GET /api/v1/fuel-usage/get-fuel-usage/:id
+ * @description Get a fuel-usage by ID (Standalone User)
+ * @access Private (Standalone User)
+ */
+router.get(
+  '/get-fuel-usage/:id',
+  authorizedRoles([UserRole.STANDALONE_USER]),
+  validateFuelUsageIdParam,
+  getFuelUsageById
+);
 
 // Export the router
 module.exports = router;
