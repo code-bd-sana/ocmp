@@ -122,7 +122,12 @@ export const getSelfServiceById = catchAsync(async (req: Request, res: Response)
  */
 export const getManySelfService = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
   // Use the validated and transformed query from Zod middleware
-  const query = { ...(req as any).validatedQuery } as SearchQueryInput & { standAloneId?: string };
+  const query = {
+    ...((req as any).validatedQuery as SearchQueryInput),
+  } as SearchQueryInput & { standAloneId?: string; requesterId?: string; requesterRole?: string };
+
+  query.requesterId = req.user!._id;
+  query.requesterRole = req.user!.role;
 
   if (req.user?.role === UserRole.STANDALONE_USER) {
     query.standAloneId = String(req.user._id);
@@ -138,4 +143,3 @@ export const getManySelfService = catchAsync(async (req: AuthenticatedRequest, r
     totalPages,
   });
 });
-

@@ -4,8 +4,10 @@ import mongoose, { Document, Schema } from 'mongoose';
 export interface IFuelUsage extends Document {
   vehicleId: mongoose.Types.ObjectId;
   driverId: mongoose.Types.ObjectId;
+  date: Date;
   adBlueUsed?: Number;
   fuelUsed?: Number;
+  standAloneId?: mongoose.Types.ObjectId;
   createdBy: mongoose.Types.ObjectId;
 }
 
@@ -22,12 +24,21 @@ const FuelUsageSchema: Schema<IFuelUsage> = new Schema(
       required: true,
       ref: 'Driver', // Reference from Driver model
     },
+    date: {
+      type: Date,
+      default: Date.now,
+      required: true,
+    },
     adBlueUsed: {
       type: Number,
     } /* In Liter */,
     fuelUsed: {
       type: Number,
     } /* In Liter */,
+    standAloneId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User', // Reference from User model
+    },
     createdBy: {
       type: Schema.Types.ObjectId,
       required: true,

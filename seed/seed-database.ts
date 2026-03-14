@@ -4,7 +4,7 @@ import mongoose from "mongoose";
 // Import all models
 import AuditsAndRectificationReports from "./../backend/src/models/compliance-enforcement-dvsa/auditsAndRecificationReports.schema";
 import ComplianceTimeTable from "./../backend/src/models/compliance-enforcement-dvsa/complianceTimeTable.schema";
-import OrsPlan from "./../backend/src/models/compliance-enforcement-dvsa/orsPlan.schema";
+import OcrsPlan from "./../backend/src/models/compliance-enforcement-dvsa/ocrsPlan.schema";
 import pg9AndPg13Plan from "./../backend/src/models/compliance-enforcement-dvsa/pg9AndPg13Plan.schema";
 import RenewalTracker from "./../backend/src/models/compliance-enforcement-dvsa/renewalTracker.schema";
 import SpotCheck from "./../backend/src/models/compliance-enforcement-dvsa/spotCheck.schema";
