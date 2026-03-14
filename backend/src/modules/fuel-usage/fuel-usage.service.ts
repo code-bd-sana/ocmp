@@ -9,7 +9,7 @@ import {
   SearchFuelUsageInput,
   UpdateFuelUsageInput,
 } from './fuel-usage.validation';
-import { FuelUsage, Vehicle } from '../../models';
+import { Driver, FuelUsage, Vehicle } from '../../models';
 
 /**
  * Verifies the vehicle is assigned to the driver
@@ -313,6 +313,40 @@ const getManyFuelUsage = async (
   return { fuelUsages: result?.data || [], totalData, totalPages };
 };
 
+const getDriversWithVehicles = async (accessId: string): Promise<any[]> => {
+  const objectId = new mongoose.Types.ObjectId(accessId);
+
+  const drivers = await Driver.aggregate([
+    {
+      $match: {
+        $or: [{ standAloneId: objectId }, { createdBy: objectId }],
+      },
+    },
+    {
+      $lookup: {
+        from: 'vehicles',
+        let: { driverId: '$_id' },
+        pipeline: [
+          { $match: { $expr: { $in: ['$$driverId', '$driverIds'] } } },
+          {
+            $project: {
+              _id: 1,
+              vehicleRegId: 1,
+              vehicleType: 1,
+              licensePlate: 1,
+              status: 1,
+            },
+          },
+        ],
+        as: 'vehicles',
+      },
+    },
+    { $sort: { createdAt: -1 } },
+  ]);
+
+  return drivers;
+};
+
 export const fuelUsageServices = {
   createFuelUsageAsManager,
   createFuelUsageAsStandAlone,
@@ -320,5 +354,6 @@ export const fuelUsageServices = {
   deleteFuelUsage,
   getFuelUsageById,
   getManyFuelUsage,
+  getDriversWithVehicles,
 };
 

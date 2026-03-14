@@ -43,8 +43,12 @@ export default function UniversalForm<T extends FieldValues>({
   });
 
   const { handleSubmit, control, formState } = methods;
-  const [datePickerOpen, setDatePickerOpen] = useState<Record<string, boolean>>({});
-  const [calendarMonth, setCalendarMonth] = useState<Record<string, Date | undefined>>({});
+  const [datePickerOpen, setDatePickerOpen] = useState<Record<string, boolean>>(
+    {},
+  );
+  const [calendarMonth, setCalendarMonth] = useState<
+    Record<string, Date | undefined>
+  >({});
 
   const openDatePicker = (name: string, open: boolean) =>
     setDatePickerOpen((prev) => ({ ...prev, [name]: open }));
@@ -172,7 +176,11 @@ export default function UniversalForm<T extends FieldValues>({
         </div>
 
         {fields.map((field) => (
-          <div key={field.name} id={String(field.name)} className="flex flex-col">
+          <div
+            key={field.name}
+            id={String(field.name)}
+            className="flex flex-col"
+          >
             {/* Label */}
             {field.type !== "checkbox" &&
               field.type !== "switch" &&
@@ -196,7 +204,7 @@ export default function UniversalForm<T extends FieldValues>({
                 type={field.type}
                 placeholder={field.placeholder}
                 {...methods.register(field.name)} // remove any ---
-                className={`border-input-border rounded-none border px-3 py-6 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-white ${formState.errors[field.name] ? "border-red-500 border-2" : ""}`}
+                className={`border-input-border rounded-none border px-3 py-6 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-white ${formState.errors[field.name] ? "border-2 border-red-500" : ""}`}
               />
             )}
 
@@ -205,7 +213,7 @@ export default function UniversalForm<T extends FieldValues>({
               <textarea
                 placeholder={field.placeholder}
                 {...methods.register(field.name)}
-                className={`border-input-border h-25 rounded border px-3 py-2 focus:ring-2 focus:ring-rose-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-white ${formState.errors[field.name] ? "border-red-500 border-2" : ""}`}
+                className={`border-input-border h-25 rounded border px-3 py-2 focus:ring-2 focus:ring-rose-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-white ${formState.errors[field.name] ? "border-2 border-red-500" : ""}`}
               />
             )}
 
@@ -217,7 +225,7 @@ export default function UniversalForm<T extends FieldValues>({
                 render={({ field: controllerField }) => (
                   <select
                     {...controllerField}
-                    className={`border-input-border rounded border px-3 py-2 focus:ring-2 focus:ring-rose-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-white ${formState.errors[field.name] ? "border-red-500 border-2" : ""}`}
+                    className={`border-input-border rounded border px-3 py-2 focus:ring-2 focus:ring-rose-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-white ${formState.errors[field.name] ? "border-2 border-red-500" : ""}`}
                   >
                     <option value="" disabled>
                       {field.placeholder || "Select an option"}
@@ -316,7 +324,9 @@ export default function UniversalForm<T extends FieldValues>({
 
                   return (
                     <Field>
-                      <InputGroup className={`border-input-border rounded-none border px-3 py-6 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-white ${formState.errors[field.name] ? "border-red-500 border-2" : ""}`}>
+                      <InputGroup
+                        className={`border-input-border rounded-none border px-3 py-6 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-white ${formState.errors[field.name] ? "border-2 border-red-500" : ""}`}
+                      >
                         <InputGroupInput
                           value={formatDate(selectedDate)}
                           placeholder={field.placeholder || "Select date"}
@@ -332,7 +342,9 @@ export default function UniversalForm<T extends FieldValues>({
                         <InputGroupAddon align="inline-end">
                           <Popover
                             open={!!datePickerOpen[field.name]}
-                            onOpenChange={(open) => openDatePicker(field.name, open)}
+                            onOpenChange={(open) =>
+                              openDatePicker(field.name, open)
+                            }
                           >
                             <PopoverTrigger asChild>
                               <InputGroupButton variant="ghost" size="icon-xs">
@@ -344,12 +356,20 @@ export default function UniversalForm<T extends FieldValues>({
                               <Calendar
                                 mode="single"
                                 selected={selectedDate}
-                                month={calendarMonth[field.name] ?? selectedDate}
-                                onMonthChange={(month) => setFieldCalendarMonth(field.name, month)}
+                                month={
+                                  calendarMonth[field.name] ?? selectedDate
+                                }
+                                onMonthChange={(month) =>
+                                  setFieldCalendarMonth(field.name, month)
+                                }
                                 onSelect={(date) => {
                                   controllerField.onChange(
                                     date
-                                      ? date.toISOString().split("T")[0]
+                                      ? `${date.getFullYear()}-${String(
+                                          date.getMonth() + 1,
+                                        ).padStart(2, "0")}-${String(
+                                          date.getDate(),
+                                        ).padStart(2, "0")}`
                                       : "",
                                   );
                                   openDatePicker(field.name, false);

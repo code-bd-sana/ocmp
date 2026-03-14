@@ -1,6 +1,5 @@
 import { Request, Response } from 'express';
 import { fuelUsageServices } from './fuel-usage.service';
-import { SearchQueryInput } from '../../handlers/common-zod-validator';
 import ServerResponse from '../../helpers/responses/custom-response';
 import catchAsync from '../../utils/catch-async/catch-async';
 import { AuthenticatedRequest } from '../../middlewares/is-authorized';
@@ -141,4 +140,24 @@ export const getManyFuelUsage = catchAsync(async (req: AuthenticatedRequest, res
     totalPages,
   });
 });
+
+/**
+ * Controller: Get all drivers with their vehicle lists for fuel usage flows.
+ * TM sends standAloneId as query param; Standalone uses own userId.
+ * GET /api/v1/fuel-usage/get-drivers-with-vehicles
+ */
+export const getDriversWithVehicles = catchAsync(
+  async (req: AuthenticatedRequest, res: Response) => {
+    let accessId: string;
+
+    if (req.user?.role === UserRole.STANDALONE_USER) {
+      accessId = req.user._id;
+    } else {
+      accessId = req.query?.standAloneId as string;
+    }
+
+    const result = await fuelUsageServices.getDriversWithVehicles(accessId);
+    ServerResponse(res, true, 200, 'Drivers with vehicles retrieved successfully', result);
+  }
+);
 
