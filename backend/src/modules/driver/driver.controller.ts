@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { FileArray, UploadedFile } from 'express-fileupload';
 import mongoose from 'mongoose';
 import ServerResponse from '../../helpers/responses/custom-response';
 import { AuthenticatedRequest } from '../../middlewares/is-authorized';
@@ -150,4 +151,51 @@ export const getManyDriver = catchAsync(async (req: AuthenticatedRequest, res: R
     totalData,
     totalPages,
   });
+});
+
+/**
+ * Controller function to upload one attachment for a driver.
+ */
+export const uploadDriverAttachment = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+  const paramToString = (p?: string | string[]) => (Array.isArray(p) ? p[0] : p);
+  const driverId = paramToString(req.params.driverId ?? req.params.id);
+  const standAloneId = paramToString(req.params.standAloneId);
+
+  const files = (req as AuthenticatedRequest & { files?: FileArray }).files;
+  if (!files || Object.keys(files).length === 0) {
+    return ServerResponse(res, false, 400, 'No file uploaded');
+  }
+
+  const candidate =
+    (files.file as UploadedFile | UploadedFile[] | undefined) ||
+    (files.attachment as UploadedFile | UploadedFile[] | undefined) ||
+    Object.values(files)[0];
+
+  const uploadedFile = (Array.isArray(candidate) ? candidate[0] : candidate) as
+    | UploadedFile
+    | undefined;
+
+  if (!uploadedFile) {
+    return ServerResponse(res, false, 400, 'Invalid uploaded file');
+  }
+
+  const canSimulate = process.env.NODE_ENV !== 'production';
+  const failAfterS3Upload = canSimulate && req.headers['x-simulate-fail-after-s3-upload'] === 'true';
+  const failAfterDocumentSave =
+    canSimulate && req.headers['x-simulate-fail-after-document-save'] === 'true';
+
+  const result = await driverServices.uploadDriverAttachment(
+    {
+      driverId: driverId as string,
+      userId: req.user!._id,
+      standAloneId,
+      simulate: {
+        failAfterS3Upload,
+        failAfterDocumentSave,
+      },
+    },
+    uploadedFile
+  );
+
+  return ServerResponse(res, true, 201, 'Driver attachment uploaded successfully', result);
 });

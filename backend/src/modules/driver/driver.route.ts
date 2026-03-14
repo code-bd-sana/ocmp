@@ -9,6 +9,7 @@ import {
   deleteDriver,
   getDriverById,
   getManyDriver,
+  uploadDriverAttachment,
   updateDriver,
 } from './driver.controller';
 
@@ -99,6 +100,31 @@ router.patch(
   validateId,
   validateUpdateDriver,
   updateDriver
+);
+
+/**
+ * @route POST /api/v1/driver/upload-driver-attachment-by-manager/:driverId/:standAloneId
+ * @description Upload one driver attachment to S3, save document metadata, then attach document id to driver
+ * @access Private - Transport Manager only
+ */
+router.post(
+  '/upload-driver-attachment-by-manager/:driverId/:standAloneId',
+  authorizedRoles([UserRole.TRANSPORT_MANAGER]),
+  validateClientForManagerMiddleware,
+  validateUpdateDriverIds,
+  uploadDriverAttachment
+);
+
+/**
+ * @route POST /api/v1/driver/upload-driver-attachment/:id
+ * @description Upload one driver attachment to S3, save document metadata, then attach document id to driver
+ * @access Private - Stand-alone user only
+ */
+router.post(
+  '/upload-driver-attachment/:id',
+  authorizedRoles([UserRole.STANDALONE_USER]),
+  validateId,
+  uploadDriverAttachment
 );
 
 /**
