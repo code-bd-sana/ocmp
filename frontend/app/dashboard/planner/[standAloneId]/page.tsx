@@ -272,7 +272,7 @@ export default function PlannerPage() {
                       return (
                         <div
                           key={col}
-                          className={`flex min-h-[52px] cursor-pointer items-center justify-center rounded-md ${eventBg(event.type)}`}
+                          className={`flex min-h-13 cursor-pointer items-center justify-center rounded-md ${eventBg(event.type)}`}
                         >
                           <GearIcon />
                         </div>
@@ -282,7 +282,7 @@ export default function PlannerPage() {
                     return (
                       <div
                         key={col}
-                        className={`flex min-h-[52px] items-start justify-start rounded-md p-1.5 text-xs font-medium ${overflow ? "text-slate-300" : "cursor-default text-blue-500 hover:bg-slate-50"}`}
+                        className={`flex min-h-13 items-start justify-start rounded-md p-1.5 text-xs font-medium ${overflow ? "text-slate-300" : "cursor-default text-blue-500 hover:bg-slate-50"}`}
                       >
                         {overflow ? ghost : day}
                       </div>
