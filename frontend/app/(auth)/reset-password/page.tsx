@@ -21,14 +21,14 @@ import { toast, Toaster } from "sonner";
 function ResetPassword() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  
+
   // Get and decode parameters from URL
   const rawEmail = searchParams.get("email") || "";
   const token = searchParams.get("token") || "";
-  
+
   // Decode email (handles %40 and other encoded characters)
   const email = decodeURIComponent(rawEmail);
-  
+
   const [formData, setFormData] = useState({
     password: "",
     confirmPassword: "",
@@ -146,7 +146,7 @@ function ResetPassword() {
         <Toaster richColors position="top-center" />
         <Card className="w-full max-w-md shadow-xl">
           <div className="relative h-1.5 w-full overflow-hidden rounded-t-lg">
-            <div className="absolute inset-0 bg-gradient-to-r from-red-500 via-red-400 to-red-500 animate-gradient" />
+            <div className="absolute inset-0 bg-linear-to-r from-red-500 via-red-400 to-red-500 animate-gradient" />
           </div>
           <CardHeader className="space-y-1">
             <CardTitle className="text-center text-2xl font-bold text-destructive">
@@ -177,8 +177,6 @@ function ResetPassword() {
             </div>
           </CardFooter>
         </Card>
-
-      
       </div>
     );
   }
@@ -189,7 +187,7 @@ function ResetPassword() {
         <Toaster  />
         <Card className="w-full max-w-md shadow-xl">
           <div className="relative h-1.5 w-full overflow-hidden rounded-t-lg">
-            <div className="absolute inset-0 bg-gradient-to-r from-green-500 via-green-400 to-green-500 animate-gradient" />
+            <div className="absolute inset-0 bg-linear-to-r from-green-500 via-green-400 to-green-500 animate-gradient" />
           </div>
           <CardHeader className="space-y-1">
             <div className="mx-auto w-12 h-12 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center mb-4">
@@ -211,8 +209,8 @@ function ResetPassword() {
             </Alert>
 
             <div className="text-center">
-              <Button 
-                asChild 
+              <Button
+                asChild
                 className="bg-primary hover:bg-primary/90 w-full transition-all duration-300 hover:scale-105"
               >
                 <Link href="/signin">Sign In Now</Link>
@@ -221,7 +219,7 @@ function ResetPassword() {
           </CardContent>
         </Card>
 
-       
+
       </div>
     );
   }
@@ -229,9 +227,9 @@ function ResetPassword() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-linear-to-br from-gray-50 to-gray-100 p-4 dark:from-gray-900 dark:to-gray-800">
       <Toaster richColors position="top-center" />
-      
+
       <Card className="w-full max-w-md shadow-xl">
-   
+
 
         <CardHeader className="space-y-1">
           <CardTitle className="text-center text-2xl font-bold">
@@ -424,7 +422,7 @@ function ResetPassword() {
         </CardFooter>
       </Card>
 
-    
+
     </div>
   );
 }
