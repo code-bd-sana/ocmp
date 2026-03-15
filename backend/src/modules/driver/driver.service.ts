@@ -3,9 +3,7 @@ import mongoose from 'mongoose';
 import { UploadedFile } from 'express-fileupload';
 import { IdOrIdsInput, SearchQueryInput } from '../../handlers/common-zod-validator';
 import { DriverTachograph, FuelUsage, Vehicle } from '../../models';
-import DocumentModel from '../../models/document.schema';
 import DriverModel, { IDriver } from '../../models/vehicle-transport/driver.schema';
-import { deleteObject, uploadBuffer } from '../../utils/aws/s3';
 import {
   CreateDriverAsStandAloneInput,
   CreateDriverAsTransportManagerInput,
@@ -312,135 +310,6 @@ const getManyDriver = async (
   return { drivers, totalData, totalPages };
 };
 
-/**
- * Upload a driver attachment to S3 and attach the created document to the driver.
- *
- * Rollback rules:
- * 1) If Document save fails after S3 upload, delete S3 object.
- * 2) If Driver update fails after Document save, delete S3 object and delete Document.
- */
-const uploadDriverAttachment = async (
-  params: {
-    driverId: string;
-    userId: string;
-    standAloneId?: string;
-    simulate?: {
-      failAfterS3Upload?: boolean;
-      failAfterDocumentSave?: boolean;
-    };
-  },
-  file: UploadedFile
-): Promise<{ documentId: string; s3Key: string; url: string; driverId: string }> => {
-  const { driverId, userId, standAloneId, simulate } = params;
-
-  const accessFilters: Record<string, unknown>[] = [
-    { createdBy: userId },
-    { standAloneId: userId },
-  ];
-
-  if (mongoose.Types.ObjectId.isValid(userId)) {
-    const userObjectId = new mongoose.Types.ObjectId(userId);
-    accessFilters.push({ createdBy: userObjectId });
-    accessFilters.push({ standAloneId: userObjectId });
-  }
-
-  if (standAloneId) {
-    accessFilters.push({ standAloneId });
-    accessFilters.push({ createdBy: standAloneId });
-
-    if (mongoose.Types.ObjectId.isValid(standAloneId)) {
-      const standAloneObjectId = new mongoose.Types.ObjectId(standAloneId);
-      accessFilters.push({ standAloneId: standAloneObjectId });
-      accessFilters.push({ createdBy: standAloneObjectId });
-    }
-  }
-
-  const driver = await DriverModel.findOne({
-    _id: driverId,
-    $or: accessFilters,
-  })
-    .select('_id')
-    .lean();
-
-  if (!driver) {
-    throw new Error('Driver not found or access denied');
-  }
-
-  let uploaded: { Key: string; Location: string } | null = null;
-  let createdDocumentId: string | null = null;
-
-  try {
-    uploaded = await uploadBuffer(
-      file.data,
-      undefined,
-      file.mimetype || 'application/octet-stream',
-      `drivers/${driverId}`
-    );
-
-    if (simulate?.failAfterS3Upload) {
-      throw new Error('Simulated failure after S3 upload');
-    }
-
-    const doc = await DocumentModel.create({
-      filename: uploaded.Key.split('/').pop() || uploaded.Key,
-      originalName: file.name,
-      mimeType: file.mimetype || 'application/octet-stream',
-      size: file.size,
-      url: uploaded.Location,
-      s3Key: uploaded.Key,
-      uploader: new mongoose.Types.ObjectId(userId),
-    });
-
-    createdDocumentId = doc._id.toString();
-
-    if (simulate?.failAfterDocumentSave) {
-      throw new Error('Simulated failure after document save');
-    }
-
-    const updatedDriver = await DriverModel.findOneAndUpdate(
-      {
-        _id: driverId,
-        $or: accessFilters,
-      },
-      {
-        $addToSet: { attachments: doc._id },
-      },
-      { returnDocument: 'after' }
-    )
-      .select('_id')
-      .lean();
-
-    if (!updatedDriver) {
-      throw new Error('Failed to attach document to driver');
-    }
-
-    return {
-      documentId: doc._id.toString(),
-      s3Key: uploaded.Key,
-      url: uploaded.Location,
-      driverId: updatedDriver._id.toString(),
-    };
-  } catch (error) {
-    if (uploaded?.Key) {
-      try {
-        await deleteObject(uploaded.Key);
-      } catch (cleanupError) {
-        console.error('Failed to rollback S3 object after error:', cleanupError);
-      }
-    }
-
-    if (createdDocumentId) {
-      try {
-        await DocumentModel.findByIdAndDelete(createdDocumentId);
-      } catch (cleanupError) {
-        console.error('Failed to rollback document after error:', cleanupError);
-      }
-    }
-
-    throw error;
-  }
-};
-
 export const driverServices = {
   createDriverAsTransportManager,
   createDriverAsStandAlone,
@@ -448,5 +317,4 @@ export const driverServices = {
   deleteDriver,
   getDriverById,
   getManyDriver,
-  uploadDriverAttachment,
 };

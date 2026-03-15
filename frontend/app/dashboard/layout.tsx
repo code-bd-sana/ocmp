@@ -4,12 +4,22 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import Header from "@/components/dashboard/header";
 import DashboardContent from "@/components/dashboard/dashboard-content";
+import { useRouteGuard } from "@/hooks/useRouteGuard";
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const { isChecking, canRender } = useRouteGuard({
+    mode: "protected",
+    redirectTo: "/signin",
+  });
+
+  if (isChecking || !canRender) {
+    return null;
+  }
+
   return (
     <>
       <SidebarProvider>

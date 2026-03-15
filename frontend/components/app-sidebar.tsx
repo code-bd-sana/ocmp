@@ -16,7 +16,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 import { ChevronDown, LogOut, UserRoundCog } from "lucide-react";
 import Link from "next/link";
@@ -24,6 +24,7 @@ import { DesktopSidebarToggle } from "./smart-toggle";
 import { AuthAction } from "@/service/auth";
 import { ClientAction } from "@/service/client";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 interface SidebarClient {
   id: string;
@@ -55,7 +56,21 @@ const CLIENT_MODULES: { slug: string; label: string }[] = [
 
 export function AppSidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const [clients, setClients] = useState<SidebarClient[]>([]);
+
+  const handleLogout = async () => {
+    try {
+      await AuthAction.LogOut();
+      toast.success("Logged out successfully");
+    } catch {
+      // Fallback: ensure local auth state is cleared even if API fails.
+      AuthAction.RemoveAuthToken();
+      toast.success("Logged out successfully");
+    } finally {
+      router.replace("/signin");
+    }
+  };
 
   // Fetch real clients on mount
   useEffect(() => {
@@ -161,16 +176,10 @@ export function AppSidebar() {
 
       <SidebarFooter className="bg-muted p-3">
         <SidebarMenuButton
-          asChild
+          onClick={handleLogout}
           className="text-destructive hover:bg-destructive/10 hover:text-destructive w-full cursor-pointer justify-start"
         >
-          <div
-            onClick={async () => {
-              const logout = await AuthAction.LogOut();
-              console.log(logout, "Log Out success"); // ! Must be remove console log
-            }}
-            className="flex items-center gap-2 text-[16px]"
-          >
+          <div className="flex items-center gap-2 text-[16px]">
             <LogOut className="h-4 w-4" />
             <span>Logout Account</span>
           </div>
