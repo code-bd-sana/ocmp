@@ -1,6 +1,5 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { auditAndRecificationReportServices } from './audit-and-recification-report.service';
-import { SearchQueryInput } from '../../handlers/common-zod-validator';
 import ServerResponse from '../../helpers/responses/custom-response';
 import catchAsync from '../../utils/catch-async/catch-async';
 import { AuthenticatedRequest } from '../../middlewares/is-authorized';
@@ -22,7 +21,7 @@ export const getAllAuditAndRecificationReport = catchAsync(async (req: Authentic
 
   // Standalone: use own userId for access control
   if (req.user?.role === UserRole.STANDALONE_USER) {
-    query.standAloneId = req.user._id;
+    query.standAloneId = String(req.user._id);
   }
   // TM: standAloneId already comes from validated query params
 
@@ -43,10 +42,13 @@ export const getAuditAndRecificationReportById = catchAsync(async (req: Authenti
   let accessId: string | undefined;
 
   if (req.user?.role === UserRole.STANDALONE_USER) {
-    accessId = req.user._id;
+    accessId = String(req.user._id);
   }
   if (req.user?.role === UserRole.TRANSPORT_MANAGER) {
-    accessId = req.query?.standAloneId as string;
+    accessId = String(req.query?.standAloneId || '');
+    if (!accessId) {
+      throw new Error('standAloneId is required for transport manager');
+    }
   }
 
   const result = await auditAndRecificationReportServices.getAuditAndRecificationReportById(id as string, accessId);

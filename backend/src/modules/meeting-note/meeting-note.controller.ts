@@ -44,7 +44,6 @@ export const createMeetingNoteAsStandalone = catchAsync(
     // Call the service method to create a new meeting-note and get the result
     const userId = req.user!._id;
     req.body.createdBy = new mongoose.Types.ObjectId(userId);
-    req.body.standAloneId = new mongoose.Types.ObjectId(userId);
     const result = await meetingNoteServices.createMeetingNote(req.body);
     // return;
     if (!result) throw new Error('Failed to create meeting-note');
@@ -64,17 +63,13 @@ export const createMeetingNoteAsStandalone = catchAsync(
 export const updateMeetingNote = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
   const paramToString = (p?: string | string[]) => (Array.isArray(p) ? p[0] : p);
   const id = paramToString(req.params?.id);
-  const standAloneId = paramToString(req.params?.standAloneId);
+  const accessId =
+    req.user!.role === UserRole.TRANSPORT_MANAGER
+      ? (paramToString(req.params.standAloneId) as string)
+      : req.user!._id;
   // Call the service method to update the meeting-note by ID and get the result
-  const result = await meetingNoteServices.updateMeetingNote(
-    id as string,
-    req.body,
-    req.user!._id,
-    standAloneId
-  );
-  if (!result) {
-    return ServerResponse(res, false, 404, 'Meeting-note not found or access denied', null);
-  }
+  const result = await meetingNoteServices.updateMeetingNote(id as string, req.body, accessId);
+
   // Send a success response with the updated meeting-note data
   ServerResponse(res, true, 200, 'Meeting-note updated successfully', result);
 });
@@ -90,16 +85,13 @@ export const updateMeetingNote = catchAsync(async (req: AuthenticatedRequest, re
 export const deleteMeetingNote = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
   const paramToString = (p?: string | string[]) => (Array.isArray(p) ? p[0] : p);
   const id = paramToString(req.params.id);
-  const standAloneId = paramToString(req.params.standAloneId);
+  const accessId =
+    req.user!.role === UserRole.TRANSPORT_MANAGER
+      ? (paramToString(req.params.standAloneId) as string)
+      : req.user!._id;
   // Call the service method to delete the meeting-note by ID
-  const result = await meetingNoteServices.deleteMeetingNote(
-    id as string,
-    req.user!._id,
-    standAloneId
-  );
-  if (!result) {
-    return ServerResponse(res, false, 404, 'Meeting-note not found or access denied', null);
-  }
+  await meetingNoteServices.deleteMeetingNote(id as string, accessId);
+
   // Send a success response confirming the deletion
   ServerResponse(res, true, 200, 'Meeting-note deleted successfully');
 });
@@ -115,22 +107,16 @@ export const deleteMeetingNote = catchAsync(async (req: AuthenticatedRequest, re
 export const getMeetingNoteById = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
   const paramToString = (p?: string | string[]) => (Array.isArray(p) ? p[0] : p);
   const { id } = req.params;
-  let standAloneId: string | undefined;
-  let createdBy: string | undefined;
+  let accessId: string | undefined;
 
   if (req.user?.role === UserRole.STANDALONE_USER) {
-    standAloneId = req.user._id;
+    accessId = req.user._id;
   }
   if (req.user?.role === UserRole.TRANSPORT_MANAGER) {
-    createdBy = req.user._id;
-    standAloneId = paramToString(req.params?.standAloneId);
+    accessId = paramToString(req.params?.standAloneId);
   }
   // Call the service method to get the meeting-note by ID and get the result
-  const result = await meetingNoteServices.getMeetingNoteById(
-    id as string,
-    standAloneId,
-    createdBy
-  );
+  const result = await meetingNoteServices.getMeetingNoteById(id as string, accessId);
   if (!result) throw new Error('Meeting-note not found');
   // Send a success response with the retrieved resource data
   ServerResponse(res, true, 200, 'Meeting-note retrieved successfully', result);
@@ -154,11 +140,10 @@ export const getAllMeetingNote = catchAsync(async (req: AuthenticatedRequest, re
   };
 
   if (req.user?.role === UserRole.STANDALONE_USER) {
-    query.standAloneId = req.user._id;
+    query.standAloneId = String(req.user._id);
   }
 
   if (req.user?.role === UserRole.TRANSPORT_MANAGER) {
-    query.createdBy = req.user._id;
     query.standAloneId = (req as any).validatedQuery.standAloneId;
   }
 

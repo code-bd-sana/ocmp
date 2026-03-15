@@ -18,7 +18,10 @@ const baseContactLogFields = {
   date: z.coerce.date({ message: 'Contact date must be a valid date string' }),
   contactMethod: z.string().optional(),
   person: z.string().max(250, 'Person must not exceed 250 characters'),
-  subject: z.string().max(250, 'Subject must not exceed 250 characters').optional(),
+  subject: z
+    .string({ message: 'Subject is required' })
+    .min(1, 'Subject must be at least 1 character')
+    .max(250, 'Subject must not exceed 250 characters'),
   outcome: z.string().max(250, 'Outcome must not exceed 250 characters').optional(),
   followUpRequired: z.boolean().default(false),
   followUpDate: z.coerce.date({ message: 'Follow-up date must be a valid date string' }).optional(),
@@ -74,6 +77,7 @@ const zodUpdateContactLogSchema = zodCreateContactLogAsManagerSchema
     followUpRequired: true,
     followUpDate: true,
   })
+  .partial()
   .refine(
     (data) => {
       // Ensure at least one field is provided for update
@@ -154,6 +158,6 @@ export const validateCreateContactLogAsStandalone = validateBody(
   zodCreateContactLogAsStandaloneSchema
 );
 export const validateUpdateContactLog = validateBody(zodUpdateContactLogSchema);
-export const validateUpdateContactLogIds = validateBody(zodContactLogAndManagerIdSchema);
+export const validateUpdateContactLogIds = validateParams(zodContactLogAndManagerIdSchema);
 export const validateDeleteContactLogIds = validateParams(zodContactLogAndManagerIdSchema);
 
