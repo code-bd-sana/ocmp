@@ -9,6 +9,7 @@ import {
   deleteFuelUsage,
   getFuelUsageById,
   getManyFuelUsage,
+  getDriversWithVehicles,
 } from './fuel-usage.controller';
 
 //Import validation from corresponding module
@@ -34,7 +35,7 @@ router.use(isAuthorized());
 
 /**
  * @route POST /api/v1/fuel-usage/create-fuel-usage
- * @description Create a new fuel-usage
+ * @description Create a new fuel-usage as a Transport Manager
  * @access Public
  * @param {function} validation - ['validateCreateFuelUsage']
  * @param {function} controller - ['createFuelUsage']
@@ -170,6 +171,23 @@ router.get(
   authorizedRoles([UserRole.STANDALONE_USER]),
   validateFuelUsageIdParam,
   getFuelUsageById
+);
+
+/**
+ * @route GET /api/v1/fuel-usage/get-drivers-with-vehicles
+ * @description Get all drivers belonging to the standalone user, each with their assigned vehicles
+ * @access Transport Manager & Standalone User
+ */
+router.get(
+  '/get-drivers-with-vehicles',
+  authorizedRoles([UserRole.STANDALONE_USER, UserRole.TRANSPORT_MANAGER]),
+  (req: AuthenticatedRequest, res, next) => {
+    if (req.user!.role === UserRole.TRANSPORT_MANAGER) {
+      return validateClientForManagerMiddleware(req, res, next);
+    }
+    next();
+  },
+  getDriversWithVehicles
 );
 
 // Export the router

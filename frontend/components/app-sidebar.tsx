@@ -38,17 +38,19 @@ const CLIENT_MODULES: { slug: string; label: string }[] = [
   { slug: "driver-details", label: "Driver Details" },
   { slug: "vehicle-list", label: "Vehicle List" },
   { slug: "spot-checks", label: "Spot Checks" },
-  { slug: "subcontractor-details", label: "Subcontractor Details" },
   { slug: "driver-tachograph", label: "Driver Tachograph" },
   { slug: "training-toolbox", label: "Training Toolbox" },
   { slug: "renewal-tracker", label: "Renewal Tracker" },
   { slug: "ocrs-plan", label: "OCRS Plan" },
   { slug: "traffic-commissioner", label: "Traffic Commissioner" },
   { slug: "self-service", label: "Self Service" },
+  { slug: "planner", label: "Planner" },
   { slug: "pg9AndPg13Plan", label: "PG9 and PG13 Plan" },
   { slug: "transport-manager", label: "Transport Manager" },
-  { slug: "policy-review-tracker", label: "Policy Review Tracker" },
+  { slug: "fuel-usage", label: "Fuel Usage" },
   { slug: "working-time-directive", label: "Working Time Directive" },
+  { slug: "policy-review-tracker", label: "Policy Review Tracker" },
+  { slug: "subcontractor-details", label: "Subcontractor Details" },
 ];
 
 export function AppSidebar() {
