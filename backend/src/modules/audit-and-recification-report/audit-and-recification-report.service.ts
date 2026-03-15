@@ -1,14 +1,35 @@
 // Import the model
 import mongoose from 'mongoose';
-import { IdOrIdsInput, SearchQueryInput } from '../../handlers/common-zod-validator';
 import {
   CreateAuditAndRecificationReportAsManagerInput,
   CreateAuditAndRecificationReportAsStandAloneInput,
   SearchAuditAndRecificationReportsQueryInput,
   UpdateAuditAndRecificationReportInput,
-  UpdateManyAuditAndRecificationReportInput,
 } from './audit-and-recification-report.validation';
 import AuditsAndRecificationReport, { IAuditsAndRecificationReport } from '../../models/compliance-enforcement-dvsa/auditsAndRecificationReports.schema';
+
+const buildAccessFilter = (accessId: string): Record<string, unknown> => {
+  const candidates: Array<string | mongoose.Types.ObjectId> = [accessId];
+
+  if (mongoose.Types.ObjectId.isValid(accessId)) {
+    candidates.unshift(new mongoose.Types.ObjectId(accessId));
+  }
+
+  return {
+    $or: [
+      { createdBy: { $in: candidates } },
+      { standAloneId: { $in: candidates } },
+    ],
+  };
+};
+
+const toObjectIdArray = (ids?: string[]): mongoose.Types.ObjectId[] | undefined => {
+  if (!ids || ids.length === 0) {
+    return undefined;
+  }
+
+  return ids.map((id) => new mongoose.Types.ObjectId(id));
+};
 
 /**
  * Service function to get all audit and recification reports with pagination and optional search by title, type, or responsible person.
@@ -28,10 +49,17 @@ const getAllAuditAndRecificationReport = async (
   const basePipeline: mongoose.PipelineStage[] = [];
 
   if (standAloneId) {
-    const objectId = new mongoose.Types.ObjectId(standAloneId);
+    const candidates: Array<string | mongoose.Types.ObjectId> = [standAloneId];
+    if (mongoose.Types.ObjectId.isValid(standAloneId)) {
+      candidates.unshift(new mongoose.Types.ObjectId(standAloneId));
+    }
+
     basePipeline.push({
       $match: {
-        $or: [{ standAloneId: objectId }, { createdBy: objectId }],
+        $or: [
+          { standAloneId: { $in: candidates } },
+          { createdBy: { $in: candidates } },
+        ],
       },
     });
   }
@@ -84,12 +112,10 @@ const getAuditAndRecificationReportById = async (
   const filter: any = { _id: new mongoose.Types.ObjectId(id) };
 
   if (accessId) {
-    const objectId = new mongoose.Types.ObjectId(accessId);
-    filter.$or = [{ createdBy: objectId }, { standAloneId: objectId }];
+    Object.assign(filter, buildAccessFilter(accessId));
   }
 
   const doc = await AuditsAndRecificationReport.findOne(filter);
-  console.info('Fetched document for getAuditAndRecificationReportById with filter =======>', filter, 'Result:', doc);
   if (!doc) throw new Error('Audit and recification report not found or access denied');
   return doc;
 };
@@ -112,18 +138,18 @@ const createAuditAndRecificationReportAsManager = async (
     status: data.status,
     responsiblePerson: data.responsiblePerson,
     finalizeDate: data.finalizeDate ? new Date(data.finalizeDate) : undefined,
-    attachments: [], //@TODO: handle attachments
+    attachments: toObjectIdArray(data.attachments),
     standAloneId: new mongoose.Types.ObjectId(data.standAloneId),
     createdBy: data.createdBy,
   };
-  if (data.auditDate !== undefined) doc.auditDate = data.auditDate;
+  if (data.auditDate !== undefined) doc.auditDate = new Date(data.auditDate);
   if (data.title !== undefined) doc.title = data.title;
   if (data.type !== undefined) doc.type = data.type;
   if (data.auditDetails !== undefined) doc.auditDetails = data.auditDetails;
   if (data.status !== undefined) doc.status = data.status;
   if (data.responsiblePerson !== undefined) doc.responsiblePerson = data.responsiblePerson;
   if (data.finalizeDate !== undefined) doc.finalizeDate = new Date(data.finalizeDate);
-  if (data.attachments !== undefined) doc.attachments = data.attachments;
+  if (data.attachments !== undefined) doc.attachments = toObjectIdArray(data.attachments);
 
   const newDoc = new AuditsAndRecificationReport(doc);
   return await newDoc.save();
@@ -148,17 +174,17 @@ const createAuditAndRecificationReportAsStandAlone = async (
     status: data.status,
     responsiblePerson: data.responsiblePerson,
     finalizeDate: data.finalizeDate ? new Date(data.finalizeDate) : undefined,
-    attachments: [], //@TODO: handle attachments
+    attachments: toObjectIdArray(data.attachments),
     createdBy: data.createdBy,
   };
-  if (data.auditDate !== undefined) doc.auditDate = data.auditDate;
+  if (data.auditDate !== undefined) doc.auditDate = new Date(data.auditDate);
   if (data.title !== undefined) doc.title = data.title;
   if (data.type !== undefined) doc.type = data.type;
   if (data.auditDetails !== undefined) doc.auditDetails = data.auditDetails;
   if (data.status !== undefined) doc.status = data.status;
   if (data.responsiblePerson !== undefined) doc.responsiblePerson = data.responsiblePerson;
   if (data.finalizeDate !== undefined) doc.finalizeDate = new Date(data.finalizeDate);
-  if (data.attachments !== undefined) doc.attachments = data.attachments;
+  if (data.attachments !== undefined) doc.attachments = toObjectIdArray(data.attachments);
 
   const newDoc = new AuditsAndRecificationReport(doc);
   return await newDoc.save();
@@ -176,11 +202,9 @@ const deleteAuditAndRecificationReport = async (
   id: string,
   accessId: string
 ): Promise<void> => {
-  const objectId = new mongoose.Types.ObjectId(accessId);
-
   const deleted = await AuditsAndRecificationReport.findOneAndDelete({
     _id: new mongoose.Types.ObjectId(id),
-    $or: [{ createdBy: objectId }, { standAloneId: objectId }],
+    ...buildAccessFilter(accessId),
   });
 
   if (!deleted) throw new Error('Audit and recification report not found or access denied');
@@ -202,8 +226,6 @@ const updateAuditAndRecificationReport = async (
   data: UpdateAuditAndRecificationReportInput,
   accessId: string
 ): Promise<IAuditsAndRecificationReport> => {
-  const objectId = new mongoose.Types.ObjectId(accessId);
-
   const updateFields: Record<string, any> = {};
   if (data.auditDate !== undefined) updateFields.auditDate = new Date(data.auditDate);
   if (data.title !== undefined) updateFields.title = data.title;
@@ -212,13 +234,12 @@ const updateAuditAndRecificationReport = async (
   if (data.status !== undefined) updateFields.status = data.status;
   if (data.responsiblePerson !== undefined) updateFields.responsiblePerson = data.responsiblePerson;
   if (data.finalizeDate !== undefined) updateFields.finalizeDate = new Date(data.finalizeDate);
-  if (data.attachments !== undefined) updateFields.attachments = data.attachments;
+  if (data.attachments !== undefined) updateFields.attachments = toObjectIdArray(data.attachments);
 
-  console.info('Updating audit-and-recification-report with id:', id, 'Update fields:', updateFields, 'Access ID:', accessId);
   const updated = await AuditsAndRecificationReport.findOneAndUpdate(
     {
       _id: new mongoose.Types.ObjectId(id),
-      $or: [{ createdBy: objectId }, { standAloneId: objectId }],
+      ...buildAccessFilter(accessId),
     },
     { $set: updateFields },
     { returnDocument: 'after' }
@@ -239,4 +260,3 @@ export const auditAndRecificationReportServices = {
   updateAuditAndRecificationReport,
   deleteAuditAndRecificationReport,
 };
-

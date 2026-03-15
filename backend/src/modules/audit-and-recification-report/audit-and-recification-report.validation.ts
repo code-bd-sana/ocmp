@@ -4,37 +4,24 @@ import { validateBody, validateParams, validateQuery } from '../../handlers/zod-
 import { zodSearchQuerySchema } from '../../handlers/common-zod-validator';
 import { AuditStatus } from '../../models/compliance-enforcement-dvsa/auditsAndRecificationReports.schema';
 
-/**
- * zod schema for validating search queries when searching for audit-and-recification-reports.
- * Supports pagination, filtering by standAloneId, and any other common search query parameters defined in zodSearchQuerySchema.
- */
+const auditStatusValues = Object.values(AuditStatus) as [AuditStatus, ...AuditStatus[]];
+const mongoIdStringSchema = z
+  .string({ message: 'Please provide a valid MongoDB ObjectId' })
+  .refine(isMongoId, { message: 'Please provide a valid MongoDB ObjectId' });
+
 const zodSearchAuditAndRecificationReportsSchema = zodSearchQuerySchema.extend({
   standAloneId: z
     .string()
     .refine(isMongoId, { message: 'Please provide a valid MongoDB ObjectId for standAloneId' })
     .optional(),
 });
-export type SearchAuditAndRecificationReportsQueryInput = z.infer<typeof zodSearchAuditAndRecificationReportsSchema>;
 
-/**
- * Zod schemas and types for audit-and-recification-report module.
- * Includes validation for creating, updating, and searching audit-and-recification-reports.
- * Also includes param validation for routes that require audit-and-recification-report IDs.
- */
 const zodAuditAndRecificationReportIdParamSchema = z
   .object({
-    id: z
-      .string({ message: 'audit and recification id is required' })
-      .refine(isMongoId, { message: 'Please provide a valid MongoDB ObjectId' }),
+    id: mongoIdStringSchema,
   })
   .strict();
 
-  export type AuditAndRecificationReportIdParamInput = z.infer<typeof zodAuditAndRecificationReportIdParamSchema>;
-
-/**
- * Zod schema for validating both audit-and-recification-report ID and standAloneId in URL params (for manager routes).
- * Used in routes where a Transport Manager is accessing an audit-and-recification-report for a specific standalone user.
- */
 const zodAuditAndRecificationReportAndManagerIdParamSchema = z
   .object({
     id: z
@@ -46,17 +33,17 @@ const zodAuditAndRecificationReportAndManagerIdParamSchema = z
   })
   .strict();
 
-export type AuditAndRecificationReportAsManagerIdParamInput = z.infer<typeof zodAuditAndRecificationReportAndManagerIdParamSchema>;
+const attachmentIdsSchema = z
+  .array(
+    z
+      .string()
+      .refine(isMongoId, { message: 'Each attachment must be a valid MongoDB ObjectId' })
+  )
+  .optional();
 
-/**
- * Base fields for creating an audit-and-recification-report, shared between standalone users and transport managers.
- * Transport Managers must also provide a standAloneId to specify which standalone user's record they are creating for.
- * All fields are optional in the base schema, but you can add .refine() or .superRefine() for conditional validation if needed (e.g., certain fields required based on status).
- * Note: attachments is currently defined as a string for simplicity, but in a real application it would likely be an array of file URLs or IDs.
- */
 const baseAuditAndRecificationReportFields = {
   auditDate: z
-    .string({ message: 'Audit date date is required' })
+    .string({ message: 'Audit date must be a valid ISO date string' })
     .datetime({ message: 'Audit date must be a valid ISO date string' })
     .optional(),
   title: z
@@ -64,14 +51,11 @@ const baseAuditAndRecificationReportFields = {
     .min(1, 'Audit title must be at least 1 character')
     .max(150, 'Audit title must not exceed 150 characters'),
   type: z
-    .string({ message: 'Audit type is must be a string' })
-    .optional(),
-  auditDetails: z
-    .string({ message: 'Audit details must be a string' })
-    .optional(),
-  status: z
-    .enum(Object.keys(AuditStatus) as [string, ...string[]])
-    .optional(),
+    .string({ message: 'Audit type is required' })
+    .min(1, 'Audit type must be at least 1 character')
+    .max(150, 'Audit type must not exceed 150 characters'),
+  auditDetails: z.string({ message: 'Audit details must be a string' }).optional(),
+  status: z.enum(auditStatusValues).optional(),
   responsiblePerson: z
     .string({ message: 'Responsible person must be a string' })
     .min(1, 'Responsible person must be at least 1 character')
@@ -81,15 +65,9 @@ const baseAuditAndRecificationReportFields = {
     .string({ message: 'Finalize date must be a valid ISO date string' })
     .datetime({ message: 'Finalize date must be a valid ISO date string' })
     .optional(),
-  attachments: z //@TODO: this should likely be an array of strings (file URLs or IDs) rather than a single string
-    .string({ message: 'Attachments must be a string' })
-    .optional(),
+  attachments: attachmentIdsSchema,
 };
 
-/**
- * Zod schema for validating data when creating a new audit-and-recification-report.
- * Separate schemas for standalone users and transport managers, since transport managers must provide a standAloneId.
- */
 const zodCreateAuditAndRecificationReportAsStandAloneSchema = z
   .object({
     ...baseAuditAndRecificationReportFields,
@@ -105,130 +83,74 @@ const zodCreateAuditAndRecificationReportAsManagerSchema = z
   })
   .strict();
 
-/**
- * Zod schema for validating data when **updating** an existing audit-and-recification-report.
- * All fields are optional, but you can add .refine() or .superRefine() for conditional validation if needed (e.g., certain fields required based on status).
- * Note: attachments is currently defined as a string for simplicity, but in a real application it would likely be an array of file URLs or IDs.
- * Also includes a .refine() to ensure that at least one field is being updated (since all are optional).
- */
-const validateUpdateAuditAndRecificationReportSchema = z
+const zodUpdateAuditAndRecificationReportSchema = z
   .object({
     auditDate: z
-      .string({ message: 'Audit date is required' })
+      .string({ message: 'Audit date must be a valid ISO date string' })
       .datetime({ message: 'Audit date must be a valid ISO date string' })
       .optional(),
-    
     title: z
-      .string({ message: 'Audit title is required' })
+      .string({ message: 'Audit title must be a string' })
       .min(1, 'Audit title must be at least 1 character')
-      .max(150, 'Audit title must not exceed 150 characters'),
-    
+      .max(150, 'Audit title must not exceed 150 characters')
+      .optional(),
     type: z
-      .string({ message: 'Audit type is required' })
+      .string({ message: 'Audit type must be a string' })
+      .min(1, 'Audit type must be at least 1 character')
+      .max(150, 'Audit type must not exceed 150 characters')
       .optional(),
-    
-    auditDetails: z 
-      .string({ message: 'Audit details is required' })
-      .optional(),
-    
-    status: z
-      .enum(Object.values(AuditStatus) as [string, ...string[]])
-      .optional(),
-    
+    auditDetails: z.string({ message: 'Audit details must be a string' }).optional(),
+    status: z.enum(auditStatusValues).optional(),
     responsiblePerson: z
-      .string({ message: 'Responsible person is required' })
+      .string({ message: 'Responsible person must be a string' })
       .min(1, 'Responsible person must be at least 1 character')
       .max(150, 'Responsible person must not exceed 150 characters')
       .optional(),
-    
     finalizeDate: z
-      .string({ message: 'Finalize date is required' })
+      .string({ message: 'Finalize date must be a valid ISO date string' })
       .datetime({ message: 'Finalize date must be a valid ISO date string' })
       .optional(),
-    
-    attachments: z
-      .string({ message: 'Attachments must be a string' })
-      .optional(),
+    attachments: attachmentIdsSchema,
   })
-  .strict() 
+  .strict()
   .refine((data) => Object.keys(data).length > 0, {
     message: 'At least one field must be provided for update',
   });
 
+export const validateCreateAuditAndRecificationReportAsManager = validateBody(
+  zodCreateAuditAndRecificationReportAsManagerSchema
+);
+export const validateCreateAuditAndRecificationReportAsStandAlone = validateBody(
+  zodCreateAuditAndRecificationReportAsStandAloneSchema
+);
+export const validateUpdateAuditAndRecificationReport = validateBody(
+  zodUpdateAuditAndRecificationReportSchema
+);
+export const validateAuditAndRecificationReportIdParam = validateParams(
+  zodAuditAndRecificationReportIdParamSchema
+);
+export const validateAuditAndRecificationReportIdParamAsManager = validateParams(
+  zodAuditAndRecificationReportAndManagerIdParamSchema
+);
+export const validateSearchAuditAndRecificationReportsQueries = validateQuery(
+  zodSearchAuditAndRecificationReportsSchema
+);
 
-export const validateCreateAuditAndRecificationReportAsManager = validateBody(zodCreateAuditAndRecificationReportAsManagerSchema);
-export const validateCreateAuditAndRecificationReportAsStandAlone = validateBody(zodCreateAuditAndRecificationReportAsStandAloneSchema);
-export const validateUpdateAuditAndRecificationReport = validateBody(validateUpdateAuditAndRecificationReportSchema);
-export const validateAuditAndRecificationReportIdParam = validateParams(zodAuditAndRecificationReportIdParamSchema);
-export const validateAuditAndRecificationReportIdParamAsManager = validateParams(zodAuditAndRecificationReportAndManagerIdParamSchema);
-// Search query validators
-export const validateSearchAuditAndRecificationReportsQueries = validateQuery(zodSearchAuditAndRecificationReportsSchema);
-export const validateSearchQueries = validateQuery(zodSearchQuerySchema);
-
-
-
-
-
-
-
-
-
-export type CreateAuditAndRecificationReportAsManagerInput = z.infer<typeof zodCreateAuditAndRecificationReportAsManagerSchema>;
-export type CreateAuditAndRecificationReportAsStandAloneInput = z.infer<typeof zodCreateAuditAndRecificationReportAsStandAloneSchema>;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/**
- * Zod schema for validating data when **updating** an existing audit-and-recification-report.
- * 
- * → All fields should usually be .optional()
- */
-const zodUpdateAuditAndRecificationReportSchema = z
-  .object({
-    // Example fields — replace / expand as needed:
-    // name: z.string().min(2, 'Name must be at least 2 characters').max(100).optional(),
-    // email: z.string().email({ message: 'Invalid email format' }).optional(),
-    // age: z.number().int().positive().optional(),
-    // status: z.enum(['active', 'inactive', 'pending']).optional(),
-  })
-  .strict();
-
-export type UpdateAuditAndRecificationReportInput = z.infer<typeof zodUpdateAuditAndRecificationReportSchema>;
-
-/**
- * Zod schema for validating bulk updates (array of partial audit-and-recification-report objects).
- */
-const zodUpdateManyAuditAndRecificationReportForBulkSchema = zodUpdateAuditAndRecificationReportSchema
-  .extend({
-    id: z.string().refine(isMongoId, { message: 'Please provide a valid MongoDB ObjectId' }),
-  })
-  .refine((data) => Object.keys(data).length > 1, {
-    message: 'At least one field to update must be provided',
-  });
-
-/**
- * Zod schema for validating an array of multiple audit-and-recification-report updates.
- */
-const zodUpdateManyAuditAndRecificationReportSchema = z
-  .array(zodUpdateManyAuditAndRecificationReportForBulkSchema)
-  .min(1, { message: 'At least one audit-and-recification-report update object must be provided' });
-
-
-export type UpdateManyAuditAndRecificationReportInput = z.infer<typeof zodUpdateManyAuditAndRecificationReportSchema>;
-
-/**
- * Named validators — use these directly in your Express routes
- */
-// export const validateUpdateAuditAndRecificationReport = validateBody(zodUpdateAuditAndRecificationReportSchema);
-export const validateUpdateManyAuditAndRecificationReport = validateBody(zodUpdateManyAuditAndRecificationReportSchema);
+export type SearchAuditAndRecificationReportsQueryInput = z.infer<
+  typeof zodSearchAuditAndRecificationReportsSchema
+>;
+export type AuditAndRecificationReportIdParamInput = z.infer<
+  typeof zodAuditAndRecificationReportIdParamSchema
+>;
+export type AuditAndRecificationReportAsManagerIdParamInput = z.infer<
+  typeof zodAuditAndRecificationReportAndManagerIdParamSchema
+>;
+export type CreateAuditAndRecificationReportAsManagerInput = z.infer<
+  typeof zodCreateAuditAndRecificationReportAsManagerSchema
+>;
+export type CreateAuditAndRecificationReportAsStandAloneInput = z.infer<
+  typeof zodCreateAuditAndRecificationReportAsStandAloneSchema
+>;
+export type UpdateAuditAndRecificationReportInput = z.infer<
+  typeof zodUpdateAuditAndRecificationReportSchema
+>;
