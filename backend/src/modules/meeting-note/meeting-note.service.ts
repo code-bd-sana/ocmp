@@ -10,14 +10,15 @@ import {
 
 const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-const buildAccessFilters = (id?: string): Record<string, unknown>[] => {
+const buildAccessFilters = (id?: IdOrIdsInput['id']): Record<string, unknown>[] => {
   if (!id) {
     return [];
   }
 
-  const candidates: Array<string | mongoose.Types.ObjectId> = [id];
-  if (mongoose.Types.ObjectId.isValid(id)) {
-    candidates.unshift(new mongoose.Types.ObjectId(id));
+  const normalizedId = String(id);
+  const candidates: Array<string | mongoose.Types.ObjectId> = [normalizedId];
+  if (mongoose.Types.ObjectId.isValid(normalizedId)) {
+    candidates.unshift(new mongoose.Types.ObjectId(normalizedId));
   }
 
   return [
@@ -66,9 +67,8 @@ const createMeetingNote = async (data: CreateMeetingNoteInput): Promise<Partial<
 const updateMeetingNote = async (
   id: IdOrIdsInput['id'],
   data: UpdateMeetingNoteInput,
-  userId: IdOrIdsInput['id'],
-  standAloneId: IdOrIdsInput['id']
-): Promise<Partial<IMeetingNote | null>> => {
+  accessId: IdOrIdsInput['id']
+): Promise<Partial<IMeetingNote>> => {
   // Check for duplicate (filed) combination
   const orConditions: any[] = [];
   if (data.keyDiscussionPoints) {
@@ -93,8 +93,7 @@ const updateMeetingNote = async (
   }
 
   const accessFilters: Record<string, unknown>[] = [
-    ...buildAccessFilters(userId),
-    ...buildAccessFilters(standAloneId),
+    ...buildAccessFilters(accessId),
   ];
 
   // Proceed to update the meeting-note
@@ -108,6 +107,11 @@ const updateMeetingNote = async (
     data,
     { returnDocument: 'after' }
   );
+
+  if (!updatedMeetingNote) {
+    throw new Error('Meeting-note not found or access denied');
+  }
+
   return updatedMeetingNote;
 };
 
@@ -119,19 +123,20 @@ const updateMeetingNote = async (
  */
 const deleteMeetingNote = async (
   id: IdOrIdsInput['id'],
-  userId: IdOrIdsInput['id'],
-  standAloneId: IdOrIdsInput['id']
-): Promise<Partial<IMeetingNote | null>> => {
+  accessId: IdOrIdsInput['id']
+): Promise<void> => {
   const accessFilters: Record<string, unknown>[] = [
-    ...buildAccessFilters(userId),
-    ...buildAccessFilters(standAloneId),
+    ...buildAccessFilters(accessId),
   ];
 
   const deletedMeetingNote = await MeetingNoteModel.findOneAndDelete({
     _id: id,
     ...(accessFilters.length ? { $or: accessFilters } : {}),
   });
-  return deletedMeetingNote;
+
+  if (!deletedMeetingNote) {
+    throw new Error('Meeting-note not found or access denied');
+  }
 };
 
 /**
@@ -142,12 +147,10 @@ const deleteMeetingNote = async (
  */
 const getMeetingNoteById = async (
   id: IdOrIdsInput['id'],
-  standAloneId?: IdOrIdsInput['id'],
-  createdBy?: IdOrIdsInput['id']
+  accessId?: IdOrIdsInput['id']
 ): Promise<Partial<IMeetingNote | null>> => {
   const accessFilters: Record<string, unknown>[] = [
-    ...buildAccessFilters(standAloneId),
-    ...buildAccessFilters(createdBy),
+    ...buildAccessFilters(accessId),
   ];
 
   const filter = accessFilters.length
@@ -168,13 +171,13 @@ const getMeetingNoteById = async (
  * @returns {Promise<Partial<IMeetingNote>[]>} - The retrieved meeting-note
  */
 const getAllMeetingNote = async (
-  query: SearchMeetingNoteQueryInput & { createdBy?: string }
+  query: SearchMeetingNoteQueryInput
 ): Promise<{
   meetingNotes: Partial<IMeetingNote>[];
   totalData: number;
   totalPages: number;
 }> => {
-  const { searchKey = '', showPerPage = 10, pageNo = 1, standAloneId, createdBy } = query;
+  const { searchKey = '', showPerPage = 10, pageNo = 1, standAloneId } = query;
   // Build the search filter based on the search key
   const searchConditions: any[] = [];
   const andConditions: any[] = [];
@@ -190,16 +193,12 @@ const getAllMeetingNote = async (
 
   if (standAloneId) {
     const standaloneFilters = buildAccessFilters(standAloneId);
-    const managerFilters = buildAccessFilters(createdBy);
 
     andConditions.push({
       $or: [
         ...standaloneFilters,
-        ...managerFilters,
       ],
     });
-  } else if (createdBy) {
-    andConditions.push({ $or: buildAccessFilters(createdBy) });
   }
 
   const searchFilter: any = {};
