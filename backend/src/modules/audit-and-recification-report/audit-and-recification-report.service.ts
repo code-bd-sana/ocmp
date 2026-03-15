@@ -9,10 +9,11 @@ import {
 import AuditsAndRecificationReport, { IAuditsAndRecificationReport } from '../../models/compliance-enforcement-dvsa/auditsAndRecificationReports.schema';
 
 const buildAccessFilter = (accessId: string): Record<string, unknown> => {
-  const candidates: Array<string | mongoose.Types.ObjectId> = [accessId];
+  const normalizedId = String(accessId);
+  const candidates: Array<string | mongoose.Types.ObjectId> = [normalizedId];
 
-  if (mongoose.Types.ObjectId.isValid(accessId)) {
-    candidates.unshift(new mongoose.Types.ObjectId(accessId));
+  if (mongoose.Types.ObjectId.isValid(normalizedId)) {
+    candidates.unshift(new mongoose.Types.ObjectId(normalizedId));
   }
 
   return {
