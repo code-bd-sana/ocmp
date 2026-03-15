@@ -7,6 +7,21 @@ import {
   UpdateWheelRetorquePolicyMonitoringInput,
 } from './wheel-retorque-policy.validation';
 
+const buildAccessFilter = (accessId: string): Record<string, unknown> => {
+  const candidates: Array<string | mongoose.Types.ObjectId> = [accessId];
+
+  if (mongoose.Types.ObjectId.isValid(accessId)) {
+    candidates.unshift(new mongoose.Types.ObjectId(accessId));
+  }
+
+  return {
+    $or: [
+      { createdBy: { $in: candidates } },
+      { standAloneId: { $in: candidates } },
+    ],
+  };
+};
+
 const verifyVehicleUnderStandalone = async (vehicleId: string, accessId: string): Promise<void> => {
   const vehicleObjectId = new mongoose.Types.ObjectId(vehicleId);
   const objectId = new mongoose.Types.ObjectId(accessId);
@@ -135,8 +150,7 @@ const getWheelRetorquePolicyMonitoringById = async (
   };
 
   if (accessId) {
-    const objectId = new mongoose.Types.ObjectId(accessId);
-    filter.$or = [{ createdBy: objectId }, { standAloneId: objectId }];
+    Object.assign(filter, buildAccessFilter(accessId));
   }
 
   const doc = await WheelRetorquePolicyMonitoring.findOne(filter);
@@ -149,8 +163,6 @@ const updateWheelRetorquePolicyMonitoring = async (
   data: UpdateWheelRetorquePolicyMonitoringInput,
   accessId: string
 ): Promise<IWheelRetorquePolicyMonitoring> => {
-  const objectId = new mongoose.Types.ObjectId(accessId);
-
   if (data.vehicleId) {
     await verifyVehicleUnderStandalone(data.vehicleId, accessId);
   }
@@ -168,7 +180,7 @@ const updateWheelRetorquePolicyMonitoring = async (
   const updated = await WheelRetorquePolicyMonitoring.findOneAndUpdate(
     {
       _id: new mongoose.Types.ObjectId(wheelRetorquePolicyMonitoringId),
-      $or: [{ createdBy: objectId }, { standAloneId: objectId }],
+      ...buildAccessFilter(accessId),
     },
     { $set: updateFields },
     { returnDocument: 'after' }
@@ -182,11 +194,9 @@ const deleteWheelRetorquePolicyMonitoring = async (
   wheelRetorquePolicyMonitoringId: string,
   accessId: string
 ): Promise<void> => {
-  const objectId = new mongoose.Types.ObjectId(accessId);
-
   const deleted = await WheelRetorquePolicyMonitoring.findOneAndDelete({
     _id: new mongoose.Types.ObjectId(wheelRetorquePolicyMonitoringId),
-    $or: [{ createdBy: objectId }, { standAloneId: objectId }],
+    ...buildAccessFilter(accessId),
   });
 
   if (!deleted) throw new Error('Wheel re-torque policy monitoring not found or access denied');
