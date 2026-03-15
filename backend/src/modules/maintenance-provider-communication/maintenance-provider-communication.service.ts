@@ -21,10 +21,7 @@ const buildAccessFilters = (id?: IdOrIdsInput['id']): Record<string, unknown>[] 
     candidates.unshift(new mongoose.Types.ObjectId(normalizedId));
   }
 
-  return [
-    { createdBy: { $in: candidates } },
-    { standAloneId: { $in: candidates } },
-  ];
+  return [{ createdBy: { $in: candidates } }, { standAloneId: { $in: candidates } }];
 };
 
 /**
@@ -120,7 +117,8 @@ const getMaintenanceProviderCommunicationById = async (
       }
     : { _id: id };
 
-  const maintenanceProviderCommunication = await MaintenanceProviderCommunicationModel.findOne(filter);
+  const maintenanceProviderCommunication =
+    await MaintenanceProviderCommunicationModel.findOne(filter);
   return maintenanceProviderCommunication;
 };
 
@@ -153,12 +151,10 @@ const getAllMaintenanceProviderCommunication = async (
   }
 
   if (standAloneId) {
-    const standaloneFilters = buildAccessFilters(standAloneId);
+    const standaloneObjectId = new mongoose.Types.ObjectId(String(standAloneId));
 
     andConditions.push({
-      $or: [
-        ...standaloneFilters,
-      ],
+      $or: [{ standAloneId: standaloneObjectId }, { createdBy: standaloneObjectId }],
     });
   } else if (createdBy) {
     andConditions.push({ $or: buildAccessFilters(createdBy) });

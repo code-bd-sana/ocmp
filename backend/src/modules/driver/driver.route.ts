@@ -9,7 +9,6 @@ import {
   deleteDriver,
   getDriverById,
   getManyDriver,
-  uploadDriverAttachment,
   updateDriver,
 } from './driver.controller';
 

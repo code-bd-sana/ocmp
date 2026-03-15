@@ -21,10 +21,7 @@ const buildAccessFilters = (id?: IdOrIdsInput['id']): Record<string, unknown>[] 
     candidates.unshift(new mongoose.Types.ObjectId(normalizedId));
   }
 
-  return [
-    { createdBy: { $in: candidates } },
-    { standAloneId: { $in: candidates } },
-  ];
+  return [{ createdBy: { $in: candidates } }, { standAloneId: { $in: candidates } }];
 };
 
 /**
@@ -92,9 +89,7 @@ const updateMeetingNote = async (
     }
   }
 
-  const accessFilters: Record<string, unknown>[] = [
-    ...buildAccessFilters(accessId),
-  ];
+  const accessFilters: Record<string, unknown>[] = [...buildAccessFilters(accessId)];
 
   // Proceed to update the meeting-note
 
@@ -125,9 +120,7 @@ const deleteMeetingNote = async (
   id: IdOrIdsInput['id'],
   accessId: IdOrIdsInput['id']
 ): Promise<void> => {
-  const accessFilters: Record<string, unknown>[] = [
-    ...buildAccessFilters(accessId),
-  ];
+  const accessFilters: Record<string, unknown>[] = [...buildAccessFilters(accessId)];
 
   const deletedMeetingNote = await MeetingNoteModel.findOneAndDelete({
     _id: id,
@@ -149,9 +142,7 @@ const getMeetingNoteById = async (
   id: IdOrIdsInput['id'],
   accessId?: IdOrIdsInput['id']
 ): Promise<Partial<IMeetingNote | null>> => {
-  const accessFilters: Record<string, unknown>[] = [
-    ...buildAccessFilters(accessId),
-  ];
+  const accessFilters: Record<string, unknown>[] = [...buildAccessFilters(accessId)];
 
   const filter = accessFilters.length
     ? {
@@ -192,12 +183,10 @@ const getAllMeetingNote = async (
   }
 
   if (standAloneId) {
-    const standaloneFilters = buildAccessFilters(standAloneId);
+    const standaloneObjectId = new mongoose.Types.ObjectId(String(standAloneId));
 
     andConditions.push({
-      $or: [
-        ...standaloneFilters,
-      ],
+      $or: [{ standAloneId: standaloneObjectId }, { createdBy: standaloneObjectId }],
     });
   }
 

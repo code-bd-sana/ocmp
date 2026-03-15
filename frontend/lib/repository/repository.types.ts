@@ -96,7 +96,7 @@ export const SETTINGS_META: SettingMeta[] = [
   {
     key: "GV79DAndMaintenanceProvider",
     label: "GV79 and Maintenance Provider Communication and Meeting Agenda",
-    href: "/dashboard/gv79",
+    href: "/dashboard/maintenance-meeting",
   },
   {
     key: "complianceTimetable",
