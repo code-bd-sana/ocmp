@@ -8,7 +8,22 @@ import {
   UpdateComplianceTimetableInput,
 } from './compliance-timetable.validation';
 import { ComplianceTimeTable, IComplianceTimeTable } from '../../models';
-const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const buildAccessFilters = (id?: string): Record<string, unknown>[] => {
+  if (!id) {
+    return [];
+  }
+
+  const candidates: Array<string | mongoose.Types.ObjectId> = [id];
+  if (mongoose.Types.ObjectId.isValid(id)) {
+    candidates.unshift(new mongoose.Types.ObjectId(id));
+  }
+
+  return [
+    { createdBy: { $in: candidates } },
+    { standAloneId: { $in: candidates } },
+  ];
+};
 
 /**
  * Service function to create a new compliance-timetable.
@@ -45,34 +60,16 @@ const updateComplianceTimetable = async (
   userId: IdOrIdsInput['id'],
   standAloneId?: IdOrIdsInput['id']
 ): Promise<Partial<IComplianceTimeTable | null>> => {
-  const accessFilters: Record<string, unknown>[] = [];
-
-  if (userId) {
-    accessFilters.push({ createdBy: userId });
-    accessFilters.push({ standAloneId: userId });
-
-    if (mongoose.Types.ObjectId.isValid(userId)) {
-      const userObjectId = new mongoose.Types.ObjectId(userId);
-      accessFilters.push({ createdBy: userObjectId });
-      accessFilters.push({ standAloneId: userObjectId });
-    }
-  }
-
-  if (standAloneId) {
-    accessFilters.push({ standAloneId });
-    accessFilters.push({ createdBy: standAloneId });
-
-    if (mongoose.Types.ObjectId.isValid(standAloneId)) {
-      const standAloneObjectId = new mongoose.Types.ObjectId(standAloneId);
-      accessFilters.push({ standAloneId: standAloneObjectId });
-      accessFilters.push({ createdBy: standAloneObjectId });
-    }
-  }
+  const accessFilters: Record<string, unknown>[] = [
+    ...buildAccessFilters(userId),
+    ...buildAccessFilters(standAloneId),
+  ];
 
   // Proceed to update the compliance-timetable
   const updatedComplianceTimetable = await ComplianceTimeTable.findOneAndUpdate(
     {
       _id: id,
+      ...(accessFilters.length ? { $or: accessFilters } : {}),
     },
     data,
     { returnDocument: 'after' }
@@ -96,33 +93,14 @@ const deleteComplianceTimetable = async (
   userId: IdOrIdsInput['id'],
   standAloneId?: IdOrIdsInput['id']
 ): Promise<Partial<IComplianceTimeTable | null>> => {
-  const accessFilters: Record<string, unknown>[] = [];
-
-  if (userId) {
-    accessFilters.push({ createdBy: userId });
-    accessFilters.push({ standAloneId: userId });
-
-    if (mongoose.Types.ObjectId.isValid(userId)) {
-      const userObjectId = new mongoose.Types.ObjectId(userId);
-      accessFilters.push({ createdBy: userObjectId });
-      accessFilters.push({ standAloneId: userObjectId });
-    }
-  }
-
-  if (standAloneId) {
-    accessFilters.push({ standAloneId });
-    accessFilters.push({ createdBy: standAloneId });
-
-    if (mongoose.Types.ObjectId.isValid(standAloneId)) {
-      const standAloneObjectId = new mongoose.Types.ObjectId(standAloneId);
-      accessFilters.push({ standAloneId: standAloneObjectId });
-      accessFilters.push({ createdBy: standAloneObjectId });
-    }
-  }
+  const accessFilters: Record<string, unknown>[] = [
+    ...buildAccessFilters(userId),
+    ...buildAccessFilters(standAloneId),
+  ];
 
   const deletedComplianceTimetable = await ComplianceTimeTable.findOneAndDelete({
     _id: id,
-    $or: accessFilters,
+    ...(accessFilters.length ? { $or: accessFilters } : {}),
   });
   return deletedComplianceTimetable;
 };
@@ -142,17 +120,10 @@ const getComplianceTimetableById = async (
   standAloneId?: IdOrIdsInput['id'],
   createdBy?: IdOrIdsInput['id']
 ): Promise<Partial<IComplianceTimeTable | null>> => {
-  const accessFilters: Record<string, mongoose.Types.ObjectId>[] = [];
-
-  if (standAloneId) {
-    const standAloneObjectId = new mongoose.Types.ObjectId(standAloneId);
-    accessFilters.push({ standAloneId: standAloneObjectId });
-    accessFilters.push({ createdBy: standAloneObjectId });
-  }
-
-  if (createdBy) {
-    accessFilters.push({ createdBy: new mongoose.Types.ObjectId(createdBy) });
-  }
+  const accessFilters: Record<string, unknown>[] = [
+    ...buildAccessFilters(standAloneId),
+    ...buildAccessFilters(createdBy),
+  ];
 
   const filter = accessFilters.length
     ? {
@@ -195,15 +166,18 @@ const getAllComplianceTimetable = async (
   }
 
   if (standAloneId) {
+    const standaloneFilters = buildAccessFilters(standAloneId);
+    const managerFilters = buildAccessFilters(createdBy);
+
     andConditions.push({
       $or: [
-        { standAloneId: new mongoose.Types.ObjectId(standAloneId) },
-        { createdBy: new mongoose.Types.ObjectId(standAloneId) },
-        { createdBy: new mongoose.Types.ObjectId(createdBy!) },
+        ...standaloneFilters,
+        ...managerFilters,
       ],
     });
   } else if (createdBy) {
-    andConditions.push({ createdBy: new mongoose.Types.ObjectId(createdBy) });
+    const managerFilters = buildAccessFilters(createdBy);
+    andConditions.push({ $or: managerFilters });
   }
 
   const searchFilter: any = {};

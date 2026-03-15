@@ -53,7 +53,6 @@ export const createMaintenanceProviderCommunicationAsStandalone = catchAsync(
     // Call the service method to create a new maintenance-provider-communication and get the result
     const userId = req.user!._id;
     req.body.createdBy = new mongoose.Types.ObjectId(userId);
-    req.body.standAloneId = new mongoose.Types.ObjectId(userId);
     const result =
       await maintenanceProviderCommunicationServices.createMaintenanceProviderCommunication(
         req.body
@@ -80,9 +79,8 @@ export const createMaintenanceProviderCommunicationAsStandalone = catchAsync(
  */
 export const updateMaintenanceProviderCommunication = catchAsync(
   async (req: AuthenticatedRequest, res: Response) => {
-    const { id } = req.params;
     const paramToString = (p?: string | string[]) => (Array.isArray(p) ? p[0] : p);
-    const subContractorId = paramToString(req.params.subContractorId);
+    const id = paramToString(req.params.id);
     // TM accesses through the client's standAloneId; standalone uses own ID
     const accessId =
       req.user!.role === UserRole.TRANSPORT_MANAGER
@@ -95,14 +93,7 @@ export const updateMaintenanceProviderCommunication = catchAsync(
         req.body,
         accessId
       );
-    // if (!result) {
-    //   return ServerResponse(
-    //     res,
-    //     false,
-    //     404,
-    //     'Maintenance-provider-communication not found or you do not have permission to update it'
-    //   );
-    // }
+
     // Send a success response with the updated maintenance-provider-communication data
     ServerResponse(
       res,
@@ -126,22 +117,15 @@ export const deleteMaintenanceProviderCommunication = catchAsync(
   async (req: AuthenticatedRequest, res: Response) => {
     const paramToString = (p?: string | string[]) => (Array.isArray(p) ? p[0] : p);
     const id = paramToString(req.params.id);
-    const standAloneId = paramToString(req.params?.standAloneId);
+    const accessId =
+      req.user!.role === UserRole.TRANSPORT_MANAGER
+        ? (paramToString(req.params.standAloneId) as string)
+        : req.user!._id;
     // Call the service method to delete the maintenance-provider-communication by ID
-    const result =
-      await maintenanceProviderCommunicationServices.deleteMaintenanceProviderCommunication(
-        id as string,
-        req.user!._id,
-        standAloneId
-      );
-    if (!result) {
-      return ServerResponse(
-        res,
-        false,
-        404,
-        'Maintenance-provider-communication not found or you do not have permission to delete it'
-      );
-    }
+    await maintenanceProviderCommunicationServices.deleteMaintenanceProviderCommunication(
+      id as string,
+      accessId
+    );
     // Send a success response confirming the deletion
     ServerResponse(res, true, 200, 'Maintenance-provider-communication deleted successfully');
   }
@@ -160,21 +144,18 @@ export const getMaintenanceProviderCommunicationById = catchAsync(
     const paramToString = (p?: string | string[]) => (Array.isArray(p) ? p[0] : p);
     const { id } = req.params;
     let standAloneId: string | undefined;
-    let createdBy: string | undefined;
 
     if (req.user?.role === UserRole.STANDALONE_USER) {
       standAloneId = req.user._id;
     }
     if (req.user?.role === UserRole.TRANSPORT_MANAGER) {
-      createdBy = req.user._id;
       standAloneId = paramToString(req.params?.standAloneId);
     }
     // Call the service method to get the maintenance-provider-communication by ID and get the result
     const result =
       await maintenanceProviderCommunicationServices.getMaintenanceProviderCommunicationById(
         id as string,
-        standAloneId,
-        createdBy
+        standAloneId
       );
     if (!result) throw new Error('Maintenance-provider-communication not found');
     // Send a success response with the retrieved resource data
@@ -207,11 +188,10 @@ export const getAllMaintenanceProviderCommunication = catchAsync(
     };
 
     if (req.user?.role === UserRole.STANDALONE_USER) {
-      query.standAloneId = req.user._id;
+      query.standAloneId = String(req.user._id);
     }
 
     if (req.user?.role === UserRole.TRANSPORT_MANAGER) {
-      query.createdBy = req.user._id;
       query.standAloneId = (req as any).validatedQuery.standAloneId;
     }
     // Call the service method to get multiple maintenance-provider-communications based on query parameters and get the result
