@@ -112,7 +112,7 @@ export const SETTINGS_META: SettingMeta[] = [
   {
     key: "wheelRetorquePolicyAndMonitoring",
     label: "Wheel Re-torque and Monitoring",
-    href: "/dashboard/wheel-retorque-monitoring",
+    href: "/dashboard/wheel-retorque",
   },
   {
     key: "workingTimeDirective",
