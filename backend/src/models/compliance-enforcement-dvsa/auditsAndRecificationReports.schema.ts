@@ -7,10 +7,12 @@ export enum AuditStatus {
   PENDING = 'Pending',
 }
 
-// Define and export an interface representing a AuditsAndRectificationReports document
-export interface IAuditsAndRectificationReports extends Document {
+// Define and export an interface representing a AuditsAndRecificationReports document
+export interface IAuditsAndRecificationReport extends Document {
   auditDate: Date;
-  auditTitle: string;
+  title: string;
+  type?: string;
+  auditDetails?: string;
   status?: AuditStatus;
   responsiblePerson?: string;
   finalizeDate?: Date;
@@ -19,16 +21,22 @@ export interface IAuditsAndRectificationReports extends Document {
   createdBy: mongoose.Types.ObjectId;
 }
 
-// Define the AuditsAndRectificationReports schema
-const AuditsAndRectificationReportsSchema: Schema<IAuditsAndRectificationReports> = new Schema(
+// Define the AuditsAndRecificationReports schema
+const AuditsAndRecificationReportSchema: Schema<IAuditsAndRecificationReport> = new Schema(
   {
     auditDate: {
       type: Date,
-      required: true,
     },
-    auditTitle: {
+    title: {
       type: String,
       required: true,
+    },
+    type: {
+      type: String,
+      required: true,
+    },
+    auditDetails: {
+      type: String,
     },
     status: {
       type: String,
@@ -60,11 +68,11 @@ const AuditsAndRectificationReportsSchema: Schema<IAuditsAndRectificationReports
   { timestamps: true, versionKey: false }
 );
 
-// Create the AuditsAndRectificationReports model
-const AuditsAndRectificationReports = mongoose.model<IAuditsAndRectificationReports>(
-  'AuditsAndRectificationReports',
-  AuditsAndRectificationReportsSchema
+// Create the AuditsAndRecificationReports model
+const AuditsAndRecificationReport = mongoose.model<IAuditsAndRecificationReport>(
+  'AuditsAndRecificationReport',
+  AuditsAndRecificationReportSchema
 );
 
-// Export the AuditsAndRectificationReports model
-export default AuditsAndRectificationReports;
+// Export the AuditsAndRecificationReports model
+export default AuditsAndRecificationReport;

@@ -94,8 +94,8 @@ export { RequestStatus, PlannerStatus, default as Planner, IPlanner } from './ve
 
 // compliance, enforcement & dvsa
 export {
-  default as AuditsAndRectificationReports,
-  IAuditsAndRectificationReports,
+  default as AuditsAndRecificationReports,
+  IAuditsAndRecificationReport,
 } from './compliance-enforcement-dvsa/auditsAndRecificationReports.schema';
 export {
   ComplianceStatus,
@@ -136,10 +136,28 @@ export {
   ITrainingRegister,
   TrainingRegisterStatus,
 } from './training/trainingRegister.schema';
+
+// meeting note
+export {
+  default as MeetingNote,
+  IMeetingNote,
+} from './meeting-note/meetingNote.schema';
+
 export {
   default as TransportManagerTraining,
   ITransportManagerTraining,
 } from './training/transportManagerTraining.schema';
 
+// maintenance provider communication
+export {
+  default as MaintenanceProviderCommunication,
+  IMaintenanceProviderCommunication,
+} from './maintenance/maintenance-provider-communication.schema';
+
+// maintenance provider communication
+export {
+  default as ContactLog,
+  IContactLog,
+} from './contact/contact-log.schema';
 // notification
 export * from './notification.schema';
