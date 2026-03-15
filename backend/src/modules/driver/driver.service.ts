@@ -1,5 +1,6 @@
 // Import the model
 import mongoose from 'mongoose';
+import { UploadedFile } from 'express-fileupload';
 import { IdOrIdsInput, SearchQueryInput } from '../../handlers/common-zod-validator';
 import { DriverTachograph, FuelUsage, Vehicle } from '../../models';
 import DriverModel, { IDriver } from '../../models/vehicle-transport/driver.schema';

@@ -18,8 +18,22 @@ const catchAsync = (fn: RequestHandler) => {
     Promise.resolve(fn(req, res, next)).catch((err) => {
       // Log the error for debugging purposes (optional)
       console.error('Async error:', err);
-      // Send a standardized error response
-      ServerResponse(res, false, 500, 'An unexpected error occurred', null, null, err.message);
+
+      const statusCode =
+        typeof err?.statusCode === 'number' && err.statusCode >= 400 && err.statusCode <= 599
+          ? err.statusCode
+          : 500;
+
+      const message =
+        typeof err?.message === 'string' && err.message.trim().length
+          ? err.message
+          : 'An unexpected error occurred';
+
+      // For non-500 responses we keep the message clean and avoid duplicating an error field.
+      // For 500 responses we still include low-level details in `error` for debugging.
+      const errorDetails = statusCode === 500 ? err?.message : undefined;
+
+      ServerResponse(res, false, statusCode, message, null, null, errorDetails);
     });
   };
 };

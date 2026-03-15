@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import TransportManagerTrainingModel, {
   ITransportManagerTraining,
 } from '../../models/training/transportManagerTraining.schema';
+import { User } from '../../models';
 import { IdOrIdsInput, SearchQueryInput } from '../../handlers/common-zod-validator';
 import {
   CreateTransportManagerTrainingInput,
@@ -19,6 +20,14 @@ const normalizeUpdatePayload = (data: UpdateTransportManagerTrainingInput) => ({
   attachments: data.attachments?.map((attachmentId) => new mongoose.Types.ObjectId(attachmentId)),
 });
 
+const getTransportManagerNameById = async (userId: IdOrIdsInput['id']): Promise<string> => {
+  const user = await User.findById(userId).select('fullName');
+  if (!user?.fullName) {
+    throw new Error('Transport manager profile name not found');
+  }
+  return user.fullName;
+};
+
 /**
  * Service function to create a new transport-manager-training.
  *
@@ -29,8 +38,11 @@ const createTransportManagerTraining = async (
   data: CreateTransportManagerTrainingInput,
   userId: IdOrIdsInput['id']
 ): Promise<Partial<ITransportManagerTraining>> => {
+  const transportManagerName = await getTransportManagerNameById(userId);
+
   const newTransportManagerTraining = new TransportManagerTrainingModel({
     ...normalizeCreatePayload(data),
+    name: transportManagerName,
     createdBy: new mongoose.Types.ObjectId(userId),
   });
   const savedTransportManagerTraining = await newTransportManagerTraining.save();
@@ -49,12 +61,17 @@ const updateTransportManagerTraining = async (
   data: UpdateTransportManagerTrainingInput,
   userId: IdOrIdsInput['id']
 ): Promise<Partial<ITransportManagerTraining | null>> => {
+  const transportManagerName = await getTransportManagerNameById(userId);
+
   const updatedTransportManagerTraining = await TransportManagerTrainingModel.findOneAndUpdate(
     {
       _id: id,
       createdBy: new mongoose.Types.ObjectId(userId),
     },
-    normalizeUpdatePayload(data),
+    {
+      ...normalizeUpdatePayload(data),
+      name: transportManagerName,
+    },
     { new: true }
   );
 

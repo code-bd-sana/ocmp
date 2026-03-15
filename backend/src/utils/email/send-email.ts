@@ -33,7 +33,7 @@ const SendEmail = async ({ to, text, subject, html }: EmailOptions): Promise<boo
   });
 
   const mailOptions = {
-    from: config.EMAIL_USER,
+    from: config.EMAIL_FROM,
     to,
     subject,
     text,

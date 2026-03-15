@@ -13,6 +13,8 @@ export interface ITrainingToolbox extends Document {
   toolboxTitle: string;
   typeOfToolbox: ToolBoxType;
   deliveredBy: mongoose.Types.ObjectId;
+  standAloneId?: mongoose.Types.ObjectId;
+  createdBy?: mongoose.Types.ObjectId;
   notes?: string;
   signed?: boolean;
   followUpNeeded?: boolean;
@@ -48,6 +50,14 @@ const TrainingToolBoxSchema: Schema<ITrainingToolbox> = new Schema(
       type: Schema.Types.ObjectId,
       // required: true,
       ref: 'User', // Reference from User model
+    },
+    standAloneId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+    },
+    createdBy: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
     },
     notes: {
       type: String,

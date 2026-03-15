@@ -110,10 +110,31 @@ const deleteTrainingToolbox = async (
  * @returns {Promise<Partial<ITrainingToolbox>>} - The retrieved training-toolbox.
  */
 const getTrainingToolboxById = async (
-  id: IdOrIdsInput['id']
+  id: IdOrIdsInput['id'],
+  requesterId?: IdOrIdsInput['id'],
+  standAloneId?: string
 ): Promise<Partial<ITrainingToolbox | null>> => {
-  const trainingToolbox = await TrainingToolboxModel.findById(id);
-  return trainingToolbox;
+  const filter: any = { _id: id };
+
+  if (standAloneId || requesterId) {
+    const ownerObjectId = new mongoose.Types.ObjectId(String(standAloneId || requesterId));
+    filter.$or = [{ standAloneId: ownerObjectId }, { createdBy: ownerObjectId }];
+  }
+
+  const trainingToolbox = await TrainingToolboxModel.findOne(filter).populate({
+    path: 'driverId',
+    select: 'fullName',
+  });
+
+  if (!trainingToolbox) return null;
+
+  const toolboxObj: any = trainingToolbox.toObject();
+  if (toolboxObj.driverId && typeof toolboxObj.driverId === 'object') {
+    toolboxObj.driverName = toolboxObj.driverId.fullName || null;
+    toolboxObj.driverId = toolboxObj.driverId._id;
+  }
+
+  return toolboxObj;
 };
 
 /**
@@ -129,7 +150,7 @@ const getManyTrainingToolbox = async (
     requesterRole?: UserRole;
   }
 ): Promise<{
-  trainingToolboxs: Partial<ITrainingToolbox>[];
+  toolboxes: Partial<ITrainingToolbox>[];
   totalData: number;
   totalPages: number;
 }> => {
@@ -152,38 +173,41 @@ const getManyTrainingToolbox = async (
     ];
   }
 
-  const ownerIds = new Set<string>();
+  let effectiveOwnerId: string | undefined;
 
+  // For standalone users, restrict to their own data. For transport managers, restrict to their own data and any data under the same standAloneId (if provided).
   if (requesterRole === UserRole.STANDALONE_USER && requesterId) {
-    ownerIds.add(String(requesterId));
+    effectiveOwnerId = String(requesterId);
   }
 
-  if (requesterRole === UserRole.TRANSPORT_MANAGER && requesterId) {
-    ownerIds.add(String(requesterId));
-
-    if (standAloneId) {
-      ownerIds.add(String(standAloneId));
-    }
+  if (requesterRole === UserRole.TRANSPORT_MANAGER && standAloneId) {
+    effectiveOwnerId = String(standAloneId);
   }
 
-  if (ownerIds.size > 0) {
-    const ownerObjectIds = Array.from(ownerIds).map((id) => new mongoose.Types.ObjectId(id));
+  if (effectiveOwnerId) {
+    const ownerObjectId = new mongoose.Types.ObjectId(effectiveOwnerId);
+
+    matchStage.$and = matchStage.$and || [];
+    matchStage.$and.push({
+      $or: [{ standAloneId: ownerObjectId }, { createdBy: ownerObjectId }],
+    });
 
     const accessibleDrivers = await Driver.find({
-      $or: [{ standAloneId: { $in: ownerObjectIds } }, { createdBy: { $in: ownerObjectIds } }],
+      $or: [{ standAloneId: ownerObjectId }, { createdBy: ownerObjectId }],
     })
       .select('_id')
       .lean();
 
     const accessibleDriverIds = accessibleDrivers.map((driver) => driver._id);
 
-    matchStage.driverId = { $in: accessibleDriverIds };
+    matchStage.$and.push({ driverId: { $in: accessibleDriverIds } });
   }
 
   const skipItems = (pageNo - 1) * showPerPage;
 
   const result = await TrainingToolboxModel.aggregate([
     { $match: matchStage },
+    // Lookup deliveredBy user
     {
       $lookup: {
         from: 'users',
@@ -193,6 +217,16 @@ const getManyTrainingToolbox = async (
       },
     },
     { $unwind: { path: '$deliveredByUser', preserveNullAndEmptyArrays: true } },
+    // Lookup driver for driverName
+    {
+      $lookup: {
+        from: 'drivers',
+        localField: 'driverId',
+        foreignField: '_id',
+        as: 'driverObj',
+      },
+    },
+    { $unwind: { path: '$driverObj', preserveNullAndEmptyArrays: true } },
     {
       $addFields: {
         deliveredBy: {
@@ -204,11 +238,13 @@ const getManyTrainingToolbox = async (
             null,
           ],
         },
+        driverName: '$driverObj.fullName',
       },
     },
     {
       $project: {
         deliveredByUser: 0,
+        driverObj: 0,
       },
     },
     {
@@ -219,11 +255,11 @@ const getManyTrainingToolbox = async (
     },
   ]);
 
-  const trainingToolboxs = result[0].data;
+  const toolboxes = result[0].data;
   const totalData = result[0].totalCount[0]?.count || 0;
   const totalPages = Math.ceil(totalData / showPerPage);
 
-  return { trainingToolboxs, totalData, totalPages };
+  return { toolboxes, totalData, totalPages };
 };
 
 export const trainingToolboxServices = {
@@ -233,4 +269,3 @@ export const trainingToolboxServices = {
   getTrainingToolboxById,
   getManyTrainingToolbox,
 };
-

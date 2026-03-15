@@ -32,10 +32,13 @@ const baseTrainingToolboxFields = {
     .max(200, 'toolboxTitle is too long')
     .trim(),
   typeOfToolbox: z.nativeEnum(ToolBoxType),
-  deliveredBy: z
-    .string()
-    .refine(isMongoId, { message: 'deliveredBy must be a valid MongoDB ObjectId' })
-    .optional(),
+  deliveredBy: z.preprocess(
+    (val) => (val === '' || val === null ? undefined : val),
+    z
+      .string()
+      .refine(isMongoId, { message: 'deliveredBy must be a valid MongoDB ObjectId' })
+      .optional()
+  ),
   notes: z.string().trim().optional(),
   signed: z.boolean().optional(),
   followUpNeeded: z.boolean().optional(),
@@ -151,4 +154,3 @@ export const validateTrainingToolboxIdParam = validateParams(zodTrainingToolboxI
 export const validateTrainingToolboxAndManagerIdParam = validateParams(
   zodTrainingToolboxAndManagerIdParamSchema
 );
-

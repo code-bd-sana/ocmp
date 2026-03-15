@@ -44,7 +44,10 @@ export function sanitizeKey(key: string): string {
 }
 
 /**
- * Generate unique object key with optional folder prefix
+ * Generate unique object key with optional folder/category prefix
+ * @param originalName Original file name (for extension)
+ * @param folderPrefix Optional folder/category name (e.g. 'images', 'docs')
+ * @returns S3 object key with folder/category if provided
  */
 function generateKey(originalName: string = '', folderPrefix: string = ''): string {
   const ext = path.extname(originalName || '') || '';
@@ -61,19 +64,25 @@ function generateKey(originalName: string = '', folderPrefix: string = ''): stri
 // ────────────────────────────────────────────────
 
 /**
- * Upload buffer with optional folder prefix
+ * Upload buffer to S3 with optional folder/category (e.g. 'images', 'docs')
+ * @param buffer File buffer
+ * @param key Optional S3 key (overrides folder/category)
+ * @param contentType Optional MIME type
+ * @param folderPrefix Optional folder/category name
+ * @returns Upload result with S3 location
  */
 export async function uploadBuffer(
   buffer: Buffer,
   key?: string,
   contentType?: string,
-  folderPrefix: string = ''
+  folderPrefix: string = '' // Use as category
 ): Promise<{ Bucket: string; Key: string; ETag: string; Location: string }> {
   if (!bucket) {
     const err = new Error('S3 bucket not configured');
     (err as any).code = 500;
     throw err;
   }
+  // If key is provided, it overrides folder/category
   const finalKey = key ? sanitizeKey(key) : generateKey('', folderPrefix);
   const upload = new Upload({
     client: s3Client,
@@ -94,19 +103,25 @@ export async function uploadBuffer(
 }
 
 /**
- * Upload stream with optional folder prefix
+ * Upload stream to S3 with optional folder/category (e.g. 'images', 'docs')
+ * @param stream File stream
+ * @param key Optional S3 key (overrides folder/category)
+ * @param contentType Optional MIME type
+ * @param folderPrefix Optional folder/category name
+ * @returns Upload result with S3 location
  */
 export async function uploadStream(
   stream: Readable,
   key?: string,
   contentType?: string,
-  folderPrefix: string = ''
+  folderPrefix: string = '' // Use as category
 ): Promise<{ Bucket: string; Key: string; ETag: string; Location: string }> {
   if (!bucket) {
     const err = new Error('S3 bucket not configured');
     (err as any).code = 500;
     throw err;
   }
+  // If key is provided, it overrides folder/category
   const finalKey = key ? sanitizeKey(key) : generateKey('', folderPrefix);
   const upload = new Upload({
     client: s3Client,
@@ -182,7 +197,10 @@ export interface UploadBufferItem {
 }
 
 /**
- * Upload multiple buffers – supports folderPrefix per item
+ * Upload multiple buffers to S3 – supports folder/category per item
+ * @param items Array of buffers with optional folderPrefix/category
+ * @param concurrency Number of parallel uploads
+ * @returns Array of upload results
  */
 export async function uploadBuffers(
   items: UploadBufferItem[],
@@ -202,6 +220,7 @@ export async function uploadBuffers(
     while (queue.length > 0) {
       const { item, ix } = queue.shift()!;
       try {
+        // If item.key is provided, it overrides folder/category
         const safeKey = sanitizeKey(
           item.key || generateKey(item.originalName || '', item.folderPrefix || '')
         );
@@ -243,7 +262,10 @@ export interface UploadStreamItem {
 }
 
 /**
- * Upload multiple streams – supports folderPrefix per item
+ * Upload multiple streams to S3 – supports folder/category per item
+ * @param items Array of streams with optional folderPrefix/category
+ * @param concurrency Number of parallel uploads
+ * @returns Array of upload results
  */
 export async function uploadStreams(
   items: UploadStreamItem[],
@@ -263,6 +285,7 @@ export async function uploadStreams(
     while (queue.length > 0) {
       const { item, ix } = queue.shift()!;
       try {
+        // If item.key is provided, it overrides folder/category
         const safeKey = sanitizeKey(
           item.key || generateKey(item.originalName || '', item.folderPrefix || '')
         );

@@ -59,7 +59,7 @@ export const SETTINGS_META: SettingMeta[] = [
   {
     key: "trainingAndToolboxTalks",
     label: "Training and Toolbox Talks",
-    href: "/dashboard/training",
+    href: "/dashboard/training-toolbox",
   },
   {
     key: "renewalsTracker",
@@ -90,7 +90,7 @@ export const SETTINGS_META: SettingMeta[] = [
   {
     key: "PG9sPG13FGClearanceInvesting",
     label: "PG9s PG13 FG Clearance Investigation and TC Reporting",
-    href: "/dashboard/pg9s",
+    href: "/dashboard/pg9AndPg13Plan",
   },
   { key: "contactLog", label: "Contact log", href: "/dashboard/contact-log" },
   {
