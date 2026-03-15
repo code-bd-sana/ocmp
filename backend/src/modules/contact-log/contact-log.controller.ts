@@ -46,7 +46,6 @@ export const createContactLogAsStandalone = catchAsync(
   async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user!._id;
     req.body.createdBy = new mongoose.Types.ObjectId(userId);
-    req.body.standAloneId = new mongoose.Types.ObjectId(userId);
     // Call the service method to create a new contact-log and get the result
     const result = await contactLogServices.createContactLog(req.body);
     if (!result) throw new Error('Failed to create contact-log');
@@ -66,17 +65,17 @@ export const createContactLogAsStandalone = catchAsync(
 export const updateContactLog = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
   const paramToString = (p?: string | string[]) => (Array.isArray(p) ? p[0] : p);
   const id = paramToString(req.params?.id);
-  const standAloneId = paramToString(req.params?.standAloneId);
+  const accessId =
+    req.user!.role === UserRole.TRANSPORT_MANAGER
+      ? (paramToString(req.params.standAloneId) as string)
+      : req.user!._id;
   // Call the service method to update the contact-log by ID and get the result
   const result = await contactLogServices.updateContactLog(
     id as string,
     req.body,
-    req.user!._id,
-    standAloneId
+    accessId
   );
-  if (!result) {
-    return ServerResponse(res, false, 404, 'Contact-log not found or you do not have permission');
-  }
+
   // Send a success response with the updated contact-log data
   ServerResponse(res, true, 200, 'Contact-log updated successfully', result);
 });
@@ -92,17 +91,13 @@ export const updateContactLog = catchAsync(async (req: AuthenticatedRequest, res
 export const deleteContactLog = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
   const paramToString = (p?: string | string[]) => (Array.isArray(p) ? p[0] : p);
   const id = paramToString(req.params.id);
-  const standAloneId = paramToString(req.params.standAloneId);
+  const accessId =
+    req.user!.role === UserRole.TRANSPORT_MANAGER
+      ? (paramToString(req.params.standAloneId) as string)
+      : req.user!._id;
   // Call the service method to delete the contact-log by ID
-  
-  const result = await contactLogServices.deleteContactLog(
-    id as string,
-    req.user!._id,
-    standAloneId
-  );
-  if (!result) {
-    return ServerResponse(res, false, 404, 'Contact-log not found or you do not have permission');
-  }
+  await contactLogServices.deleteContactLog(id as string, accessId);
+
   // Send a success response confirming the deletion
   ServerResponse(res, true, 200, 'Contact-log deleted successfully');
 });
@@ -118,18 +113,16 @@ export const deleteContactLog = catchAsync(async (req: AuthenticatedRequest, res
 export const getContactLogById = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
   const paramToString = (p?: string | string[]) => (Array.isArray(p) ? p[0] : p);
   const { id } = req.params;
-  let standAloneId: string | undefined;
-  let createdBy: string | undefined;
+  let accessId: string | undefined;
 
   if (req.user?.role === UserRole.STANDALONE_USER) {
-    standAloneId = req.user._id;
+    accessId = req.user._id;
   }
   if (req.user?.role === UserRole.TRANSPORT_MANAGER) {
-    createdBy = req.user._id;
-    standAloneId = paramToString(req.params?.standAloneId);
+    accessId = paramToString(req.params?.standAloneId);
   }
   // Call the service method to get the contact-log by ID and get the result
-  const result = await contactLogServices.getContactLogById(id as string, standAloneId, createdBy);
+  const result = await contactLogServices.getContactLogById(id as string, accessId);
   if (!result) throw new Error('Contact-log not found');
   // Send a success response with the retrieved resource data
   ServerResponse(res, true, 200, 'Contact-log retrieved successfully', result);
@@ -153,11 +146,10 @@ export const getManyContactLog = catchAsync(async (req: AuthenticatedRequest, re
   };
 
   if (req.user?.role === UserRole.STANDALONE_USER) {
-    query.standAloneId = req.user._id;
+    query.standAloneId = String(req.user._id);
   }
 
   if (req.user?.role === UserRole.TRANSPORT_MANAGER) {
-    query.createdBy = req.user._id;
     query.standAloneId = (req as any).validatedQuery.standAloneId;
   }
 

@@ -74,6 +74,7 @@ router.patch(
   '/update-as-manager/:id/:standAloneId',
   authorizedRoles([UserRole.TRANSPORT_MANAGER]),
   validateClientForManagerMiddleware,
+  validateUpdateContactLogIds,
   validateUpdateContactLog,
   updateContactLog
 );
@@ -126,7 +127,7 @@ router.delete('/:id', authorizedRoles([UserRole.STANDALONE_USER]), validateId, d
  * @param {function} validation - ['validateSearchQueries']
  * @param {function} controller - ['getManyContactLog']
  */
-(router.get(
+router.get(
   '/get-all',
   authorizedRoles([UserRole.STANDALONE_USER, UserRole.TRANSPORT_MANAGER]),
   (req: AuthenticatedRequest, res, next) => {
@@ -150,22 +151,23 @@ router.delete('/:id', authorizedRoles([UserRole.STANDALONE_USER]), validateId, d
     return validateSearchQueries(req, res, next);
   },
   getManyContactLog
-),
-  /**
-   * @route GET /api/v1/contact-log/:id/:standAloneId
-   * @description Get a contact-log by ID
-   * @access Private (Transport Manager or Standalone User)
-   * @param {IdOrIdsInput['id']} id - The ID of the contact-log to retrieve
-   * @param {function} validation - ['validateGetContactLogByIdParams']
-   * @param {function} controller - ['getContactLogById']
-   */
-  router.get(
-    '/:id/:standAloneId',
-    authorizedRoles([UserRole.TRANSPORT_MANAGER]),
-    validateClientForManagerMiddleware,
-    validateGetContactLogByIdParams,
-    getContactLogById
-  ));
+);
+
+/**
+ * @route GET /api/v1/contact-log/:id/:standAloneId
+ * @description Get a contact-log by ID
+ * @access Private (Transport Manager or Standalone User)
+ * @param {IdOrIdsInput['id']} id - The ID of the contact-log to retrieve
+ * @param {function} validation - ['validateGetContactLogByIdParams']
+ * @param {function} controller - ['getContactLogById']
+ */
+router.get(
+  '/:id/:standAloneId',
+  authorizedRoles([UserRole.TRANSPORT_MANAGER]),
+  validateClientForManagerMiddleware,
+  validateGetContactLogByIdParams,
+  getContactLogById
+);
 
 /**
  * @route GET /api/v1/contact-log/:id
