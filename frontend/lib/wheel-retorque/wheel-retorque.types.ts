@@ -1,13 +1,3 @@
-//   vehicleId: mongoose.Types.ObjectId;
-//   dateChanged?: Date;
-//   tyreSize?: string;
-//   tyreLocation?: string;
-//   reTorqueDue?: Date;
-//   reTorqueCompleted?: Date;
-//   technician?: string;
-//   standAloneId?: mongoose.Types.ObjectId;
-//   createdBy: mongoose.Types.ObjectId;
-
 export interface WheelReTorqueRow {
   _id: string;
   vehicleId: string;

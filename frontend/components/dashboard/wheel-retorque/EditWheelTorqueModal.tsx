@@ -1,16 +1,27 @@
 "use client";
-
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { FieldConfig } from "@/components/universal-form/form.types";
+import {
+  UpdateWheelReTorqueInput,
+  WheelReTorqueRow,
+} from "@/lib/wheel-retorque/wheel-retorque.types";
+import { VehicleAction } from "@/service/vehicle";
+import { useEffect, useState } from "react";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Loader2 } from "lucide-react";
+import z from "zod";
 import UniversalForm from "@/components/universal-form/UniversalForm";
 
-import { CreateWheelReTorqueInput } from "@/lib/wheel-retorque/wheel-retorque.types";
-import { VehicleAction } from "@/service/vehicle";
-import { Loader2 } from "lucide-react";
-import { useEffect, useState } from "react";
-import z from "zod";
+// vehicleId: mongoose.Types.ObjectId;
+// dateChanged?: Date;
+// tyreSize?: string;
+// tyreLocation?: string;
+// reTorqueDue?: Date;
+// reTorqueCompleted?: Date;
+// technician?: string;
+// standAloneId?: mongoose.Types.ObjectId;
+// createdBy: mongoose.Types.ObjectId;
 
-const addWheelTorque = z.object({
+const editWheelTorqueSchema = z.object({
   vehicleId: z.string().min(1, "Vehicle ID is required"),
   dateChanged: z
     .string()
@@ -35,21 +46,35 @@ const addWheelTorque = z.object({
   technician: z.string().trim().optional(),
 });
 
-type AddWheelTorqueForm = z.infer<typeof addWheelTorque>;
+type EditWheelTorqueForm = z.infer<typeof editWheelTorqueSchema>;
 
-interface AddWheelTorqueModalProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSubmit: (data: CreateWheelReTorqueInput) => Promise<void> | void;
-  standAloneId: string;
+/** Format a date string/Date to YYYY-MM-DD for form defaults */
+function toDateInput(value?: string | Date): string {
+  if (!value) return "";
+  try {
+    return new Date(value).toISOString().split("T")[0];
+  } catch {
+    return "";
+  }
 }
 
-export default function AddWheelTorqueModal({
+interface EditWheelTorqueModalProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSubmit: (data: UpdateWheelReTorqueInput) => Promise<void> | void;
+  wheelRetorque: WheelReTorqueRow | null;
+  standAloneId: string;
+  loading: boolean;
+}
+
+export default function EditWheelTorqueModal({
   open,
   onOpenChange,
   onSubmit,
+  wheelRetorque,
   standAloneId,
-}: AddWheelTorqueModalProps) {
+  loading,
+}: EditWheelTorqueModalProps) {
   const [vehicleOptions, setVehicleOptions] = useState<
     { label: string; value: string }[]
   >([]);
@@ -85,7 +110,7 @@ export default function AddWheelTorqueModal({
     };
   }, [open, standAloneId]);
 
-  const fields: FieldConfig<AddWheelTorqueForm>[] = [
+  const fields: FieldConfig<EditWheelTorqueForm>[] = [
     {
       name: "vehicleId",
       label: "Vehicle",
@@ -97,42 +122,36 @@ export default function AddWheelTorqueModal({
       name: "dateChanged",
       label: "Date Changed",
       type: "date",
-      placeholder: "Select date changed",
     },
     {
       name: "tyreSize",
       label: "Tyre Size",
       type: "text",
-      placeholder: "Enter tyre size",
     },
     {
       name: "tyreLocation",
       label: "Tyre Location",
       type: "text",
-      placeholder: "Enter tyre location",
     },
     {
       name: "reTorqueDue",
       label: "Re-Torque Due",
       type: "date",
-      placeholder: "Select re-torque due date",
     },
     {
       name: "reTorqueCompleted",
       label: "Re-Torque Completed",
       type: "date",
-      placeholder: "Select re-torque completed date",
     },
     {
       name: "technician",
       label: "Technician",
       type: "text",
-      placeholder: "Enter technician name",
     },
   ];
 
-  const handleSubmit = async (data: AddWheelTorqueForm) => {
-    const payload: CreateWheelReTorqueInput = {
+  const handleSubmit = async (data: EditWheelTorqueForm) => {
+    const payload: UpdateWheelReTorqueInput = {
       ...data,
       dateChanged: data.dateChanged
         ? new Date(data.dateChanged).toISOString()
@@ -143,7 +162,6 @@ export default function AddWheelTorqueModal({
       reTorqueCompleted: data.reTorqueCompleted
         ? new Date(data.reTorqueCompleted).toISOString()
         : undefined,
-      standAloneId,
     };
     await onSubmit(payload);
   };
@@ -155,30 +173,36 @@ export default function AddWheelTorqueModal({
         className="max-h-[90vh] overflow-y-auto sm:max-w-2xl"
       >
         <DialogTitle className="text-primary mb-4 text-xl font-bold">
-          Add Wheel Torque
+          Edit Wheel Torque
         </DialogTitle>
-        {vehiclesLoading ? (
+
+        {loading || vehiclesLoading ? (
           <div className="flex h-40 items-center justify-center">
             <Loader2 className="text-primary h-8 w-8 animate-spin" />
           </div>
-        ) : (
-          <UniversalForm<AddWheelTorqueForm>
-            title="Wheel Torque Details"
+        ) : wheelRetorque ? (
+          <UniversalForm<EditWheelTorqueForm>
+            title="Wheel Torque Policy Details"
             fields={fields}
-            schema={addWheelTorque}
+            schema={editWheelTorqueSchema}
             defaultValues={{
-              vehicleId: "",
-              dateChanged: "",
-              tyreSize: "",
-              tyreLocation: "",
-              reTorqueDue: "",
-              reTorqueCompleted: "",
-              technician: "",
+              vehicleId: wheelRetorque?.vehicleId || "",
+              dateChanged: toDateInput(wheelRetorque?.dateChanged),
+              tyreSize: wheelRetorque?.tyreSize || "",
+              tyreLocation: wheelRetorque?.tyreLocation || "",
+              reTorqueDue: toDateInput(wheelRetorque?.reTorqueDue),
+              reTorqueCompleted: toDateInput(wheelRetorque?.reTorqueCompleted),
             }}
             onSubmit={handleSubmit}
-            submitText="Create Wheel Torque"
+            submitText="Update Wheel Torque"
             setOpen={onOpenChange}
           />
+        ) : (
+          <div className="flex h-40 items-center justify-center">
+            <p className="text-muted-foreground">
+              No wheel torque data available
+            </p>
+          </div>
         )}
       </DialogContent>
     </Dialog>
