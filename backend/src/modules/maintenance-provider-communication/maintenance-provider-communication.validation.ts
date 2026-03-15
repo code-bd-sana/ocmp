@@ -87,7 +87,10 @@ const zodUpdateMaintenanceProviderCommunicationSchema =
       details: true,
     })
     .partial()
-    .strict();
+    .strict()
+    .refine((data) => Object.keys(data).length > 0, {
+      message: 'At least one field must be provided for update',
+    });
 
 export type UpdateMaintenanceProviderCommunicationInput = z.infer<
   typeof zodUpdateMaintenanceProviderCommunicationSchema

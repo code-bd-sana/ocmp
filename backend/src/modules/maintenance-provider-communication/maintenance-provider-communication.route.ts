@@ -17,6 +17,7 @@ import {
   validateCreateMaintenanceProviderCommunicationAsStandalone,
   validateDeleteMaintenanceProviderCommunicationIds,
   validateGetMaintenanceProviderCommunicationByIdParams,
+  validateSearchMaintenanceProviderCommunicationQueries,
   validateUpdateMaintenanceProviderCommunication,
   validateUpdateMaintenanceProviderCommunicationIds,
 } from './maintenance-provider-communication.validation';
@@ -25,7 +26,6 @@ import authorizedRoles from '../../middlewares/authorized-roles';
 import { UserRole } from '../../models';
 import { validateClientForManagerMiddleware } from '../../middlewares/validate-client-for-manager';
 import isAuthorized, { AuthenticatedRequest } from '../../middlewares/is-authorized';
-import { validateSearchMeetingNoteQueries } from '../meeting-note/meeting-note.validation';
 import ServerResponse from '../../helpers/responses/custom-response';
 
 // Initialize router
@@ -154,7 +154,7 @@ router.get(
   },
   (req: AuthenticatedRequest, res, next) => {
     if (req.user!.role === UserRole.TRANSPORT_MANAGER) {
-      return validateSearchMeetingNoteQueries(req, res, next);
+      return validateSearchMaintenanceProviderCommunicationQueries(req, res, next);
     }
     return validateSearchQueries(req, res, next);
   },
@@ -171,6 +171,7 @@ router.get(
 router.get(
   '/:id/:standAloneId',
   authorizedRoles([UserRole.TRANSPORT_MANAGER]),
+  validateClientForManagerMiddleware,
   validateGetMaintenanceProviderCommunicationByIdParams,
   getMaintenanceProviderCommunicationById
 );

@@ -3,14 +3,29 @@ import mongoose from 'mongoose';
 import MaintenanceProviderCommunicationModel, {
   IMaintenanceProviderCommunication,
 } from '../../models/maintenance/maintenance-provider-communication.schema';
-import { IdOrIdsInput, SearchQueryInput } from '../../handlers/common-zod-validator';
+import { IdOrIdsInput } from '../../handlers/common-zod-validator';
 import {
   CreateMaintenanceProviderCommunicationInput,
   SearchMaintenanceProviderCommunicationQueryInput,
   UpdateMaintenanceProviderCommunicationInput,
 } from './maintenance-provider-communication.validation';
 
-const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const buildAccessFilters = (id?: IdOrIdsInput['id']): Record<string, unknown>[] => {
+  if (!id) {
+    return [];
+  }
+
+  const normalizedId = String(id);
+  const candidates: Array<string | mongoose.Types.ObjectId> = [normalizedId];
+  if (mongoose.Types.ObjectId.isValid(normalizedId)) {
+    candidates.unshift(new mongoose.Types.ObjectId(normalizedId));
+  }
+
+  return [
+    { createdBy: { $in: candidates } },
+    { standAloneId: { $in: candidates } },
+  ];
+};
 
 /**
  * Service function to create a new maintenance-provider-communication.
@@ -38,16 +53,24 @@ const updateMaintenanceProviderCommunication = async (
   id: IdOrIdsInput['id'],
   data: UpdateMaintenanceProviderCommunicationInput,
   accessId: IdOrIdsInput['id']
-): Promise<Partial<IMaintenanceProviderCommunication | null>> => {
-  const objectId = new mongoose.Types.ObjectId(accessId);
+): Promise<Partial<IMaintenanceProviderCommunication>> => {
+  const accessFilters: Record<string, unknown>[] = buildAccessFilters(accessId);
 
   // Proceed to update the maintenance-provider-communication
   const updatedMaintenanceProviderCommunication =
     await MaintenanceProviderCommunicationModel.findOneAndUpdate(
-      { _id: id, $or: [{ createdBy: objectId }, { standAloneId: objectId }] },
+      {
+        _id: id,
+        ...(accessFilters.length ? { $or: accessFilters } : {}),
+      },
       data,
       { returnDocument: 'after' }
     );
+
+  if (!updatedMaintenanceProviderCommunication) {
+    throw new Error('Maintenance-provider-communication not found or access denied');
+  }
+
   return updatedMaintenanceProviderCommunication;
 };
 
@@ -59,39 +82,19 @@ const updateMaintenanceProviderCommunication = async (
  */
 const deleteMaintenanceProviderCommunication = async (
   id: IdOrIdsInput['id'],
-  userId: IdOrIdsInput['id'],
-  standAloneId: IdOrIdsInput['id']
-): Promise<Partial<IMaintenanceProviderCommunication | null>> => {
-  const accessFilters: Record<string, unknown>[] = [];
-
-  if (userId) {
-    accessFilters.push({ createdBy: userId });
-    accessFilters.push({ standAloneId: userId });
-
-    if (mongoose.Types.ObjectId.isValid(userId)) {
-      const userObjectId = new mongoose.Types.ObjectId(userId);
-      accessFilters.push({ createdBy: userObjectId });
-      accessFilters.push({ standAloneId: userObjectId });
-    }
-  }
-
-  if (standAloneId) {
-    accessFilters.push({ standAloneId });
-    accessFilters.push({ createdBy: standAloneId });
-
-    if (mongoose.Types.ObjectId.isValid(standAloneId)) {
-      const standAloneObjectId = new mongoose.Types.ObjectId(standAloneId);
-      accessFilters.push({ standAloneId: standAloneObjectId });
-      accessFilters.push({ createdBy: standAloneObjectId });
-    }
-  }
+  accessId: IdOrIdsInput['id']
+): Promise<void> => {
+  const accessFilters: Record<string, unknown>[] = buildAccessFilters(accessId);
 
   const deletedMaintenanceProviderCommunication =
     await MaintenanceProviderCommunicationModel.findOneAndDelete({
       _id: id,
-      $or: accessFilters,
+      ...(accessFilters.length ? { $or: accessFilters } : {}),
     });
-  return deletedMaintenanceProviderCommunication;
+
+  if (!deletedMaintenanceProviderCommunication) {
+    throw new Error('Maintenance-provider-communication not found or access denied');
+  }
 };
 
 /**
@@ -105,17 +108,10 @@ const getMaintenanceProviderCommunicationById = async (
   standAloneId?: IdOrIdsInput['id'],
   createdBy?: IdOrIdsInput['id']
 ): Promise<Partial<IMaintenanceProviderCommunication | null>> => {
-  const accessFilters: Record<string, mongoose.Types.ObjectId>[] = [];
-
-  if (standAloneId) {
-    const standAloneObjectId = new mongoose.Types.ObjectId(standAloneId);
-    accessFilters.push({ standAloneId: standAloneObjectId });
-    accessFilters.push({ createdBy: standAloneObjectId });
-  }
-
-  if (createdBy) {
-    accessFilters.push({ createdBy: new mongoose.Types.ObjectId(createdBy) });
-  }
+  const accessFilters: Record<string, unknown>[] = [
+    ...buildAccessFilters(standAloneId),
+    ...buildAccessFilters(createdBy),
+  ];
 
   const filter = accessFilters.length
     ? {
@@ -124,7 +120,7 @@ const getMaintenanceProviderCommunicationById = async (
       }
     : { _id: id };
 
-  const maintenanceProviderCommunication = await MaintenanceProviderCommunicationModel.findById(id);
+  const maintenanceProviderCommunication = await MaintenanceProviderCommunicationModel.findOne(filter);
   return maintenanceProviderCommunication;
 };
 
@@ -157,15 +153,15 @@ const getAllMaintenanceProviderCommunication = async (
   }
 
   if (standAloneId) {
+    const standaloneFilters = buildAccessFilters(standAloneId);
+
     andConditions.push({
       $or: [
-        { standAloneId: new mongoose.Types.ObjectId(standAloneId) },
-        { createdBy: new mongoose.Types.ObjectId(standAloneId) },
-        { createdBy: new mongoose.Types.ObjectId(createdBy!) },
+        ...standaloneFilters,
       ],
     });
   } else if (createdBy) {
-    andConditions.push({ createdBy: new mongoose.Types.ObjectId(createdBy) });
+    andConditions.push({ $or: buildAccessFilters(createdBy) });
   }
 
   const searchFilter: any = {};
