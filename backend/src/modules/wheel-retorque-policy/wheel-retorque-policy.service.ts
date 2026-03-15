@@ -1,5 +1,9 @@
 import mongoose from 'mongoose';
-import { IWheelRetorquePolicyMonitoring, Vehicle, WheelRetorquePolicyMonitoring } from '../../models';
+import {
+  IWheelRetorquePolicyMonitoring,
+  Vehicle,
+  WheelRetorquePolicyMonitoring,
+} from '../../models';
 import {
   CreateWheelRetorquePolicyMonitoringAsManagerInput,
   CreateWheelRetorquePolicyMonitoringAsStandAloneInput,
@@ -15,10 +19,7 @@ const buildAccessFilter = (accessId: string): Record<string, unknown> => {
   }
 
   return {
-    $or: [
-      { createdBy: { $in: candidates } },
-      { standAloneId: { $in: candidates } },
-    ],
+    $or: [{ createdBy: { $in: candidates } }, { standAloneId: { $in: candidates } }],
   };
 };
 
@@ -57,7 +58,9 @@ const createWheelRetorquePolicyMonitoringAsManager = async (
 };
 
 const createWheelRetorquePolicyMonitoringAsStandAlone = async (
-  data: CreateWheelRetorquePolicyMonitoringAsStandAloneInput & { createdBy: mongoose.Types.ObjectId }
+  data: CreateWheelRetorquePolicyMonitoringAsStandAloneInput & {
+    createdBy: mongoose.Types.ObjectId;
+  }
 ): Promise<IWheelRetorquePolicyMonitoring> => {
   await verifyVehicleUnderStandalone(data.vehicleId, data.createdBy.toString());
 
@@ -168,7 +171,8 @@ const updateWheelRetorquePolicyMonitoring = async (
   }
 
   const updateFields: Record<string, unknown> = {};
-  if (data.vehicleId !== undefined) updateFields.vehicleId = new mongoose.Types.ObjectId(data.vehicleId);
+  if (data.vehicleId !== undefined)
+    updateFields.vehicleId = new mongoose.Types.ObjectId(data.vehicleId);
   if (data.dateChanged !== undefined) updateFields.dateChanged = new Date(data.dateChanged);
   if (data.tyreSize !== undefined) updateFields.tyreSize = data.tyreSize;
   if (data.tyreLocation !== undefined) updateFields.tyreLocation = data.tyreLocation;

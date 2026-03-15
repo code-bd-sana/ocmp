@@ -49,6 +49,7 @@ const CLIENT_MODULES: { slug: string; label: string }[] = [
   { slug: "pg9AndPg13Plan", label: "PG9 and PG13 Plan" },
   { slug: "transport-manager", label: "Transport Manager" },
   { slug: "fuel-usage", label: "Fuel Usage" },
+  {slug: "wheel-retorque", label: "Wheel Re-torque Policy" },
   { slug: "working-time-directive", label: "Working Time Directive" },
   { slug: "policy-review-tracker", label: "Policy Review Tracker" },
   { slug: "subcontractor-details", label: "Subcontractor Details" },
