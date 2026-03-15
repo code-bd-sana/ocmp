@@ -1,6 +1,7 @@
 "use client";
 
-import { use, useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 import { toast } from "sonner";
 
 import MeetingNoteHeader from "@/components/dashboard/meeting-note/MeetingNoteHeader";
@@ -30,14 +31,9 @@ import {
   MeetingNoteAction,
 } from "@/service/maintenance-meeting";
 
-interface PageProps {
-  params: Promise<{ standAloneId: string }>;
-}
-
-export default function MaintenanceMeetingStandAlonePage({
-  params,
-}: PageProps) {
-  const { standAloneId } = use(params);
+export default function MaintenanceMeetingStandAlonePage() {
+  const pathname = usePathname();
+  const standAloneId = pathname.split("/")[3] || "";
 
   const [meetingRows, setMeetingRows] = useState<MeetingNoteRow[]>([]);
   const [meetingSearchQuery, setMeetingSearchQuery] = useState("");
@@ -75,22 +71,47 @@ export default function MaintenanceMeetingStandAlonePage({
   const maintenanceDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
+  const activeStandAloneIdRef = useRef(standAloneId);
+
+  useEffect(() => {
+    activeStandAloneIdRef.current = standAloneId;
+  }, [standAloneId]);
+
+  useEffect(() => {
+    // Reset visible rows immediately when switching clients.
+    setMeetingRows([]);
+    setMaintenanceRows([]);
+  }, [standAloneId]);
 
   const fetchMeetingNotes = useCallback(
     async (search?: string) => {
+      const requestedStandAloneId = standAloneId;
+
+      if (!standAloneId) {
+        setMeetingRows([]);
+        setMeetingLoading(false);
+        return;
+      }
+
       try {
         setMeetingLoading(true);
-        const res = await MeetingNoteAction.getMany(standAloneId, {
+        const res = await MeetingNoteAction.getMany(requestedStandAloneId, {
           searchKey: search || undefined,
           showPerPage: 100,
           pageNo: 1,
         });
+
+        // Ignore stale responses when user quickly switches clients.
+        if (activeStandAloneIdRef.current !== requestedStandAloneId) return;
+
         if (res.status && res.data) {
           setMeetingRows(res.data.meetingNotes || []);
         } else {
+          setMeetingRows([]);
           toast.error(res.message || "Failed to fetch meeting notes");
         }
       } catch (error) {
+        setMeetingRows([]);
         toast.error(
           error instanceof Error
             ? error.message
@@ -105,25 +126,39 @@ export default function MaintenanceMeetingStandAlonePage({
 
   const fetchMaintenanceProviders = useCallback(
     async (search?: string) => {
+      const requestedStandAloneId = standAloneId;
+
+      if (!standAloneId) {
+        setMaintenanceRows([]);
+        setMaintenanceLoading(false);
+        return;
+      }
+
       try {
         setMaintenanceLoading(true);
         const res = await MaintenanceProviderCommunicationAction.getMany(
-          standAloneId,
+          requestedStandAloneId,
           {
             searchKey: search || undefined,
             showPerPage: 100,
             pageNo: 1,
           },
         );
+
+        // Ignore stale responses when user quickly switches clients.
+        if (activeStandAloneIdRef.current !== requestedStandAloneId) return;
+
         if (res.status && res.data) {
           setMaintenanceRows(res.data.maintenanceProviderCommunications || []);
         } else {
+          setMaintenanceRows([]);
           toast.error(
             res.message ||
               "Failed to fetch maintenance provider communications",
           );
         }
       } catch (error) {
+        setMaintenanceRows([]);
         toast.error(
           error instanceof Error
             ? error.message
