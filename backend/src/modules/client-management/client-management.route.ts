@@ -8,6 +8,7 @@ import {
   getClientsByManagerId,
   getLeaveRequests,
   getManagerList,
+  getMyManager,
   getPendingRequests,
   getRemoveRequest,
   handleLeaveRequest,
@@ -328,18 +329,18 @@ router.patch(
 
 /**
  * @route GET /api/v1/client-management/my-manager
- * @description Client Get her own manager
+ * @description Client gets their assigned Transport Manager
  * @access Private
  * @param {function} isAuthorized - Middleware to check if the user is authenticated
  * @param {function} authorizedRoles - Middleware to check if the user has the required role(s) (STANDALONE_USER)
  * @param {function} controller - ['getMyManager']
  */
-// router.get(
-//   '/my-manager',
-//   isAuthorized(),
-//   authorizedRoles([UserRole.STANDALONE_USER]),
-//   getRemoveRequest
-// );
+router.get(
+  '/my-manager',
+  isAuthorized(),
+  authorizedRoles([UserRole.STANDALONE_USER]),
+  getMyManager
+);
 
 // Export the router
 module.exports = router;

@@ -270,17 +270,17 @@ export const handleRemoveRequest = catchAsync(async (req: AuthenticatedRequest, 
 });
 
 /**
- * Controller: Client checks if they have a pending remove request.
+ * Controller: Get the Transport Manager assigned to the authenticated client.
  * ClientId from token.
  *
  * @param {AuthenticatedRequest} req - The request object (user._id = clientId from Redis→JWT decode).
  * @param {Response} res - The response object used to send the response.
  * @returns {Promise<void>}
  */
-export const getMyManger = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+export const getMyManager = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
   const clientId = req.user!._id;
 
-  const result = await clientManagementServices.getRemoveRequest(clientId as string);
-  if (!result) return ServerResponse(res, false, 404, 'No remove request found');
-  ServerResponse(res, true, 200, 'Remove request retrieved successfully', result);
+  const result = await clientManagementServices.getMyManager(clientId as string);
+  if (!result) return ServerResponse(res, false, 404, 'No Transport Manager assigned');
+  ServerResponse(res, true, 200, 'Transport Manager retrieved successfully', result);
 });
