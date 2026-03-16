@@ -53,6 +53,7 @@ const CLIENT_MODULES: { slug: string; label: string }[] = [
     slug: "audits-rectification-reports",
     label: "Audits & Rectification Reports",
   },
+  { slug: "compliance-timetable", label: "Compliance Timetable" },
   { slug: "transport-manager", label: "Transport Manager" },
   { slug: "fuel-usage", label: "Fuel Usage" },
   { slug: "wheel-retorque", label: "Wheel Re-torque Policy" },
