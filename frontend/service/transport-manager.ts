@@ -88,8 +88,57 @@ const getTransportManager = async (params?: {
   }
 };
 
+
+const myManager = async (): Promise<IApiResponse<MyManagerData>> => {
+  const token = AuthAction.GetAuthToken();
+  if (!token) {
+    throw new Error("No authentication token found");
+  }
+  try {
+    const response = await axios.get<IApiResponse<any>>(
+      `${base_url}/client-management/my-manager`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    );
+    return response.data;
+  } catch (error: unknown) {
+    if (axios.isAxiosError<IApiResponse>(error)) {
+      throw new Error(extractApiError(error.response?.data));
+    }
+    throw new Error("Something went wrong");
+  }
+};
+
+const removeClient = async (): Promise<IApiResponse<void>> => {
+  const token = AuthAction.GetAuthToken();
+  if (!token) {
+    throw new Error("No authentication token found");
+  }
+  try {
+    const response = await axios.delete<IApiResponse<any>>(
+      `${base_url}/client-management/clients/remove-manager`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    );
+    return response.data;
+  } catch (error: unknown) {
+    if (axios.isAxiosError<IApiResponse>(error)) {
+      throw new Error(extractApiError(error.response?.data));
+    }
+    throw new Error("Something went wrong");
+  }
+};
+
 export const TransportManagerAction = {
-getTransportManager
+getTransportManager,
+myManager,
+removeClient
 };
 
 

@@ -4,7 +4,7 @@ import type { HeaderActionGroup } from "@/components/universal-table/UniversalTa
 import UniversalTable from "@/components/universal-table/UniversalTable";
 import { Column, TableAction } from "@/components/universal-table/table.types";
 import { TransportManagerType } from "@/lib/clients/client.types";
-import { LogIn, LogOut } from "lucide-react";
+import { LogIn } from "lucide-react";
 
 /** Flat row type used by the table */
 export interface TransportManagerTableRow {
@@ -40,13 +40,11 @@ const columns: Column<TransportManagerTableRow>[] = [
 interface TransportManagerTableProps {
   data: TransportManagerTableRow[];
   onRequestJoinTeam: (managerId: string) => void;
-  onLeaveManagerRequest: (managerId: string) => void;
 }
 
 export default function TransportManagerTable({ 
   data, 
   onRequestJoinTeam,
-  onLeaveManagerRequest 
 }: TransportManagerTableProps) {
   
   // Row actions for each manager
@@ -59,14 +57,7 @@ export default function TransportManagerTable({
    
 
     },
-    {
-      label: "Leave Request",
-      onClick: (row) => onLeaveManagerRequest(row._id),
-      icon: <LogOut className="h-4 w-4" />,
-      variant: "secondary",
 
-
-    },
   ];
 
   const headerActionGroups: HeaderActionGroup[] = [
