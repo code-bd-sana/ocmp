@@ -11,6 +11,7 @@ import {
   Calendar,
   Settings,
 } from "lucide-react";
+import { AuthAction } from "@/service/auth";
 
 /**
  * Array of navigation items for the dashboard sidebar/header
@@ -42,6 +43,8 @@ const items = [
   { name: "Planner", href: "/dashboard/planner", icon: Calendar },
   { name: "Settings", href: "/dashboard/settings", icon: Settings },
 ];
+const userProfile = AuthAction.myProfile();
+console.log(userProfile, 'this is user profile');
 
 export function DashboardNav() {
   const pathname = usePathname();

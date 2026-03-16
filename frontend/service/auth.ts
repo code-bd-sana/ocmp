@@ -191,17 +191,18 @@ const LogOut = async (): Promise<IApiResponse> => {
     throw new Error("Something went wrong");
   }
 };
-// get user role
+// get user Profile
 const myProfile = async() =>{
-    const token = GetAuthToken();
+  console.log(base_url, 'this is base url!');
+    const token =await GetAuthToken();
 
   if (!token) {
     throw new Error("No authentication token found");
   }
   try {
-const response = await axios.post<IApiResponse>(
+const response = await axios.get(
       `${base_url}/user/me`,
-      {}, 
+  
       {
         headers: {
           Authorization: `Bearer ${token}`,
