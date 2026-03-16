@@ -143,7 +143,7 @@ export const getAllComplianceTimetable = catchAsync(
     const query: SearchComplianceTimetableQueryInput = {
       ...((req as any).validatedQuery as SearchComplianceTimetableQueryInput),
     };
-    
+
     if (req.user?.role === UserRole.STANDALONE_USER) {
       query.standAloneId = req.user._id;
     }
@@ -163,4 +163,3 @@ export const getAllComplianceTimetable = catchAsync(
     });
   }
 );
-
