@@ -57,13 +57,11 @@ const createComplianceTimetable = async (
 const updateComplianceTimetable = async (
   id: IdOrIdsInput['id'],
   data: UpdateComplianceTimetableInput,
-  userId: IdOrIdsInput['id'],
-  standAloneId?: IdOrIdsInput['id']
-): Promise<Partial<IComplianceTimeTable | null>> => {
-  const accessFilters: Record<string, unknown>[] = [
-    ...buildAccessFilters(userId),
-    ...buildAccessFilters(standAloneId),
-  ];
+  accessId: IdOrIdsInput['id']
+): Promise<Partial<IComplianceTimeTable>> => {
+  const accessFilters: Record<string, unknown>[] = buildAccessFilters(
+    accessId ? String(accessId) : undefined
+  );
 
   // Proceed to update the compliance-timetable
   const updatedComplianceTimetable = await ComplianceTimeTable.findOneAndUpdate(
@@ -74,6 +72,10 @@ const updateComplianceTimetable = async (
     data,
     { returnDocument: 'after' }
   );
+
+  if (!updatedComplianceTimetable) {
+    throw new Error('Compliance-timetable not found or access denied');
+  }
 
   return updatedComplianceTimetable;
 };
@@ -90,19 +92,20 @@ const updateComplianceTimetable = async (
  */
 const deleteComplianceTimetable = async (
   id: IdOrIdsInput['id'],
-  userId: IdOrIdsInput['id'],
-  standAloneId?: IdOrIdsInput['id']
-): Promise<Partial<IComplianceTimeTable | null>> => {
-  const accessFilters: Record<string, unknown>[] = [
-    ...buildAccessFilters(userId),
-    ...buildAccessFilters(standAloneId),
-  ];
+  accessId: IdOrIdsInput['id']
+): Promise<void> => {
+  const accessFilters: Record<string, unknown>[] = buildAccessFilters(
+    accessId ? String(accessId) : undefined
+  );
 
   const deletedComplianceTimetable = await ComplianceTimeTable.findOneAndDelete({
     _id: id,
     ...(accessFilters.length ? { $or: accessFilters } : {}),
   });
-  return deletedComplianceTimetable;
+
+  if (!deletedComplianceTimetable) {
+    throw new Error('Compliance-timetable not found or access denied');
+  }
 };
 
 /**
@@ -117,13 +120,11 @@ const deleteComplianceTimetable = async (
  */
 const getComplianceTimetableById = async (
   id: IdOrIdsInput['id'],
-  standAloneId?: IdOrIdsInput['id'],
-  createdBy?: IdOrIdsInput['id']
+  accessId?: IdOrIdsInput['id']
 ): Promise<Partial<IComplianceTimeTable | null>> => {
-  const accessFilters: Record<string, unknown>[] = [
-    ...buildAccessFilters(standAloneId),
-    ...buildAccessFilters(createdBy),
-  ];
+  const accessFilters: Record<string, unknown>[] = buildAccessFilters(
+    accessId ? String(accessId) : undefined
+  );
 
   const filter = accessFilters.length
     ? {
@@ -145,13 +146,13 @@ const getComplianceTimetableById = async (
  * @throws {Error} - Throws an error if the query parameters are invalid.
  */
 const getAllComplianceTimetable = async (
-  query: SearchComplianceTimetableQueryInput & { createdBy?: string }
+  query: SearchComplianceTimetableQueryInput
 ): Promise<{
   complianceTimetables: Partial<IComplianceTimeTable>[];
   totalData: number;
   totalPages: number;
 }> => {
-  const { searchKey = '', showPerPage = 10, pageNo = 1, standAloneId, createdBy } = query;
+  const { searchKey = '', showPerPage = 10, pageNo = 1, standAloneId } = query;
   // Build the search filter based on the search key
   const searchConditions: any[] = [];
   const andConditions: any[] = [];
@@ -166,18 +167,9 @@ const getAllComplianceTimetable = async (
   }
 
   if (standAloneId) {
-    const standaloneFilters = buildAccessFilters(standAloneId);
-    const managerFilters = buildAccessFilters(createdBy);
+    const standaloneFilters = buildAccessFilters(String(standAloneId));
 
-    andConditions.push({
-      $or: [
-        ...standaloneFilters,
-        ...managerFilters,
-      ],
-    });
-  } else if (createdBy) {
-    const managerFilters = buildAccessFilters(createdBy);
-    andConditions.push({ $or: managerFilters });
+    andConditions.push({ $or: standaloneFilters });
   }
 
   const searchFilter: any = {};
