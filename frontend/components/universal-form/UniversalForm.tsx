@@ -56,18 +56,11 @@ export default function UniversalForm<T extends FieldValues>({
   const setFieldCalendarMonth = (name: string, month: Date | undefined) =>
     setCalendarMonth((prev) => ({ ...prev, [name]: month }));
 
-  // State for file previews and drag state
-  const [filePreviews, setFilePreviews] = useState<Record<string, string[]>>(
-    {},
-  );
+  // State for selected files and drag state
+  const [selectedFilesByField, setSelectedFilesByField] = useState<
+    Record<string, { name: string; isImage: boolean; previewUrl?: string }[]>
+  >({});
   const [isDragging, setIsDragging] = useState<Record<string, boolean>>({});
-
-  function isValidDate(date: Date | undefined) {
-    if (!date) {
-      return false;
-    }
-    return !isNaN(date.getTime());
-  }
 
   function formatDate(date: Date | undefined) {
     if (!date) return "";
@@ -82,32 +75,74 @@ export default function UniversalForm<T extends FieldValues>({
     fieldName: string,
     files: FileList | null,
     multiple: boolean | undefined,
+    currentValue: string | FileList | null | File,
     onChange: (value: string | FileList | null | File) => void,
   ) => {
     if (!files) return;
-    onChange(multiple ? files : files[0]);
 
-    // Generate previews for images
-    const previews: string[] = [];
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      if (file.type.startsWith("image/")) {
-        const url = URL.createObjectURL(file);
-        previews.push(url);
+    let nextFiles: FileList | null = files;
+
+    if (multiple) {
+      const dt = new DataTransfer();
+      const existingFiles =
+        currentValue instanceof FileList ? currentValue : null;
+
+      if (existingFiles) {
+        for (let i = 0; i < existingFiles.length; i++) {
+          dt.items.add(existingFiles[i]);
+        }
       }
+
+      for (let i = 0; i < files.length; i++) {
+        dt.items.add(files[i]);
+      }
+
+      nextFiles = dt.files.length > 0 ? dt.files : null;
+      onChange(nextFiles);
+    } else {
+      onChange(files[0]);
     }
-    setFilePreviews((prev) => ({ ...prev, [fieldName]: previews }));
+
+    // Track every selected file so all file types are visible in UI.
+    const nextSelectedFiles: {
+      name: string;
+      isImage: boolean;
+      previewUrl?: string;
+    }[] = [];
+
+    const previewSource = multiple && nextFiles ? nextFiles : files;
+    for (let i = 0; i < previewSource.length; i++) {
+      const file = previewSource[i];
+      const isImage = file.type.startsWith("image/");
+      nextSelectedFiles.push({
+        name: file.name,
+        isImage,
+        previewUrl: isImage ? URL.createObjectURL(file) : undefined,
+      });
+    }
+
+    setSelectedFilesByField((prev) => ({
+      ...prev,
+      [fieldName]: nextSelectedFiles,
+    }));
   };
 
   const handleFileDrop = (
     e: React.DragEvent<HTMLDivElement>,
     fieldName: string,
     multiple: boolean | undefined,
+    currentValue: string | FileList | null | File,
     onChange: (value: string | FileList | null | File) => void,
   ) => {
     e.preventDefault();
     setIsDragging((prev) => ({ ...prev, [fieldName]: false }));
-    handleFileChange(fieldName, e.dataTransfer.files, multiple, onChange);
+    handleFileChange(
+      fieldName,
+      e.dataTransfer.files,
+      multiple,
+      currentValue,
+      onChange,
+    );
   };
 
   const handleDragOver = (
@@ -122,15 +157,14 @@ export default function UniversalForm<T extends FieldValues>({
     setIsDragging((prev) => ({ ...prev, [fieldName]: false }));
   };
 
-  const removeFilePreview = (
+  const removeSelectedFile = (
     fieldName: string,
     index: number,
     currentValue: string | FileList | null | File,
     multiple: boolean | undefined,
     onChange: (value: string | FileList | null | File) => void,
   ) => {
-    // Remove preview
-    setFilePreviews((prev) => ({
+    setSelectedFilesByField((prev) => ({
       ...prev,
       [fieldName]: prev[fieldName]?.filter((_, i) => i !== index) || [],
     }));
@@ -391,7 +425,7 @@ export default function UniversalForm<T extends FieldValues>({
                 name={field.name}
                 render={({ field: controllerField }) => {
                   const fieldName = field.name;
-                  const previews = filePreviews[fieldName] || [];
+                  const selectedFiles = selectedFilesByField[fieldName] || [];
                   const dragging = isDragging[fieldName] || false;
 
                   return (
@@ -406,6 +440,7 @@ export default function UniversalForm<T extends FieldValues>({
                               fieldName,
                               e.target.files,
                               field.multiple,
+                              controllerField.value,
                               controllerField.onChange,
                             )
                           }
@@ -418,6 +453,7 @@ export default function UniversalForm<T extends FieldValues>({
                               e,
                               fieldName,
                               field.multiple,
+                              controllerField.value,
                               controllerField.onChange,
                             )
                           }
@@ -453,25 +489,33 @@ export default function UniversalForm<T extends FieldValues>({
                         </div>
                       </label>
 
-                      {/* Previews */}
-                      {previews.length > 0 && (
+                      {/* Selected files */}
+                      {selectedFiles.length > 0 && (
                         <div className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5">
-                          {previews.map((src, idx) => (
+                          {selectedFiles.map((file, idx) => (
                             <div
-                              key={idx}
+                              key={`${file.name}-${idx}`}
                               className="relative aspect-square w-full overflow-hidden rounded border"
                             >
-                              <Image
-                                width={200}
-                                height={200}
-                                src={src}
-                                alt={`preview-${idx}`}
-                                className="h-full w-full object-cover"
-                              />
+                              {file.isImage && file.previewUrl ? (
+                                <Image
+                                  width={200}
+                                  height={200}
+                                  src={file.previewUrl}
+                                  alt={`preview-${idx}`}
+                                  className="h-full w-full object-cover"
+                                />
+                              ) : (
+                                <div className="bg-muted/40 flex h-full w-full flex-col items-center justify-center p-2 text-center">
+                                  <p className="max-w-full truncate text-xs font-medium">
+                                    {file.name}
+                                  </p>
+                                </div>
+                              )}
                               <button
                                 type="button"
                                 onClick={() =>
-                                  removeFilePreview(
+                                  removeSelectedFile(
                                     fieldName,
                                     idx,
                                     controllerField.value,
