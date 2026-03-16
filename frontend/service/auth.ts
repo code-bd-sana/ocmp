@@ -191,7 +191,39 @@ const LogOut = async (): Promise<IApiResponse> => {
     throw new Error("Something went wrong");
   }
 };
-export const AuthAction = {
+// get user role
+const myProfile = async() =>{
+    const token = GetAuthToken();
+
+  if (!token) {
+    throw new Error("No authentication token found");
+  }
+  try {
+const response = await axios.post<IApiResponse>(
+      `${base_url}/user/me`,
+      {}, 
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    );
+    return response.data;
+
+    
+  } catch (error: unknown) {
+    if (axios.isAxiosError<IApiResponse>(error)) {
+      const apiError = error.response?.data?.error;
+      throw new Error(
+        typeof apiError === "string" ? apiError : "Something went wrong",
+      );
+    }
+    throw new Error("Something went wrong");
+  }
+}
+
+
+export const AuthAction = { 
   RegisterUser,
   LoginUser,
   VerifyEmail,
@@ -201,4 +233,5 @@ export const AuthAction = {
   GetAuthToken,
   RemoveAuthToken,
   LogOut,
+  myProfile
 };
