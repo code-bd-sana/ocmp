@@ -222,6 +222,27 @@ const response = await axios.get(
     throw new Error("Something went wrong");
   }
 }
+const myRole = async() =>{
+  console.log(base_url, 'this is base url!');
+    const token =await GetAuthToken();
+
+  if (!token) {
+    throw new Error("No authentication token found");
+  }
+  try {
+const response = await myProfile();
+return response.data.role;
+    
+  } catch (error: unknown) {
+    if (axios.isAxiosError<IApiResponse>(error)) {
+      const apiError = error.response?.data?.error;
+      throw new Error(
+        typeof apiError === "string" ? apiError : "Something went wrong",
+      );
+    }
+    throw new Error("Something went wrong");
+  }
+}
 
 
 export const AuthAction = { 
@@ -234,5 +255,6 @@ export const AuthAction = {
   GetAuthToken,
   RemoveAuthToken,
   LogOut,
-  myProfile
+  myProfile,
+  myRole
 };

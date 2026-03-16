@@ -43,7 +43,7 @@ const items = [
   { name: "Planner", href: "/dashboard/planner", icon: Calendar },
   { name: "Settings", href: "/dashboard/settings", icon: Settings },
 ];
-const userProfile = AuthAction.myProfile();
+const userProfile = await AuthAction.myProfile();
 console.log(userProfile, 'this is user profile');
 
 export function DashboardNav() {
