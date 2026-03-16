@@ -324,5 +324,22 @@ router.patch(
   handleRemoveRequest
 );
 
+
+
+/**
+ * @route GET /api/v1/client-management/my-manager
+ * @description Client Get her own manager
+ * @access Private
+ * @param {function} isAuthorized - Middleware to check if the user is authenticated
+ * @param {function} authorizedRoles - Middleware to check if the user has the required role(s) (STANDALONE_USER)
+ * @param {function} controller - ['getMyManager']
+ */
+// router.get(
+//   '/my-manager',
+//   isAuthorized(),
+//   authorizedRoles([UserRole.STANDALONE_USER]),
+//   getRemoveRequest
+// );
+
 // Export the router
 module.exports = router;

@@ -7,11 +7,11 @@ import SendEmail from '../../utils/email/send-email';
 import { repositorySettingsServices } from '../repository-settings/repository-settings.service';
 import { IClientLimitStatus } from './client-management.interface';
 import {
-    ActionInput,
-    CreateClientInput,
-    RequestJoinTeamInput,
-    UpdateClientLimitInput,
-    UpdateJoinRequestInput,
+  ActionInput,
+  CreateClientInput,
+  RequestJoinTeamInput,
+  UpdateClientLimitInput,
+  UpdateJoinRequestInput,
 } from './client-management.validation';
 
 /**
@@ -808,6 +808,53 @@ const handleRemoveRequest = async (
 
   return { clientId, action: data.action, newStatus };
 };
+/**
+ * Service: Get the Transport Manager assigned to a client.
+ * Finds the ClientManagement document where the client is assigned with an active status.
+ *
+ * @param {string} clientId - The client's user ID.
+ * @returns {Promise<any>} - The manager info if assigned, or null.
+ */
+const getMyManager = async (clientId: string) => {
+  const clientObjId = new mongoose.Types.ObjectId(clientId);
+
+  const assignment = await ClientManagement.findOne({
+    clients: {
+      $elemMatch: {
+        clientId: clientObjId,
+        status: {
+          $in: [
+            ClientStatus.PENDING,
+            ClientStatus.APPROVED,
+            ClientStatus.LEAVE_REQUESTED,
+            ClientStatus.REMOVE_REQUESTED,
+          ],
+        },
+      },
+    },
+  })
+    .populate({
+      path: 'managerId',
+      select: '-password -resetToken -resetTokenExpiry -emailVerificationToken -emailVerificationTokenExpiry',
+    })
+    .lean();
+
+  if (!assignment) return null;
+
+  // Extract the specific client entry
+  const clientEntry = assignment.clients.find(
+    (c) => c.clientId.toString() === clientId
+  );
+
+  return {
+    manager: assignment.managerId,
+    clientStatus: clientEntry?.status,
+    requestedAt: clientEntry?.requestedAt,
+    approvedAt: clientEntry?.approvedAt,
+  };
+};
+
+
 
 // Export all service functions as a namespace
 export const clientManagementServices = {
@@ -827,4 +874,5 @@ export const clientManagementServices = {
   requestRemove,
   getRemoveRequest,
   handleRemoveRequest,
+  getMyManager
 };

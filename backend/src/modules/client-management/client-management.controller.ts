@@ -268,3 +268,19 @@ export const handleRemoveRequest = catchAsync(async (req: AuthenticatedRequest, 
   const result = await clientManagementServices.handleRemoveRequest(clientId as string, req.body);
   ServerResponse(res, true, 200, `Remove request ${result.action}ed successfully`, result);
 });
+
+/**
+ * Controller: Client checks if they have a pending remove request.
+ * ClientId from token.
+ *
+ * @param {AuthenticatedRequest} req - The request object (user._id = clientId from Redis→JWT decode).
+ * @param {Response} res - The response object used to send the response.
+ * @returns {Promise<void>}
+ */
+export const getMyManger = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+  const clientId = req.user!._id;
+
+  const result = await clientManagementServices.getRemoveRequest(clientId as string);
+  if (!result) return ServerResponse(res, false, 404, 'No remove request found');
+  ServerResponse(res, true, 200, 'Remove request retrieved successfully', result);
+});
