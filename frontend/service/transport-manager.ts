@@ -1,7 +1,7 @@
+import { TransportManagerType } from "@/lib/clients/client.types";
+import { base_url } from "@/lib/utils";
 import axios from "axios";
 import { AuthAction, IApiResponse } from "./auth";
-import { ClientListResponse } from "@/lib/clients/client.types";
-import { base_url } from "@/lib/utils";
 
 
 
@@ -33,13 +33,13 @@ const getTransportManager = async (params?: {
   searchKey?: string;
   showPerPage?: number;
   pageNo?: number;
-}): Promise<IApiResponse<ClientListResponse>> => {
+}): Promise<IApiResponse<TransportManagerType[]>> => {
   const token = AuthAction.GetAuthToken();
   if (!token) throw new Error("No authentication token found");
 
   try {
-    const response = await axios.get<IApiResponse<ClientListResponse>>(
-      `${base_url}/client-management/clients`,
+    const response = await axios.get<IApiResponse<TransportManagerType[]>>(
+      `${base_url}/client-management/managers`,
       {
         headers: { Authorization: `Bearer ${token}` },
         params: {
@@ -57,6 +57,6 @@ const getTransportManager = async (params?: {
     throw new Error("Something went wrong");
   }
 };
-export const ClientAction = {
+export const TransportManagerAction = {
 getTransportManager
 };
