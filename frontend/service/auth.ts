@@ -193,7 +193,7 @@ const LogOut = async (): Promise<IApiResponse> => {
 };
 // get user Profile
 const myProfile = async() =>{
-  console.log(base_url, 'this is base url!');
+
     const token =await GetAuthToken();
 
   if (!token) {

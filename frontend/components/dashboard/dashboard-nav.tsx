@@ -1,60 +1,80 @@
 "use client";
 
+import { cn } from "@/lib/utils";
+import { AuthAction } from "@/service/auth";
+import {
+  Calendar,
+  FolderOpen,
+  LayoutDashboard,
+  Settings,
+  Truck,
+  UserCog,
+  Users,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { cn } from "@/lib/utils";
-import {
-  LayoutDashboard,
-  FolderOpen,
-  Truck,
-  Users,
-  Calendar,
-  Settings,
-} from "lucide-react";
-import { AuthAction } from "@/service/auth";
+import { useEffect, useState } from "react";
 
-/**
- * Array of navigation items for the dashboard sidebar/header
- *
- * Each item represents a navigation link in the dashboard navigation bar.
- * The items are displayed as clickable icons with labels that provide
- * access to different sections of the dashboard.
- *
- * @type {Array<{
- *   name: string;        // Display name shown to the user
- *   href: string;        // URL path for navigation (Next.js route)
- *   icon: LucideIcon;    // Icon component from lucide-react library
- * }>}
- *
- * @property {string} name - The display name shown to the user (e.g., "Dashboard", "Repository")
- * @property {string} href - The URL path for Next.js navigation. Should follow the app router structure.
- * @property {LucideIcon} icon - Icon component from lucide-react library that visually represents the navigation item.
- */
-// const userRole = use
+// সব navigation items
 const items = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  {
-    name: "Repository",
-    href: "/dashboard/repository-settings",
-    icon: FolderOpen,
-  },
+  { name: "Repository", href: "/dashboard/repository-settings", icon: FolderOpen },
   { name: "Vehicles", href: "/dashboard/vehicles", icon: Truck },
-  { name: "All Users", href: "/dashboard/users", icon: Users },
+  { name: "All Users", href: "/dashboard/users", icon: Users }, 
+  { name: "All Transport Manager", href: "/dashboard/transport-managers", icon: UserCog }, // 
   { name: "Planner", href: "/dashboard/planner", icon: Calendar },
   { name: "Settings", href: "/dashboard/settings", icon: Settings },
 ];
-const userProfile = await AuthAction.myProfile();
-console.log(userProfile, 'this is user profile');
 
 export function DashboardNav() {
   const pathname = usePathname();
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchUserRole() {
+      try {
+        const userRole = await AuthAction.myRole();
+        setUserRole(userRole || null);
+      } catch (error) {
+        console.error("Failed to fetch user role:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    
+    fetchUserRole();
+  }, []);
+
+
+  const filteredItems = items.filter(item => {
+
+    if (item.name === "All Users") {
+      return userRole === "ADMIN";
+    }
+   
+    if (item.name === "All Transport Manager") {
+      return userRole === "STANDALONE_USER";
+    }
+ 
+    return true;
+  });
+
+  if (isLoading) {
+    return (
+      <nav className='w-full border-b bg-muted shadow-sm'>
+        <div className='h-20 md:h-26 flex items-center justify-center'>
+          <div className="animate-pulse bg-gray-200 h-8 w-32 rounded"></div>
+        </div>
+      </nav>
+    );
+  }
 
   return (
     <nav className='w-full border-b bg-muted shadow-sm'>
-      {/* overflow-x-auto on a non-absolute container so left-side items are always reachable */}
       <div className='h-20 md:h-26 overflow-x-auto scrollbar-hide scroll-smooth'>
         <div className='flex items-center justify-start lg:justify-center h-full min-w-max px-6 md:px-10 gap-2 sm:gap-6 lg:gap-20'>
-          {items.map((item) => {
+          {filteredItems.map((item) => {
             const isActive =
               pathname === item.href ||
               (item.href !== "/dashboard" && pathname.startsWith(item.href));
