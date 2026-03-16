@@ -9,6 +9,7 @@ import {
   deleteDriver,
   getDriverById,
   getManyDriver,
+  uploadDriverAttachments,
   updateDriver,
 } from './driver.controller';
 
@@ -21,6 +22,7 @@ import { UserRole } from '../../models';
 import {
   validateCreateDriverAsStandAlone,
   validateCreateDriverAsTransportManager,
+  validateDriverIdParam,
   validateDeleteDriverIds,
   validateGetDriverByIdParams,
   validateSearchDriverQueries,
@@ -64,6 +66,31 @@ router.post(
   // checkSubscriptionValidity,
   validateCreateDriverAsStandAlone,
   createDriverAsStandAlone
+);
+
+/**
+ * @route POST /api/v1/driver/upload-attachments-by-manager/:driverId/:standAloneId
+ * @description Upload one or more files for a driver as transport manager and attach document IDs to the driver.
+ * @access Private - Transport Manager only
+ */
+router.post(
+  '/upload-attachments-by-manager/:driverId/:standAloneId',
+  authorizedRoles([UserRole.TRANSPORT_MANAGER]),
+  validateClientForManagerMiddleware,
+  validateUpdateDriverIds,
+  uploadDriverAttachments
+);
+
+/**
+ * @route POST /api/v1/driver/upload-attachments/:driverId
+ * @description Upload one or more files for a driver as stand-alone user and attach document IDs to the driver.
+ * @access Private - Stand-alone user only
+ */
+router.post(
+  '/upload-attachments/:driverId',
+  authorizedRoles([UserRole.STANDALONE_USER]),
+  validateDriverIdParam,
+  uploadDriverAttachments
 );
 
 /**
