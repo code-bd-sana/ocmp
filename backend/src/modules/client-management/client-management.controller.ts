@@ -2,7 +2,6 @@ import { Request, Response } from 'express';
 import { SearchQueryInput } from '../../handlers/common-zod-validator';
 import ServerResponse from '../../helpers/responses/custom-response';
 import { AuthenticatedRequest } from '../../middlewares/is-authorized';
-import { UserRole } from '../../models';
 import catchAsync from '../../utils/catch-async/catch-async';
 import { clientManagementServices } from './client-management.service';
 
@@ -158,7 +157,8 @@ export const updateJoinRequest = catchAsync(async (req: AuthenticatedRequest, re
  * @returns {Promise<void>}
  */
 export const getManagerList = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-  const result = await clientManagementServices.getManagerList();
+  const query = req.query as unknown as SearchQueryInput;
+  const result = await clientManagementServices.getManagerList(query);
   ServerResponse(res, true, 200, 'Manager list retrieved successfully', result);
 });
 

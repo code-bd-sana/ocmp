@@ -1,4 +1,4 @@
-import { TransportManagerType } from "@/lib/clients/client.types";
+import { ClientListResponse } from "@/lib/clients/client.types";
 import { base_url } from "@/lib/utils";
 import axios from "axios";
 import { AuthAction, IApiResponse } from "./auth";
@@ -29,16 +29,46 @@ function extractApiError(data: IApiResponse | undefined): string {
   return "Something went wrong";
 }
 
+// const getTransportManager = async (params?: {
+//   searchKey?: string;
+//   showPerPage?: number;
+//   pageNo?: number;
+// }): Promise<IApiResponse<TransportManagerType[]>> => {
+//   const token = AuthAction.GetAuthToken();
+//   if (!token) throw new Error("No authentication token found");
+
+//   try {
+//     const response = await axios.get<IApiResponse<TransportManagerType[]>>(
+//       `${base_url}/client-management/managers`,
+//       {
+//         headers: { Authorization: `Bearer ${token}` },
+//         params: {
+//           ...(params?.searchKey && { searchKey: params.searchKey }),
+//           showPerPage: params?.showPerPage || 10,
+//           pageNo: params?.pageNo || 1,
+//         },
+//       },
+//     );
+//     return response.data;
+//   } catch (error: unknown) {
+//     if (axios.isAxiosError<IApiResponse>(error)) {
+//       throw new Error(extractApiError(error.response?.data));
+//     }
+//     throw new Error("Something went wrong");
+//   }
+// };
+
+
 const getTransportManager = async (params?: {
   searchKey?: string;
   showPerPage?: number;
   pageNo?: number;
-}): Promise<IApiResponse<TransportManagerType[]>> => {
+}): Promise<IApiResponse<ClientListResponse>> => {
   const token = AuthAction.GetAuthToken();
   if (!token) throw new Error("No authentication token found");
 
   try {
-    const response = await axios.get<IApiResponse<TransportManagerType[]>>(
+    const response = await axios.get<IApiResponse<ClientListResponse>>(
       `${base_url}/client-management/managers`,
       {
         headers: { Authorization: `Bearer ${token}` },
@@ -57,6 +87,9 @@ const getTransportManager = async (params?: {
     throw new Error("Something went wrong");
   }
 };
+
 export const TransportManagerAction = {
 getTransportManager
 };
+
+

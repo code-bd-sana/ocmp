@@ -1,17 +1,17 @@
 import crypto from 'crypto';
 import mongoose from 'mongoose';
 import { SearchQueryInput } from '../../handlers/common-zod-validator';
-import { User, UserRole, ClientManagement, ClientStatus, IClientManagement } from '../../models';
+import { ClientManagement, ClientStatus, IClientManagement, User, UserRole } from '../../models';
 import HashInfo from '../../utils/bcrypt/hash-info';
 import SendEmail from '../../utils/email/send-email';
 import { repositorySettingsServices } from '../repository-settings/repository-settings.service';
 import { IClientLimitStatus } from './client-management.interface';
 import {
-  ActionInput,
-  CreateClientInput,
-  RequestJoinTeamInput,
-  UpdateClientLimitInput,
-  UpdateJoinRequestInput,
+    ActionInput,
+    CreateClientInput,
+    RequestJoinTeamInput,
+    UpdateClientLimitInput,
+    UpdateJoinRequestInput,
 } from './client-management.validation';
 
 /**
@@ -517,13 +517,21 @@ const updateJoinRequest = async (
  * Service: Get all active Transport Managers (id + name).
  * For standalone users to browse and select a manager to request joining.
  *
+ * @param {SearchQueryInput} query - Search parameters.
  * @returns {Promise<{ _id: string; fullName: string }[]>} - List of active managers.
  */
-const getManagerList = async (): Promise<{ _id: any; fullName: string }[]> => {
-  return User.find(
-    { role: UserRole.TRANSPORT_MANAGER, isActive: true },
-    { _id: 1, fullName: 1 }
-  ).lean();
+const getManagerList = async (
+  query: SearchQueryInput
+): Promise<{ _id: any; fullName: string }[]> => {
+  const searchKey = query.searchKey;
+
+  // Build match condition
+  const matchCondition: any = { role: UserRole.TRANSPORT_MANAGER, isActive: true };
+  if (searchKey) {
+    matchCondition.fullName = { $regex: searchKey, $options: 'i' };
+  }
+
+  return User.find(matchCondition, { _id: 1, fullName: 1 }).lean();
 };
 
 // ═══════════════════════════════════════════════════════════════

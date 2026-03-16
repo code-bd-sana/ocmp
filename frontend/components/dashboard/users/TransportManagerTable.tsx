@@ -1,10 +1,10 @@
 "use client";
 
+import type { HeaderActionGroup } from "@/components/universal-table/UniversalTable";
 import UniversalTable from "@/components/universal-table/UniversalTable";
 import { Column, TableAction } from "@/components/universal-table/table.types";
 import { TransportManagerType } from "@/lib/clients/client.types";
-import { UserPlus, LogIn, LogOut } from "lucide-react";
-import type { HeaderActionGroup } from "@/components/universal-table/UniversalTable";
+import { LogIn, LogOut } from "lucide-react";
 
 /** Flat row type used by the table */
 export interface TransportManagerTableRow {
@@ -39,14 +39,12 @@ const columns: Column<TransportManagerTableRow>[] = [
 
 interface TransportManagerTableProps {
   data: TransportManagerTableRow[];
-  onAddManager: () => void;
   onRequestJoinTeam: (managerId: string) => void;
   onLeaveManagerRequest: (managerId: string) => void;
 }
 
 export default function TransportManagerTable({ 
   data, 
-  onAddManager,
   onRequestJoinTeam,
   onLeaveManagerRequest 
 }: TransportManagerTableProps) {
@@ -75,16 +73,7 @@ export default function TransportManagerTable({
     {
       title: "Transport Managers",
       startingActionGroup: [],
-      endActionGroup: [
-        {
-          label: "Add Manager",
-          className: "bg-primary hover:bg-primary/90 text-white rounded-md px-4 py-2 text-sm font-medium",
-          onClick: onAddManager,
-          icon: <UserPlus className="h-4 w-4 mr-2" />,
-          visibility: true,
-          positionIndex: 1,
-        },
-      ],
+      endActionGroup: [],
     },
   ];
 

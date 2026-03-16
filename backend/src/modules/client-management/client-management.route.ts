@@ -118,12 +118,14 @@ router.post(
  * @access Private
  * @param {function} isAuthorized - Middleware to check if the user is authenticated
  * @param {function} authorizedRoles - Middleware to check if the user has the required role(s) (STANDALONE_USER)
+ * @param {function} validation - ['validateSearchQueries']
  * @param {function} controller - ['getManagerList']
  */
 router.get(
   '/managers',
   isAuthorized(),
   authorizedRoles([UserRole.STANDALONE_USER]),
+  validateSearchQueries,
   getManagerList
 );
 
