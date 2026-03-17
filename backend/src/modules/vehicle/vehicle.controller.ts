@@ -146,7 +146,7 @@ export const getManyVehicle = catchAsync(async (req: AuthenticatedRequest, res: 
   };
 
   if (req.user?.role === UserRole.STANDALONE_USER) {
-    query.standAloneId = req.user._id;
+    query.createdBy = req.user._id;
   }
 
   if (req.user?.role === UserRole.TRANSPORT_MANAGER) {

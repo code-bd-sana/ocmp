@@ -109,13 +109,16 @@ export const getSpotCheckById = catchAsync(async (req: AuthenticatedRequest, res
  * @throws {Error} - Throws an error if the spot-checks retrieval fails.
  */
 export const getManySpotCheck = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-  const query = { ...((req as any).validatedQuery as SearchSpotChecksQueryInput) };
+  type SpotCheckQuery = SearchSpotChecksQueryInput & { createdBy?: string };
+  const query: SpotCheckQuery = {
+    ...((req as any).validatedQuery as SearchSpotChecksQueryInput),
+  };
 
   // Standalone: restrict to own user
   if (req.user?.role === UserRole.STANDALONE_USER) {
-    query.standAloneId = req.user._id;
+    query.createdBy = req.user._id;
   }
-  // TM: standAloneId may come from validated query or params (middleware ensures it's valid)
+  // TM: standAloneId already comes from validatedQuery (frontend passed it in query params)
 
   const { spotChecks, totalData, totalPages } = await spotCheckServices.getManySpotCheck(query);
   if (!spotChecks) throw new Error('Failed to retrieve spot-checks');
@@ -125,4 +128,3 @@ export const getManySpotCheck = catchAsync(async (req: AuthenticatedRequest, res
     totalPages,
   });
 });
-

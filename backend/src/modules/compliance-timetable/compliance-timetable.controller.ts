@@ -63,17 +63,16 @@ export const updateComplianceTimetable = catchAsync(
   async (req: AuthenticatedRequest, res: Response) => {
     const paramToString = (p?: string | string[]) => (Array.isArray(p) ? p[0] : p);
     const id = paramToString(req.params?.id);
-    const standAloneId = paramToString(req.params?.standAloneId);
+    const accessId =
+      req.user!.role === UserRole.TRANSPORT_MANAGER
+        ? (paramToString(req.params?.standAloneId) as string)
+        : req.user!._id;
     // Call the service method to update the compliance-timetable by ID and get the result
     const result = await complianceTimetableServices.updateComplianceTimetable(
       id as string,
       req.body,
-      req.user!._id,
-      standAloneId
+      accessId
     );
-    if (!result) {
-      return ServerResponse(res, false, 404, 'Compliance-timetable not found or access denied');
-    }
     // Send a success response with the updated compliance-timetable data
     ServerResponse(res, true, 200, 'Compliance-timetable updated successfully', result);
   }
@@ -91,16 +90,12 @@ export const deleteComplianceTimetable = catchAsync(
   async (req: AuthenticatedRequest, res: Response) => {
     const paramToString = (p?: string | string[]) => (Array.isArray(p) ? p[0] : p);
     const id = paramToString(req.params.id);
-    const standAloneId = paramToString(req.params.standAloneId);
+    const accessId =
+      req.user!.role === UserRole.TRANSPORT_MANAGER
+        ? (paramToString(req.params.standAloneId) as string)
+        : req.user!._id;
     // Call the service method to delete the compliance-timetable by ID
-    const result = await complianceTimetableServices.deleteComplianceTimetable(
-      id as string,
-      req.user!._id,
-      standAloneId
-    );
-    if (!result) {
-      return ServerResponse(res, false, 404, 'compliance-timetable not found or access denied');
-    }
+    await complianceTimetableServices.deleteComplianceTimetable(id as string, accessId);
     // Send a success response confirming the deletion
     ServerResponse(res, true, 200, 'Compliance-timetable deleted successfully');
   }
@@ -118,22 +113,16 @@ export const getComplianceTimetableById = catchAsync(
   async (req: AuthenticatedRequest, res: Response) => {
     const paramToString = (p?: string | string[]) => (Array.isArray(p) ? p[0] : p);
     const { id } = req.params;
-    let standAloneId: string | undefined;
-    let createdBy: string | undefined;
+    let accessId: string | undefined;
 
     if (req.user?.role === UserRole.STANDALONE_USER) {
-      standAloneId = req.user._id;
+      accessId = req.user._id;
     }
     if (req.user?.role === UserRole.TRANSPORT_MANAGER) {
-      createdBy = req.user._id;
-      standAloneId = paramToString(req.params?.standAloneId);
+      accessId = paramToString(req.params?.standAloneId);
     }
     // Call the service method to get the compliance-timetable by ID and get the result
-    const result = await complianceTimetableServices.getComplianceTimetableById(
-      id as string,
-      standAloneId,
-      createdBy
-    );
+    const result = await complianceTimetableServices.getComplianceTimetableById(id as string, accessId);
     if (!result) throw new Error('Compliance-timetable not found');
     // Send a success response with the retrieved resource data
     ServerResponse(res, true, 200, 'Compliance-timetable retrieved successfully', result);
@@ -151,19 +140,15 @@ export const getComplianceTimetableById = catchAsync(
 export const getAllComplianceTimetable = catchAsync(
   async (req: AuthenticatedRequest, res: Response) => {
     // Use the validated and transformed query from Zod middleware
-    type complianceTimetableSearchQuery = SearchComplianceTimetableQueryInput & {
-      createdBy?: string;
-    };
-    const query: complianceTimetableSearchQuery = {
+    const query: SearchComplianceTimetableQueryInput = {
       ...((req as any).validatedQuery as SearchComplianceTimetableQueryInput),
     };
-    
+
     if (req.user?.role === UserRole.STANDALONE_USER) {
       query.standAloneId = req.user._id;
     }
 
     if (req.user?.role === UserRole.TRANSPORT_MANAGER) {
-      query.createdBy = req.user._id;
       query.standAloneId = (req as any).validatedQuery.standAloneId;
     }
 
@@ -178,4 +163,3 @@ export const getAllComplianceTimetable = catchAsync(
     });
   }
 );
-

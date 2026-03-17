@@ -7,6 +7,7 @@ import {
   SpotCheckListResponse,
   SpotCheckRow,
 } from "@/lib/spot-checks/spot-check.types";
+import { UserAction } from "./user";
 
 /**
  * Extract the most useful error message from a backend error response.
@@ -33,6 +34,21 @@ function extractApiError(data: IApiResponse | undefined): string {
 }
 
 /**
+ * Get the current user's role (cached or fresh fetch)
+ */
+let cachedUserRole: string | null = null;
+const getUserRole = async (): Promise<string | null> => {
+  if (cachedUserRole) return cachedUserRole;
+  try {
+    const profileResp = await UserAction.getProfile();
+    cachedUserRole = profileResp.data?.role || null;
+    return cachedUserRole;
+  } catch {
+    return null;
+  }
+};
+
+/**
  * GET /api/v1/spot-check/get-spot-check/many?standAloneId=...
  */
 const getSpotChecks = async (
@@ -47,16 +63,28 @@ const getSpotChecks = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
+    const userRole = await getUserRole();
+
+    // For standalone users, don't include standAloneId in query params
+    const queryParams =
+      userRole === "STANDALONE_USER"
+        ? {
+            searchKey: params?.searchKey || undefined,
+            showPerPage: params?.showPerPage || 10,
+            pageNo: params?.pageNo || 1,
+          }
+        : {
+            standAloneId,
+            searchKey: params?.searchKey || undefined,
+            showPerPage: params?.showPerPage || 10,
+            pageNo: params?.pageNo || 1,
+          };
+
     const response = await axios.get<IApiResponse<SpotCheckListResponse>>(
       `${base_url}/spot-check/get-spot-check/many`,
       {
         headers: { Authorization: `Bearer ${token}` },
-        params: {
-          standAloneId,
-          searchKey: params?.searchKey || undefined,
-          showPerPage: params?.showPerPage || 10,
-          pageNo: params?.pageNo || 1,
-        },
+        params: queryParams,
       },
     );
     return response.data;
@@ -79,13 +107,21 @@ const getSpotCheck = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
-    const response = await axios.get<IApiResponse<SpotCheckRow>>(
-      `${base_url}/spot-check/get-spot-check/${spotCheckId}`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-        params: { standAloneId },
-      },
-    );
+    const userRole = await getUserRole();
+
+    // Backend route: /get-spot-check/:id with optional standAloneId query param for TM
+    // SA users: no standAloneId in any form
+    // TM users: standAloneId must be in query params (not URL path)
+    const url = `${base_url}/spot-check/get-spot-check/${spotCheckId}`;
+    const params =
+      userRole === "STANDALONE_USER"
+        ? {} // SA users should not send standAloneId
+        : { standAloneId }; // TM users must send standAloneId in query
+
+    const response = await axios.get<IApiResponse<SpotCheckRow>>(url, {
+      headers: { Authorization: `Bearer ${token}` },
+      params,
+    });
     return response.data;
   } catch (error: unknown) {
     if (axios.isAxiosError<IApiResponse>(error)) {
@@ -105,11 +141,23 @@ const createSpotCheck = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
-    const response = await axios.post<IApiResponse>(
-      `${base_url}/spot-check/create-spot-check`,
-      data,
-      { headers: { Authorization: `Bearer ${token}` } },
-    );
+    const userRole = await getUserRole();
+    const endpoint =
+      userRole === "STANDALONE_USER"
+        ? `${base_url}/spot-check/create-stand-alone-spot-check`
+        : `${base_url}/spot-check/create-spot-check`;
+
+    // SA endpoint uses .strict() — must not include standAloneId in body
+    const body =
+      userRole === "STANDALONE_USER"
+        ? Object.fromEntries(
+            Object.entries(data).filter(([key]) => key !== "standAloneId"),
+          )
+        : data;
+
+    const response = await axios.post<IApiResponse>(endpoint, body, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
     return response.data;
   } catch (error: unknown) {
     if (axios.isAxiosError<IApiResponse>(error)) {
@@ -131,11 +179,16 @@ const updateSpotCheck = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
-    const response = await axios.patch<IApiResponse>(
-      `${base_url}/spot-check/update-spot-check/${spotCheckId}/${standAloneId}`,
-      data,
-      { headers: { Authorization: `Bearer ${token}` } },
-    );
+    const userRole = await getUserRole();
+
+    const url =
+      userRole === "STANDALONE_USER"
+        ? `${base_url}/spot-check/update-spot-check/${spotCheckId}`
+        : `${base_url}/spot-check/update-spot-check/${spotCheckId}/${standAloneId}`;
+
+    const response = await axios.patch<IApiResponse>(url, data, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
     return response.data;
   } catch (error: unknown) {
     if (axios.isAxiosError<IApiResponse>(error)) {
@@ -156,10 +209,16 @@ const deleteSpotCheck = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
-    const response = await axios.delete<IApiResponse>(
-      `${base_url}/spot-check/delete-spot-check/${spotCheckId}/${standAloneId}`,
-      { headers: { Authorization: `Bearer ${token}` } },
-    );
+    const userRole = await getUserRole();
+
+    const url =
+      userRole === "STANDALONE_USER"
+        ? `${base_url}/spot-check/delete-spot-check/${spotCheckId}`
+        : `${base_url}/spot-check/delete-spot-check/${spotCheckId}/${standAloneId}`;
+
+    const response = await axios.delete<IApiResponse>(url, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
     return response.data;
   } catch (error: unknown) {
     if (axios.isAxiosError<IApiResponse>(error)) {
