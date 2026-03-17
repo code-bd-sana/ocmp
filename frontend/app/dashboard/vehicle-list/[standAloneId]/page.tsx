@@ -47,7 +47,9 @@ export default function VehicleListPage({ params }: PageProps) {
 
   // Delete dialog
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<VehicleTableRow | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<VehicleTableRow | null>(
+    null,
+  );
   const [deleteLoading, setDeleteLoading] = useState(false);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);

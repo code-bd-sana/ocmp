@@ -58,7 +58,7 @@ export interface VehicleListResponse {
   totalPages: number;
 }
 
-/** Body for POST /vehicle/create-vehicle (Transport Manager) */
+/** Body for POST /vehicle/create-vehicle (Transport Manager) or /vehicle/create-stand-alone-vehicle (Standalone User) */
 export interface CreateVehicleInput {
   vehicleRegId: string;
   vehicleType: string;
@@ -82,7 +82,7 @@ export interface CreateVehicleInput {
   driverPack: boolean;
   notes?: string;
   driverIds: string[];
-  standAloneId: string;
+  standAloneId?: string; // Required for Transport Manager, omitted for Standalone User
 }
 
 /** Body for PATCH /vehicle/update-vehicle/:vehicleId/:standAloneId */
