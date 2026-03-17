@@ -55,6 +55,7 @@ export interface CreateDriverInput {
   endorsementCodes?: string[];
   lastChecked?: string;
   checkStatus?: CheckStatus;
+  attachments?: File[];
 }
 
 /** Body for PATCH /driver/update-driver-by-manager/:driverId/:standAloneId */

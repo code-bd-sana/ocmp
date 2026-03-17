@@ -6,6 +6,11 @@ import { UserRole } from '../../models';
 import catchAsync from '../../utils/catch-async/catch-async';
 import { driverServices } from './driver.service';
 import { SearchDriverQueryInput } from './driver.validation';
+import {
+  extractUploadedFiles,
+  rollbackUploadedDocuments,
+  uploadFilesAndCreateDocuments,
+} from '../../utils/aws/document-upload';
 
 /**
  * Controller function to handle the creation of a driver by a transport manager.
@@ -20,11 +25,35 @@ export const createDriverAsTransportManager = catchAsync(
     const userId = req.user!._id;
     req.body.createdBy = new mongoose.Types.ObjectId(userId);
     req.body.standAloneId = new mongoose.Types.ObjectId(req.body.standAloneId);
-    // Call the service method to create a new driver and get the result
-    const result = await driverServices.createDriverAsTransportManager(req.body);
-    if (!result) throw new Error('Failed to create driver');
-    // Send a success response with the created driver data
-    ServerResponse(res, true, 201, 'Driver created successfully', result);
+    const files = extractUploadedFiles((req as any).files, ['attachments', 'files']);
+
+    let uploadedDocuments: Awaited<
+      ReturnType<typeof uploadFilesAndCreateDocuments>
+    >['documents'] = [];
+
+    try {
+      if (files.length) {
+        const uploadResult = await uploadFilesAndCreateDocuments(files, userId, 'driver');
+        uploadedDocuments = uploadResult.documents;
+
+        const uploadedIds = uploadedDocuments.map((doc) => String(doc._id));
+        req.body.attachments = Array.isArray(req.body.attachments)
+          ? [...req.body.attachments, ...uploadedIds]
+          : uploadedIds;
+      }
+
+      // Call the service method to create a new driver and get the result
+      const result = await driverServices.createDriverAsTransportManager(req.body);
+      if (!result) throw new Error('Failed to create driver');
+
+      // Send a success response with the created driver data
+      ServerResponse(res, true, 201, 'Driver created successfully', result);
+    } catch (error) {
+      if (uploadedDocuments.length) {
+        await rollbackUploadedDocuments(uploadedDocuments);
+      }
+      throw error;
+    }
   }
 );
 
@@ -40,11 +69,36 @@ export const createDriverAsStandAlone = catchAsync(
   async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user!._id;
     req.body.createdBy = new mongoose.Types.ObjectId(userId);
-    // Call the service method to create a new stand-alone driver and get the result
-    const result = await driverServices.createDriverAsStandAlone(req.body);
-    if (!result) throw new Error('Failed to create stand-alone driver');
-    // Send a success response with the created driver data
-    ServerResponse(res, true, 201, 'Driver created successfully', result);
+
+    const files = extractUploadedFiles((req as any).files, ['attachments', 'files']);
+
+    let uploadedDocuments: Awaited<
+      ReturnType<typeof uploadFilesAndCreateDocuments>
+    >['documents'] = [];
+
+    try {
+      if (files.length) {
+        const uploadResult = await uploadFilesAndCreateDocuments(files, userId, 'driver');
+        uploadedDocuments = uploadResult.documents;
+
+        const uploadedIds = uploadedDocuments.map((doc) => String(doc._id));
+        req.body.attachments = Array.isArray(req.body.attachments)
+          ? [...req.body.attachments, ...uploadedIds]
+          : uploadedIds;
+      }
+
+      // Call the service method to create a new stand-alone driver and get the result
+      const result = await driverServices.createDriverAsStandAlone(req.body);
+      if (!result) throw new Error('Failed to create stand-alone driver');
+
+      // Send a success response with the created driver data
+      ServerResponse(res, true, 201, 'Driver created successfully', result);
+    } catch (error) {
+      if (uploadedDocuments.length) {
+        await rollbackUploadedDocuments(uploadedDocuments);
+      }
+      throw error;
+    }
   }
 );
 
@@ -151,3 +205,33 @@ export const getManyDriver = catchAsync(async (req: AuthenticatedRequest, res: R
     totalPages,
   });
 });
+
+/**
+ * Controller function to upload one or more attachment files for a driver.
+ * Accepts multipart fields named `attachments` or `files`.
+ * Uploads to S3, stores rows in Document model, then appends document IDs to driver.attachments.
+ */
+export const uploadDriverAttachments = catchAsync(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const paramToString = (p?: string | string[]) => (Array.isArray(p) ? p[0] : p);
+    const driverId = paramToString(req.params.driverId);
+    const standAloneId = paramToString(req.params.standAloneId);
+
+    const files = extractUploadedFiles((req as any).files, ['attachments', 'files']);
+    if (!files.length) {
+      throw new Error('No files uploaded. Use `attachments` or `files` as multipart field name.');
+    }
+
+    const accessStandAloneId =
+      req.user!.role === UserRole.TRANSPORT_MANAGER ? standAloneId : undefined;
+
+    const result = await driverServices.uploadDriverAttachments(
+      driverId as string,
+      req.user!._id,
+      files,
+      accessStandAloneId
+    );
+
+    ServerResponse(res, true, 200, 'Driver attachments uploaded successfully', result);
+  }
+);

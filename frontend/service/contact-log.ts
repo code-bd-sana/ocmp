@@ -1,17 +1,13 @@
-import { base_url } from "@/lib/utils";
-import { IApiResponse } from "./auth";
-import { AuthAction } from "./auth";
-import {
-  CreateDriverInput,
-  DriverListResponse,
-  DriverRow,
-  UpdateDriverInput,
-} from "@/lib/drivers/driver.types";
 import axios from "axios";
+import { base_url } from "@/lib/utils";
+import { IApiResponse, AuthAction } from "./auth";
+import {
+  ContactLogListResponse,
+  ContactLogRow,
+  CreateContactLogInput,
+  UpdateContactLogInput,
+} from "@/lib/contact-log/contact-log.types";
 
-/**
- * Extract the most useful error message from a backend error response.
- */
 function extractApiError(data: IApiResponse | undefined): string {
   if (!data) return "Something went wrong";
 
@@ -27,30 +23,27 @@ function extractApiError(data: IApiResponse | undefined): string {
     if (typeof data.errors === "string") return data.errors;
   }
 
-  if (data.message && data.message !== "An unexpected error occurred")
+  if (data.message && data.message !== "An unexpected error occurred") {
     return data.message;
+  }
 
   return "Something went wrong";
 }
 
-/**
- * GET /api/v1/driver/get-drivers?standAloneId=...
- * Fetches paginated drivers for a specific client (standAloneId).
- */
-const getDrivers = async (
+const getContactLogs = async (
   standAloneId: string,
   params?: {
     searchKey?: string;
     showPerPage?: number;
     pageNo?: number;
   },
-): Promise<IApiResponse<DriverListResponse>> => {
+): Promise<IApiResponse<ContactLogListResponse>> => {
   const token = AuthAction.GetAuthToken();
   if (!token) throw new Error("No authentication token found");
 
   try {
-    const response = await axios.get<IApiResponse<DriverListResponse>>(
-      `${base_url}/driver/get-drivers`,
+    const response = await axios.get<IApiResponse<ContactLogListResponse>>(
+      `${base_url}/contact-log/get-all`,
       {
         headers: { Authorization: `Bearer ${token}` },
         params: {
@@ -70,20 +63,16 @@ const getDrivers = async (
   }
 };
 
-/**
- * GET /api/v1/driver/get-driver/:id/:standAloneId
- * Fetches a single driver by ID for a specific client.
- */
-const getDriver = async (
-  driverId: string,
+const getContactLog = async (
+  contactLogId: string,
   standAloneId: string,
-): Promise<IApiResponse<DriverRow>> => {
+): Promise<IApiResponse<ContactLogRow>> => {
   const token = AuthAction.GetAuthToken();
   if (!token) throw new Error("No authentication token found");
 
   try {
-    const response = await axios.get<IApiResponse<DriverRow>>(
-      `${base_url}/driver/get-driver/${driverId}/${standAloneId}`,
+    const response = await axios.get<IApiResponse<ContactLogRow>>(
+      `${base_url}/contact-log/${contactLogId}/${standAloneId}`,
       { headers: { Authorization: `Bearer ${token}` } },
     );
     return response.data;
@@ -95,76 +84,15 @@ const getDriver = async (
   }
 };
 
-/**
- * POST /api/v1/driver/create-driver
- * Creates a new driver under a specific client (standAloneId in body).
- */
-const createDriver = async (
-  data: CreateDriverInput,
+const createContactLog = async (
+  data: CreateContactLogInput,
 ): Promise<IApiResponse> => {
   const token = AuthAction.GetAuthToken();
   if (!token) throw new Error("No authentication token found");
 
   try {
-    const formData = new FormData();
-
-    formData.append("fullName", data.fullName);
-    formData.append("licenseNumber", data.licenseNumber);
-    formData.append("postCode", data.postCode);
-    formData.append("niNumber", data.niNumber);
-    formData.append("nextCheckDueDate", data.nextCheckDueDate);
-    formData.append("points", String(data.points));
-    formData.append("checkFrequencyDays", String(data.checkFrequencyDays));
-    formData.append("employed", String(data.employed));
-    formData.append("standAloneId", data.standAloneId);
-
-    if (data.licenseExpiry) formData.append("licenseExpiry", data.licenseExpiry);
-    if (data.licenseExpiryDTC) formData.append("licenseExpiryDTC", data.licenseExpiryDTC);
-    if (data.cpcExpiry) formData.append("cpcExpiry", data.cpcExpiry);
-    if (data.lastChecked) formData.append("lastChecked", data.lastChecked);
-    if (data.checkStatus) formData.append("checkStatus", data.checkStatus);
-
-    if (data.endorsementCodes?.length) {
-      data.endorsementCodes.forEach((code) => {
-        formData.append("endorsementCodes", code);
-      });
-    }
-
-    if (data.attachments?.length) {
-      data.attachments.forEach((file) => {
-        formData.append("attachments", file);
-      });
-    }
-
     const response = await axios.post<IApiResponse>(
-      `${base_url}/driver/create-driver`,
-      formData,
-      { headers: { Authorization: `Bearer ${token}` } },
-    );
-    return response.data;
-  } catch (error: unknown) {
-    if (axios.isAxiosError<IApiResponse>(error)) {
-      throw new Error(extractApiError(error.response?.data));
-    }
-    throw new Error("Something went wrong");
-  }
-};
-
-/**
- * PATCH /api/v1/driver/update-driver-by-manager/:driverId/:standAloneId
- * Updates a driver for a specific client.
- */
-const updateDriver = async (
-  driverId: string,
-  standAloneId: string,
-  data: UpdateDriverInput,
-): Promise<IApiResponse> => {
-  const token = AuthAction.GetAuthToken();
-  if (!token) throw new Error("No authentication token found");
-
-  try {
-    const response = await axios.patch<IApiResponse>(
-      `${base_url}/driver/update-driver-by-manager/${driverId}/${standAloneId}`,
+      `${base_url}/contact-log/create-as-manager`,
       data,
       { headers: { Authorization: `Bearer ${token}` } },
     );
@@ -177,20 +105,18 @@ const updateDriver = async (
   }
 };
 
-/**
- * DELETE /api/v1/driver/delete-driver-by-manager/:driverId/:standAloneId
- * Deletes a driver for a specific client.
- */
-const deleteDriver = async (
-  driverId: string,
+const updateContactLog = async (
+  contactLogId: string,
   standAloneId: string,
+  data: UpdateContactLogInput,
 ): Promise<IApiResponse> => {
   const token = AuthAction.GetAuthToken();
   if (!token) throw new Error("No authentication token found");
 
   try {
-    const response = await axios.delete<IApiResponse>(
-      `${base_url}/driver/delete-driver-by-manager/${driverId}/${standAloneId}`,
+    const response = await axios.patch<IApiResponse>(
+      `${base_url}/contact-log/update-as-manager/${contactLogId}/${standAloneId}`,
+      data,
       { headers: { Authorization: `Bearer ${token}` } },
     );
     return response.data;
@@ -202,10 +128,31 @@ const deleteDriver = async (
   }
 };
 
-export const DriverAction = {
-  getDrivers,
-  getDriver,
-  createDriver,
-  updateDriver,
-  deleteDriver,
+const deleteContactLog = async (
+  contactLogId: string,
+  standAloneId: string,
+): Promise<IApiResponse> => {
+  const token = AuthAction.GetAuthToken();
+  if (!token) throw new Error("No authentication token found");
+
+  try {
+    const response = await axios.delete<IApiResponse>(
+      `${base_url}/contact-log/${contactLogId}/${standAloneId}`,
+      { headers: { Authorization: `Bearer ${token}` } },
+    );
+    return response.data;
+  } catch (error: unknown) {
+    if (axios.isAxiosError<IApiResponse>(error)) {
+      throw new Error(extractApiError(error.response?.data));
+    }
+    throw new Error("Something went wrong");
+  }
+};
+
+export const ContactLogAction = {
+  getContactLogs,
+  getContactLog,
+  createContactLog,
+  updateContactLog,
+  deleteContactLog,
 };

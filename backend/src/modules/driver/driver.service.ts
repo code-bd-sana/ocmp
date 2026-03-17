@@ -5,6 +5,10 @@ import { IdOrIdsInput, SearchQueryInput } from '../../handlers/common-zod-valida
 import { DriverTachograph, FuelUsage, Vehicle } from '../../models';
 import DriverModel, { IDriver } from '../../models/vehicle-transport/driver.schema';
 import {
+  rollbackUploadedDocuments,
+  uploadFilesAndCreateDocuments,
+} from '../../utils/aws/document-upload';
+import {
   CreateDriverAsStandAloneInput,
   CreateDriverAsTransportManagerInput,
   SearchDriverQueryInput,
@@ -310,6 +314,84 @@ const getManyDriver = async (
   return { drivers, totalData, totalPages };
 };
 
+const uploadDriverAttachments = async (
+  id: IdOrIdsInput['id'],
+  userId: string,
+  files: UploadedFile[],
+  standAloneId?: string
+): Promise<{ driver: Partial<IDriver>; documents: { _id: mongoose.Types.ObjectId; url: string }[] }> => {
+  if (!files.length) {
+    throw new Error('No files provided for upload');
+  }
+
+  const accessFilters: Record<string, unknown>[] = [
+    { createdBy: userId },
+    { standAloneId: userId },
+  ];
+
+  if (mongoose.Types.ObjectId.isValid(userId)) {
+    const userObjectId = new mongoose.Types.ObjectId(userId);
+    accessFilters.push({ createdBy: userObjectId });
+    accessFilters.push({ standAloneId: userObjectId });
+  }
+
+  if (standAloneId) {
+    accessFilters.push({ standAloneId });
+    accessFilters.push({ createdBy: standAloneId });
+
+    if (mongoose.Types.ObjectId.isValid(standAloneId)) {
+      const standAloneObjectId = new mongoose.Types.ObjectId(standAloneId);
+      accessFilters.push({ standAloneId: standAloneObjectId });
+      accessFilters.push({ createdBy: standAloneObjectId });
+    }
+  }
+
+  const ownershipFilter = {
+    _id: id,
+    $or: accessFilters,
+  };
+
+  const existingDriver = await DriverModel.findOne(ownershipFilter).select('_id');
+  if (!existingDriver) {
+    throw new Error('Driver not found or access denied');
+  }
+
+  const { documents } = await uploadFilesAndCreateDocuments(
+    files,
+    userId,
+    `driver/${String(id)}`
+  );
+
+  try {
+    const documentIds = documents.map((doc) => doc._id as mongoose.Types.ObjectId);
+
+    const updatedDriver = await DriverModel.findOneAndUpdate(
+      ownershipFilter,
+      {
+        $addToSet: {
+          attachments: { $each: documentIds },
+        },
+      },
+      { returnDocument: 'after' }
+    );
+
+    if (!updatedDriver) {
+      throw new Error('Driver not found or access denied');
+    }
+
+    return {
+      driver: updatedDriver,
+      documents: documents.map((doc) => ({
+        _id: doc._id as mongoose.Types.ObjectId,
+        url: doc.url,
+      })),
+    };
+  } catch (error) {
+    await rollbackUploadedDocuments(documents);
+    throw error;
+  }
+};
+
 export const driverServices = {
   createDriverAsTransportManager,
   createDriverAsStandAlone,
@@ -317,4 +399,5 @@ export const driverServices = {
   deleteDriver,
   getDriverById,
   getManyDriver,
+  uploadDriverAttachments,
 };
