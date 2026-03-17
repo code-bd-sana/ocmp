@@ -16,6 +16,10 @@ export interface ILogin {
 
 export interface ILoginResponseData {
   token: string;
+  user?: {
+    role?: string;
+    [key: string]: unknown;
+  };
   [key: string]: unknown;
 }
 
