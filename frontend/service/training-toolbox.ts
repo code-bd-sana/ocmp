@@ -6,6 +6,7 @@ import {
 } from "@/lib/training-toolbox/training-toolbox.type";
 import { base_url } from "@/lib/utils";
 import { AuthAction, IApiResponse } from "./auth";
+import { UserAction } from "./user";
 
 interface ToolboxResponse {
   status: boolean;
@@ -63,9 +64,24 @@ function toErrorMessage(error: unknown, fallback: string): string {
   return fallback;
 }
 
+/**
+ * Get the current user's role (cached or fresh fetch)
+ */
+let cachedUserRole: string | null = null;
+const getUserRole = async (): Promise<string | null> => {
+  if (cachedUserRole) return cachedUserRole;
+  try {
+    const profileResp = await UserAction.getProfile();
+    cachedUserRole = profileResp.data?.role || null;
+    return cachedUserRole;
+  } catch {
+    return null;
+  }
+};
+
 export const TrainingToolboxAction = {
   /**
-   * Create a training toolbox record
+   * Create a training toolbox - role-aware routing and body filtering
    */
   async createTrainingToolbox(
     data: CreateTrainingToolboxInput,
@@ -73,11 +89,24 @@ export const TrainingToolboxAction = {
     const token = AuthAction.GetAuthToken();
     if (!token) throw new Error("No authentication token found");
     try {
-      const response = await axios.post<ToolboxResponse>(
-        `${base_url}/training-toolbox/create-training-toolbox`,
-        data,
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
+      const userRole = await getUserRole();
+
+      const endpoint =
+        userRole === "STANDALONE_USER"
+          ? `${base_url}/training-toolbox/create-stand-alone-training-toolbox`
+          : `${base_url}/training-toolbox/create-training-toolbox`;
+
+      // SA users: strip standAloneId from body (strict validation)
+      const body =
+        userRole === "STANDALONE_USER"
+          ? Object.fromEntries(
+              Object.entries(data).filter(([key]) => key !== "standAloneId"),
+            )
+          : data;
+
+      const response = await axios.post<ToolboxResponse>(endpoint, body, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       return response.data;
     } catch (error: unknown) {
       return {
@@ -88,30 +117,7 @@ export const TrainingToolboxAction = {
   },
 
   /**
-   * Create training toolbox as standalone user
-   */
-  async createTrainingToolboxAsStandAlone(
-    data: CreateTrainingToolboxInput,
-  ): Promise<ToolboxResponse> {
-    const token = AuthAction.GetAuthToken();
-    if (!token) throw new Error("No authentication token found");
-    try {
-      const response = await axios.post<ToolboxResponse>(
-        `${base_url}/training-toolbox/create-stand-alone-training-toolbox`,
-        data,
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
-      return response.data;
-    } catch (error: unknown) {
-      return {
-        status: false,
-        message: toErrorMessage(error, "Failed to create training toolbox"),
-      };
-    }
-  },
-
-  /**
-   * Get many training toolboxes for a client (with filtering)
+   * Get many training toolboxes - role-aware routing for query params
    */
   async getTrainingToolboxes(
     standAloneId: string,
@@ -120,16 +126,29 @@ export const TrainingToolboxAction = {
     const token = AuthAction.GetAuthToken();
     if (!token) throw new Error("No authentication token found");
     try {
+      const userRole = await getUserRole();
+
+      // SA users: no standAloneId in query params
+      // TM users: include standAloneId in query params
+      const queryParams =
+        userRole === "STANDALONE_USER"
+          ? {
+              searchKey: params?.searchKey || undefined,
+              showPerPage: params?.showPerPage || 10,
+              pageNo: params?.pageNo || 1,
+            }
+          : {
+              standAloneId,
+              searchKey: params?.searchKey || undefined,
+              showPerPage: params?.showPerPage || 10,
+              pageNo: params?.pageNo || 1,
+            };
+
       const response = await axios.get<ToolboxListResponse>(
         `${base_url}/training-toolbox/get-training-toolbox/many`,
         {
           headers: { Authorization: `Bearer ${token}` },
-          params: {
-            standAloneId,
-            searchKey: params?.searchKey || undefined,
-            showPerPage: params?.showPerPage || 10,
-            pageNo: params?.pageNo || 1,
-          },
+          params: queryParams,
         },
       );
       return response.data;
@@ -142,32 +161,7 @@ export const TrainingToolboxAction = {
   },
 
   /**
-   * Get many training toolboxes as standalone user
-   */
-  async getTrainingToolboxesAsStandAlone(
-    params?: SearchParams,
-  ): Promise<ToolboxListResponse> {
-    const token = AuthAction.GetAuthToken();
-    if (!token) throw new Error("No authentication token found");
-    try {
-      const response = await axios.get<ToolboxListResponse>(
-        `${base_url}/training-toolbox/get-training-toolbox/many`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-          params,
-        },
-      );
-      return response.data;
-    } catch (error: unknown) {
-      return {
-        status: false,
-        message: toErrorMessage(error, "Failed to fetch training toolboxes"),
-      };
-    }
-  },
-
-  /**
-   * Get a single training toolbox by ID
+   * Get a single training toolbox - role-aware routing
    */
   async getTrainingToolbox(
     toolboxId: string,
@@ -176,12 +170,18 @@ export const TrainingToolboxAction = {
     const token = AuthAction.GetAuthToken();
     if (!token) throw new Error("No authentication token found");
     try {
-      const response = await axios.get<ToolboxResponse>(
-        `${base_url}/training-toolbox/get-training-toolbox/${toolboxId}/${standAloneId}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
+      const userRole = await getUserRole();
+
+      // TM: separate route with standAloneId in URL path
+      // SA: separate route without standAloneId
+      const url =
+        userRole === "STANDALONE_USER"
+          ? `${base_url}/training-toolbox/get-training-toolbox/${toolboxId}`
+          : `${base_url}/training-toolbox/get-training-toolbox/${toolboxId}/${standAloneId}`;
+
+      const response = await axios.get<ToolboxResponse>(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       return response.data;
     } catch (error: unknown) {
       return {
@@ -192,31 +192,7 @@ export const TrainingToolboxAction = {
   },
 
   /**
-   * Get single training toolbox as standalone user
-   */
-  async getTrainingToolboxAsStandAlone(
-    toolboxId: string,
-  ): Promise<ToolboxResponse> {
-    const token = AuthAction.GetAuthToken();
-    if (!token) throw new Error("No authentication token found");
-    try {
-      const response = await axios.get<ToolboxResponse>(
-        `${base_url}/training-toolbox/get-training-toolbox/${toolboxId}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
-      return response.data;
-    } catch (error: unknown) {
-      return {
-        status: false,
-        message: toErrorMessage(error, "Failed to fetch training toolbox"),
-      };
-    }
-  },
-
-  /**
-   * Update a training toolbox
+   * Update a training toolbox - role-aware routing
    */
   async updateTrainingToolbox(
     toolboxId: string,
@@ -226,11 +202,18 @@ export const TrainingToolboxAction = {
     const token = AuthAction.GetAuthToken();
     if (!token) throw new Error("No authentication token found");
     try {
-      const response = await axios.patch<ToolboxResponse>(
-        `${base_url}/training-toolbox/update-training-toolbox/${toolboxId}/${standAloneId}`,
-        data,
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
+      const userRole = await getUserRole();
+
+      // TM: separate route with standAloneId in URL path
+      // SA: separate route without standAloneId
+      const url =
+        userRole === "STANDALONE_USER"
+          ? `${base_url}/training-toolbox/update-training-toolbox/${toolboxId}`
+          : `${base_url}/training-toolbox/update-training-toolbox/${toolboxId}/${standAloneId}`;
+
+      const response = await axios.patch<ToolboxResponse>(url, data, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       return response.data;
     } catch (error: unknown) {
       return {
@@ -241,31 +224,7 @@ export const TrainingToolboxAction = {
   },
 
   /**
-   * Update training toolbox as standalone user
-   */
-  async updateTrainingToolboxAsStandAlone(
-    toolboxId: string,
-    data: UpdateTrainingToolboxInput,
-  ): Promise<ToolboxResponse> {
-    const token = AuthAction.GetAuthToken();
-    if (!token) throw new Error("No authentication token found");
-    try {
-      const response = await axios.patch<ToolboxResponse>(
-        `${base_url}/training-toolbox/update-training-toolbox/${toolboxId}`,
-        data,
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
-      return response.data;
-    } catch (error: unknown) {
-      return {
-        status: false,
-        message: toErrorMessage(error, "Failed to update training toolbox"),
-      };
-    }
-  },
-
-  /**
-   * Delete a training toolbox
+   * Delete a training toolbox - role-aware routing
    */
   async deleteTrainingToolbox(
     toolboxId: string,
@@ -274,32 +233,18 @@ export const TrainingToolboxAction = {
     const token = AuthAction.GetAuthToken();
     if (!token) throw new Error("No authentication token found");
     try {
-      const response = await axios.delete<ToolboxResponse>(
-        `${base_url}/training-toolbox/delete-training-toolbox/${toolboxId}/${standAloneId}`,
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
-      return response.data;
-    } catch (error: unknown) {
-      return {
-        status: false,
-        message: toErrorMessage(error, "Failed to delete training toolbox"),
-      };
-    }
-  },
+      const userRole = await getUserRole();
 
-  /**
-   * Delete training toolbox as standalone user
-   */
-  async deleteTrainingToolboxAsStandAlone(
-    toolboxId: string,
-  ): Promise<ToolboxResponse> {
-    const token = AuthAction.GetAuthToken();
-    if (!token) throw new Error("No authentication token found");
-    try {
-      const response = await axios.delete<ToolboxResponse>(
-        `${base_url}/training-toolbox/delete-training-toolbox/${toolboxId}`,
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
+      // TM: separate route with standAloneId in URL path
+      // SA: separate route without standAloneId
+      const url =
+        userRole === "STANDALONE_USER"
+          ? `${base_url}/training-toolbox/delete-training-toolbox/${toolboxId}`
+          : `${base_url}/training-toolbox/delete-training-toolbox/${toolboxId}/${standAloneId}`;
+
+      const response = await axios.delete<ToolboxResponse>(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       return response.data;
     } catch (error: unknown) {
       return {
