@@ -36,7 +36,7 @@ const TransportManagerpage = () => {
       
       
       if (res.status && res.data) {
-        setRows(toTableRows(res.data));
+        setRows(toTableRows(res.data as any));
       } else {
         setError(res.message || "Failed to load transport managers");
       }

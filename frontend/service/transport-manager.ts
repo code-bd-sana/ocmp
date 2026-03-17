@@ -89,7 +89,7 @@ const getTransportManager = async (params?: {
 };
 
 
-const myManager = async (): Promise<IApiResponse<MyManagerData>> => {
+const myManager = async (): Promise<IApiResponse<any>> => {
   const token = AuthAction.GetAuthToken();
   if (!token) {
     throw new Error("No authentication token found");

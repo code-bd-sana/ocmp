@@ -49,6 +49,8 @@ export interface IResetForgetPassword {
 }
 
 const RegisterUser = async (data: IRegister): Promise<IApiResponse> => {
+  console.log(data, 'user data');
+
   try {
     const response = await axios.post<IApiResponse>(
       `${base_url}/auth/register`,
