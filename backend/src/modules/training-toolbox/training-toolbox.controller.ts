@@ -17,8 +17,12 @@ import { UserRole } from '../../models';
  */
 export const createTrainingToolboxAsManager = catchAsync(
   async (req: AuthenticatedRequest, res: Response) => {
-    if (!req.body.deliveredBy && req.user?._id) {
+    if (req.user?._id) {
+      req.body.createdBy = new mongoose.Types.ObjectId(req.user._id);
       req.body.deliveredBy = new mongoose.Types.ObjectId(req.user._id);
+    }
+    if (req.body.standAloneId) {
+      req.body.standAloneId = new mongoose.Types.ObjectId(req.body.standAloneId);
     }
 
     const result = await trainingToolboxServices.createTrainingToolbox(req.body);
@@ -29,7 +33,9 @@ export const createTrainingToolboxAsManager = catchAsync(
 
 export const createTrainingToolboxAsStandAlone = catchAsync(
   async (req: AuthenticatedRequest, res: Response) => {
-    if (!req.body.deliveredBy && req.user?._id) {
+    if (req.user?._id) {
+      req.body.createdBy = new mongoose.Types.ObjectId(req.user._id);
+      req.body.standAloneId = new mongoose.Types.ObjectId(req.user._id);
       req.body.deliveredBy = new mongoose.Types.ObjectId(req.user._id);
     }
 
@@ -104,14 +110,22 @@ export const deleteTrainingToolbox = catchAsync(
  * @returns {Promise<Partial<ITrainingToolbox>>} - The retrieved training-toolbox.
  * @throws {Error} - Throws an error if the training-toolbox retrieval fails.
  */
-export const getTrainingToolboxById = catchAsync(async (req: Request, res: Response) => {
-  const { id } = req.params;
-  // Call the service method to get the training-toolbox by ID and get the result
-  const result = await trainingToolboxServices.getTrainingToolboxById(id as string);
-  if (!result) throw new Error('Training-toolbox not found');
-  // Send a success response with the retrieved resource data
-  ServerResponse(res, true, 200, 'Training-toolbox retrieved successfully', result);
-});
+export const getTrainingToolboxById = catchAsync(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const paramToString = (p?: string | string[]) => (Array.isArray(p) ? p[0] : p);
+    const id = paramToString(req.params.id);
+    const standAloneId = paramToString((req.params as any).standAloneId);
+    // Call the service method to get the training-toolbox by ID and get the result
+    const result = await trainingToolboxServices.getTrainingToolboxById(
+      id as string,
+      req.user!._id,
+      standAloneId
+    );
+    if (!result) throw new Error('Training-toolbox not found');
+    // Send a success response with the retrieved resource data
+    ServerResponse(res, true, 200, 'Training-toolbox retrieved successfully', result);
+  }
+);
 
 /**
  * Controller function to handle the retrieval of multiple training-toolboxs.
@@ -133,11 +147,11 @@ export const getManyTrainingToolbox = catchAsync(async (req: Request, res: Respo
     query.standAloneId = authReq.user._id;
   }
 
-  const { trainingToolboxs, totalData, totalPages } =
+  const { toolboxes, totalData, totalPages } =
     await trainingToolboxServices.getManyTrainingToolbox(query);
-  if (!trainingToolboxs) throw new Error('Failed to retrieve training-toolboxs');
+  if (!toolboxes) throw new Error('Failed to retrieve training-toolboxs');
   ServerResponse(res, true, 200, 'Training-toolboxs retrieved successfully', {
-    trainingToolboxs,
+    toolboxes,
     totalData,
     totalPages,
   });

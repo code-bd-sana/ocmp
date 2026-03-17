@@ -15,7 +15,6 @@ const authorizedRoles = (roles: UserRole[]) => {
     try {
       // Assuming req.user is populated by a previous authentication middleware
       const user = (req as any).user;
-
       if (!user || !roles.includes(user.role)) {
         return ServerResponse(
           res,

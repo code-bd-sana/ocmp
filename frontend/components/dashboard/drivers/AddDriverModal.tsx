@@ -40,6 +40,7 @@ const createDriverSchema = z.object({
   cpcExpiry: z.string().optional(),
   lastChecked: z.string().optional(),
   checkStatus: z.nativeEnum(CheckStatus).optional(),
+  attachments: z.any().optional(),
 });
 
 type CreateDriverForm = z.infer<typeof createDriverSchema>;
@@ -132,6 +133,12 @@ const fields: FieldConfig<CreateDriverForm>[] = [
       { label: "Due", value: CheckStatus.DUE },
     ],
   },
+  {
+    name: "attachments",
+    label: "Attachments",
+    type: "file",
+    multiple: true,
+  },
 ];
 
 interface AddDriverModalProps {
@@ -148,6 +155,10 @@ export default function AddDriverModal({
   standAloneId,
 }: AddDriverModalProps) {
   const handleSubmit = async (data: CreateDriverForm) => {
+    const attachmentFiles = data.attachments
+      ? Array.from(data.attachments as FileList)
+      : undefined;
+
     // Convert form data to API input, attaching standAloneId
     const payload: CreateDriverInput = {
       fullName: data.fullName,
@@ -166,6 +177,7 @@ export default function AddDriverModal({
       ...(data.cpcExpiry && { cpcExpiry: data.cpcExpiry }),
       ...(data.lastChecked && { lastChecked: data.lastChecked }),
       ...(data.checkStatus && { checkStatus: data.checkStatus }),
+      ...(attachmentFiles?.length && { attachments: attachmentFiles }),
     };
     await onSubmit(payload);
   };
@@ -191,6 +203,7 @@ export default function AddDriverModal({
             licenseExpiryDTC: "",
             cpcExpiry: "",
             lastChecked: "",
+            attachments: undefined,
           }}
           onSubmit={handleSubmit}
           submitText="Create Driver"

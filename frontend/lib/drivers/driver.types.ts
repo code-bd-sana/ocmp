@@ -38,7 +38,7 @@ export interface DriverListResponse {
   totalPages: number;
 }
 
-/** Body for POST /driver/create-driver (Transport Manager) */
+/** Body for POST /driver/create-driver (Transport Manager) or /driver/create-stand-alone-driver (Standalone User) */
 export interface CreateDriverInput {
   fullName: string;
   licenseNumber: string;
@@ -48,13 +48,14 @@ export interface CreateDriverInput {
   points: number;
   checkFrequencyDays: number;
   employed: boolean;
-  standAloneId: string;
+  standAloneId?: string; // Required for Transport Manager, omitted for Standalone User
   licenseExpiry?: string;
   licenseExpiryDTC?: string;
   cpcExpiry?: string;
   endorsementCodes?: string[];
   lastChecked?: string;
   checkStatus?: CheckStatus;
+  attachments?: File[];
 }
 
 /** Body for PATCH /driver/update-driver-by-manager/:driverId/:standAloneId */

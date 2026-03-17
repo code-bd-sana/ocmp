@@ -117,17 +117,20 @@ export const deleteOcrsPlan = catchAsync(async (req: AuthenticatedRequest, res: 
 export const getOcrsPlanById = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
   const paramToString = (p?: string | string[]) => (Array.isArray(p) ? p[0] : p);
   const ocrsPlanId = paramToString(req.params.id);
+  const standAloneId = paramToString((req.params as any).standAloneId);
 
-  let accessId: string | undefined;
-  if (req.user?.role === UserRole.STANDALONE_USER) {
-    accessId = req.user._id;
-  }
-  if (req.user?.role === UserRole.TRANSPORT_MANAGER) {
-    accessId = paramToString((req.params as any).standAloneId);
+  if (req.user?.role === UserRole.TRANSPORT_MANAGER && !standAloneId) {
+    return ServerResponse(res, false, 400, 'standAloneId is required for transport managers');
   }
 
-  const result = await ocrsPlanServices.getOcrsPlanById(ocrsPlanId as string, accessId);
-  if (!result) throw new Error('Ocrs-plan not found');
+  const result = await ocrsPlanServices.getOcrsPlanById(ocrsPlanId as string, {
+    requesterId: req.user!._id,
+    requesterRole: req.user!.role,
+    standAloneId,
+  });
+  if (!result) {
+    return ServerResponse(res, false, 404, 'Ocrs-plan not found or access denied');
+  }
   ServerResponse(res, true, 200, 'Ocrs-plan retrieved successfully', result);
 });
 

@@ -31,14 +31,18 @@ const zodSubContractorAndManagerIdParamSchema = z
   .object({
     subContractorId: z
       .string({ message: 'SubContractor id is required' })
-      .refine(isMongoId, { message: 'Please provide a valid MongoDB ObjectId for subContractorId' }),
+      .refine(isMongoId, {
+        message: 'Please provide a valid MongoDB ObjectId for subContractorId',
+      }),
     standAloneId: z
       .string({ message: 'standAloneId is required' })
       .refine(isMongoId, { message: 'Please provide a valid MongoDB ObjectId for standAloneId' }),
   })
   .strict();
 
-export type SubContractorAndManagerIdParamInput = z.infer<typeof zodSubContractorAndManagerIdParamSchema>;
+export type SubContractorAndManagerIdParamInput = z.infer<
+  typeof zodSubContractorAndManagerIdParamSchema
+>;
 
 // ─── Body schemas ────────────────────────────────────────────────────
 
@@ -78,9 +82,7 @@ const baseSubContractorFields = {
     .number({ message: 'GIT cover per tonne must be a number' })
     .nonnegative('GIT cover per tonne must be a non-negative number')
     .optional(),
-  hiabAvailable: z
-    .boolean({ message: 'HIAB available must be a boolean' })
-    .optional(),
+  hiabAvailable: z.boolean({ message: 'HIAB available must be a boolean' }).optional(),
   otherCapabilities: z
     .string({ message: 'Other capabilities must be a string' })
     .max(500, 'Other capabilities must not exceed 500 characters')
@@ -114,7 +116,9 @@ const zodCreateSubContractorAsManagerSchema = z
   })
   .strict();
 
-export type CreateSubContractorAsManagerInput = z.infer<typeof zodCreateSubContractorAsManagerSchema>;
+export type CreateSubContractorAsManagerInput = z.infer<
+  typeof zodCreateSubContractorAsManagerSchema
+>;
 
 /** Standalone create: no standAloneId needed */
 const zodCreateSubContractorAsStandAloneSchema = z
@@ -123,10 +127,14 @@ const zodCreateSubContractorAsStandAloneSchema = z
   })
   .strict();
 
-export type CreateSubContractorAsStandAloneInput = z.infer<typeof zodCreateSubContractorAsStandAloneSchema>;
+export type CreateSubContractorAsStandAloneInput = z.infer<
+  typeof zodCreateSubContractorAsStandAloneSchema
+>;
 
 // Legacy union type
-export type CreateSubContractorInput = CreateSubContractorAsManagerInput | CreateSubContractorAsStandAloneInput;
+export type CreateSubContractorInput =
+  | CreateSubContractorAsManagerInput
+  | CreateSubContractorAsStandAloneInput;
 
 /** Update sub-contractor (shared for both roles) — all fields optional, at least 1 required */
 const zodUpdateSubContractorSchema = z
@@ -170,9 +178,7 @@ const zodUpdateSubContractorSchema = z
       .number({ message: 'GIT cover per tonne must be a number' })
       .nonnegative('GIT cover per tonne must be a non-negative number')
       .optional(),
-    hiabAvailable: z
-      .boolean({ message: 'HIAB available must be a boolean' })
-      .optional(),
+    hiabAvailable: z.boolean({ message: 'HIAB available must be a boolean' }).optional(),
     otherCapabilities: z
       .string({ message: 'Other capabilities must be a string' })
       .max(500, 'Other capabilities must not exceed 500 characters')
@@ -219,11 +225,17 @@ export type SearchSubContractorsQueryInput = z.infer<typeof zodSearchSubContract
 
 // Param validators
 export const validateSubContractorIdParam = validateParams(zodSubContractorIdParamSchema);
-export const validateSubContractorAndManagerIdParam = validateParams(zodSubContractorAndManagerIdParamSchema);
+export const validateSubContractorAndManagerIdParam = validateParams(
+  zodSubContractorAndManagerIdParamSchema
+);
 
 // Body validators
-export const validateCreateSubContractorAsManager = validateBody(zodCreateSubContractorAsManagerSchema);
-export const validateCreateSubContractorAsStandAlone = validateBody(zodCreateSubContractorAsStandAloneSchema);
+export const validateCreateSubContractorAsManager = validateBody(
+  zodCreateSubContractorAsManagerSchema
+);
+export const validateCreateSubContractorAsStandAlone = validateBody(
+  zodCreateSubContractorAsStandAloneSchema
+);
 export const validateUpdateSubContractor = validateBody(zodUpdateSubContractorSchema);
 
 // Search query validators

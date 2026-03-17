@@ -45,7 +45,6 @@ export default function SignInPage() {
     {},
   );
 
-
   const router = useRouter();
 
   // Validate form inputs
@@ -81,25 +80,25 @@ export default function SignInPage() {
     try {
       const payload = { email, password };
       const resp = await AuthAction.LoginUser(payload);
-      
+
       if (resp.status) {
         const token = resp.data?.token;
         if (token) {
-          const secure = window.location.protocol === "https:" ? "; secure" : "";
+          const secure =
+            window.location.protocol === "https:" ? "; secure" : "";
           document.cookie = `token=${encodeURIComponent(
             token,
           )}; path=/; max-age=604800; samesite=lax${secure}`;
         }
 
         toast.success(resp.message || "Successfully signed in!");
-        // Redirect to dashboard or home page
-        setTimeout(() => {
-          router.push("/dashboard"); // or wherever you want to redirect
-        }, 1000);
+        router.push("/dashboard");
       } else {
         // Show error message from API
-        toast.error(resp.message || "Sign in failed. Please check your credentials.");
-        
+        toast.error(
+          resp.message || "Sign in failed. Please check your credentials.",
+        );
+
         // Set field-specific errors if provided by API
         if (resp.error) {
           if (typeof resp.error === "string") {
@@ -114,19 +113,17 @@ export default function SignInPage() {
       }
     } catch (error) {
       console.error("Sign in failed:", error);
-      const errorMessage = error instanceof Error ? error.message : "Something went wrong";
+      const errorMessage =
+        error instanceof Error ? error.message : "Something went wrong";
       toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
   }
 
-const token = AuthAction.GetAuthToken();
-console.log(token, 'token');
-
   return (
     <div className="flex min-h-screen items-center justify-center bg-linear-to-br from-gray-50 to-gray-100 p-4 dark:from-gray-900 dark:to-gray-800">
-      <Toaster/>
+      <Toaster />
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="space-y-1">
           <CardTitle className="text-center text-2xl font-bold">

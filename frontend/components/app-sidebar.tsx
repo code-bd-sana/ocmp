@@ -16,7 +16,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 import { ChevronDown, LogOut, UserRoundCog } from "lucide-react";
 import Link from "next/link";
@@ -24,6 +24,7 @@ import { DesktopSidebarToggle } from "./smart-toggle";
 import { AuthAction } from "@/service/auth";
 import { ClientAction } from "@/service/client";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 interface SidebarClient {
   id: string;
@@ -38,15 +39,46 @@ const CLIENT_MODULES: { slug: string; label: string }[] = [
   { slug: "driver-details", label: "Driver Details" },
   { slug: "vehicle-list", label: "Vehicle List" },
   { slug: "spot-checks", label: "Spot Checks" },
-  { slug: "subcontractor-details", label: "Subcontractor Details" },
   { slug: "driver-tachograph", label: "Driver Tachograph" },
+  { slug: "training-toolbox", label: "Training Toolbox" },
   { slug: "renewal-tracker", label: "Renewal Tracker" },
+  { slug: "ocrs-plan", label: "OCRS Plan" },
+  { slug: "traffic-commissioner", label: "Traffic Commissioner" },
+  { slug: "self-service", label: "Self Service" },
+  { slug: "planner", label: "Planner" },
+  { slug: "pg9AndPg13Plan", label: "PG9 and PG13 Plan" },
+  { slug: "maintenance-meeting", label: "Maintenance & Meeting" },
+  { slug: "contact-log", label: "Contact Log" },
+  {
+    slug: "audits-rectification-reports",
+    label: "Audits & Rectification Reports",
+  },
+  { slug: "compliance-timetable", label: "Compliance Timetable" },
+  { slug: "transport-manager", label: "Transport Manager" },
+  { slug: "fuel-usage", label: "Fuel Usage" },
+  { slug: "wheel-retorque", label: "Wheel Re-torque Policy" },
+  { slug: "working-time-directive", label: "Working Time Directive" },
   { slug: "policy-review-tracker", label: "Policy Review Tracker" },
+  { slug: "subcontractor-details", label: "Subcontractor Details" },
 ];
 
 export function AppSidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const [clients, setClients] = useState<SidebarClient[]>([]);
+
+  const handleLogout = async () => {
+    try {
+      await AuthAction.LogOut();
+      toast.success("Logged out successfully");
+    } catch {
+      // Fallback: ensure local auth state is cleared even if API fails.
+      AuthAction.RemoveAuthToken();
+      toast.success("Logged out successfully");
+    } finally {
+      router.replace("/signin");
+    }
+  };
 
   // Fetch real clients on mount
   useEffect(() => {
@@ -96,40 +128,49 @@ export function AppSidebar() {
 
               <CollapsibleContent>
                 {activeModule ? (
-                  <SidebarMenuSub className="mt-3 -ml-5">
-                    {clients.map((client, index) => (
-                      <SidebarMenuSubItem key={client.id} className="relative">
-                        {/* Vertical line */}
-                        {index < clients.length - 1 && (
-                          <div className="bg-muted-foreground absolute -top-1 bottom-0 left-6 w-0.5" />
-                        )}
-
-                        {/* Horizontal branch line */}
-                        <div className="bg-muted-foreground absolute top-1/2 left-6 h-0.5 w-5" />
-
-                        {/* Corner for last item */}
-                        {index === clients.length - 1 && (
-                          <div className="bg-muted-foreground absolute -top-1 left-6 h-7 w-0.5" />
-                        )}
-                        <SidebarMenuSubButton
-                          asChild
-                          isActive={activeClientId === client.id}
-                          className={`hover:text-primary py-6 pl-14 font-normal text-(--body-text) hover:text-base ${
-                            activeClientId === client.id
-                              ? "!bg-white! !text-primary! data-[active=true]:text-primary! ml-12 rounded-none pl-3 shadow-sm! data-[active=true]:bg-white!"
-                              : ""
-                          } `}
+                  activeModule.slug === "transport-manager" ? (
+                    <div className="text-muted-foreground px-6 py-4 text-sm">
+                      No client list for this module
+                    </div>
+                  ) : (
+                    <SidebarMenuSub className="mt-3 -ml-5">
+                      {clients.map((client, index) => (
+                        <SidebarMenuSubItem
+                          key={client.id}
+                          className="relative"
                         >
-                          <Link
-                            href={`/dashboard/${activeModule.slug}/${client.id}`}
-                            className="block"
+                          {/* Vertical line */}
+                          {index < clients.length - 1 && (
+                            <div className="bg-muted-foreground absolute -top-1 bottom-0 left-6 w-0.5" />
+                          )}
+
+                          {/* Horizontal branch line */}
+                          <div className="bg-muted-foreground absolute top-1/2 left-6 h-0.5 w-5" />
+
+                          {/* Corner for last item */}
+                          {index === clients.length - 1 && (
+                            <div className="bg-muted-foreground absolute -top-1 left-6 h-7 w-0.5" />
+                          )}
+                          <SidebarMenuSubButton
+                            asChild
+                            isActive={activeClientId === client.id}
+                            className={`hover:text-primary py-6 pl-14 font-normal text-(--body-text) hover:text-base ${
+                              activeClientId === client.id
+                                ? "!bg-white! !text-primary! data-[active=true]:text-primary! ml-12 rounded-none pl-3 shadow-sm! data-[active=true]:bg-white!"
+                                : ""
+                            } `}
                           >
-                            {client.name}
-                          </Link>
-                        </SidebarMenuSubButton>
-                      </SidebarMenuSubItem>
-                    ))}
-                  </SidebarMenuSub>
+                            <Link
+                              href={`/dashboard/${activeModule.slug}/${client.id}`}
+                              className="block"
+                            >
+                              {client.name}
+                            </Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                      ))}
+                    </SidebarMenuSub>
+                  )
                 ) : (
                   <div className="text-muted-foreground px-6 py-4 text-sm">
                     Please select a module from the footer to view clients.
@@ -143,16 +184,10 @@ export function AppSidebar() {
 
       <SidebarFooter className="bg-muted p-3">
         <SidebarMenuButton
-          asChild
+          onClick={handleLogout}
           className="text-destructive hover:bg-destructive/10 hover:text-destructive w-full cursor-pointer justify-start"
         >
-          <div
-            onClick={async () => {
-              const logout = await AuthAction.LogOut();
-              console.log(logout, "Log Out success"); // ! Must be remove console log
-            }}
-            className="flex items-center gap-2 text-[16px]"
-          >
+          <div className="flex items-center gap-2 text-[16px]">
             <LogOut className="h-4 w-4" />
             <span>Logout Account</span>
           </div>

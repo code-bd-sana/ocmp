@@ -1,3 +1,5 @@
+"use client";
+
 import Image from "next/image";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -7,20 +9,41 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MobileSidebarToggle } from "../smart-toggle";
+import { AuthAction } from "@/service/auth";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
-export default function Header() {
+interface HeaderProps {
+  showSidebarToggle?: boolean;
+}
+
+export default function Header({ showSidebarToggle = true }: HeaderProps) {
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    try {
+      await AuthAction.LogOut();
+      toast.success("Logged out successfully");
+    } catch {
+      AuthAction.RemoveAuthToken();
+      toast.success("Logged out successfully");
+    } finally {
+      router.replace("/signin");
+    }
+  };
+
   return (
     <header className="bg-primary text-primary-foreground sticky top-0 z-50 flex h-14 items-center justify-between border-b px-4 shadow-sm sm:px-6 md:h-16 lg:px-10">
       {/* Logo */}
       <div className="flex items-center gap-3">
-        <MobileSidebarToggle />
+        {showSidebarToggle ? <MobileSidebarToggle /> : null}
         <Image
           src="/logo.png"
           alt="OCMP"
           width={150}
           height={40}
           className="object-contain"
-          style={{ height: "auto" }}
+          style={{ height: "auto", width: "auto" }}
           priority
         />
       </div>
@@ -46,7 +69,10 @@ export default function Header() {
           <DropdownMenuContent align="end">
             <DropdownMenuItem>Profile</DropdownMenuItem>
             <DropdownMenuItem>Settings</DropdownMenuItem>
-            <DropdownMenuItem className="text-destructive">
+            <DropdownMenuItem
+              className="text-destructive cursor-pointer"
+              onClick={handleLogout}
+            >
               Logout
             </DropdownMenuItem>
           </DropdownMenuContent>

@@ -45,16 +45,16 @@ const baseDriverFields = {
     .optional(),
   cpcExpiry: z.coerce.date({ message: 'CPC expiry must be a valid date string' }).optional(),
   points: z
-    .number({ message: 'Points must be a number' })
+    .coerce.number({ message: 'Points must be a number' })
     .int({ message: 'Points must be an integer' })
     .min(0, 'Points cannot be negative'),
   endorsementCodes: z.array(z.string({ message: 'Endorsement code must be a string' })).optional(),
   lastChecked: z.coerce.date({ message: 'Last checked must be a valid date string' }).optional(),
   checkFrequencyDays: z
-    .number({ message: 'Check frequency days must be a number' })
+    .coerce.number({ message: 'Check frequency days must be a number' })
     .int({ message: 'Check frequency days must be an integer' })
     .min(0, 'Check frequency days cannot be negative'),
-  employed: z.boolean({ message: 'Employed must be a boolean value' }),
+  employed: z.coerce.boolean({ message: 'Employed must be a boolean value' }),
   checkStatus: z.nativeEnum(CheckStatus).optional(),
   attachments: z
     .array(z.string().refine(isMongoId, { message: 'Please provide a valid MongoDB ObjectId' }))
@@ -182,6 +182,16 @@ const zodGetDriverByIdParamsSchema = z
 
 export type GetDriverByIdParamsInput = z.infer<typeof zodGetDriverByIdParamsSchema>;
 
+const zodDriverIdParamSchema = z
+  .object({
+    driverId: z
+      .string({ message: 'Driver id is required' })
+      .refine(isMongoId, { message: 'Please provide a valid MongoDB ObjectId for driver ID' }),
+  })
+  .strict();
+
+export type DriverIdParamInput = z.infer<typeof zodDriverIdParamSchema>;
+
 /**
  * Named validators — use these directly in your Express routes
  */
@@ -194,3 +204,4 @@ export const validateSearchDriverQueries = validateQuery(zodSearchDriverSchema);
 export const validateDeleteDriverIds = validateParams(zodDeleteDriverSchema);
 export const validateUpdateDriverIds = validateParams(zodUpdateDriverIdSchema);
 export const validateGetDriverByIdParams = validateParams(zodGetDriverByIdParamsSchema);
+export const validateDriverIdParam = validateParams(zodDriverIdParamSchema);

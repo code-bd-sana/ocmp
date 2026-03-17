@@ -59,7 +59,7 @@ export const SETTINGS_META: SettingMeta[] = [
   {
     key: "trainingAndToolboxTalks",
     label: "Training and Toolbox Talks",
-    href: "/dashboard/training",
+    href: "/dashboard/training-toolbox",
   },
   {
     key: "renewalsTracker",
@@ -69,7 +69,7 @@ export const SETTINGS_META: SettingMeta[] = [
   {
     key: "OCRSChecksAndRectification",
     label: "OCRS checks and rectification action plans",
-    href: "/dashboard/ocrs-checks",
+    href: "/dashboard/ocrs-plan",
   },
   {
     key: "trafficCommissionerCommunicate",
@@ -90,13 +90,13 @@ export const SETTINGS_META: SettingMeta[] = [
   {
     key: "PG9sPG13FGClearanceInvesting",
     label: "PG9s PG13 FG Clearance Investigation and TC Reporting",
-    href: "/dashboard/pg9s",
+    href: "/dashboard/pg9AndPg13Plan",
   },
   { key: "contactLog", label: "Contact log", href: "/dashboard/contact-log" },
   {
     key: "GV79DAndMaintenanceProvider",
     label: "GV79 and Maintenance Provider Communication and Meeting Agenda",
-    href: "/dashboard/gv79",
+    href: "/dashboard/maintenance-meeting",
   },
   {
     key: "complianceTimetable",
@@ -112,7 +112,7 @@ export const SETTINGS_META: SettingMeta[] = [
   {
     key: "wheelRetorquePolicyAndMonitoring",
     label: "Wheel Re-torque and Monitoring",
-    href: "/dashboard/wheel-retorque-monitoring",
+    href: "/dashboard/wheel-retorque",
   },
   {
     key: "workingTimeDirective",
