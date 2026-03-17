@@ -148,6 +148,7 @@ const getManyTrainingToolbox = async (
     standAloneId?: string;
     requesterId?: string;
     requesterRole?: UserRole;
+    createdBy?: string;
   }
 ): Promise<{
   toolboxes: Partial<ITrainingToolbox>[];
@@ -161,6 +162,7 @@ const getManyTrainingToolbox = async (
     standAloneId,
     requesterId,
     requesterRole,
+    createdBy,
   } = query;
 
   const matchStage: any = {};
@@ -176,31 +178,38 @@ const getManyTrainingToolbox = async (
   let effectiveOwnerId: string | undefined;
 
   // For standalone users, restrict to their own data. For transport managers, restrict to their own data and any data under the same standAloneId (if provided).
-  if (requesterRole === UserRole.STANDALONE_USER && requesterId) {
-    effectiveOwnerId = String(requesterId);
-  }
+  // if (requesterRole === UserRole.STANDALONE_USER && requesterId) {
+  //   effectiveOwnerId = String(requesterId);
+  // }
 
-  if (requesterRole === UserRole.TRANSPORT_MANAGER && standAloneId) {
-    effectiveOwnerId = String(standAloneId);
-  }
+  // if (requesterRole === UserRole.TRANSPORT_MANAGER && standAloneId) {
+  //   effectiveOwnerId = String(standAloneId);
+  // }
 
-  if (effectiveOwnerId) {
-    const ownerObjectId = new mongoose.Types.ObjectId(effectiveOwnerId);
+  // if (effectiveOwnerId) {
+  //   const ownerObjectId = new mongoose.Types.ObjectId(effectiveOwnerId);
 
-    matchStage.$and = matchStage.$and || [];
-    matchStage.$and.push({
-      $or: [{ standAloneId: ownerObjectId }, { createdBy: ownerObjectId }],
-    });
+  //   matchStage.$and = matchStage.$and || [];
+  //   matchStage.$and.push({
+  //     $or: [{ standAloneId: ownerObjectId }, { createdBy: ownerObjectId }],
+  //   });
 
-    const accessibleDrivers = await Driver.find({
-      $or: [{ standAloneId: ownerObjectId }, { createdBy: ownerObjectId }],
-    })
-      .select('_id')
-      .lean();
+  //   const accessibleDrivers = await Driver.find({
+  //     $or: [{ standAloneId: ownerObjectId }, { createdBy: ownerObjectId }],
+  //   })
+  //     .select('_id')
+  //     .lean();
 
-    const accessibleDriverIds = accessibleDrivers.map((driver) => driver._id);
+  //   const accessibleDriverIds = accessibleDrivers.map((driver) => driver._id);
 
-    matchStage.$and.push({ driverId: { $in: accessibleDriverIds } });
+  //   matchStage.$and.push({ driverId: { $in: accessibleDriverIds }
+
+  // });
+
+  const ownerId = standAloneId || createdBy;
+  if (ownerId) {
+    const ownerObjectId = new mongoose.Types.ObjectId(String(ownerId));
+    matchStage.$or = [{ standAloneId: ownerObjectId }, { createdBy: ownerObjectId }];
   }
 
   const skipItems = (pageNo - 1) * showPerPage;
