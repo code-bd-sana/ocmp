@@ -154,7 +154,7 @@ const createVehicle = async (
         : `${base_url}/vehicle/create-vehicle`;
 
     // SA endpoint uses .strict() — must not include standAloneId in body
-    const { standAloneId: _omit, ...saData } = data;
+    const { ...saData } = data;
     const body = userRole === "STANDALONE_USER" ? saData : data;
 
     const response = await axios.post<IApiResponse>(endpoint, body, {

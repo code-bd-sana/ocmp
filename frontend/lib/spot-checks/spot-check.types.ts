@@ -32,7 +32,7 @@ export interface SpotCheckListResponse {
 export interface CreateSpotCheckInput {
   vehicleId: string;
   issueDetails: string;
-  standAloneId: string;
+  standAloneId?: string;
   reportedBy?: string;
   rectificationRequired?: string;
   actionTaken?: string;
