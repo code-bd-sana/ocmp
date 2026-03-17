@@ -318,22 +318,14 @@ const getDriverTachographById = async (id: IdOrIdsInput['id']): Promise<any> => 
 const getManyDriverTachograph = async (
   query: SearchQueryInput & {
     standAloneId?: string;
-    requesterId?: string;
-    requesterRole?: UserRole;
+    createdBy?: string;
   }
 ): Promise<{
   driverTachographs: any[];
   totalData: number;
   totalPages: number;
 }> => {
-  const {
-    searchKey = '',
-    showPerPage = 10,
-    pageNo = 1,
-    standAloneId,
-    requesterId,
-    requesterRole,
-  } = query;
+  const { searchKey = '', showPerPage = 10, pageNo = 1, standAloneId, createdBy } = query;
 
   const matchStage: any = {};
 
@@ -346,36 +338,14 @@ const getManyDriverTachograph = async (
     ];
   }
 
-  // Ownership filtering
-  const ownerIds = new Set<string>();
-
-  if (requesterRole === UserRole.STANDALONE_USER && requesterId) {
-    // Standalone users can only see their own records
-    ownerIds.add(String(requesterId));
-  }
-
-  if (requesterRole === UserRole.TRANSPORT_MANAGER) {
-    // Transport managers must provide standAloneId to see specific client's records
-    if (standAloneId) {
-      ownerIds.add(String(standAloneId));
-    }
-    // If no standAloneId provided, they see no records (or could show error)
-  }
-
-  if (ownerIds.size > 0) {
-    const ownerObjectIds = Array.from(ownerIds).map((id) => new mongoose.Types.ObjectId(id));
-
-    // Find vehicles that belong to the specified owner(s)
-    const accessibleVehicles = await Vehicle.find({
-      $or: [{ standAloneId: { $in: ownerObjectIds } }, { createdBy: { $in: ownerObjectIds } }],
-    })
-      .select('_id')
-      .lean();
-
-    const accessibleVehicleIds = accessibleVehicles.map((v) => v._id);
-
-    // Filter driver-tachographs to only show those with accessible vehicles
-    matchStage.vehicleId = { $in: accessibleVehicleIds };
+  // Ownership filtering - bidirectional visibility
+  // A record belongs to an SA user if EITHER:
+  //   a) standAloneId = SA_id  (created by TM on behalf of SA user)
+  //   b) createdBy   = SA_id  (created by SA user themselves)
+  const ownerId = standAloneId || createdBy;
+  if (ownerId) {
+    const ownerObjectId = new mongoose.Types.ObjectId(ownerId);
+    matchStage.$or = [{ standAloneId: ownerObjectId }, { createdBy: ownerObjectId }];
   }
 
   const skipItems = (pageNo - 1) * showPerPage;
