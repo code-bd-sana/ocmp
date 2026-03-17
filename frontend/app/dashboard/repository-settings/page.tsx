@@ -38,7 +38,9 @@ export default function RepositorySettings() {
           setError(res.message || "Failed to load settings");
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load settings");
+        setError(
+          err instanceof Error ? err.message : "Failed to load settings",
+        );
       }
     };
     fetch();
