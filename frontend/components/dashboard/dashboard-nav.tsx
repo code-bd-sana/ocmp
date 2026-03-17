@@ -1,44 +1,27 @@
 "use client";
 
+import { cn } from "@/lib/utils";
+import { AuthAction } from "@/service/auth";
+import {
+  Calendar,
+  FolderOpen,
+  LayoutDashboard,
+  Settings,
+  Truck,
+  UserCog,
+  Users,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { cn } from "@/lib/utils";
-import {
-  LayoutDashboard,
-  FolderOpen,
-  Truck,
-  Users,
-  Calendar,
-  Settings,
-} from "lucide-react";
+import { useEffect, useState } from "react";
 
-/**
- * Array of navigation items for the dashboard sidebar/header
- *
- * Each item represents a navigation link in the dashboard navigation bar.
- * The items are displayed as clickable icons with labels that provide
- * access to different sections of the dashboard.
- *
- * @type {Array<{
- *   name: string;        // Display name shown to the user
- *   href: string;        // URL path for navigation (Next.js route)
- *   icon: LucideIcon;    // Icon component from lucide-react library
- * }>}
- *
- * @property {string} name - The display name shown to the user (e.g., "Dashboard", "Repository")
- * @property {string} href - The URL path for Next.js navigation. Should follow the app router structure.
- * @property {LucideIcon} icon - Icon component from lucide-react library that visually represents the navigation item.
- */
-
+// সব navigation items
 const items = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  {
-    name: "Repository",
-    href: "/dashboard/repository-settings",
-    icon: FolderOpen,
-  },
+  { name: "Repository", href: "/dashboard/repository-settings", icon: FolderOpen },
   { name: "Vehicles", href: "/dashboard/vehicles", icon: Truck },
-  { name: "All Users", href: "/dashboard/users", icon: Users },
+  { name: "All Users", href: "/dashboard/users", icon: Users }, 
+  { name: "All Transport Manager", href: "/dashboard/transport-managers", icon: UserCog }, // 
   { name: "Planner", href: "/dashboard/planner", icon: Calendar },
   { name: "Settings", href: "/dashboard/settings", icon: Settings },
 ];
