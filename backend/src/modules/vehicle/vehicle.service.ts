@@ -320,15 +320,19 @@ const getManyVehicle = async (
     });
   }
 
-  if (standAloneId) {
-      andConditions.push({ standAloneId: new mongoose.Types.ObjectId(standAloneId) });
-      if (createdBy) {
-        andConditions.push({ createdBy: new mongoose.Types.ObjectId(createdBy) });
-      }
-    } else if (createdBy) {
-      // Stand-alone user: filter by createdBy only
-      andConditions.push({ createdBy: new mongoose.Types.ObjectId(createdBy) });
-    }
+  // Determine the SA user's ID:
+  //   - TM passes it as standAloneId (the client they're viewing)
+  //   - SA passes it as createdBy (their own ID, set by the controller)
+  // A vehicle belongs to an SA user if EITHER:
+  //   a) standAloneId = SA_id  (created by TM on behalf of SA user)
+  //   b) createdBy   = SA_id  (created by SA user themselves)
+  const ownerId = standAloneId || createdBy;
+  if (ownerId) {
+    const ownerObjectId = new mongoose.Types.ObjectId(ownerId);
+    andConditions.push({
+      $or: [{ standAloneId: ownerObjectId }, { createdBy: ownerObjectId }],
+    });
+  }
 
   const searchFilter: any = {};
 
