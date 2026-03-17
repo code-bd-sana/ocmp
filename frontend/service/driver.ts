@@ -106,9 +106,39 @@ const createDriver = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
+    const formData = new FormData();
+
+    formData.append("fullName", data.fullName);
+    formData.append("licenseNumber", data.licenseNumber);
+    formData.append("postCode", data.postCode);
+    formData.append("niNumber", data.niNumber);
+    formData.append("nextCheckDueDate", data.nextCheckDueDate);
+    formData.append("points", String(data.points));
+    formData.append("checkFrequencyDays", String(data.checkFrequencyDays));
+    formData.append("employed", String(data.employed));
+    formData.append("standAloneId", data.standAloneId);
+
+    if (data.licenseExpiry) formData.append("licenseExpiry", data.licenseExpiry);
+    if (data.licenseExpiryDTC) formData.append("licenseExpiryDTC", data.licenseExpiryDTC);
+    if (data.cpcExpiry) formData.append("cpcExpiry", data.cpcExpiry);
+    if (data.lastChecked) formData.append("lastChecked", data.lastChecked);
+    if (data.checkStatus) formData.append("checkStatus", data.checkStatus);
+
+    if (data.endorsementCodes?.length) {
+      data.endorsementCodes.forEach((code) => {
+        formData.append("endorsementCodes", code);
+      });
+    }
+
+    if (data.attachments?.length) {
+      data.attachments.forEach((file) => {
+        formData.append("attachments", file);
+      });
+    }
+
     const response = await axios.post<IApiResponse>(
       `${base_url}/driver/create-driver`,
-      data,
+      formData,
       { headers: { Authorization: `Bearer ${token}` } },
     );
     return response.data;
