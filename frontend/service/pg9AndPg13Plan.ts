@@ -6,23 +6,12 @@ import {
 import { AuthAction, IApiResponse } from "./auth";
 import axios from "axios";
 import { base_url } from "@/lib/utils";
-
-interface Pg9AndPg13PlanResponse {
-  status: boolean;
-  statusCode?: number;
-  message: string;
-  data?: Pg9AndPg13PlanRow;
-}
+import { UserAction } from "./user";
 
 interface Pg9AndPg13PlanListResponse {
-  status: boolean;
-  statusCode?: number;
-  message: string;
-  data?: {
-    pg9AndPg13Plans: Pg9AndPg13PlanRow[];
-    totalData: number;
-    totalPages: number;
-  };
+  pg9AndPg13Plans: Pg9AndPg13PlanRow[];
+  totalData: number;
+  totalPages: number;
 }
 
 interface SearchParams {
@@ -53,264 +42,196 @@ function extractApiError(data: IApiResponse | undefined): string {
   return "Something went wrong";
 }
 
-function toErrorMessage(error: unknown, fallback: string): string {
-  if (axios.isAxiosError<IApiResponse>(error)) {
-    return extractApiError(error.response?.data);
+/**
+ * Get the current user's role (cached or fresh fetch)
+ */
+let cachedUserRole: string | null = null;
+const getUserRole = async (): Promise<string | null> => {
+  if (cachedUserRole) return cachedUserRole;
+  try {
+    const profileResp = await UserAction.getProfile();
+    cachedUserRole = profileResp.data?.role || null;
+    return cachedUserRole;
+  } catch {
+    return null;
   }
-
-  if (error instanceof Error && error.message) return error.message;
-
-  return fallback;
-}
+};
 
 export const Pg9AndPg13PlanAction = {
   /**
-   * Create a new PG9/PG13 plan as Transport Manager
-   */
-
-  async createPg9AndPg13Plan(
-    data: CreatePg9AndPg13PlanInput,
-  ): Promise<Pg9AndPg13PlanResponse> {
-    const token = AuthAction.GetAuthToken();
-    if (!token) throw new Error("No authentication token found");
-    try {
-      const response = await axios.post<Pg9AndPg13PlanResponse>(
-        `${base_url}/pg9AndPg13Plan/create-pg9-and-pg13-plan`,
-        data,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
-      return response.data;
-    } catch (error: unknown) {
-      return {
-        status: false,
-        message: toErrorMessage(error, "Failed to create PG9/PG13 plan"),
-      };
-    }
-  },
-
-  /**
-   * Create a new PG9/PG13 plan as Standalone User
-   */
-  async createPg9AndPg13PlanAsStandAlone(
-    data: CreatePg9AndPg13PlanInput,
-  ): Promise<Pg9AndPg13PlanResponse> {
-    const token = AuthAction.GetAuthToken();
-    if (!token) throw new Error("No authentication token found");
-    try {
-      const response = await axios.post<Pg9AndPg13PlanResponse>(
-        `${base_url}/pg9AndPg13Plan/create-stand-alone-pg9-and-pg13-plan`,
-        data,
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
-      return response.data;
-    } catch (error: unknown) {
-      return {
-        status: false,
-        message: toErrorMessage(error, "Failed to create PG9/PG13 plan"),
-      };
-    }
-  },
-
-  /**
-   * Get many PG9/PG13 plans for a client (with filtering)
+   * GET /api/v1/pg9AndPg13Plan/get-pg9-and-pg13-plans
    */
   async getPg9AndPg13Plans(
     standAloneId: string,
     params?: SearchParams,
-  ): Promise<Pg9AndPg13PlanListResponse> {
+  ): Promise<IApiResponse<Pg9AndPg13PlanListResponse>> {
     const token = AuthAction.GetAuthToken();
     if (!token) throw new Error("No authentication token found");
+
     try {
-      const response = await axios.get<Pg9AndPg13PlanListResponse>(
+      const userRole = await getUserRole();
+
+      const queryParams =
+        userRole === "STANDALONE_USER"
+          ? {
+              searchKey: params?.searchKey || undefined,
+              showPerPage: params?.showPerPage || 10,
+              pageNo: params?.pageNo || 1,
+            }
+          : {
+              standAloneId,
+              searchKey: params?.searchKey || undefined,
+              showPerPage: params?.showPerPage || 10,
+              pageNo: params?.pageNo || 1,
+            };
+
+      const response = await axios.get<IApiResponse<Pg9AndPg13PlanListResponse>>(
         `${base_url}/pg9AndPg13Plan/get-pg9-and-pg13-plans`,
         {
           headers: { Authorization: `Bearer ${token}` },
-          params: {
-            standAloneId,
-            searchKey: params?.searchKey || undefined,
-            showPerPage: params?.showPerPage || 10,
-            pageNo: params?.pageNo || 1,
-          },
+          params: queryParams,
         },
       );
       return response.data;
     } catch (error: unknown) {
-      return {
-        status: false,
-        message: toErrorMessage(error, "Failed to fetch PG9/PG13 plans"),
-      };
+      if (axios.isAxiosError<IApiResponse>(error)) {
+        throw new Error(extractApiError(error.response?.data));
+      }
+      throw new Error("Something went wrong");
     }
   },
 
   /**
-   * Get many pg9 and pg13 plans as standalone user
-   */
-  async getPg9AndPg13PlansAsStandAlone(
-    params?: SearchParams,
-  ): Promise<Pg9AndPg13PlanListResponse> {
-    const token = AuthAction.GetAuthToken();
-    if (!token) throw new Error("No authentication token found");
-    try {
-      const response = await axios.get<Pg9AndPg13PlanListResponse>(
-        `${base_url}/pg9AndPg13Plan/get-pg9-and-pg13-plans`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-          params,
-        },
-      );
-      return response.data;
-    } catch (error: unknown) {
-      return {
-        status: false,
-        message: toErrorMessage(error, "Failed to fetch PG9/PG13 plans"),
-      };
-    }
-  },
-
-  /**
-   * Get a single PG9/PG13 plan by ID as Transport Manager
+   * GET /api/v1/pg9AndPg13Plan/get-pg9-and-pg13-plan/:planId/:standAloneId
    */
   async getPg9AndPg13Plan(
     planId: string,
     standAloneId: string,
-  ): Promise<Pg9AndPg13PlanResponse> {
+  ): Promise<IApiResponse<Pg9AndPg13PlanRow>> {
     const token = AuthAction.GetAuthToken();
     if (!token) throw new Error("No authentication token found");
+
     try {
-      const response = await axios.get<Pg9AndPg13PlanResponse>(
-        `${base_url}/pg9AndPg13Plan/get-pg9-and-pg13-plan/${planId}/${standAloneId}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
+      const userRole = await getUserRole();
+
+      const url =
+        userRole === "STANDALONE_USER"
+          ? `${base_url}/pg9AndPg13Plan/get-pg9-and-pg13-plan/${planId}`
+          : `${base_url}/pg9AndPg13Plan/get-pg9-and-pg13-plan/${planId}/${standAloneId}`;
+
+      const response = await axios.get<IApiResponse<Pg9AndPg13PlanRow>>(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       return response.data;
     } catch (error: unknown) {
-      return {
-        status: false,
-        message: toErrorMessage(error, "Failed to fetch PG9/PG13 plan"),
-      };
+      if (axios.isAxiosError<IApiResponse>(error)) {
+        throw new Error(extractApiError(error.response?.data));
+    }
+      throw new Error("Something went wrong");
     }
   },
 
   /**
-   * Get single PG9/PG13 plan as standalone user
+   * POST /api/v1/pg9AndPg13Plan/create-pg9-and-pg13-plan
    */
-  async getPg9AndPg13PlanAsStandAlone(
-    planId: string,
-  ): Promise<Pg9AndPg13PlanResponse> {
+  async createPg9AndPg13Plan(
+    data: CreatePg9AndPg13PlanInput,
+  ): Promise<IApiResponse<Pg9AndPg13PlanRow>> {
     const token = AuthAction.GetAuthToken();
     if (!token) throw new Error("No authentication token found");
+
     try {
-      const response = await axios.get<Pg9AndPg13PlanResponse>(
-        `${base_url}/pg9AndPg13Plan/get-pg9-and-pg13-plan/${planId}`,
+      const userRole = await getUserRole();
+
+      const isStandalone = userRole === "STANDALONE_USER";
+      const endpoint = isStandalone
+        ? `${base_url}/pg9AndPg13Plan/create-stand-alone-pg9-and-pg13-plan`
+        : `${base_url}/pg9AndPg13Plan/create-pg9-and-pg13-plan`;
+
+      // If standalone, remove standAloneId from body to satisfy .strict() Zod schema
+      const body = { ...data };
+      if (isStandalone) {
+        delete body.standAloneId;
+      }
+
+      const response = await axios.post<IApiResponse<Pg9AndPg13PlanRow>>(
+        endpoint,
+        body,
         {
           headers: { Authorization: `Bearer ${token}` },
         },
       );
       return response.data;
     } catch (error: unknown) {
-      return {
-        status: false,
-        message: toErrorMessage(error, "Failed to fetch PG9/PG13 plan"),
-      };
+      if (axios.isAxiosError<IApiResponse>(error)) {
+        throw new Error(extractApiError(error.response?.data));
+      }
+      throw new Error("Something went wrong");
     }
   },
 
   /**
-   * Update a PG9/PG13 plan as Transport Manager
+   * PATCH /api/v1/pg9AndPg13Plan/update-pg9-and-pg13-plan-by-manager/:planId/:standAloneId
    */
   async updatePg9AndPg13Plan(
     planId: string,
     standAloneId: string,
     data: UpdatePg9AndPg13PlanInput,
-  ): Promise<Pg9AndPg13PlanResponse> {
+  ): Promise<IApiResponse<Pg9AndPg13PlanRow>> {
     const token = AuthAction.GetAuthToken();
     if (!token) throw new Error("No authentication token found");
+
     try {
-      const response = await axios.patch<Pg9AndPg13PlanResponse>(
-        `${base_url}/pg9AndPg13Plan/update-pg9-and-pg13-plan-by-manager/${planId}/${standAloneId}`,
+      const userRole = await getUserRole();
+
+      const url =
+        userRole === "STANDALONE_USER"
+          ? `${base_url}/pg9AndPg13Plan/update-pg9-and-pg13-plan/${planId}`
+          : `${base_url}/pg9AndPg13Plan/update-pg9-and-pg13-plan-by-manager/${planId}/${standAloneId}`;
+
+      const response = await axios.patch<IApiResponse<Pg9AndPg13PlanRow>>(
+        url,
         data,
-        { headers: { Authorization: `Bearer ${token}` } },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
       );
       return response.data;
     } catch (error: unknown) {
-      return {
-        status: false,
-        message: toErrorMessage(error, "Failed to update PG9/PG13 plan"),
-      };
+      if (axios.isAxiosError<IApiResponse>(error)) {
+        throw new Error(extractApiError(error.response?.data));
+      }
+      throw new Error("Something went wrong");
     }
   },
 
   /**
-   * Update PG9/PG13 plan as standalone user
-   */
-  async updatePg9AndPg13PlanAsStandAlone(
-    planId: string,
-    data: UpdatePg9AndPg13PlanInput,
-  ): Promise<Pg9AndPg13PlanResponse> {
-    const token = AuthAction.GetAuthToken();
-    if (!token) throw new Error("No authentication token found");
-    try {
-      const response = await axios.patch<Pg9AndPg13PlanResponse>(
-        `${base_url}/pg9AndPg13Plan/update-pg9-and-pg13-plan/${planId}`,
-        data,
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
-      return response.data;
-    } catch (error: unknown) {
-      return {
-        status: false,
-        message: toErrorMessage(error, "Failed to update PG9/PG13 plan"),
-      };
-    }
-  },
-
-  /**
-   * Delete a PG9/PG13 plan as Transport Manager
+   * DELETE /api/v1/pg9AndPg13Plan/delete-pg9-and-pg13-plan-by-manager/:planId/:standAloneId
    */
   async deletePg9AndPg13Plan(
     planId: string,
     standAloneId: string,
-  ): Promise<Pg9AndPg13PlanResponse> {
+  ): Promise<IApiResponse> {
     const token = AuthAction.GetAuthToken();
     if (!token) throw new Error("No authentication token found");
-    try {
-      const response = await axios.delete<Pg9AndPg13PlanResponse>(
-        `${base_url}/pg9AndPg13Plan/delete-pg9-and-pg13-plan-by-manager/${planId}/${standAloneId}`,
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
-      return response.data;
-    } catch (error: unknown) {
-      return {
-        status: false,
-        message: toErrorMessage(error, "Failed to delete PG9/PG13 plan"),
-      };
-    }
-  },
 
-  /**
-   * Delete PG9/PG13 Plan as standalone user
-   */
-  async deletePg9AndPg13PlanAsStandAlone(
-    planId: string,
-  ): Promise<Pg9AndPg13PlanResponse> {
-    const token = AuthAction.GetAuthToken();
-    if (!token) throw new Error("No authentication token found");
     try {
-      const response = await axios.delete<Pg9AndPg13PlanResponse>(
-        `${base_url}/pg9AndPg13Plan/delete-pg9-and-pg13-plan/${planId}`,
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
+      const userRole = await getUserRole();
+
+      const url =
+        userRole === "STANDALONE_USER"
+          ? `${base_url}/pg9AndPg13Plan/delete-pg9-and-pg13-plan/${planId}`
+          : `${base_url}/pg9AndPg13Plan/delete-pg9-and-pg13-plan-by-manager/${planId}/${standAloneId}`;
+
+      const response = await axios.delete<IApiResponse>(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       return response.data;
     } catch (error: unknown) {
-      return {
-        status: false,
-        message: toErrorMessage(error, "Failed to delete PG9/PG13 plan"),
-      };
+      if (axios.isAxiosError<IApiResponse>(error)) {
+        throw new Error(extractApiError(error.response?.data));
+      }
+      throw new Error("Something went wrong");
     }
   },
 };
