@@ -1,29 +1,17 @@
-import { axiosInstance } from "@/lib/utils/axiosInstance";
+import { AuthAction, IApiResponse } from "./auth";
+import axios from "axios";
 import { base_url } from "@/lib/utils";
+import { UserAction } from "./user";
 import {
-  CreateRenewalTrackerAsStandAloneInput,
   CreateRenewalTrackerInput,
   RenewalTrackerRow,
-  UpdateRenewalTrackerAsStandAloneInput,
   UpdateRenewalTrackerInput,
 } from "@/lib/renewal-tracker/renewal-tracker.types";
 
-interface RenewalTrackerResponse {
-  status: boolean;
-  statusCode?: number;
-  message: string;
-  data?: RenewalTrackerRow;
-}
-
 interface RenewalTrackersListResponse {
-  status: boolean;
-  statusCode?: number;
-  message: string;
-  data?: {
-    renewalTrackers: RenewalTrackerRow[];
-    totalData: number;
-    totalPages: number;
-  };
+  renewalTrackers: RenewalTrackerRow[];
+  totalData: number;
+  totalPages: number;
 }
 
 interface SearchParams {
@@ -32,281 +20,218 @@ interface SearchParams {
   pageNo?: number;
 }
 
+function extractApiError(data: IApiResponse | undefined): string {
+  if (!data) return "Something went wrong";
+
+  if (typeof data.error === "string" && data.error) return data.error;
+
+  if (data.errors) {
+    if (Array.isArray(data.errors)) {
+      const msgs = (data.errors as { field?: string; message: string }[]).map(
+        (e) => (e.field ? `${e.field}: ${e.message}` : e.message),
+      );
+      return msgs.join(", ");
+    }
+    if (typeof data.errors === "string") return data.errors;
+  }
+
+  if (data.message && data.message !== "An unexpected error occurred") {
+    return data.message;
+  }
+
+  return "Something went wrong";
+}
+
+/**
+ * Get the current user's role (cached or fresh fetch)
+ */
+let cachedUserRole: string | null = null;
+const getUserRole = async (): Promise<string | null> => {
+  if (cachedUserRole) return cachedUserRole;
+  try {
+    const profileResp = await UserAction.getProfile();
+    cachedUserRole = profileResp.data?.role || null;
+    return cachedUserRole;
+  } catch {
+    return null;
+  }
+};
+
 export const RenewalTrackerAction = {
   /**
-   * Create a renewal tracker as transport manager
-   */
-  async createRenewalTracker(
-    data: CreateRenewalTrackerInput,
-  ): Promise<RenewalTrackerResponse> {
-    try {
-      const response = await axiosInstance.post(
-        `${base_url}/renewal-tracker/create-renewal-tracker`,
-        data,
-      );
-      return response.data;
-    } catch (error: unknown) {
-      const err = error as {
-        response?: { data?: { message?: string } };
-        message?: string;
-      };
-      return {
-        status: false,
-        message:
-          err.response?.data?.message ||
-          err.message ||
-          "Failed to create renewal tracker",
-      };
-    }
-  },
-
-  /**
-   * Create a renewal tracker as standalone user
-   */
-  async createRenewalTrackerAsStandAlone(
-    data: CreateRenewalTrackerAsStandAloneInput,
-  ): Promise<RenewalTrackerResponse> {
-    try {
-      const response = await axiosInstance.post(
-        `${base_url}/renewal-tracker/create-stand-alone-renewal-tracker`,
-        data,
-      );
-      return response.data;
-    } catch (error: unknown) {
-      const err = error as {
-        response?: { data?: { message?: string } };
-        message?: string;
-      };
-      return {
-        status: false,
-        message:
-          err.response?.data?.message ||
-          err.message ||
-          "Failed to create renewal tracker",
-      };
-    }
-  },
-
-  /**
-   * Get all renewal trackers for a client (transport manager)
+   * GET /api/v1/renewal-tracker/get-renewal-tracker/many
    */
   async getRenewalTrackers(
     standAloneId: string,
     params?: SearchParams,
-  ): Promise<RenewalTrackersListResponse> {
+  ): Promise<IApiResponse<RenewalTrackersListResponse>> {
+    const token = AuthAction.GetAuthToken();
+    if (!token) throw new Error("No authentication token found");
+
     try {
-      const response = await axiosInstance.get(
+      const userRole = await getUserRole();
+
+      const queryParams =
+        userRole === "STANDALONE_USER"
+          ? {
+              searchKey: params?.searchKey || undefined,
+              showPerPage: params?.showPerPage || 10,
+              pageNo: params?.pageNo || 1,
+            }
+          : {
+              standAloneId,
+              searchKey: params?.searchKey || undefined,
+              showPerPage: params?.showPerPage || 10,
+              pageNo: params?.pageNo || 1,
+            };
+
+      const response = await axios.get<IApiResponse<RenewalTrackersListResponse>>(
         `${base_url}/renewal-tracker/get-renewal-tracker/many`,
         {
-          params: {
-            standAloneId,
-            ...params,
-          },
+          headers: { Authorization: `Bearer ${token}` },
+          params: queryParams,
         },
       );
       return response.data;
     } catch (error: unknown) {
-      const err = error as {
-        response?: { data?: { message?: string } };
-        message?: string;
-      };
-      return {
-        status: false,
-        message:
-          err.response?.data?.message ||
-          err.message ||
-          "Failed to fetch renewal trackers",
-      };
+      if (axios.isAxiosError<IApiResponse>(error)) {
+        throw new Error(extractApiError(error.response?.data));
+      }
+      throw new Error("Something went wrong");
     }
   },
 
   /**
-   * Get all renewal trackers (standalone user)
-   */
-  async getRenewalTrackersAsStandAlone(
-    params?: SearchParams,
-  ): Promise<RenewalTrackersListResponse> {
-    try {
-      const response = await axiosInstance.get(
-        `${base_url}/renewal-tracker/get-renewal-tracker/many`,
-        { params },
-      );
-      return response.data;
-    } catch (error: unknown) {
-      const err = error as {
-        response?: { data?: { message?: string } };
-        message?: string;
-      };
-      return {
-        status: false,
-        message:
-          err.response?.data?.message ||
-          err.message ||
-          "Failed to fetch renewal trackers",
-      };
-    }
-  },
-
-  /**
-   * Get a single renewal tracker by ID (transport manager)
+   * GET /api/v1/renewal-tracker/get-renewal-tracker/:id
    */
   async getRenewalTracker(
     id: string,
     standAloneId: string,
-  ): Promise<RenewalTrackerResponse> {
+  ): Promise<IApiResponse<RenewalTrackerRow>> {
+    const token = AuthAction.GetAuthToken();
+    if (!token) throw new Error("No authentication token found");
+
     try {
-      const response = await axiosInstance.get(
-        `${base_url}/renewal-tracker/get-renewal-tracker/${id}/${standAloneId}`,
-      );
+      const userRole = await getUserRole();
+
+      const url =
+        userRole === "STANDALONE_USER"
+          ? `${base_url}/renewal-tracker/get-renewal-tracker/${id}`
+          : `${base_url}/renewal-tracker/get-renewal-tracker/${id}/${standAloneId}`;
+
+      const response = await axios.get<IApiResponse<RenewalTrackerRow>>(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       return response.data;
     } catch (error: unknown) {
-      const err = error as {
-        response?: { data?: { message?: string } };
-        message?: string;
-      };
-      return {
-        status: false,
-        message:
-          err.response?.data?.message ||
-          err.message ||
-          "Failed to fetch renewal tracker",
-      };
+      if (axios.isAxiosError<IApiResponse>(error)) {
+        throw new Error(extractApiError(error.response?.data));
+      }
+      throw new Error("Something went wrong");
     }
   },
 
   /**
-   * Get a single renewal tracker by ID (standalone user)
+   * POST /api/v1/renewal-tracker/create-renewal-tracker
    */
-  async getRenewalTrackerAsStandAlone(
-    id: string,
-  ): Promise<RenewalTrackerResponse> {
+  async createRenewalTracker(
+    data: CreateRenewalTrackerInput,
+  ): Promise<IApiResponse<RenewalTrackerRow>> {
+    const token = AuthAction.GetAuthToken();
+    if (!token) throw new Error("No authentication token found");
+
     try {
-      const response = await axiosInstance.get(
-        `${base_url}/renewal-tracker/get-renewal-tracker/${id}`,
+      const userRole = await getUserRole();
+
+      const isStandalone = userRole === "STANDALONE_USER";
+      const endpoint = isStandalone
+        ? `${base_url}/renewal-tracker/create-stand-alone-renewal-tracker`
+        : `${base_url}/renewal-tracker/create-renewal-tracker`;
+
+      // If standalone, remove standAloneId from body to satisfy .strict() Zod schema
+      const body = { ...data };
+      if (isStandalone) {
+        delete (body as any).standAloneId;
+      }
+
+      const response = await axios.post<IApiResponse<RenewalTrackerRow>>(
+        endpoint,
+        body,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
       );
       return response.data;
     } catch (error: unknown) {
-      const err = error as {
-        response?: { data?: { message?: string } };
-        message?: string;
-      };
-      return {
-        status: false,
-        message:
-          err.response?.data?.message ||
-          err.message ||
-          "Failed to fetch renewal tracker",
-      };
+      if (axios.isAxiosError<IApiResponse>(error)) {
+        throw new Error(extractApiError(error.response?.data));
+      }
+      throw new Error("Something went wrong");
     }
   },
 
   /**
-   * Update a renewal tracker (transport manager)
+   * PATCH /api/v1/renewal-tracker/update-renewal-tracker/:id/:standAloneId
    */
   async updateRenewalTracker(
     id: string,
     standAloneId: string,
     data: UpdateRenewalTrackerInput,
-  ): Promise<RenewalTrackerResponse> {
+  ): Promise<IApiResponse<RenewalTrackerRow>> {
+    const token = AuthAction.GetAuthToken();
+    if (!token) throw new Error("No authentication token found");
+
     try {
-      const response = await axiosInstance.patch(
-        `${base_url}/renewal-tracker/update-renewal-tracker/${id}/${standAloneId}`,
+      const userRole = await getUserRole();
+
+      const url =
+        userRole === "STANDALONE_USER"
+          ? `${base_url}/renewal-tracker/update-renewal-tracker/${id}`
+          : `${base_url}/renewal-tracker/update-renewal-tracker/${id}/${standAloneId}`;
+
+      const response = await axios.patch<IApiResponse<RenewalTrackerRow>>(
+        url,
         data,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
       );
       return response.data;
     } catch (error: unknown) {
-      const err = error as {
-        response?: { data?: { message?: string } };
-        message?: string;
-      };
-      return {
-        status: false,
-        message:
-          err.response?.data?.message ||
-          err.message ||
-          "Failed to update renewal tracker",
-      };
+      if (axios.isAxiosError<IApiResponse>(error)) {
+        throw new Error(extractApiError(error.response?.data));
+      }
+      throw new Error("Something went wrong");
     }
   },
 
   /**
-   * Update a renewal tracker (standalone user)
-   */
-  async updateRenewalTrackerAsStandAlone(
-    id: string,
-    data: UpdateRenewalTrackerAsStandAloneInput,
-  ): Promise<RenewalTrackerResponse> {
-    try {
-      const response = await axiosInstance.patch(
-        `${base_url}/renewal-tracker/update-renewal-tracker/${id}`,
-        data,
-      );
-      return response.data;
-    } catch (error: unknown) {
-      const err = error as {
-        response?: { data?: { message?: string } };
-        message?: string;
-      };
-      return {
-        status: false,
-        message:
-          err.response?.data?.message ||
-          err.message ||
-          "Failed to update renewal tracker",
-      };
-    }
-  },
-
-  /**
-   * Delete a renewal tracker (transport manager)
+   * DELETE /api/v1/renewal-tracker/delete-renewal-tracker/:id/:standAloneId
    */
   async deleteRenewalTracker(
     id: string,
     standAloneId: string,
-  ): Promise<RenewalTrackerResponse> {
-    try {
-      const response = await axiosInstance.delete(
-        `${base_url}/renewal-tracker/delete-renewal-tracker/${id}/${standAloneId}`,
-      );
-      return response.data;
-    } catch (error: unknown) {
-      const err = error as {
-        response?: { data?: { message?: string } };
-        message?: string;
-      };
-      return {
-        status: false,
-        message:
-          err.response?.data?.message ||
-          err.message ||
-          "Failed to delete renewal tracker",
-      };
-    }
-  },
+  ): Promise<IApiResponse> {
+    const token = AuthAction.GetAuthToken();
+    if (!token) throw new Error("No authentication token found");
 
-  /**
-   * Delete a renewal tracker (standalone user)
-   */
-  async deleteRenewalTrackerAsStandAlone(
-    id: string,
-  ): Promise<RenewalTrackerResponse> {
     try {
-      const response = await axiosInstance.delete(
-        `${base_url}/renewal-tracker/delete-renewal-tracker/${id}`,
-      );
+      const userRole = await getUserRole();
+
+      const url =
+        userRole === "STANDALONE_USER"
+          ? `${base_url}/renewal-tracker/delete-renewal-tracker/${id}`
+          : `${base_url}/renewal-tracker/delete-renewal-tracker/${id}/${standAloneId}`;
+
+      const response = await axios.delete<IApiResponse>(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       return response.data;
     } catch (error: unknown) {
-      const err = error as {
-        response?: { data?: { message?: string } };
-        message?: string;
-      };
-      return {
-        status: false,
-        message:
-          err.response?.data?.message ||
-          err.message ||
-          "Failed to delete renewal tracker",
-      };
+      if (axios.isAxiosError<IApiResponse>(error)) {
+        throw new Error(extractApiError(error.response?.data));
+      }
+      throw new Error("Something went wrong");
     }
   },
 };

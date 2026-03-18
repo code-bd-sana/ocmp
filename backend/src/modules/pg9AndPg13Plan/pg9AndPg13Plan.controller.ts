@@ -43,16 +43,25 @@ export const createPg9AndPg13PlanAsStandAlone = catchAsync(async (req: Authentic
  * Get all PG9 & PG13 plans (TM route — standAloneId from query).
  * Uses pagination and search query params, with access control via standAloneId.
  */
-export const getAllPg9AndPg13PlansAsManager = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-  const query = (req as any).validatedQuery as SearchPg9AndPg13PlansQueryInput;
-  const { pg9AndPg13Plans, totalData, totalPages } =
-    await pg9AndPg13PlanServices.getAllPg9AndPg13Plans(query);
-  ServerResponse(res, true, 200, 'PG9 & PG13 plans retrieved successfully', {
-    pg9AndPg13Plans,
-    totalData,
-    totalPages,
-  });
-});
+export const getAllPg9AndPg13PlansAsManager = catchAsync(
+  async (req: AuthenticatedRequest, res: Response) => {
+    type Pg9AndPg13Query = SearchPg9AndPg13PlansQueryInput & { createdBy?: string };
+    const query: Pg9AndPg13Query = {
+      ...((req as any).validatedQuery as SearchPg9AndPg13PlansQueryInput),
+    };
+
+    query.createdBy = req.user!._id;
+    query.standAloneId = (req as any).validatedQuery.standAloneId;
+
+    const { pg9AndPg13Plans, totalData, totalPages } =
+      await pg9AndPg13PlanServices.getAllPg9AndPg13Plans(query);
+    ServerResponse(res, true, 200, 'PG9 & PG13 plans retrieved successfully', {
+      pg9AndPg13Plans,
+      totalData,
+      totalPages,
+    });
+  }
+);
 
 /**
  * Get all PG9 & PG13 plans (Standalone route — accessId from token).
@@ -61,17 +70,25 @@ export const getAllPg9AndPg13PlansAsManager = catchAsync(async (req: Authenticat
  * Standalone users will only get their own plans since standAloneId = userId.
  * TM users can get any standalone user's plans by providing the standAloneId in query params.
  */
-export const getAllPg9AndPg13PlansAsStandAlone = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-  const query = (req as any).validatedQuery as SearchPg9AndPg13PlansQueryInput;
-  const standAloneId = req.user!._id;
-  const { pg9AndPg13Plans, totalData, totalPages } =
-    await pg9AndPg13PlanServices.getAllPg9AndPg13Plans({ ...query, standAloneId });
-  ServerResponse(res, true, 200, 'PG9 & PG13 plans retrieved successfully', {
-    pg9AndPg13Plans,
-    totalData,
-    totalPages,
-  });
-});
+export const getAllPg9AndPg13PlansAsStandAlone = catchAsync(
+  async (req: AuthenticatedRequest, res: Response) => {
+    type Pg9AndPg13Query = SearchPg9AndPg13PlansQueryInput & { createdBy?: string };
+    const query: Pg9AndPg13Query = {
+      ...((req as any).validatedQuery as SearchPg9AndPg13PlansQueryInput),
+    };
+
+    query.createdBy = req.user!._id;
+    query.standAloneId = req.user!._id; // Ensure we look for plans where this user is the standalone client
+
+    const { pg9AndPg13Plans, totalData, totalPages } =
+      await pg9AndPg13PlanServices.getAllPg9AndPg13Plans(query);
+    ServerResponse(res, true, 200, 'PG9 & PG13 plans retrieved successfully', {
+      pg9AndPg13Plans,
+      totalData,
+      totalPages,
+    });
+  }
+);
 
 /**
  * Get a single PG9 & PG13 plan by ID (TM route — standAloneId from params).

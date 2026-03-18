@@ -81,25 +81,43 @@ const createPg9AndPg13PlanAsStandAlone = async (
 };
 
 /**
+ * Helper to build access filters based on an ID.
+ * Returns an array of filters that match if EITHER createdBy OR standAloneId matches the ID.
+ */
+const buildAccessFilters = (id?: string): Record<string, unknown>[] => {
+  if (!id) return [];
+
+  const candidates: Array<string | mongoose.Types.ObjectId> = [id];
+  if (mongoose.Types.ObjectId.isValid(id)) {
+    candidates.unshift(new mongoose.Types.ObjectId(id));
+  }
+
+  return [{ createdBy: { $in: candidates } }, { standAloneId: { $in: candidates } }];
+};
+
+/**
  * Service: Get all PG9 & PG13 plans (paginated + searchable).
  * Uses aggregation with $or access control and $lookup for vehicle details.
  */
 const getAllPg9AndPg13Plans = async (
-  query: SearchPg9AndPg13PlansQueryInput
+  query: SearchPg9AndPg13PlansQueryInput & { createdBy?: string; standAloneId?: string }
 ): Promise<{ pg9AndPg13Plans: any[]; totalData: number; totalPages: number }> => {
   const showPerPage = Number(query.showPerPage) || 10;
   const pageNo = Number(query.pageNo) || 1;
   const searchKey = query.searchKey;
-  const { standAloneId } = query;
+  const { standAloneId, createdBy } = query;
 
   const basePipeline: mongoose.PipelineStage[] = [];
 
-  // Access control
-  if (standAloneId) {
-    const objectId = new mongoose.Types.ObjectId(standAloneId);
+  // A plan belongs to an SA user if EITHER:
+  //   a) standAloneId = SA_id  (created by TM on behalf of SA user)
+  //   b) createdBy   = SA_id  (created by SA user themselves)
+  const ownerId = standAloneId || createdBy;
+  if (ownerId) {
+    const accessFilters = buildAccessFilters(String(ownerId));
     basePipeline.push({
       $match: {
-        $or: [{ standAloneId: objectId }, { createdBy: objectId }],
+        $or: accessFilters,
       },
     });
   }
@@ -157,6 +175,7 @@ const getAllPg9AndPg13Plans = async (
               createdBy: { $toString: '$createdBy' },
               createdAt: 1,
               updatedAt: 1,
+              vehicle: 1,
             },
           },
         ],
@@ -164,10 +183,10 @@ const getAllPg9AndPg13Plans = async (
     },
   ]);
 
-  const totalData = result.metadata[0]?.total ?? 0;
+  const totalData = result?.metadata?.[0]?.total ?? 0;
   const totalPages = Math.ceil(totalData / showPerPage);
 
-  return { pg9AndPg13Plans: result.data, totalData, totalPages };
+  return { pg9AndPg13Plans: result?.data || [], totalData, totalPages };
 };
 
 /**
