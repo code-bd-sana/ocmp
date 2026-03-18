@@ -3,11 +3,17 @@
 import { z } from "zod";
 import UniversalForm from "@/components/universal-form/UniversalForm";
 import { FieldConfig } from "@/components/universal-form/form.types";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   ComplianceStatus,
   CreateComplianceTimetableInput,
 } from "@/lib/compliance-timetable/compliance-timetable.types";
+import { getUserRole } from "@/service/compliance-timetable";
 
 const addComplianceTimetableSchema = z.object({
   task: z
@@ -72,10 +78,12 @@ export default function AddComplianceTimetableModal({
   ];
 
   const handleSubmit = async (data: AddComplianceTimetableForm) => {
+    const userRole = await getUserRole();
+
     const payload: CreateComplianceTimetableInput = {
       task: data.task,
       responsibleParty: data.responsibleParty,
-      standAloneId,
+      ...(userRole !== "STANDALONE_USER" && { standAloneId }),
       ...(data.dueDate && { dueDate: data.dueDate }),
       ...(data.status && { status: data.status }),
     };
@@ -92,6 +100,10 @@ export default function AddComplianceTimetableModal({
         <DialogTitle className="text-primary mb-4 text-xl font-bold">
           Add Compliance Timetable
         </DialogTitle>
+        <DialogDescription className="sr-only">
+          Add a compliance timetable task with responsible party, due date, and
+          status.
+        </DialogDescription>
 
         <UniversalForm<AddComplianceTimetableForm>
           title="Compliance Timetable Details"

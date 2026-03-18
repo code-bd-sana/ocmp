@@ -3,7 +3,12 @@
 import { z } from "zod";
 import UniversalForm from "@/components/universal-form/UniversalForm";
 import { FieldConfig } from "@/components/universal-form/form.types";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Loader2 } from "lucide-react";
 import {
   ComplianceStatus,
@@ -106,6 +111,10 @@ export default function EditComplianceTimetableModal({
         <DialogTitle className="text-primary mb-4 text-xl font-bold">
           Edit Compliance Timetable
         </DialogTitle>
+        <DialogDescription className="sr-only">
+          Edit compliance timetable task details such as task name, responsible
+          party, due date, and status.
+        </DialogDescription>
 
         {loading ? (
           <div className="flex h-40 items-center justify-center">

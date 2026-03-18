@@ -21,7 +21,7 @@ export interface ComplianceTimetableListResponse {
 export interface CreateComplianceTimetableInput {
   task: string;
   responsibleParty: string;
-  standAloneId: string;
+  standAloneId?: string;
   dueDate?: string;
   status?: ComplianceStatus;
 }
