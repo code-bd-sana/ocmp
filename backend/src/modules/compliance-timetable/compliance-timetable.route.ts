@@ -21,10 +21,7 @@ import {
   validateUpdateComplianceTimetable,
   validateUpdateComplianceTimetableIds,
 } from './compliance-timetable.validation';
-import {
-  validateId,
-  validateSearchQueries,
-} from '../../handlers/common-zod-validator';
+import { validateId, validateSearchQueries } from '../../handlers/common-zod-validator';
 import authorizedRoles from '../../middlewares/authorized-roles';
 import { UserRole } from '../../models';
 import { validateClientForManagerMiddleware } from '../../middlewares/validate-client-for-manager';
@@ -35,7 +32,6 @@ import ServerResponse from '../../helpers/responses/custom-response';
 const router = Router();
 // Apply isAuthorized middleware to all routes in this router
 router.use(isAuthorized());
-
 
 // Define route handlers
 /**
@@ -165,8 +161,8 @@ router.get(
 
 /**
  * @route GET /api/v1/compliance-timetable/:id/:standAloneId
- * @description Get a compliance-timetable by ID
- * @access Private (Transport Manager or Standalone User)
+ * @description Get a compliance-timetable by ID as Transport Manager
+ * @access Private (Transport Manager)
  * @param {IdOrIdsInput['id']} id - The ID of the compliance-timetable to retrieve
  * @param {function} validation - ['validateId']
  * @param {function} controller - ['getComplianceTimetableById']
@@ -196,4 +192,3 @@ router.get(
 
 // Export the router
 module.exports = router;
-

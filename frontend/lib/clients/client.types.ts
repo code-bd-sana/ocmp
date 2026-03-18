@@ -33,3 +33,8 @@ export interface CreateClientInput {
   fullName: string;
   email: string;
 }
+export interface TransportManagerType {
+  _id: string;
+  fullName: string
+
+}
