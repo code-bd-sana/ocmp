@@ -190,6 +190,8 @@ export default function EditDriverModal({
   };
 
   const renderAttachmentRemoveSection = () => {
+    if (!driver) return null;
+
     if (!driver.attachments?.length) {
       return (
         <div className="mt-4 rounded-md border p-3">

@@ -286,11 +286,9 @@ const updateDriver = async (
   let uploadedDocuments: Awaited<ReturnType<typeof uploadFilesAndCreateDocuments>>['documents'] = [];
 
   if (files.length) {
-    const uploadResult = await uploadFilesAndCreateDocuments(files, userId, `driver/${String(id)}`);
+    const uploadResult = await uploadFilesAndCreateDocuments(files, userId, 'driver');
     uploadedDocuments = uploadResult.documents;
   }
-
-  const updateQuery: Record<string, unknown> = {};
 
   const setData: Record<string, unknown> = {};
   const settableFields: Array<keyof UpdateDriverInput> = [
@@ -316,44 +314,52 @@ const updateDriver = async (
     }
   }
 
-  if (Object.keys(setData).length) {
-    updateQuery.$set = setData;
-  }
-
-  if (uploadedDocuments.length) {
-    updateQuery.$addToSet = {
-      attachments: {
-        $each: uploadedDocuments.map((doc) => doc._id as mongoose.Types.ObjectId),
-      },
-    };
-  }
-
-  if (removableAttachmentIds.length) {
-    updateQuery.$pull = {
-      attachments: {
-        $in: removableAttachmentIds.map((docId) => new mongoose.Types.ObjectId(docId)),
-      },
-    };
-  }
-
-  // Final guard against ConflictingUpdateOperators on attachments.
-  if (updateQuery.$set && (updateQuery.$set as Record<string, unknown>).attachments) {
-    delete (updateQuery.$set as Record<string, unknown>).attachments;
-    if (!Object.keys(updateQuery.$set as Record<string, unknown>).length) {
-      delete updateQuery.$set;
-    }
-  }
-
-  if (!Object.keys(updateQuery).length) {
-    const currentDriver = await DriverModel.findOne(ownershipFilter).lean();
-    return currentDriver as Partial<IDriver> | null;
-  }
-
   try {
-    // Proceed to update the driver
-    const updatedDriver = await DriverModel.findOneAndUpdate(ownershipFilter, updateQuery, {
-      returnDocument: 'after',
-    });
+    let updatedDriver: IDriver | null = null;
+
+    // 1) Update normal scalar fields first.
+    if (Object.keys(setData).length) {
+      updatedDriver = (await DriverModel.findOneAndUpdate(
+        ownershipFilter,
+        { $set: setData },
+        { returnDocument: 'after' }
+      )) as IDriver | null;
+    }
+
+    // 2) Pull removed attachment references.
+    if (removableAttachmentIds.length) {
+      updatedDriver = (await DriverModel.findOneAndUpdate(
+        ownershipFilter,
+        {
+          $pull: {
+            attachments: {
+              $in: removableAttachmentIds.map((docId) => new mongoose.Types.ObjectId(docId)),
+            },
+          },
+        },
+        { returnDocument: 'after' }
+      )) as IDriver | null;
+    }
+
+    // 3) Add newly uploaded attachment references.
+    if (uploadedDocuments.length) {
+      updatedDriver = (await DriverModel.findOneAndUpdate(
+        ownershipFilter,
+        {
+          $addToSet: {
+            attachments: {
+              $each: uploadedDocuments.map((doc) => doc._id as mongoose.Types.ObjectId),
+            },
+          },
+        },
+        { returnDocument: 'after' }
+      )) as IDriver | null;
+    }
+
+    if (!updatedDriver) {
+      updatedDriver = await DriverModel.findOne(ownershipFilter).lean();
+    }
+
     return updatedDriver;
   } catch (error) {
     if (uploadedDocuments.length) {
@@ -406,10 +412,49 @@ const deleteDriver = async (
     ownershipFilters.push({ standAloneId: userObjectId });
   }
 
-  const deletedDriver = await DriverModel.findOneAndDelete({
+  const ownershipFilter = {
     _id: id,
     $or: ownershipFilters,
-  });
+  };
+
+  const existingDriver = await DriverModel.findOne(ownershipFilter).select('_id attachments').lean();
+  if (!existingDriver) {
+    return null;
+  }
+
+  const attachmentIds = Array.isArray(existingDriver.attachments)
+    ? existingDriver.attachments
+        .map((item) => String(item))
+        .filter((item) => mongoose.Types.ObjectId.isValid(item))
+    : [];
+
+  if (attachmentIds.length) {
+    const documents = await DocumentModel.find({
+      _id: { $in: attachmentIds.map((docId) => new mongoose.Types.ObjectId(docId)) },
+    })
+      .select('_id s3Key')
+      .lean();
+
+    const s3Keys = documents.map((doc) => doc.s3Key).filter(Boolean);
+
+    // Required sequence: remove from S3 first, then remove rows from Document table.
+    if (s3Keys.length) {
+      const s3DeleteResult = await deleteObjects(s3Keys);
+      if (s3DeleteResult.Errors?.length) {
+        throw new Error('Failed to delete one or more driver attachment files from S3');
+      }
+    }
+
+    if (documents.length) {
+      await DocumentModel.deleteMany({
+        _id: { $in: documents.map((doc) => doc._id) },
+      });
+    }
+
+    await DriverModel.updateOne({ _id: existingDriver._id }, { $set: { attachments: [] } });
+  }
+
+  const deletedDriver = await DriverModel.findOneAndDelete(ownershipFilter);
   return deletedDriver;
 };
 
@@ -561,7 +606,7 @@ const uploadDriverAttachments = async (
     throw new Error('Driver not found or access denied');
   }
 
-  const { documents } = await uploadFilesAndCreateDocuments(files, userId, `driver/${String(id)}`);
+  const { documents } = await uploadFilesAndCreateDocuments(files, userId, 'driver');
 
   try {
     const documentIds = documents.map((doc) => doc._id as mongoose.Types.ObjectId);
