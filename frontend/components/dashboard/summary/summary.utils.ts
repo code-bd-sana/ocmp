@@ -1,5 +1,11 @@
 import { SummaryCardData, FleetUtilizationData } from "./summary.types";
-import { Truck, Briefcase, User, AlertTriangle } from "lucide-react";
+import {
+  Truck,
+  Briefcase,
+  User,
+  AlertTriangle,
+  ClipboardList,
+} from "lucide-react";
 
 export const getSummaryData = (): SummaryCardData[] => [
   {
@@ -25,6 +31,12 @@ export const getSummaryData = (): SummaryCardData[] => [
     value: 20,
     icon: AlertTriangle,
     color: "var(--dashboard-job-alert-card-bg)",
+  },
+  {
+    title: "Renewal Tracker",
+    value: 5,
+    icon: ClipboardList,
+    color: "var(--dashboard-vehicle-driver-bg)",
   },
 ];
 
