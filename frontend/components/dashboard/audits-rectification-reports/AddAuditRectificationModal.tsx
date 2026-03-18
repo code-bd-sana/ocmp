@@ -26,6 +26,7 @@ const addReportSchema = z.object({
     .max(150, "Responsible person must not exceed 150 characters")
     .optional(),
   finalizeDate: z.string().optional(),
+  attachments: z.any().optional(),
 });
 
 type AddReportForm = z.infer<typeof addReportSchema>;
@@ -79,9 +80,19 @@ export default function AddAuditRectificationModal({
       placeholder: "Enter responsible person",
     },
     { name: "finalizeDate", label: "Finalize Date", type: "date" },
+    {
+      name: "attachments",
+      label: "Attachments",
+      type: "file",
+      multiple: true,
+    },
   ];
 
   const handleSubmit = async (data: AddReportForm) => {
+    const attachmentFiles = data.attachments
+      ? Array.from(data.attachments as FileList)
+      : undefined;
+
     const payload: CreateAuditRectificationReportInput = {
       title: data.title,
       type: data.type,
@@ -97,6 +108,7 @@ export default function AddAuditRectificationModal({
       ...(data.finalizeDate && {
         finalizeDate: new Date(data.finalizeDate).toISOString(),
       }),
+      ...(attachmentFiles?.length && { attachments: attachmentFiles }),
     };
     await onSubmit(payload);
   };
@@ -123,6 +135,7 @@ export default function AddAuditRectificationModal({
             status: "Pending",
             responsiblePerson: "",
             finalizeDate: "",
+            attachments: undefined,
           }}
           onSubmit={handleSubmit}
           submitText="Create Report"

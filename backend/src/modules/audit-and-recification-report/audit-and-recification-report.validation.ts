@@ -111,6 +111,18 @@ const zodUpdateAuditAndRecificationReportSchema = z
       .datetime({ message: 'Finalize date must be a valid ISO date string' })
       .optional(),
     attachments: attachmentIdsSchema,
+    removeAttachmentIds: z
+      .union([
+        z.string().refine(isMongoId, {
+          message: 'Please provide a valid MongoDB ObjectId',
+        }),
+        z.array(
+          z.string().refine(isMongoId, {
+            message: 'Please provide a valid MongoDB ObjectId',
+          })
+        ),
+      ])
+      .optional(),
   })
   .strict()
   .refine((data) => Object.keys(data).length > 0, {

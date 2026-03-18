@@ -1,5 +1,6 @@
 // Import the model
 import mongoose from 'mongoose';
+import { UploadedFile } from 'express-fileupload';
 import {
   CreateAuditAndRecificationReportAsManagerInput,
   CreateAuditAndRecificationReportAsStandAloneInput,
@@ -7,6 +8,81 @@ import {
   UpdateAuditAndRecificationReportInput,
 } from './audit-and-recification-report.validation';
 import AuditsAndRecificationReport, { IAuditsAndRecificationReport } from '../../models/compliance-enforcement-dvsa/auditsAndRecificationReports.schema';
+import DocumentModel from '../../models/document.schema';
+import { deleteObjects, getSignedDownloadUrl } from '../../utils/aws/s3';
+import {
+  rollbackUploadedDocuments,
+  uploadFilesAndCreateDocuments,
+} from '../../utils/aws/document-upload';
+
+interface AuditAttachmentResponse {
+  _id: string;
+  filename: string;
+  originalName: string;
+  mimeType: string;
+  size: number;
+  url: string;
+  downloadUrl: string;
+}
+
+type AuditWithAttachmentsResponse = Omit<Partial<IAuditsAndRecificationReport>, 'attachments'> & {
+  attachments?: AuditAttachmentResponse[];
+};
+
+const withSignedAttachmentUrls = async (
+  report:
+    | IAuditsAndRecificationReport
+    | (Partial<IAuditsAndRecificationReport> & { _id: mongoose.Types.ObjectId })
+): Promise<AuditWithAttachmentsResponse> => {
+  const attachmentIds = Array.isArray(report.attachments)
+    ? report.attachments
+      .map((id) => (id instanceof mongoose.Types.ObjectId ? id : new mongoose.Types.ObjectId(id)))
+      .filter(Boolean)
+    : [];
+
+  if (!attachmentIds.length) {
+    return {
+      ...(report as Partial<IAuditsAndRecificationReport>),
+      attachments: [],
+    } as AuditWithAttachmentsResponse;
+  }
+
+  const documents = await DocumentModel.find({ _id: { $in: attachmentIds } })
+    .select('_id filename originalName mimeType size url s3Key')
+    .lean();
+
+  const signedDocuments = await Promise.all(
+    documents.map(async (doc) => {
+      let downloadUrl = doc.url;
+
+      try {
+        downloadUrl = await getSignedDownloadUrl(doc.s3Key);
+      } catch {
+        // Fallback to stored URL if signed URL generation fails.
+      }
+
+      return {
+        _id: String(doc._id),
+        filename: doc.filename,
+        originalName: doc.originalName,
+        mimeType: doc.mimeType,
+        size: doc.size,
+        url: doc.url,
+        downloadUrl,
+      } as AuditAttachmentResponse;
+    })
+  );
+
+  const byId = new Map(signedDocuments.map((doc) => [doc._id, doc]));
+  const orderedAttachments = attachmentIds
+    .map((id) => byId.get(String(id)))
+    .filter((doc): doc is AuditAttachmentResponse => Boolean(doc));
+
+  return {
+    ...(report as Partial<IAuditsAndRecificationReport>),
+    attachments: orderedAttachments,
+  } as AuditWithAttachmentsResponse;
+};
 
 const buildAccessFilter = (accessId: string): Record<string, unknown> => {
   const normalizedId = String(accessId);
@@ -109,16 +185,18 @@ const getAllAuditAndRecificationReport = async (
 const getAuditAndRecificationReportById = async (
   id: string,
   accessId?: string
-): Promise<IAuditsAndRecificationReport> => {
+): Promise<AuditWithAttachmentsResponse> => {
   const filter: any = { _id: new mongoose.Types.ObjectId(id) };
 
   if (accessId) {
     Object.assign(filter, buildAccessFilter(accessId));
   }
 
-  const doc = await AuditsAndRecificationReport.findOne(filter);
+  const doc = await AuditsAndRecificationReport.findOne(filter).lean();
   if (!doc) throw new Error('Audit and recification report not found or access denied');
-  return doc;
+  return withSignedAttachmentUrls(
+    doc as Partial<IAuditsAndRecificationReport> & { _id: mongoose.Types.ObjectId }
+  );
 };
 
 /**
@@ -203,12 +281,52 @@ const deleteAuditAndRecificationReport = async (
   id: string,
   accessId: string
 ): Promise<void> => {
-  const deleted = await AuditsAndRecificationReport.findOneAndDelete({
+  const ownershipFilter = {
     _id: new mongoose.Types.ObjectId(id),
     ...buildAccessFilter(accessId),
-  });
+  };
 
-  if (!deleted) throw new Error('Audit and recification report not found or access denied');
+  const existingReport = await AuditsAndRecificationReport.findOne(ownershipFilter)
+    .select('_id attachments')
+    .lean();
+
+  if (!existingReport) throw new Error('Audit and recification report not found or access denied');
+
+  const attachmentIds = Array.isArray(existingReport.attachments)
+    ? existingReport.attachments
+      .map((item) => String(item))
+      .filter((item) => mongoose.Types.ObjectId.isValid(item))
+    : [];
+
+  if (attachmentIds.length) {
+    const documents = await DocumentModel.find({
+      _id: { $in: attachmentIds.map((docId) => new mongoose.Types.ObjectId(docId)) },
+    })
+      .select('_id s3Key')
+      .lean();
+
+    const s3Keys = documents.map((doc) => doc.s3Key).filter(Boolean);
+
+    if (s3Keys.length) {
+      const s3DeleteResult = await deleteObjects(s3Keys);
+      if (s3DeleteResult.Errors?.length) {
+        throw new Error('Failed to delete one or more audit attachment files from S3');
+      }
+    }
+
+    if (documents.length) {
+      await DocumentModel.deleteMany({
+        _id: { $in: documents.map((doc) => doc._id) },
+      });
+    }
+
+    await AuditsAndRecificationReport.updateOne(
+      { _id: existingReport._id },
+      { $set: { attachments: [] } }
+    );
+  }
+
+  await AuditsAndRecificationReport.findOneAndDelete(ownershipFilter);
 };
 
 /**
@@ -225,8 +343,69 @@ const deleteAuditAndRecificationReport = async (
 const updateAuditAndRecificationReport = async (
   id: string,
   data: UpdateAuditAndRecificationReportInput,
-  accessId: string
+  accessId: string,
+  uploaderId: string,
+  files: UploadedFile[] = [],
+  removeAttachmentIds: string[] = []
 ): Promise<IAuditsAndRecificationReport> => {
+  const ownershipFilter = {
+    _id: new mongoose.Types.ObjectId(id),
+    ...buildAccessFilter(accessId),
+  };
+
+  const existingReport = await AuditsAndRecificationReport.findOne(ownershipFilter)
+    .select('_id attachments')
+    .lean();
+
+  if (!existingReport) {
+    throw new Error('Audit-and-recification-report not found or access denied');
+  }
+
+  const normalizedRemoveIds = Array.from(
+    new Set(
+      removeAttachmentIds
+        .filter((item) => mongoose.Types.ObjectId.isValid(item))
+        .map((item) => String(item))
+    )
+  );
+
+  const currentAttachmentIds = Array.isArray(existingReport.attachments)
+    ? existingReport.attachments.map((item) => String(item))
+    : [];
+
+  const removableAttachmentIds = normalizedRemoveIds.filter((item) =>
+    currentAttachmentIds.includes(item)
+  );
+
+  if (removableAttachmentIds.length) {
+    const documentsToDelete = await DocumentModel.find({
+      _id: {
+        $in: removableAttachmentIds.map((docId) => new mongoose.Types.ObjectId(docId)),
+      },
+    })
+      .select('_id s3Key')
+      .lean();
+
+    const keysToDelete = documentsToDelete.map((doc) => doc.s3Key).filter(Boolean);
+
+    if (keysToDelete.length) {
+      await deleteObjects(keysToDelete);
+    }
+
+    if (documentsToDelete.length) {
+      await DocumentModel.deleteMany({
+        _id: { $in: documentsToDelete.map((doc) => doc._id) },
+      });
+    }
+  }
+
+  let uploadedDocuments: Awaited<ReturnType<typeof uploadFilesAndCreateDocuments>>['documents'] = [];
+
+  if (files.length) {
+    const uploadResult = await uploadFilesAndCreateDocuments(files, uploaderId, 'audit-and-recification-report');
+    uploadedDocuments = uploadResult.documents;
+  }
+
   const updateFields: Record<string, any> = {};
   if (data.auditDate !== undefined) updateFields.auditDate = new Date(data.auditDate);
   if (data.title !== undefined) updateFields.title = data.title;
@@ -235,16 +414,55 @@ const updateAuditAndRecificationReport = async (
   if (data.status !== undefined) updateFields.status = data.status;
   if (data.responsiblePerson !== undefined) updateFields.responsiblePerson = data.responsiblePerson;
   if (data.finalizeDate !== undefined) updateFields.finalizeDate = new Date(data.finalizeDate);
-  if (data.attachments !== undefined) updateFields.attachments = toObjectIdArray(data.attachments);
 
-  const updated = await AuditsAndRecificationReport.findOneAndUpdate(
-    {
-      _id: new mongoose.Types.ObjectId(id),
-      ...buildAccessFilter(accessId),
-    },
-    { $set: updateFields },
-    { returnDocument: 'after' }
-  );
+  let updated: IAuditsAndRecificationReport | null = null;
+
+  try {
+    if (Object.keys(updateFields).length) {
+      updated = await AuditsAndRecificationReport.findOneAndUpdate(
+        ownershipFilter,
+        { $set: updateFields },
+        { returnDocument: 'after' }
+      );
+    }
+
+    if (removableAttachmentIds.length) {
+      updated = await AuditsAndRecificationReport.findOneAndUpdate(
+        ownershipFilter,
+        {
+          $pull: {
+            attachments: {
+              $in: removableAttachmentIds.map((docId) => new mongoose.Types.ObjectId(docId)),
+            },
+          },
+        },
+        { returnDocument: 'after' }
+      );
+    }
+
+    if (uploadedDocuments.length) {
+      updated = await AuditsAndRecificationReport.findOneAndUpdate(
+        ownershipFilter,
+        {
+          $addToSet: {
+            attachments: {
+              $each: uploadedDocuments.map((doc) => doc._id as mongoose.Types.ObjectId),
+            },
+          },
+        },
+        { returnDocument: 'after' }
+      );
+    }
+
+    if (!updated) {
+      updated = await AuditsAndRecificationReport.findOne(ownershipFilter);
+    }
+  } catch (error) {
+    if (uploadedDocuments.length) {
+      await rollbackUploadedDocuments(uploadedDocuments);
+    }
+    throw error;
+  }
 
   if (!updated) throw new Error('Audit-and-recification-report not found or access denied');
   return updated;
