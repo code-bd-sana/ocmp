@@ -122,7 +122,10 @@ export const getComplianceTimetableById = catchAsync(
       accessId = paramToString(req.params?.standAloneId);
     }
     // Call the service method to get the compliance-timetable by ID and get the result
-    const result = await complianceTimetableServices.getComplianceTimetableById(id as string, accessId);
+    const result = await complianceTimetableServices.getComplianceTimetableById(
+      id as string,
+      accessId
+    );
     if (!result) throw new Error('Compliance-timetable not found');
     // Send a success response with the retrieved resource data
     ServerResponse(res, true, 200, 'Compliance-timetable retrieved successfully', result);
@@ -139,21 +142,25 @@ export const getComplianceTimetableById = catchAsync(
  */
 export const getAllComplianceTimetable = catchAsync(
   async (req: AuthenticatedRequest, res: Response) => {
+    type ComplianceQuery = SearchComplianceTimetableQueryInput & { createdBy?: string };
     // Use the validated and transformed query from Zod middleware
-    const query: SearchComplianceTimetableQueryInput = {
+    const query: ComplianceQuery = {
       ...((req as any).validatedQuery as SearchComplianceTimetableQueryInput),
     };
 
+    // Standalone: restrict to own user
     if (req.user?.role === UserRole.STANDALONE_USER) {
-      query.standAloneId = req.user._id;
+      query.createdBy = req.user._id;
     }
 
     if (req.user?.role === UserRole.TRANSPORT_MANAGER) {
+      query.createdBy = req.user._id;
       query.standAloneId = (req as any).validatedQuery.standAloneId;
     }
 
     // Call the service method to get multiple compliance-timetables based on query parameters and get the result
-    const { complianceTimetables, totalData, totalPages } = await complianceTimetableServices.getAllComplianceTimetable(query);
+    const { complianceTimetables, totalData, totalPages } =
+      await complianceTimetableServices.getAllComplianceTimetable(query);
     if (!complianceTimetables) throw new Error('Failed to retrieve compliance-timetables');
     // Send a success response with the retrieved complianceTimetables data
     ServerResponse(res, true, 200, 'Compliance-timetables retrieved successfully', {

@@ -19,10 +19,7 @@ const buildAccessFilters = (id?: string): Record<string, unknown>[] => {
     candidates.unshift(new mongoose.Types.ObjectId(id));
   }
 
-  return [
-    { createdBy: { $in: candidates } },
-    { standAloneId: { $in: candidates } },
-  ];
+  return [{ createdBy: { $in: candidates } }, { standAloneId: { $in: candidates } }];
 };
 
 /**
@@ -146,13 +143,13 @@ const getComplianceTimetableById = async (
  * @throws {Error} - Throws an error if the query parameters are invalid.
  */
 const getAllComplianceTimetable = async (
-  query: SearchComplianceTimetableQueryInput
+  query: SearchComplianceTimetableQueryInput & { createdBy?: string; standAloneId?: string }
 ): Promise<{
   complianceTimetables: Partial<IComplianceTimeTable>[];
   totalData: number;
   totalPages: number;
 }> => {
-  const { searchKey = '', showPerPage = 10, pageNo = 1, standAloneId } = query;
+  const { searchKey = '', showPerPage = 10, pageNo = 1, standAloneId, createdBy } = query;
   // Build the search filter based on the search key
   const searchConditions: any[] = [];
   const andConditions: any[] = [];
@@ -163,6 +160,17 @@ const getAllComplianceTimetable = async (
         { task: { $regex: searchKey, $options: 'i' } },
         { responsibleParty: { $regex: searchKey, $options: 'i' } },
       ],
+    });
+  }
+
+  // A spot-check belongs to an SA user if EITHER:
+  //   a) standAloneId = SA_id  (created by TM on behalf of SA user)
+  //   b) createdBy   = SA_id  (created by SA user themselves)
+  const ownerId = standAloneId || createdBy;
+  if (ownerId) {
+    const ownerObjectId = new mongoose.Types.ObjectId(ownerId);
+    andConditions.push({
+      $or: [{ standAloneId: ownerObjectId }, { createdBy: ownerObjectId }],
     });
   }
 
@@ -194,6 +202,55 @@ const getAllComplianceTimetable = async (
     .select(''); // Keep/Exclude any field if needed
   return { complianceTimetables, totalData, totalPages };
 };
+// const getAllComplianceTimetable = async (
+//   query: SearchComplianceTimetableQueryInput
+// ): Promise<{
+//   complianceTimetables: Partial<IComplianceTimeTable>[];
+//   totalData: number;
+//   totalPages: number;
+// }> => {
+//   const { searchKey = '', showPerPage = 10, pageNo = 1, standAloneId } = query;
+//   // Build the search filter based on the search key
+//   const searchConditions: any[] = [];
+//   const andConditions: any[] = [];
+
+//   if (searchKey) {
+//     searchConditions.push({
+//       $or: [
+//         { task: { $regex: searchKey, $options: 'i' } },
+//         { responsibleParty: { $regex: searchKey, $options: 'i' } },
+//       ],
+//     });
+//   }
+
+//   if (standAloneId) {
+//     const standaloneFilters = buildAccessFilters(String(standAloneId));
+
+//     andConditions.push({ $or: standaloneFilters });
+//   }
+
+//   const searchFilter: any = {};
+
+//   if (searchConditions.length) {
+//     searchFilter.$and = searchConditions;
+//   }
+
+//   if (andConditions.length) {
+//     searchFilter.$and = [...(searchFilter.$and || []), ...andConditions];
+//   }
+//   // Calculate the number of items to skip based on the page number
+//   const skipItems = (pageNo - 1) * showPerPage;
+//   // Find the total count of matching compliance-timetable
+//   const totalData = await ComplianceTimeTable.countDocuments(searchFilter);
+//   // Calculate the total number of pages
+//   const totalPages = Math.ceil(totalData / showPerPage);
+//   // Find compliance-timetables based on the search filter with pagination
+//   const complianceTimetables = await ComplianceTimeTable.find(searchFilter)
+//     .skip(skipItems)
+//     .limit(showPerPage)
+//     .select(''); // Keep/Exclude any field if needed
+//   return { complianceTimetables, totalData, totalPages };
+// };
 
 /**
  * Exporting all service functions related to compliance-timetable as an object for easy import in controllers.
