@@ -36,6 +36,7 @@ export default function UniversalForm<T extends FieldValues>({
   onSubmit,
   submitText,
   setOpen,
+  renderAfterField,
 }: UniversalFomrsProps<T>) {
   const methods = useForm<T>({
     resolver: zodResolver(schema as ZodType<T, any, any>),
@@ -543,6 +544,8 @@ export default function UniversalForm<T extends FieldValues>({
                 {formState.errors[field.name]?.message as string}
               </p>
             )}
+
+            {renderAfterField ? renderAfterField(field.name) : null}
           </div>
         ))}
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { z } from "zod";
 import UniversalForm from "@/components/universal-form/UniversalForm";
 import { FieldConfig } from "@/components/universal-form/form.types";
@@ -9,7 +10,7 @@ import {
   UpdateDriverInput,
   CheckStatus,
 } from "@/lib/drivers/driver.types";
-import { Loader2 } from "lucide-react";
+import { Download, Loader2, Trash2 } from "lucide-react";
 
 /** Zod schema for edit — all fields optional but with validation when present */
 const editDriverSchema = z.object({
@@ -45,6 +46,7 @@ const editDriverSchema = z.object({
   cpcExpiry: z.string().optional(),
   lastChecked: z.string().optional(),
   checkStatus: z.nativeEnum(CheckStatus).optional(),
+  attachments: z.any().optional(),
 });
 
 type EditDriverForm = z.infer<typeof editDriverSchema>;
@@ -137,6 +139,12 @@ const fields: FieldConfig<EditDriverForm>[] = [
       { label: "Due", value: CheckStatus.DUE },
     ],
   },
+  {
+    name: "attachments",
+    label: "Add New Attachments",
+    type: "file",
+    multiple: true,
+  },
 ];
 
 /** Format a date string to YYYY-MM-DD for form defaults */
@@ -164,7 +172,102 @@ export default function EditDriverModal({
   driver,
   loading,
 }: EditDriverModalProps) {
+  const [removeAttachmentIds, setRemoveAttachmentIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (open) {
+      setRemoveAttachmentIds([]);
+    }
+  }, [open, driver?._id]);
+
+  const toggleRemoveAttachment = (attachmentId: string) => {
+    setRemoveAttachmentIds((prev) => {
+      if (prev.includes(attachmentId)) {
+        return prev.filter((id) => id !== attachmentId);
+      }
+      return [...prev, attachmentId];
+    });
+  };
+
+  const renderAttachmentRemoveSection = () => {
+    if (!driver) return null;
+
+    if (!driver.attachments?.length) {
+      return (
+        <div className="mt-4 rounded-md border p-3">
+          <p className="text-sm font-semibold">Remove Existing Attachments</p>
+          <p className="text-muted-foreground mt-2 text-sm">
+            No attachments found.
+          </p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="mt-4 rounded-md border p-3">
+        <p className="text-sm font-semibold">Remove Existing Attachments</p>
+        <div className="mt-2 space-y-2">
+          {driver.attachments.map((attachment) => {
+            const markedForRemoval = removeAttachmentIds.includes(
+              attachment._id,
+            );
+            return (
+              <div
+                key={attachment._id}
+                className="flex items-center justify-between gap-3 rounded-md border p-2"
+              >
+                <span
+                  className={`min-w-0 truncate text-sm ${markedForRemoval ? "text-red-600 line-through" : ""}`}
+                >
+                  {attachment.originalName || attachment.filename}
+                </span>
+
+                <div className="flex items-center gap-2">
+                  <a
+                    href={attachment.downloadUrl || attachment.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-muted-foreground hover:text-foreground"
+                    title="Download"
+                  >
+                    <Download className="h-4 w-4" />
+                  </a>
+
+                  <button
+                    type="button"
+                    onClick={() => toggleRemoveAttachment(attachment._id)}
+                    className={
+                      markedForRemoval
+                        ? "text-red-600 hover:text-red-700"
+                        : "text-muted-foreground hover:text-red-600"
+                    }
+                    title={
+                      markedForRemoval ? "Undo remove" : "Remove on update"
+                    }
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {removeAttachmentIds.length > 0 ? (
+          <p className="mt-2 text-xs text-amber-600">
+            {removeAttachmentIds.length} attachment(s) marked for removal on
+            update.
+          </p>
+        ) : null}
+      </div>
+    );
+  };
+
   const handleSubmit = async (data: EditDriverForm) => {
+    const attachmentFiles = data.attachments
+      ? Array.from(data.attachments as FileList)
+      : undefined;
+
     const payload: UpdateDriverInput = {
       fullName: data.fullName,
       licenseNumber: data.licenseNumber,
@@ -181,6 +284,8 @@ export default function EditDriverModal({
       ...(data.cpcExpiry && { cpcExpiry: data.cpcExpiry }),
       ...(data.lastChecked && { lastChecked: data.lastChecked }),
       ...(data.checkStatus && { checkStatus: data.checkStatus }),
+      ...(attachmentFiles?.length && { attachments: attachmentFiles }),
+      ...(removeAttachmentIds.length && { removeAttachmentIds }),
     };
     await onSubmit(payload);
   };
@@ -188,7 +293,7 @@ export default function EditDriverModal({
   if (loading || !driver) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
           <DialogTitle className="sr-only">Edit Driver</DialogTitle>
           <div className="flex h-40 items-center justify-center">
             <Loader2 className="text-primary h-8 w-8 animate-spin" />
@@ -200,8 +305,12 @@ export default function EditDriverModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent showCloseButton={false} className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent
+        showCloseButton={false}
+        className="max-h-[90vh] overflow-y-auto sm:max-w-2xl"
+      >
         <DialogTitle className="sr-only">Edit Driver</DialogTitle>
+
         <UniversalForm<EditDriverForm>
           title="Edit Driver"
           fields={fields}
@@ -220,10 +329,14 @@ export default function EditDriverModal({
             cpcExpiry: toDateInput(driver.cpcExpiry),
             lastChecked: toDateInput(driver.lastChecked),
             checkStatus: driver.checkStatus,
+            attachments: undefined,
           }}
           onSubmit={handleSubmit}
           submitText="Update Driver"
           setOpen={onOpenChange}
+          renderAfterField={(fieldName) =>
+            fieldName === "attachments" ? renderAttachmentRemoveSection() : null
+          }
         />
       </DialogContent>
     </Dialog>

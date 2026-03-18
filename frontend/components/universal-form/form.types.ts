@@ -1,3 +1,4 @@
+import { ReactNode } from "react";
 import { FieldValues, Path } from "react-hook-form";
 import { ZodType } from "zod";
 
@@ -32,4 +33,5 @@ export interface UniversalFomrsProps<T extends FieldValues> {
   onSubmit: (data: T) => void;
   submitText?: string;
   setOpen: (open: boolean) => void;
+  renderAfterField?: (fieldName: Path<T>) => ReactNode;
 }
