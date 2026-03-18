@@ -12,6 +12,7 @@ import {
 import ViewOcrsPlanModal from "@/components/dashboard/ocrs-plan/ViewOcrsPlanModal";
 import {
   CreateOcrsPlanInput,
+  OcrsPlanRow,
   UpdateOcrsPlanInput,
 } from "@/lib/ocrs-plan/ocrs-plan.types";
 import { OcrsPlanAction } from "@/service/ocrs-plan";
@@ -35,16 +36,12 @@ export default function OcrsPlanListPage({ params }: PageProps) {
 
   // View modal
   const [viewOpen, setViewOpen] = useState(false);
-  const [viewOcrsPlan, setViewOcrsPlan] = useState<OcrsPlanTableRow | null>(
-    null,
-  );
+  const [viewOcrsPlan, setViewOcrsPlan] = useState<OcrsPlanRow | null>(null);
   const [viewLoading, setViewLoading] = useState(false);
 
   // Edit modal
   const [editOpen, setEditOpen] = useState(false);
-  const [editOcrsPlan, setEditOcrsPlan] = useState<OcrsPlanTableRow | null>(
-    null,
-  );
+  const [editOcrsPlan, setEditOcrsPlan] = useState<OcrsPlanRow | null>(null);
 
   // Delete dialog
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -120,7 +117,7 @@ export default function OcrsPlanListPage({ params }: PageProps) {
     try {
       const res = await OcrsPlanAction.getOcrsPlan(row._id, standAloneId);
       if (res.status && res.data) {
-        setViewOcrsPlan(toOcrsPlanTableRows([res.data])[0]);
+        setViewOcrsPlan(res.data);
       } else {
         toast.error(res.message || "Failed to load OCRS plan details");
         setViewOpen(false);
@@ -141,7 +138,7 @@ export default function OcrsPlanListPage({ params }: PageProps) {
     try {
       const res = await OcrsPlanAction.getOcrsPlan(row._id, standAloneId);
       if (res.status && res.data) {
-        setEditOcrsPlan(toOcrsPlanTableRows([res.data])[0]);
+        setEditOcrsPlan(res.data);
       } else {
         toast.error(res.message || "Failed to load OCRS plan details");
         setEditOpen(false);

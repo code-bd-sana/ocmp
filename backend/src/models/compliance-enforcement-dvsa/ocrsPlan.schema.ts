@@ -5,13 +5,7 @@ export interface IOcrsPlan extends Document {
   roadWorthinessScore?: string;
   overallTrafficScore?: string;
   actionRequired?: string;
-  documents?: {
-    textDoc: {
-      label: string;
-      description: string;
-    }[];
-    attachments: mongoose.Types.ObjectId[];
-  }[];
+  attachments?: mongoose.Types.ObjectId[];
   standAloneId?: mongoose.Types.ObjectId;
   createdBy: mongoose.Types.ObjectId;
 }
@@ -28,24 +22,10 @@ const OcrsPlanSchema: Schema<IOcrsPlan> = new Schema(
     actionRequired: {
       type: String,
     },
-    documents: [
+    attachments: [
       {
-        textDoc: [
-          {
-            label: {
-              type: String,
-              ref: 'Document', // Reference from Document model
-            },
-            description: {
-              type: String,
-            },
-          },
-        ],
-        attachments: [
-          {
-            type: Schema.Types.ObjectId,
-          },
-        ],
+        type: Schema.Types.ObjectId,
+        ref: 'Document', // Reference from Document model
       },
     ],
     standAloneId: {

@@ -38,9 +38,28 @@ export const OcrsPlanAction = {
    */
   async createOcrsPlan(data: CreateOcrsPlanInput): Promise<OcrsPlanResponse> {
     try {
+      const formData = new FormData();
+
+      if (data.roadWorthinessScore) {
+        formData.append("roadWorthinessScore", data.roadWorthinessScore);
+      }
+      if (data.overallTrafficScore) {
+        formData.append("overallTrafficScore", data.overallTrafficScore);
+      }
+      if (data.actionRequired) {
+        formData.append("actionRequired", data.actionRequired);
+      }
+      formData.append("standAloneId", data.standAloneId);
+
+      if (data.attachments?.length) {
+        data.attachments.forEach((file) => {
+          formData.append("attachments", file);
+        });
+      }
+
       const response = await axiosInstance.post(
         `${base_url}/ocrs-plan/create-ocrs-plan`,
-        data,
+        formData,
       );
       return response.data;
     } catch (error: unknown) {
@@ -65,9 +84,27 @@ export const OcrsPlanAction = {
     data: CreateOcrsPlanAsStandAloneInput,
   ): Promise<OcrsPlanResponse> {
     try {
+      const formData = new FormData();
+
+      if (data.roadWorthinessScore) {
+        formData.append("roadWorthinessScore", data.roadWorthinessScore);
+      }
+      if (data.overallTrafficScore) {
+        formData.append("overallTrafficScore", data.overallTrafficScore);
+      }
+      if (data.actionRequired) {
+        formData.append("actionRequired", data.actionRequired);
+      }
+
+      if (data.attachments?.length) {
+        data.attachments.forEach((file) => {
+          formData.append("attachments", file);
+        });
+      }
+
       const response = await axiosInstance.post(
         `${base_url}/ocrs-plan/create-stand-alone-ocrs-plan`,
-        data,
+        formData,
       );
       return response.data;
     } catch (error: unknown) {
@@ -205,9 +242,33 @@ export const OcrsPlanAction = {
     data: UpdateOcrsPlanInput,
   ): Promise<OcrsPlanResponse> {
     try {
+      const formData = new FormData();
+
+      if (data.roadWorthinessScore) {
+        formData.append("roadWorthinessScore", data.roadWorthinessScore);
+      }
+      if (data.overallTrafficScore) {
+        formData.append("overallTrafficScore", data.overallTrafficScore);
+      }
+      if (data.actionRequired) {
+        formData.append("actionRequired", data.actionRequired);
+      }
+
+      if (data.removeAttachmentIds?.length) {
+        data.removeAttachmentIds.forEach((id) => {
+          formData.append("removeAttachmentIds", id);
+        });
+      }
+
+      if (data.attachments?.length) {
+        data.attachments.forEach((file) => {
+          formData.append("attachments", file);
+        });
+      }
+
       const response = await axiosInstance.patch(
         `${base_url}/ocrs-plan/update-ocrs-plan/${id}/${standAloneId}`,
-        data,
+        formData,
       );
       return response.data;
     } catch (error: unknown) {
@@ -233,9 +294,33 @@ export const OcrsPlanAction = {
     data: UpdateOcrsPlanAsStandAloneInput,
   ): Promise<OcrsPlanResponse> {
     try {
+      const formData = new FormData();
+
+      if (data.roadWorthinessScore) {
+        formData.append("roadWorthinessScore", data.roadWorthinessScore);
+      }
+      if (data.overallTrafficScore) {
+        formData.append("overallTrafficScore", data.overallTrafficScore);
+      }
+      if (data.actionRequired) {
+        formData.append("actionRequired", data.actionRequired);
+      }
+
+      if (data.removeAttachmentIds?.length) {
+        data.removeAttachmentIds.forEach((id) => {
+          formData.append("removeAttachmentIds", id);
+        });
+      }
+
+      if (data.attachments?.length) {
+        data.attachments.forEach((file) => {
+          formData.append("attachments", file);
+        });
+      }
+
       const response = await axiosInstance.patch(
         `${base_url}/ocrs-plan/update-ocrs-plan/${id}`,
-        data,
+        formData,
       );
       return response.data;
     } catch (error: unknown) {

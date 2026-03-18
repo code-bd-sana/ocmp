@@ -40,6 +40,9 @@ const baseOcrsPlanFields = {
   roadWorthinessScore: z.string().trim().optional(),
   overallTrafficScore: z.string().trim().optional(),
   actionRequired: z.string().trim().optional(),
+  attachments: z
+    .array(z.string().refine(isMongoId, { message: 'attachments must be valid ObjectIds' }))
+    .optional(),
   documents: z.array(zodDocumentItemSchema).optional(),
   createdBy: z
     .string()
@@ -78,6 +81,21 @@ const zodUpdateOcrsPlanSchema = z
     roadWorthinessScore: z.string().trim().optional(),
     overallTrafficScore: z.string().trim().optional(),
     actionRequired: z.string().trim().optional(),
+    attachments: z
+      .array(z.string().refine(isMongoId, { message: 'attachments must be valid ObjectIds' }))
+      .optional(),
+    removeAttachmentIds: z
+      .union([
+        z.string().refine(isMongoId, {
+          message: 'Please provide a valid MongoDB ObjectId',
+        }),
+        z.array(
+          z.string().refine(isMongoId, {
+            message: 'Please provide a valid MongoDB ObjectId',
+          })
+        ),
+      ])
+      .optional(),
     documents: z.array(zodDocumentItemSchema).optional(),
   })
   .strict()
