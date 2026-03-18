@@ -80,6 +80,56 @@ const getUserRole = async (): Promise<string | null> => {
 };
 
 export const TrainingToolboxAction = {
+  buildTrainingToolboxFormData(
+    data: CreateTrainingToolboxInput | UpdateTrainingToolboxInput,
+  ) {
+    const formData = new FormData();
+
+    if ("date" in data && data.date) formData.append("date", data.date);
+    if ("driverId" in data && data.driverId)
+      formData.append("driverId", data.driverId);
+    if ("toolboxTitle" in data && data.toolboxTitle)
+      formData.append("toolboxTitle", data.toolboxTitle);
+    if ("typeOfToolbox" in data && data.typeOfToolbox) {
+      formData.append("typeOfToolbox", data.typeOfToolbox);
+    }
+    if ("deliveredBy" in data && data.deliveredBy) {
+      formData.append("deliveredBy", data.deliveredBy);
+    }
+    if ("notes" in data && data.notes) formData.append("notes", data.notes);
+
+    if ("signed" in data && typeof data.signed === "boolean") {
+      formData.append("signed", String(data.signed));
+    }
+    if ("followUpNeeded" in data && typeof data.followUpNeeded === "boolean") {
+      formData.append("followUpNeeded", String(data.followUpNeeded));
+    }
+    if ("followUpDate" in data && data.followUpDate) {
+      formData.append("followUpDate", data.followUpDate);
+    }
+    if ("signOff" in data && typeof data.signOff === "boolean") {
+      formData.append("signOff", String(data.signOff));
+    }
+
+    if ("standAloneId" in data && data.standAloneId) {
+      formData.append("standAloneId", data.standAloneId);
+    }
+
+    if ("removeAttachmentIds" in data && data.removeAttachmentIds?.length) {
+      data.removeAttachmentIds.forEach((id) => {
+        formData.append("removeAttachmentIds", id);
+      });
+    }
+
+    if ("attachments" in data && data.attachments?.length) {
+      data.attachments.forEach((file) => {
+        formData.append("attachments", file);
+      });
+    }
+
+    return formData;
+  },
+
   /**
    * Create a training toolbox - role-aware routing and body filtering
    */
@@ -96,15 +146,16 @@ export const TrainingToolboxAction = {
           ? `${base_url}/training-toolbox/create-stand-alone-training-toolbox`
           : `${base_url}/training-toolbox/create-training-toolbox`;
 
-      // SA users: strip standAloneId from body (strict validation)
-      const body =
+      const formData = this.buildTrainingToolboxFormData(
         userRole === "STANDALONE_USER"
-          ? Object.fromEntries(
-              Object.entries(data).filter(([key]) => key !== "standAloneId"),
-            )
-          : data;
+          ? {
+              ...data,
+              standAloneId: undefined,
+            }
+          : data,
+      );
 
-      const response = await axios.post<ToolboxResponse>(endpoint, body, {
+      const response = await axios.post<ToolboxResponse>(endpoint, formData, {
         headers: { Authorization: `Bearer ${token}` },
       });
       return response.data;
@@ -211,7 +262,9 @@ export const TrainingToolboxAction = {
           ? `${base_url}/training-toolbox/update-training-toolbox/${toolboxId}`
           : `${base_url}/training-toolbox/update-training-toolbox/${toolboxId}/${standAloneId}`;
 
-      const response = await axios.patch<ToolboxResponse>(url, data, {
+      const formData = this.buildTrainingToolboxFormData(data);
+
+      const response = await axios.patch<ToolboxResponse>(url, formData, {
         headers: { Authorization: `Bearer ${token}` },
       });
       return response.data;

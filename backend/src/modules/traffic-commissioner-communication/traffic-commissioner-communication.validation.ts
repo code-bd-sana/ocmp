@@ -122,6 +122,18 @@ const zodUpdateTrafficCommissionerCommunicationSchema = z
         z.string().refine(isMongoId, { message: 'Attachments must be valid MongoDB ObjectIds' })
       )
       .optional(),
+    removeAttachmentIds: z
+      .union([
+        z.string().refine(isMongoId, {
+          message: 'Please provide a valid MongoDB ObjectId',
+        }),
+        z.array(
+          z.string().refine(isMongoId, {
+            message: 'Please provide a valid MongoDB ObjectId',
+          })
+        ),
+      ])
+      .optional(),
     comments: z.string().trim().max(1000, 'Comments must not exceed 1000 characters').optional(),
   })
   .refine((data) => Object.keys(data).length > 0, {

@@ -25,7 +25,7 @@ interface PageProps {
 
 export default function TrafficCommissionerPage({ params }: PageProps) {
   const { standAloneId } = use(params);
-  const [rows, setRows] = useState<trafficCommissionerRow[]>([]);
+  const [rows, setRows] = useState<TrafficCommissionerTableRow[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -36,7 +36,7 @@ export default function TrafficCommissionerPage({ params }: PageProps) {
   // View modal
   const [viewOpen, setViewOpen] = useState(false);
   const [viewTrafficCommissioner, setViewTrafficCommissioner] =
-    useState<TrafficCommissionerTableRow | null>(null);
+    useState<trafficCommissionerRow | null>(null);
   const [viewLoading, setViewLoading] = useState(false);
 
   // Edit modal
@@ -127,7 +127,7 @@ export default function TrafficCommissionerPage({ params }: PageProps) {
   };
 
   // ---------- View traffic commissioner communication ----------
-  const handleView = async (row: trafficCommissionerRow) => {
+  const handleView = async (row: TrafficCommissionerTableRow) => {
     setViewOpen(true);
     setViewLoading(true);
     try {
@@ -136,9 +136,7 @@ export default function TrafficCommissionerPage({ params }: PageProps) {
         standAloneId,
       );
       if (res.status && res.data) {
-        setViewTrafficCommissioner(
-          toTrafficCommissionerTableRows([res.data])[0],
-        );
+        setViewTrafficCommissioner(res.data);
       } else {
         toast.error(
           res.message ||
@@ -159,7 +157,7 @@ export default function TrafficCommissionerPage({ params }: PageProps) {
   };
 
   // ---------- Edit traffic commissioner communication ----------
-  const handleEditOpen = async (row: trafficCommissionerRow) => {
+  const handleEditOpen = async (row: TrafficCommissionerTableRow) => {
     setEditOpen(true);
     setEditLoading(true);
     try {
@@ -168,9 +166,7 @@ export default function TrafficCommissionerPage({ params }: PageProps) {
         standAloneId,
       );
       if (res.status && res.data) {
-        setEditTrafficCommissioner(
-          toTrafficCommissionerTableRows([res.data])[0],
-        );
+        setEditTrafficCommissioner(res.data);
       } else {
         toast.error(
           res.message ||
@@ -198,7 +194,7 @@ export default function TrafficCommissionerPage({ params }: PageProps) {
       const res = await TrafficCommissionerAction.updateTrafficCommissioner(
         editTrafficCommissioner._id,
         standAloneId,
-        data as CreateTrafficCommissionerInput,
+        data,
       );
       if (res.status) {
         toast.success(
@@ -223,7 +219,7 @@ export default function TrafficCommissionerPage({ params }: PageProps) {
   };
 
   // ---------- Delete traffic commissioner communication ----------
-  const handleDeleteOpen = (row: trafficCommissionerRow) => {
+  const handleDeleteOpen = (row: TrafficCommissionerTableRow) => {
     setDeleteTarget(row);
     setDeleteOpen(true);
   };

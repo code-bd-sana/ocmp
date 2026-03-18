@@ -1,9 +1,24 @@
 import {
   CreateTrafficCommissionerInput,
+  UpdateTrafficCommissionerInput,
   trafficCommissionerRow,
 } from "@/lib/traffic-commissioner/traffic-commissioner.type";
 import { base_url } from "@/lib/utils";
 import { axiosInstance } from "@/lib/utils/axiosInstance";
+import { UserAction } from "./user";
+
+let cachedUserRole: string | null = null;
+const getUserRole = async (): Promise<string | null> => {
+  if (cachedUserRole) return cachedUserRole;
+
+  try {
+    const profileResp = await UserAction.getProfile();
+    cachedUserRole = profileResp.data?.role || null;
+    return cachedUserRole;
+  } catch {
+    return null;
+  }
+};
 
 interface TrafficCommissionerResponse {
   status: boolean;
@@ -37,9 +52,33 @@ export const TrafficCommissionerAction = {
     data: CreateTrafficCommissionerInput,
   ): Promise<TrafficCommissionerResponse> {
     try {
+      const userRole = await getUserRole();
+      const endpoint =
+        userRole === "STANDALONE_USER"
+          ? `${base_url}/traffic-commissioner-communication/create-stand-alone-traffic-commissioner-communication`
+          : `${base_url}/traffic-commissioner-communication/create-traffic-commissioner-communication`;
+
+      const formData = new FormData();
+
+      formData.append("type", data.type);
+      formData.append("contactedPerson", data.contactedPerson);
+      formData.append("reason", data.reason);
+      formData.append("communicationDate", data.communicationDate);
+
+      if (data.comments) formData.append("comments", data.comments);
+      if (userRole !== "STANDALONE_USER" && data.standAloneId) {
+        formData.append("standAloneId", data.standAloneId);
+      }
+
+      if (data.attachments?.length) {
+        data.attachments.forEach((file) => {
+          formData.append("attachments", file);
+        });
+      }
+
       const response = await axiosInstance.post(
-        `${base_url}/traffic-commissioner-communication/create-traffic-commissioner-communication`,
-        data,
+        endpoint,
+        formData,
       );
       return response.data;
     } catch (error: unknown) {
@@ -65,13 +104,20 @@ export const TrafficCommissionerAction = {
     params?: SearchParams,
   ): Promise<TrafficCommissionerListResponse> {
     try {
+      const userRole = await getUserRole();
+
       const response = await axiosInstance.get(
         `${base_url}/traffic-commissioner-communication/get-traffic-commissioner-communication/many`,
         {
-          params: {
-            standAloneId,
-            ...params,
-          },
+          params:
+            userRole === "STANDALONE_USER"
+              ? {
+                  ...params,
+                }
+              : {
+                  standAloneId,
+                  ...params,
+                },
         },
       );
       return response.data;
@@ -125,8 +171,15 @@ export const TrafficCommissionerAction = {
     standAloneId: string,
   ): Promise<TrafficCommissionerResponse> {
     try {
+      const userRole = await getUserRole();
+
+      const endpoint =
+        userRole === "STANDALONE_USER"
+          ? `${base_url}/traffic-commissioner-communication/get-traffic-commissioner-communication/${id}`
+          : `${base_url}/traffic-commissioner-communication/get-traffic-commissioner-communication/${id}/${standAloneId}`;
+
       const response = await axiosInstance.get(
-        `${base_url}/traffic-commissioner-communication/get-traffic-commissioner-communication/${id}/${standAloneId}`,
+        endpoint,
       );
       return response.data;
     } catch (error: unknown) {
@@ -177,12 +230,37 @@ export const TrafficCommissionerAction = {
   async updateTrafficCommissioner(
     id: string,
     standAloneId: string,
-    data: CreateTrafficCommissionerInput,
+    data: UpdateTrafficCommissionerInput,
   ): Promise<TrafficCommissionerResponse> {
     try {
+      const userRole = await getUserRole();
+
+      const formData = new FormData();
+
+      formData.append("type", data.type);
+      formData.append("contactedPerson", data.contactedPerson);
+      formData.append("reason", data.reason);
+      formData.append("communicationDate", data.communicationDate);
+
+      if (data.comments) formData.append("comments", data.comments);
+
+      if (data.removeAttachmentIds?.length) {
+        data.removeAttachmentIds.forEach((id) => {
+          formData.append("removeAttachmentIds", id);
+        });
+      }
+
+      if (data.attachments?.length) {
+        data.attachments.forEach((file) => {
+          formData.append("attachments", file);
+        });
+      }
+
       const response = await axiosInstance.patch(
-        `${base_url}/traffic-commissioner-communication/update-traffic-commissioner-communication/${id}/${standAloneId}`,
-        data,
+        userRole === "STANDALONE_USER"
+          ? `${base_url}/traffic-commissioner-communication/update-traffic-commissioner-communication/${id}`
+          : `${base_url}/traffic-commissioner-communication/update-traffic-commissioner-communication/${id}/${standAloneId}`,
+        formData,
       );
       return response.data;
     } catch (error: unknown) {
@@ -205,12 +283,33 @@ export const TrafficCommissionerAction = {
    */
   async updateTrafficCommissionerAsStandAlone(
     id: string,
-    data: CreateTrafficCommissionerInput,
+    data: UpdateTrafficCommissionerInput,
   ): Promise<TrafficCommissionerResponse> {
     try {
+      const formData = new FormData();
+
+      formData.append("type", data.type);
+      formData.append("contactedPerson", data.contactedPerson);
+      formData.append("reason", data.reason);
+      formData.append("communicationDate", data.communicationDate);
+
+      if (data.comments) formData.append("comments", data.comments);
+
+      if (data.removeAttachmentIds?.length) {
+        data.removeAttachmentIds.forEach((id) => {
+          formData.append("removeAttachmentIds", id);
+        });
+      }
+
+      if (data.attachments?.length) {
+        data.attachments.forEach((file) => {
+          formData.append("attachments", file);
+        });
+      }
+
       const response = await axiosInstance.patch(
         `${base_url}/traffic-commissioner-communication/update-traffic-commissioner-communication/${id}`,
-        data,
+        formData,
       );
       return response.data;
     } catch (error: unknown) {
@@ -235,8 +334,12 @@ export const TrafficCommissionerAction = {
     standAloneId: string,
   ): Promise<TrafficCommissionerResponse> {
     try {
+      const userRole = await getUserRole();
+
       const response = await axiosInstance.delete(
-        `${base_url}/traffic-commissioner-communication/delete-traffic-commissioner-communication/${id}/${standAloneId}`,
+        userRole === "STANDALONE_USER"
+          ? `${base_url}/traffic-commissioner-communication/delete-traffic-commissioner-communication/${id}`
+          : `${base_url}/traffic-commissioner-communication/delete-traffic-commissioner-communication/${id}/${standAloneId}`,
       );
       return response.data;
     } catch (error: unknown) {

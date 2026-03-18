@@ -1,11 +1,11 @@
-import { TrafficCommissionerTableRow } from "./CommissionerTable";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { Loader2 } from "lucide-react";
+import { Download, FileText, Loader2 } from "lucide-react";
+import { trafficCommissionerRow } from "@/lib/traffic-commissioner/traffic-commissioner.type";
 
 interface ViewCommissionerModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  communication: TrafficCommissionerTableRow | null;
+  communication: trafficCommissionerRow | null;
   loading: boolean;
   standAloneId: string;
 }
@@ -21,6 +21,22 @@ function formatDate(value?: string | Date): string {
   } catch {
     return "—";
   }
+}
+
+function formatFileSize(bytes: number): string {
+  if (!Number.isFinite(bytes) || bytes < 0) return "—";
+  if (bytes < 1024) return `${bytes} B`;
+
+  const units = ["KB", "MB", "GB", "TB"];
+  let value = bytes / 1024;
+  let unitIndex = 0;
+
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value /= 1024;
+    unitIndex += 1;
+  }
+
+  return `${value.toFixed(value >= 10 ? 0 : 1)} ${units[unitIndex]}`;
 }
 
 interface DetailItemProps {
@@ -70,6 +86,43 @@ export default function ViewCommissionerModal({
                 value={formatDate(communication.communicationDate)}
               />
               <DetailItem label="Comments" value={communication.comments} />
+
+              <div className="sm:col-span-2">
+                <span className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+                  Attachments
+                </span>
+
+                {communication.attachments?.length ? (
+                  <div className="mt-2 space-y-2">
+                    {communication.attachments.map((attachment) => (
+                      <a
+                        key={attachment._id}
+                        href={attachment.downloadUrl || attachment.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="hover:border-primary/40 flex items-center justify-between gap-3 rounded-md border p-3 transition"
+                      >
+                        <div className="flex min-w-0 items-center gap-2">
+                          <FileText className="text-muted-foreground h-4 w-4 shrink-0" />
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-medium">
+                              {attachment.originalName || attachment.filename}
+                            </p>
+                            <p className="text-muted-foreground text-xs">
+                              {attachment.mimeType || "Unknown type"} •{" "}
+                              {formatFileSize(attachment.size)}
+                            </p>
+                          </div>
+                        </div>
+
+                        <Download className="text-muted-foreground h-4 w-4 shrink-0" />
+                      </a>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-foreground mt-1 text-sm">—</p>
+                )}
+              </div>
             </div>
           </div>
         ) : (

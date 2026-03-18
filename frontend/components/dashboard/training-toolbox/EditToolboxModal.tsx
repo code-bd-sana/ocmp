@@ -10,7 +10,7 @@ import { useEffect, useState } from "react";
 import { DriverAction } from "@/service/driver";
 import { FieldConfig } from "@/components/universal-form/form.types";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { Loader2 } from "lucide-react";
+import { Download, Loader2, Trash2 } from "lucide-react";
 import UniversalForm from "@/components/universal-form/UniversalForm";
 
 /** Zod schema for the edit form */
@@ -36,7 +36,7 @@ const editToolboxSchema = z.object({
     })
     .optional(),
   signOff: z.boolean().optional(),
-  attachments: z.array(z.instanceof(File)).optional(),
+  attachments: z.any().optional(),
 });
 
 type EditToolboxForm = z.infer<typeof editToolboxSchema>;
@@ -72,6 +72,13 @@ export default function EditToolboxModal({
     { label: string; value: string }[]
   >([]);
   const [driversLoading, setDriversLoading] = useState(false);
+  const [removeAttachmentIds, setRemoveAttachmentIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (open) {
+      setRemoveAttachmentIds([]);
+    }
+  }, [open, toolbox?._id]);
 
   // Fetch drivers when modal opens
   useEffect(() => {
@@ -169,10 +176,93 @@ export default function EditToolboxModal({
     },
   ];
 
+  const toggleRemoveAttachment = (attachmentId: string) => {
+    setRemoveAttachmentIds((prev) => {
+      if (prev.includes(attachmentId)) {
+        return prev.filter((id) => id !== attachmentId);
+      }
+      return [...prev, attachmentId];
+    });
+  };
+
+  const renderAttachmentRemoveSection = () => {
+    if (!toolbox) return null;
+
+    if (!toolbox.attachments?.length) {
+      return (
+        <div className="mt-4 rounded-md border p-3">
+          <p className="text-sm font-semibold">Remove Existing Attachments</p>
+          <p className="text-muted-foreground mt-2 text-sm">No attachments found.</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="mt-4 rounded-md border p-3">
+        <p className="text-sm font-semibold">Remove Existing Attachments</p>
+        <div className="mt-2 space-y-2">
+          {toolbox.attachments.map((attachment) => {
+            const markedForRemoval = removeAttachmentIds.includes(attachment._id);
+
+            return (
+              <div
+                key={attachment._id}
+                className="flex items-center justify-between gap-3 rounded-md border p-2"
+              >
+                <span
+                  className={`min-w-0 truncate text-sm ${markedForRemoval ? "text-red-600 line-through" : ""}`}
+                >
+                  {attachment.originalName || attachment.filename}
+                </span>
+
+                <div className="flex items-center gap-2">
+                  <a
+                    href={attachment.downloadUrl || attachment.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-muted-foreground hover:text-foreground"
+                    title="Download"
+                  >
+                    <Download className="h-4 w-4" />
+                  </a>
+
+                  <button
+                    type="button"
+                    onClick={() => toggleRemoveAttachment(attachment._id)}
+                    className={
+                      markedForRemoval
+                        ? "text-red-600 hover:text-red-700"
+                        : "text-muted-foreground hover:text-red-600"
+                    }
+                    title={markedForRemoval ? "Undo remove" : "Remove on update"}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {removeAttachmentIds.length > 0 ? (
+          <p className="mt-2 text-xs text-amber-600">
+            {removeAttachmentIds.length} attachment(s) marked for removal on
+            update.
+          </p>
+        ) : null}
+      </div>
+    );
+  };
+
   const handleSubmit = async (data: EditToolboxForm) => {
+    const attachmentFiles = data.attachments
+      ? Array.from(data.attachments as FileList)
+      : undefined;
+
     const payload: UpdateTrainingToolboxInput = {
       ...data,
-      attachments: data.attachments?.map((file) => file.name),
+      ...(attachmentFiles?.length && { attachments: attachmentFiles }),
+      ...(removeAttachmentIds.length && { removeAttachmentIds }),
     };
     await onSubmit(payload);
   };
@@ -215,6 +305,11 @@ export default function EditToolboxModal({
             onSubmit={handleSubmit}
             submitText="Update Training Toolbox"
             setOpen={onOpenChange}
+            renderAfterField={(fieldName) =>
+              fieldName === "attachments"
+                ? renderAttachmentRemoveSection()
+                : null
+            }
           />
         ) : (
           <div className="flex h-40 items-center justify-center">

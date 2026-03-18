@@ -6,8 +6,9 @@ import {
 import z from "zod";
 import { CommunicationType } from "./AddCommissionerModal";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { Loader2 } from "lucide-react";
+import { Download, Loader2, Trash2 } from "lucide-react";
 import UniversalForm from "@/components/universal-form/UniversalForm";
+import { useEffect, useState } from "react";
 
 const editCommissionerSchema = z.object({
   type: z.string().min(1, "Type is required").max(120, "Type is too long"),
@@ -21,7 +22,7 @@ const editCommissionerSchema = z.object({
     .max(1000, "Reason is too long"),
   communicationDate: z.string().min(1, "Communication date is required"),
   comments: z.string().optional(),
-  attachments: z.array(z.instanceof(File)).optional(),
+  attachments: z.any().optional(),
 });
 
 type EditCommissionerForm = z.infer<typeof editCommissionerSchema>;
@@ -92,18 +93,117 @@ export default function EditCommissionerModal({
     },
     {
       name: "attachments",
-      label: "Attachments",
+      label: "Add New Attachments",
       type: "file",
       multiple: true,
     },
   ];
 
+  const [removeAttachmentIds, setRemoveAttachmentIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (open) {
+      setRemoveAttachmentIds([]);
+    }
+  }, [open, communication?._id]);
+
+  const toggleRemoveAttachment = (attachmentId: string) => {
+    setRemoveAttachmentIds((prev) => {
+      if (prev.includes(attachmentId)) {
+        return prev.filter((id) => id !== attachmentId);
+      }
+      return [...prev, attachmentId];
+    });
+  };
+
+  const renderAttachmentRemoveSection = () => {
+    if (!communication) return null;
+
+    if (!communication.attachments?.length) {
+      return (
+        <div className="mt-4 rounded-md border p-3">
+          <p className="text-sm font-semibold">Remove Existing Attachments</p>
+          <p className="text-muted-foreground mt-2 text-sm">
+            No attachments found.
+          </p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="mt-4 rounded-md border p-3">
+        <p className="text-sm font-semibold">Remove Existing Attachments</p>
+        <div className="mt-2 space-y-2">
+          {communication.attachments.map((attachment) => {
+            const markedForRemoval = removeAttachmentIds.includes(
+              attachment._id,
+            );
+
+            return (
+              <div
+                key={attachment._id}
+                className="flex items-center justify-between gap-3 rounded-md border p-2"
+              >
+                <span
+                  className={`min-w-0 truncate text-sm ${markedForRemoval ? "text-red-600 line-through" : ""}`}
+                >
+                  {attachment.originalName || attachment.filename}
+                </span>
+
+                <div className="flex items-center gap-2">
+                  <a
+                    href={attachment.downloadUrl || attachment.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-muted-foreground hover:text-foreground"
+                    title="Download"
+                  >
+                    <Download className="h-4 w-4" />
+                  </a>
+
+                  <button
+                    type="button"
+                    onClick={() => toggleRemoveAttachment(attachment._id)}
+                    className={
+                      markedForRemoval
+                        ? "text-red-600 hover:text-red-700"
+                        : "text-muted-foreground hover:text-red-600"
+                    }
+                    title={
+                      markedForRemoval ? "Undo remove" : "Remove on update"
+                    }
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {removeAttachmentIds.length > 0 ? (
+          <p className="mt-2 text-xs text-amber-600">
+            {removeAttachmentIds.length} attachment(s) marked for removal on
+            update.
+          </p>
+        ) : null}
+      </div>
+    );
+  };
+
   const handleSubmit = async (data: EditCommissionerForm) => {
-    const attachmentNames = data.attachments?.map((file) => file.name);
+    const attachmentFiles = data.attachments
+      ? Array.from(data.attachments as FileList)
+      : undefined;
+
     const payload: UpdateTrafficCommissionerInput = {
-      ...data,
+      type: data.type,
+      contactedPerson: data.contactedPerson,
+      reason: data.reason,
       communicationDate: new Date(data.communicationDate).toISOString(),
-      attachments: attachmentNames,
+      comments: data.comments,
+      ...(attachmentFiles?.length && { attachments: attachmentFiles }),
+      ...(removeAttachmentIds.length && { removeAttachmentIds }),
     };
     await onSubmit(payload);
   };
@@ -128,10 +228,16 @@ export default function EditCommissionerModal({
               reason: communication.reason,
               communicationDate: toDateInput(communication.communicationDate),
               comments: communication.comments || "",
+              attachments: undefined,
             }}
             onSubmit={handleSubmit}
             submitText="Update Communication"
             setOpen={onOpenChange}
+            renderAfterField={(fieldName) =>
+              fieldName === "attachments"
+                ? renderAttachmentRemoveSection()
+                : null
+            }
           />
         ) : (
           <div className="py-8 text-center text-sm text-gray-500">
