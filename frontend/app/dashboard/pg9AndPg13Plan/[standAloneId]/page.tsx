@@ -51,13 +51,10 @@ export default function Pg9AndPg13PlanPage({ params }: PageProps) {
     async (search?: string) => {
       try {
         setLoading(true);
-        const res = await Pg9AndPg13PlanAction.getPg9AndPg13Plans(
-          standAloneId,
-          {
-            searchKey: search || undefined,
-            showPerPage: 100,
-          },
-        );
+        const res = await Pg9AndPg13PlanAction.getPg9AndPg13Plans(standAloneId, {
+          searchKey: search || undefined,
+          showPerPage: 100,
+        });
 
         if (res.status && res.data) {
           const transformed = toPg9AndPg13PlanRow(res.data.pg9AndPg13Plans);
@@ -70,7 +67,7 @@ export default function Pg9AndPg13PlanPage({ params }: PageProps) {
         setError(
           err instanceof Error
             ? err.message
-            : "Failed to load training toolbox records",
+            : "Failed to load PG9/PG13 plan records",
         );
       } finally {
         setLoading(false);
@@ -95,10 +92,7 @@ export default function Pg9AndPg13PlanPage({ params }: PageProps) {
   // Create PG9/PG13 plan
   const handleCreate = async (data: CreatePg9AndPg13PlanInput) => {
     try {
-      const res = await Pg9AndPg13PlanAction.createPg9AndPg13Plan({
-        ...data,
-        standAloneId,
-      });
+      const res = await Pg9AndPg13PlanAction.createPg9AndPg13Plan(data);
 
       if (res.status) {
         toast.success("PG9/PG13 plan created successfully");
@@ -109,9 +103,7 @@ export default function Pg9AndPg13PlanPage({ params }: PageProps) {
       }
     } catch (err) {
       toast.error(
-        err instanceof Error
-          ? err.message
-          : "Failed to create training toolbox",
+        err instanceof Error ? err.message : "Failed to create PG9/PG13 plan",
       );
     }
   };
@@ -120,6 +112,7 @@ export default function Pg9AndPg13PlanPage({ params }: PageProps) {
   const handleView = async (plan: Pg9AndPg13PlanRow) => {
     setViewPlan(plan);
     setViewOpen(true);
+    setViewLoading(true);
 
     try {
       const res = await Pg9AndPg13PlanAction.getPg9AndPg13Plan(
@@ -148,6 +141,7 @@ export default function Pg9AndPg13PlanPage({ params }: PageProps) {
   const handleEditOpen = async (plan: Pg9AndPg13PlanRow) => {
     setEditPlan(plan);
     setEditOpen(true);
+    setEditLoading(true);
 
     try {
       const res = await Pg9AndPg13PlanAction.getPg9AndPg13Plan(
@@ -192,9 +186,7 @@ export default function Pg9AndPg13PlanPage({ params }: PageProps) {
       }
     } catch (err) {
       toast.error(
-        err instanceof Error
-          ? err.message
-          : "Failed to update training toolbox",
+        err instanceof Error ? err.message : "Failed to update PG9/PG13 plan",
       );
     }
   };
@@ -225,9 +217,7 @@ export default function Pg9AndPg13PlanPage({ params }: PageProps) {
       }
     } catch (err) {
       toast.error(
-        err instanceof Error
-          ? err.message
-          : "Failed to delete training toolbox",
+        err instanceof Error ? err.message : "Failed to delete PG9/PG13 plan",
       );
     } finally {
       setDeleteLoading(false);
@@ -250,7 +240,7 @@ export default function Pg9AndPg13PlanPage({ params }: PageProps) {
     return (
       <div className="container mx-auto max-w-6xl py-10">
         <div className="flex h-64 items-center justify-center">
-          <p className="text-muted-foreground">Loading training toolbox...</p>
+          <p className="text-muted-foreground">Loading PG9/PG13 plans...</p>
         </div>
       </div>
     );
