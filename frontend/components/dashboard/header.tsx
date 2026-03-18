@@ -37,15 +37,15 @@ export default function Header({ showSidebarToggle = true }: HeaderProps) {
       {/* Logo */}
       <div className="flex items-center gap-3">
         {showSidebarToggle ? <MobileSidebarToggle /> : null}
-        <Image
-          src="/logo.png"
-          alt="OCMP"
-          width={150}
-          height={40}
-          className="object-contain"
-          style={{ height: "auto", width: "auto" }}
-          priority
-        />
+        <div className="relative h-10 w-37.5">
+          <Image
+            src="/logo.png"
+            alt="OCMP"
+            fill
+            className="object-contain"
+            priority
+          />
+        </div>
       </div>
 
       {/* User info */}
