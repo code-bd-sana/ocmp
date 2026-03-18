@@ -22,6 +22,7 @@ const addSpotCheckSchema = z.object({
   completedBy: z.string().optional(),
   followUpNeeded: z.string().optional(),
   notes: z.string().optional(),
+  attachments: z.any().optional(),
 });
 
 type AddSpotCheckForm = z.infer<typeof addSpotCheckSchema>;
@@ -112,9 +113,19 @@ export default function AddSpotCheckModal({
       type: "textarea",
       placeholder: "Any additional notes",
     },
+    {
+      name: "attachments",
+      label: "Attachments",
+      type: "file",
+      multiple: true,
+    },
   ];
 
   const handleSubmit = async (data: AddSpotCheckForm) => {
+    const attachmentFiles = data.attachments
+      ? Array.from(data.attachments as FileList)
+      : undefined;
+
     const payload: CreateSpotCheckInput = {
       vehicleId: data.vehicleId,
       issueDetails: data.issueDetails,
@@ -127,6 +138,7 @@ export default function AddSpotCheckModal({
       ...(data.completedBy && { completedBy: data.completedBy }),
       ...(data.followUpNeeded && { followUpNeeded: data.followUpNeeded }),
       ...(data.notes && { notes: data.notes }),
+      ...(attachmentFiles?.length && { attachments: attachmentFiles }),
     };
     await onSubmit(payload);
   };
@@ -135,9 +147,9 @@ export default function AddSpotCheckModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showCloseButton={false}
-        className="sm:max-w-2xl max-h-[90vh] overflow-y-auto"
+        className="max-h-[90vh] overflow-y-auto sm:max-w-2xl"
       >
-        <DialogTitle className="text-primary text-xl font-bold mb-4">
+        <DialogTitle className="text-primary mb-4 text-xl font-bold">
           Add New Spot Check
         </DialogTitle>
 
@@ -159,6 +171,7 @@ export default function AddSpotCheckModal({
               completedBy: "",
               followUpNeeded: "",
               notes: "",
+              attachments: undefined,
             }}
             onSubmit={handleSubmit}
             submitText="Create Spot Check"

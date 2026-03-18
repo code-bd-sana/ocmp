@@ -1,16 +1,98 @@
 // Import the model
 import mongoose from 'mongoose';
+import { UploadedFile } from 'express-fileupload';
 import SpotCheckModel, {
   ISpotCheck,
 } from '../../models/compliance-enforcement-dvsa/spotCheck.schema';
 import Vehicle from '../../models/vehicle-transport/vehicle.schema';
 import { IdOrIdsInput, SearchQueryInput } from '../../handlers/common-zod-validator';
+import DocumentModel from '../../models/document.schema';
+import { deleteObjects, getSignedDownloadUrl } from '../../utils/aws/s3';
+import {
+  rollbackUploadedDocuments,
+  uploadFilesAndCreateDocuments,
+} from '../../utils/aws/document-upload';
 import {
   CreateSpotCheckInput,
   CreateSpotCheckAsManagerInput,
   CreateSpotCheckAsStandAloneInput,
   UpdateSpotCheckInput,
 } from './spot-check.validation';
+
+interface SpotCheckAttachmentResponse {
+  _id: string;
+  filename: string;
+  originalName: string;
+  mimeType: string;
+  size: number;
+  url: string;
+  downloadUrl: string;
+}
+
+type SpotCheckWithAttachmentsResponse = Omit<Partial<ISpotCheck>, 'attachments'> & {
+  attachments?: SpotCheckAttachmentResponse[];
+};
+
+const withSignedAttachmentUrls = async (
+  spotCheck: ISpotCheck | (Partial<ISpotCheck> & { _id: mongoose.Types.ObjectId })
+): Promise<SpotCheckWithAttachmentsResponse> => {
+  const attachmentIds = Array.isArray(spotCheck.attachments)
+    ? spotCheck.attachments
+      .map((id) => (id instanceof mongoose.Types.ObjectId ? id : new mongoose.Types.ObjectId(id)))
+      .filter(Boolean)
+    : [];
+
+  if (!attachmentIds.length) {
+    return {
+      ...(spotCheck as Partial<ISpotCheck>),
+      attachments: [],
+    } as SpotCheckWithAttachmentsResponse;
+  }
+
+  const documents = await DocumentModel.find({ _id: { $in: attachmentIds } })
+    .select('_id filename originalName mimeType size url s3Key')
+    .lean();
+
+  const signedDocuments = await Promise.all(
+    documents.map(async (doc) => {
+      let downloadUrl = doc.url;
+
+      try {
+        downloadUrl = await getSignedDownloadUrl(doc.s3Key);
+      } catch {
+        // Fallback to stored URL if signed URL generation fails.
+      }
+
+      return {
+        _id: String(doc._id),
+        filename: doc.filename,
+        originalName: doc.originalName,
+        mimeType: doc.mimeType,
+        size: doc.size,
+        url: doc.url,
+        downloadUrl,
+      } as SpotCheckAttachmentResponse;
+    })
+  );
+
+  const byId = new Map(signedDocuments.map((doc) => [doc._id, doc]));
+  const orderedAttachments = attachmentIds
+    .map((id) => byId.get(String(id)))
+    .filter((doc): doc is SpotCheckAttachmentResponse => Boolean(doc));
+
+  return {
+    ...(spotCheck as Partial<ISpotCheck>),
+    attachments: orderedAttachments,
+  } as SpotCheckWithAttachmentsResponse;
+};
+
+const hasOwnerAccess = (doc: any, accessId?: string) => {
+  if (!accessId) return true;
+  const accessIdStr = String(accessId);
+  return (
+    doc?.standAloneId?.toString?.() === accessIdStr || doc?.createdBy?.toString?.() === accessIdStr
+  );
+};
 
 /**
  * Service function to create a new spot-check.
@@ -73,11 +155,118 @@ const createSpotCheckAsStandAlone = async (
  */
 const updateSpotCheck = async (
   id: IdOrIdsInput['id'],
-  data: UpdateSpotCheckInput
+  data: UpdateSpotCheckInput,
+  userId: IdOrIdsInput['id'],
+  standAloneId?: string,
+  files: UploadedFile[] = [],
+  removeAttachmentIds: string[] = []
 ): Promise<Partial<ISpotCheck | null>> => {
-  // Proceed to update the spot-check (no global duplicate check needed)
-  const updatedSpotCheck = await SpotCheckModel.findByIdAndUpdate(id, data, { new: true });
-  return updatedSpotCheck;
+  const existingSpotCheck = await SpotCheckModel.findById(id)
+    .select('standAloneId createdBy attachments')
+    .lean();
+
+  if (!existingSpotCheck) return null;
+
+  const accessOwnerId = standAloneId || String(userId);
+  if (!hasOwnerAccess(existingSpotCheck, accessOwnerId)) {
+    return null;
+  }
+
+  const normalizedRemoveIds = Array.from(
+    new Set(
+      removeAttachmentIds
+        .filter((item) => mongoose.Types.ObjectId.isValid(item))
+        .map((item) => String(item))
+    )
+  );
+
+  const currentAttachmentIds = Array.isArray(existingSpotCheck.attachments)
+    ? existingSpotCheck.attachments.map((item) => String(item))
+    : [];
+
+  const removableAttachmentIds = normalizedRemoveIds.filter((item) =>
+    currentAttachmentIds.includes(item)
+  );
+
+  if (removableAttachmentIds.length) {
+    const documentsToDelete = await DocumentModel.find({
+      _id: {
+        $in: removableAttachmentIds.map((docId) => new mongoose.Types.ObjectId(docId)),
+      },
+    })
+      .select('_id s3Key')
+      .lean();
+
+    const keysToDelete = documentsToDelete.map((doc) => doc.s3Key).filter(Boolean);
+
+    if (keysToDelete.length) {
+      await deleteObjects(keysToDelete);
+    }
+
+    if (documentsToDelete.length) {
+      await DocumentModel.deleteMany({
+        _id: { $in: documentsToDelete.map((doc) => doc._id) },
+      });
+    }
+  }
+
+  let uploadedDocuments: Awaited<ReturnType<typeof uploadFilesAndCreateDocuments>>['documents'] = [];
+
+  if (files.length) {
+    const uploadResult = await uploadFilesAndCreateDocuments(files, String(userId), 'spot-check');
+    uploadedDocuments = uploadResult.documents;
+  }
+
+  const sanitizedData: UpdateSpotCheckInput = { ...data };
+  delete (sanitizedData as any).attachments;
+  delete (sanitizedData as any).removeAttachmentIds;
+
+  try {
+    let updatedSpotCheck: ISpotCheck | null = null;
+
+    if (Object.keys(sanitizedData).length) {
+      updatedSpotCheck = await SpotCheckModel.findByIdAndUpdate(id, { $set: sanitizedData }, { new: true });
+    }
+
+    if (removableAttachmentIds.length) {
+      updatedSpotCheck = await SpotCheckModel.findByIdAndUpdate(
+        id,
+        {
+          $pull: {
+            attachments: {
+              $in: removableAttachmentIds.map((docId) => new mongoose.Types.ObjectId(docId)),
+            },
+          },
+        },
+        { new: true }
+      );
+    }
+
+    if (uploadedDocuments.length) {
+      updatedSpotCheck = await SpotCheckModel.findByIdAndUpdate(
+        id,
+        {
+          $addToSet: {
+            attachments: {
+              $each: uploadedDocuments.map((doc) => doc._id as mongoose.Types.ObjectId),
+            },
+          },
+        },
+        { new: true }
+      );
+    }
+
+    if (!updatedSpotCheck) {
+      updatedSpotCheck = await SpotCheckModel.findById(id);
+    }
+
+    return updatedSpotCheck;
+  } catch (error) {
+    if (uploadedDocuments.length) {
+      await rollbackUploadedDocuments(uploadedDocuments);
+    }
+    throw error;
+  }
 };
 
 /**
@@ -86,7 +275,53 @@ const updateSpotCheck = async (
  * @param {IdOrIdsInput['id']} id - The ID of the spot-check to delete.
  * @returns {Promise<Partial<ISpotCheck>>} - The deleted spot-check.
  */
-const deleteSpotCheck = async (id: IdOrIdsInput['id']): Promise<Partial<ISpotCheck | null>> => {
+const deleteSpotCheck = async (
+  id: IdOrIdsInput['id'],
+  userId: IdOrIdsInput['id'],
+  standAloneId?: IdOrIdsInput['id']
+): Promise<Partial<ISpotCheck | null>> => {
+  const existingSpotCheck = await SpotCheckModel.findById(id)
+    .select('standAloneId createdBy attachments')
+    .lean();
+
+  if (!existingSpotCheck) return null;
+
+  const accessOwnerId = String(standAloneId || userId);
+  if (!hasOwnerAccess(existingSpotCheck, accessOwnerId)) {
+    return null;
+  }
+
+  const attachmentIds = Array.isArray(existingSpotCheck.attachments)
+    ? existingSpotCheck.attachments
+      .map((item) => String(item))
+      .filter((item) => mongoose.Types.ObjectId.isValid(item))
+    : [];
+
+  if (attachmentIds.length) {
+    const documents = await DocumentModel.find({
+      _id: { $in: attachmentIds.map((docId) => new mongoose.Types.ObjectId(docId)) },
+    })
+      .select('_id s3Key')
+      .lean();
+
+    const s3Keys = documents.map((doc) => doc.s3Key).filter(Boolean);
+
+    if (s3Keys.length) {
+      const s3DeleteResult = await deleteObjects(s3Keys);
+      if (s3DeleteResult.Errors?.length) {
+        throw new Error('Failed to delete one or more spot-check attachment files from S3');
+      }
+    }
+
+    if (documents.length) {
+      await DocumentModel.deleteMany({
+        _id: { $in: documents.map((doc) => doc._id) },
+      });
+    }
+
+    await SpotCheckModel.updateOne({ _id: existingSpotCheck._id }, { $set: { attachments: [] } });
+  }
+
   const deletedSpotCheck = await SpotCheckModel.findByIdAndDelete(id);
   return deletedSpotCheck;
 };
@@ -100,7 +335,7 @@ const deleteSpotCheck = async (id: IdOrIdsInput['id']): Promise<Partial<ISpotChe
 const getSpotCheckById = async (
   id: IdOrIdsInput['id'],
   accessId?: string
-): Promise<Partial<ISpotCheck | null>> => {
+): Promise<SpotCheckWithAttachmentsResponse | null> => {
   const spotCheck = await SpotCheckModel.findById(id).lean();
   if (!spotCheck) return null;
   if (accessId) {
@@ -110,7 +345,7 @@ const getSpotCheckById = async (
       (spotCheck as any).createdBy?.toString?.() === accessIdStr;
     if (!ownerMatch) return null;
   }
-  return spotCheck as any;
+  return withSignedAttachmentUrls(spotCheck as Partial<ISpotCheck> & { _id: mongoose.Types.ObjectId });
 };
 
 /**

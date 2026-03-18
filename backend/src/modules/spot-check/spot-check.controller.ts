@@ -7,6 +7,11 @@ import ServerResponse from '../../helpers/responses/custom-response';
 import catchAsync from '../../utils/catch-async/catch-async';
 import { AuthenticatedRequest } from '../../middlewares/is-authorized';
 import { UserRole } from '../../models';
+import {
+  extractUploadedFiles,
+  rollbackUploadedDocuments,
+  uploadFilesAndCreateDocuments,
+} from '../../utils/aws/document-upload';
 
 /**
  * Controller function to handle the creation of a single spot-check.
@@ -22,9 +27,30 @@ export const createSpotCheckAsManager = catchAsync(
     req.body.createdBy = new mongoose.Types.ObjectId(userId);
     // ensure standAloneId is converted to ObjectId
     req.body.standAloneId = new mongoose.Types.ObjectId(req.body.standAloneId);
-    const result = await spotCheckServices.createSpotCheckAsManager(req.body);
-    if (!result) throw new Error('Failed to create spot-check');
-    ServerResponse(res, true, 201, 'Spot-check created successfully', result);
+
+    const files = extractUploadedFiles((req as any).files, ['attachments', 'files']);
+    let uploadedDocuments: Awaited<ReturnType<typeof uploadFilesAndCreateDocuments>>['documents'] = [];
+
+    try {
+      if (files.length) {
+        const uploadResult = await uploadFilesAndCreateDocuments(files, userId, 'spot-check');
+        uploadedDocuments = uploadResult.documents;
+
+        const uploadedIds = uploadedDocuments.map((doc) => String(doc._id));
+        req.body.attachments = Array.isArray(req.body.attachments)
+          ? [...req.body.attachments, ...uploadedIds]
+          : uploadedIds;
+      }
+
+      const result = await spotCheckServices.createSpotCheckAsManager(req.body);
+      if (!result) throw new Error('Failed to create spot-check');
+      ServerResponse(res, true, 201, 'Spot-check created successfully', result);
+    } catch (error) {
+      if (uploadedDocuments.length) {
+        await rollbackUploadedDocuments(uploadedDocuments);
+      }
+      throw error;
+    }
   }
 );
 
@@ -34,9 +60,30 @@ export const createSpotCheckAsStandAlone = catchAsync(
     req.body.createdBy = new mongoose.Types.ObjectId(userId);
     // reportedBy should default to the authenticated user if not provided
     if (!req.body.reportedBy) req.body.reportedBy = new mongoose.Types.ObjectId(userId);
-    const result = await spotCheckServices.createSpotCheckAsStandAlone(req.body);
-    if (!result) throw new Error('Failed to create spot-check');
-    ServerResponse(res, true, 201, 'Spot-check created successfully', result);
+
+    const files = extractUploadedFiles((req as any).files, ['attachments', 'files']);
+    let uploadedDocuments: Awaited<ReturnType<typeof uploadFilesAndCreateDocuments>>['documents'] = [];
+
+    try {
+      if (files.length) {
+        const uploadResult = await uploadFilesAndCreateDocuments(files, userId, 'spot-check');
+        uploadedDocuments = uploadResult.documents;
+
+        const uploadedIds = uploadedDocuments.map((doc) => String(doc._id));
+        req.body.attachments = Array.isArray(req.body.attachments)
+          ? [...req.body.attachments, ...uploadedIds]
+          : uploadedIds;
+      }
+
+      const result = await spotCheckServices.createSpotCheckAsStandAlone(req.body);
+      if (!result) throw new Error('Failed to create spot-check');
+      ServerResponse(res, true, 201, 'Spot-check created successfully', result);
+    } catch (error) {
+      if (uploadedDocuments.length) {
+        await rollbackUploadedDocuments(uploadedDocuments);
+      }
+      throw error;
+    }
   }
 );
 
@@ -48,10 +95,34 @@ export const createSpotCheckAsStandAlone = catchAsync(
  * @returns {Promise<Partial<ISpotCheck>>} - The updated spot-check.
  * @throws {Error} - Throws an error if the spot-check update fails.
  */
-export const updateSpotCheck = catchAsync(async (req: Request, res: Response) => {
-  const { id } = req.params;
+export const updateSpotCheck = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+  const paramToString = (p?: string | string[]) => (Array.isArray(p) ? p[0] : p);
+  const paramToStringArray = (p?: string | string[]) => {
+    if (!p) return [] as string[];
+    return Array.isArray(p) ? p : [p];
+  };
+
+  const id = paramToString(req.params.id);
+  const standAloneId = paramToString(req.params.standAloneId);
+  const files = extractUploadedFiles((req as any).files, ['attachments', 'files']);
+  const removeAttachmentIds = paramToStringArray((req.body as any).removeAttachmentIds);
+
+  if ('removeAttachmentIds' in req.body) {
+    delete (req.body as any).removeAttachmentIds;
+  }
+  if ('attachments' in req.body) {
+    delete (req.body as any).attachments;
+  }
+
   // Call the service method to update the spot-check by ID and get the result
-  const result = await spotCheckServices.updateSpotCheck(id as string, req.body);
+  const result = await spotCheckServices.updateSpotCheck(
+    id as string,
+    req.body,
+    req.user!._id,
+    standAloneId,
+    files,
+    removeAttachmentIds
+  );
   if (!result) throw new Error('Spot-check not found');
   // Send a success response with the updated spot-check data
   ServerResponse(res, true, 200, 'Spot-check updated successfully', result);
@@ -65,10 +136,13 @@ export const updateSpotCheck = catchAsync(async (req: Request, res: Response) =>
  * @returns {Promise<Partial<ISpotCheck>>} - The deleted spot-check.
  * @throws {Error} - Throws an error if the spot-check deletion fails.
  */
-export const deleteSpotCheck = catchAsync(async (req: Request, res: Response) => {
-  const { id } = req.params;
+export const deleteSpotCheck = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+  const paramToString = (p?: string | string[]) => (Array.isArray(p) ? p[0] : p);
+  const id = paramToString(req.params.id);
+  const standAloneId = paramToString(req.params.standAloneId);
+
   // Call the service method to delete the spot-check by ID
-  const result = await spotCheckServices.deleteSpotCheck(id as string);
+  const result = await spotCheckServices.deleteSpotCheck(id as string, req.user!._id, standAloneId);
   if (!result) throw new Error('Spot-check not found');
   // Send a success response confirming the deletion
   ServerResponse(res, true, 200, 'Spot-check deleted successfully');

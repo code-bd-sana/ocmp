@@ -3,6 +3,16 @@
  */
 
 /** Shape of a single spot-check returned by the backend */
+export interface SpotCheckAttachment {
+  _id: string;
+  filename: string;
+  originalName: string;
+  mimeType: string;
+  size: number;
+  url: string;
+  downloadUrl: string;
+}
+
 export interface SpotCheckRow {
   _id: string;
   vehicleId: string;
@@ -14,7 +24,7 @@ export interface SpotCheckRow {
   completedBy?: string;
   followUpNeeded?: string;
   notes?: string;
-  attachments?: string[];
+  attachments?: SpotCheckAttachment[];
   standAloneId?: string;
   createdBy: string;
   createdAt?: string;
@@ -40,7 +50,7 @@ export interface CreateSpotCheckInput {
   completedBy?: string;
   followUpNeeded?: string;
   notes?: string;
-  attachments?: string[];
+  attachments?: File[];
 }
 
 /** Body for PATCH /spot-check/update-spot-check/:id/:standAloneId */
@@ -53,5 +63,6 @@ export interface UpdateSpotCheckInput {
   completedBy?: string;
   followUpNeeded?: string;
   notes?: string;
-  attachments?: string[];
+  attachments?: File[];
+  removeAttachmentIds?: string[];
 }

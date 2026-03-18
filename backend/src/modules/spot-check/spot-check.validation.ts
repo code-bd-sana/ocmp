@@ -85,6 +85,18 @@ const zodUpdateSpotCheckSchema = z
     followUpNeeded: z.string().optional(),
     notes: z.string().optional(),
     attachments: z.array(z.string().refine(isMongoId)).optional(),
+    removeAttachmentIds: z
+      .union([
+        z.string().refine(isMongoId, {
+          message: 'Please provide a valid MongoDB ObjectId',
+        }),
+        z.array(
+          z.string().refine(isMongoId, {
+            message: 'Please provide a valid MongoDB ObjectId',
+          })
+        ),
+      ])
+      .optional(),
   })
   .strict()
   .refine((data) => Object.keys(data).length > 0, {
