@@ -3,7 +3,9 @@ import mongoose from 'mongoose';
 import { UploadedFile } from 'express-fileupload';
 import { IdOrIdsInput, SearchQueryInput } from '../../handlers/common-zod-validator';
 import { DriverTachograph, FuelUsage, Vehicle } from '../../models';
+import DocumentModel from '../../models/document.schema';
 import DriverModel, { IDriver } from '../../models/vehicle-transport/driver.schema';
+import { deleteObjects, getSignedDownloadUrl } from '../../utils/aws/s3';
 import {
   rollbackUploadedDocuments,
   uploadFilesAndCreateDocuments,
@@ -16,6 +18,72 @@ import {
 } from './driver.validation';
 
 const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+interface DriverAttachmentResponse {
+  _id: string;
+  filename: string;
+  originalName: string;
+  mimeType: string;
+  size: number;
+  url: string;
+  downloadUrl: string;
+}
+
+type DriverWithAttachmentsResponse = Omit<Partial<IDriver>, 'attachments'> & {
+  attachments?: DriverAttachmentResponse[];
+};
+
+const withSignedAttachmentUrls = async (
+  driver: IDriver | (Partial<IDriver> & { _id: mongoose.Types.ObjectId })
+): Promise<DriverWithAttachmentsResponse> => {
+  const attachmentIds = Array.isArray(driver.attachments)
+    ? driver.attachments
+        .map((id) => (id instanceof mongoose.Types.ObjectId ? id : new mongoose.Types.ObjectId(id)))
+        .filter(Boolean)
+    : [];
+
+  if (!attachmentIds.length) {
+    return {
+      ...(driver as Partial<IDriver>),
+      attachments: [],
+    } as DriverWithAttachmentsResponse;
+  }
+
+  const documents = await DocumentModel.find({ _id: { $in: attachmentIds } })
+    .select('_id filename originalName mimeType size url s3Key')
+    .lean();
+
+  const signedDocuments = await Promise.all(
+    documents.map(async (doc) => {
+      let downloadUrl = doc.url;
+      try {
+        downloadUrl = await getSignedDownloadUrl(doc.s3Key);
+      } catch {
+        // Fallback to stored S3 URL if signed URL generation fails.
+      }
+
+      return {
+        _id: String(doc._id),
+        filename: doc.filename,
+        originalName: doc.originalName,
+        mimeType: doc.mimeType,
+        size: doc.size,
+        url: doc.url,
+        downloadUrl,
+      } as DriverAttachmentResponse;
+    })
+  );
+
+  const byId = new Map(signedDocuments.map((doc) => [doc._id, doc]));
+  const orderedAttachments = attachmentIds
+    .map((id) => byId.get(String(id)))
+    .filter((doc): doc is DriverAttachmentResponse => Boolean(doc));
+
+  return {
+    ...(driver as Partial<IDriver>),
+    attachments: orderedAttachments,
+  } as DriverWithAttachmentsResponse;
+};
 
 /**
  * Service function to create a new driver as a Transport Manager.
@@ -79,50 +147,60 @@ const updateDriver = async (
   id: IdOrIdsInput['id'],
   data: UpdateDriverInput,
   userId: string,
-  standAloneId?: string
+  standAloneId?: string,
+  files: UploadedFile[] = [],
+  removeAttachmentIds: string[] = []
 ): Promise<Partial<IDriver | null>> => {
+  const sanitizedData: UpdateDriverInput = { ...data };
+  delete (sanitizedData as any).attachments;
+  delete (sanitizedData as any).removeAttachmentIds;
+
   // Build $or conditions only for fields provided in `data`
   const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const orConditions: any[] = [];
 
-  if (data.licenseNumber) {
+  if (sanitizedData.licenseNumber) {
     orConditions.push({
-      licenseNumber: { $regex: new RegExp(`^${escapeRegex(data.licenseNumber)}$`, 'i') },
+      licenseNumber: { $regex: new RegExp(`^${escapeRegex(sanitizedData.licenseNumber)}$`, 'i') },
     });
   }
-  if (data.niNumber) {
-    orConditions.push({ niNumber: { $regex: new RegExp(`^${escapeRegex(data.niNumber)}$`, 'i') } });
+  if (sanitizedData.niNumber) {
+    orConditions.push({
+      niNumber: { $regex: new RegExp(`^${escapeRegex(sanitizedData.niNumber)}$`, 'i') },
+    });
   }
-  if (data.postCode) {
-    orConditions.push({ postCode: { $regex: new RegExp(`^${escapeRegex(data.postCode)}$`, 'i') } });
+  if (sanitizedData.postCode) {
+    orConditions.push({
+      postCode: { $regex: new RegExp(`^${escapeRegex(sanitizedData.postCode)}$`, 'i') },
+    });
   }
-  if (data.nextCheckDueDate) orConditions.push({ nextCheckDueDate: data.nextCheckDueDate });
-  if (data.licenseExpiry) orConditions.push({ licenseExpiry: data.licenseExpiry });
-  if (data.licenseExpiryDTC) orConditions.push({ licenseExpiryDTC: data.licenseExpiryDTC });
-  if (data.cpcExpiry) orConditions.push({ cpcExpiry: data.cpcExpiry });
-  if (typeof data.points !== 'undefined') orConditions.push({ points: data.points });
-  if (Array.isArray(data.endorsementCodes) && data.endorsementCodes.length)
-    orConditions.push({ endorsementCodes: { $all: data.endorsementCodes } });
-  if (data.lastChecked) orConditions.push({ lastChecked: data.lastChecked });
-  if (typeof data.checkFrequencyDays !== 'undefined')
-    orConditions.push({ checkFrequencyDays: data.checkFrequencyDays });
-  if (typeof data.employed !== 'undefined') orConditions.push({ employed: data.employed });
-  if (data.checkStatus) orConditions.push({ checkStatus: data.checkStatus });
-  if (Array.isArray(data.attachments) && data.attachments.length)
-    orConditions.push({ attachments: { $all: data.attachments } });
+  if (sanitizedData.nextCheckDueDate)
+    orConditions.push({ nextCheckDueDate: sanitizedData.nextCheckDueDate });
+  if (sanitizedData.licenseExpiry) orConditions.push({ licenseExpiry: sanitizedData.licenseExpiry });
+  if (sanitizedData.licenseExpiryDTC)
+    orConditions.push({ licenseExpiryDTC: sanitizedData.licenseExpiryDTC });
+  if (sanitizedData.cpcExpiry) orConditions.push({ cpcExpiry: sanitizedData.cpcExpiry });
+  if (typeof sanitizedData.points !== 'undefined') orConditions.push({ points: sanitizedData.points });
+  if (Array.isArray(sanitizedData.endorsementCodes) && sanitizedData.endorsementCodes.length)
+    orConditions.push({ endorsementCodes: { $all: sanitizedData.endorsementCodes } });
+  if (sanitizedData.lastChecked) orConditions.push({ lastChecked: sanitizedData.lastChecked });
+  if (typeof sanitizedData.checkFrequencyDays !== 'undefined')
+    orConditions.push({ checkFrequencyDays: sanitizedData.checkFrequencyDays });
+  if (typeof sanitizedData.employed !== 'undefined') orConditions.push({ employed: sanitizedData.employed });
+  if (sanitizedData.checkStatus) orConditions.push({ checkStatus: sanitizedData.checkStatus });
 
   if (orConditions.length > 0) {
     const existingDriver = await DriverModel.findOne({
       _id: { $ne: id },
       $or: [
         {
-          licenseNumber: data.licenseNumber
-            ? { $regex: new RegExp(`^${escapeRegex(data.licenseNumber)}$`, 'i') }
+          licenseNumber: sanitizedData.licenseNumber
+            ? { $regex: new RegExp(`^${escapeRegex(sanitizedData.licenseNumber)}$`, 'i') }
             : undefined,
         },
         {
-          niNumber: data.niNumber
-            ? { $regex: new RegExp(`^${escapeRegex(data.niNumber)}$`, 'i') }
+          niNumber: sanitizedData.niNumber
+            ? { $regex: new RegExp(`^${escapeRegex(sanitizedData.niNumber)}$`, 'i') }
             : undefined,
         },
       ],
@@ -153,16 +231,136 @@ const updateDriver = async (
     }
   }
 
-  // Proceed to update the driver
-  const updatedDriver = await DriverModel.findOneAndUpdate(
-    {
-      _id: id,
-      $or: accessFilters,
-    },
-    data,
-    { returnDocument: 'after' }
+  const ownershipFilter = {
+    _id: id,
+    $or: accessFilters,
+  };
+
+  const existingDriver = await DriverModel.findOne(ownershipFilter)
+    .select('_id attachments')
+    .lean();
+
+  if (!existingDriver) {
+    return null;
+  }
+
+  const normalizedRemoveIds = Array.from(
+    new Set(
+      removeAttachmentIds
+        .filter((item) => mongoose.Types.ObjectId.isValid(item))
+        .map((item) => String(item))
+    )
   );
-  return updatedDriver;
+
+  const currentAttachmentIds = Array.isArray(existingDriver.attachments)
+    ? existingDriver.attachments.map((item) => String(item))
+    : [];
+
+  const removableAttachmentIds = normalizedRemoveIds.filter((item) =>
+    currentAttachmentIds.includes(item)
+  );
+
+  if (removableAttachmentIds.length) {
+    const documentsToDelete = await DocumentModel.find({
+      _id: {
+        $in: removableAttachmentIds.map((docId) => new mongoose.Types.ObjectId(docId)),
+      },
+    })
+      .select('_id s3Key')
+      .lean();
+
+    const keysToDelete = documentsToDelete.map((doc) => doc.s3Key).filter(Boolean);
+
+    // Required order for update removal flow: S3 deletion first, then Document rows.
+    if (keysToDelete.length) {
+      await deleteObjects(keysToDelete);
+    }
+
+    if (documentsToDelete.length) {
+      await DocumentModel.deleteMany({
+        _id: { $in: documentsToDelete.map((doc) => doc._id) },
+      });
+    }
+  }
+
+  let uploadedDocuments: Awaited<ReturnType<typeof uploadFilesAndCreateDocuments>>['documents'] = [];
+
+  if (files.length) {
+    const uploadResult = await uploadFilesAndCreateDocuments(files, userId, `driver/${String(id)}`);
+    uploadedDocuments = uploadResult.documents;
+  }
+
+  const updateQuery: Record<string, unknown> = {};
+
+  const setData: Record<string, unknown> = {};
+  const settableFields: Array<keyof UpdateDriverInput> = [
+    'fullName',
+    'licenseNumber',
+    'postCode',
+    'niNumber',
+    'nextCheckDueDate',
+    'licenseExpiry',
+    'licenseExpiryDTC',
+    'cpcExpiry',
+    'points',
+    'endorsementCodes',
+    'lastChecked',
+    'checkFrequencyDays',
+    'employed',
+    'checkStatus',
+  ];
+
+  for (const key of settableFields) {
+    if (typeof sanitizedData[key] !== 'undefined') {
+      setData[key] = sanitizedData[key];
+    }
+  }
+
+  if (Object.keys(setData).length) {
+    updateQuery.$set = setData;
+  }
+
+  if (uploadedDocuments.length) {
+    updateQuery.$addToSet = {
+      attachments: {
+        $each: uploadedDocuments.map((doc) => doc._id as mongoose.Types.ObjectId),
+      },
+    };
+  }
+
+  if (removableAttachmentIds.length) {
+    updateQuery.$pull = {
+      attachments: {
+        $in: removableAttachmentIds.map((docId) => new mongoose.Types.ObjectId(docId)),
+      },
+    };
+  }
+
+  // Final guard against ConflictingUpdateOperators on attachments.
+  if (updateQuery.$set && (updateQuery.$set as Record<string, unknown>).attachments) {
+    delete (updateQuery.$set as Record<string, unknown>).attachments;
+    if (!Object.keys(updateQuery.$set as Record<string, unknown>).length) {
+      delete updateQuery.$set;
+    }
+  }
+
+  if (!Object.keys(updateQuery).length) {
+    const currentDriver = await DriverModel.findOne(ownershipFilter).lean();
+    return currentDriver as Partial<IDriver> | null;
+  }
+
+  try {
+    // Proceed to update the driver
+    const updatedDriver = await DriverModel.findOneAndUpdate(ownershipFilter, updateQuery, {
+      returnDocument: 'after',
+    });
+    return updatedDriver;
+  } catch (error) {
+    if (uploadedDocuments.length) {
+      await rollbackUploadedDocuments(uploadedDocuments);
+    }
+    throw error;
+  }
 };
 
 /**
@@ -227,7 +425,7 @@ const getDriverById = async (
   id: IdOrIdsInput['id'],
   standAloneId?: IdOrIdsInput['id'],
   createdBy?: IdOrIdsInput['id']
-): Promise<Partial<IDriver | null>> => {
+): Promise<DriverWithAttachmentsResponse | null> => {
   const accessFilters: Record<string, mongoose.Types.ObjectId>[] = [];
 
   if (standAloneId) {
@@ -247,8 +445,10 @@ const getDriverById = async (
       }
     : { _id: id };
 
-  const driver = await DriverModel.findOne(filter);
-  return driver;
+  const driver = await DriverModel.findOne(filter).lean();
+  if (!driver) return null;
+
+  return withSignedAttachmentUrls(driver as Partial<IDriver> & { _id: mongoose.Types.ObjectId });
 };
 
 /**

@@ -112,14 +112,32 @@ export const createDriverAsStandAlone = catchAsync(
  */
 export const updateDriver = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
   const paramToString = (p?: string | string[]) => (Array.isArray(p) ? p[0] : p);
+  const paramToStringArray = (p?: string | string[]) => {
+    if (!p) return [] as string[];
+    return Array.isArray(p) ? p : [p];
+  };
+
   const driverId = paramToString(req.params.driverId ?? req.params.id);
   const standAloneId = paramToString(req.params.standAloneId);
+  const files = extractUploadedFiles((req as any).files, ['attachments', 'files']);
+
+  const removeAttachmentIds = paramToStringArray((req.body as any).removeAttachmentIds);
+
+  if ('removeAttachmentIds' in req.body) {
+    delete (req.body as any).removeAttachmentIds;
+  }
+  if ('attachments' in req.body) {
+    delete (req.body as any).attachments;
+  }
+
   // Call the service method to update the driver by ID and get the result
   const result = await driverServices.updateDriver(
     driverId as string,
     req.body,
     req.user!._id,
-    standAloneId
+    standAloneId,
+    files,
+    removeAttachmentIds
   );
   if (!result) {
     return ServerResponse(res, false, 404, 'Driver not found or access denied');

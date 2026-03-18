@@ -163,9 +163,47 @@ const updateDriver = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
+    const formData = new FormData();
+
+    if (data.fullName) formData.append("fullName", data.fullName);
+    if (data.licenseNumber) formData.append("licenseNumber", data.licenseNumber);
+    if (data.postCode) formData.append("postCode", data.postCode);
+    if (data.niNumber) formData.append("niNumber", data.niNumber);
+    if (data.nextCheckDueDate) formData.append("nextCheckDueDate", data.nextCheckDueDate);
+    if (typeof data.points !== "undefined") formData.append("points", String(data.points));
+    if (typeof data.checkFrequencyDays !== "undefined") {
+      formData.append("checkFrequencyDays", String(data.checkFrequencyDays));
+    }
+    if (typeof data.employed !== "undefined") {
+      formData.append("employed", String(data.employed));
+    }
+    if (data.licenseExpiry) formData.append("licenseExpiry", data.licenseExpiry);
+    if (data.licenseExpiryDTC) formData.append("licenseExpiryDTC", data.licenseExpiryDTC);
+    if (data.cpcExpiry) formData.append("cpcExpiry", data.cpcExpiry);
+    if (data.lastChecked) formData.append("lastChecked", data.lastChecked);
+    if (data.checkStatus) formData.append("checkStatus", data.checkStatus);
+
+    if (data.endorsementCodes?.length) {
+      data.endorsementCodes.forEach((code) => {
+        formData.append("endorsementCodes", code);
+      });
+    }
+
+    if (data.removeAttachmentIds?.length) {
+      data.removeAttachmentIds.forEach((id) => {
+        formData.append("removeAttachmentIds", id);
+      });
+    }
+
+    if (data.attachments?.length) {
+      data.attachments.forEach((file) => {
+        formData.append("attachments", file);
+      });
+    }
+
     const response = await axios.patch<IApiResponse>(
       `${base_url}/driver/update-driver-by-manager/${driverId}/${standAloneId}`,
-      data,
+      formData,
       { headers: { Authorization: `Bearer ${token}` } },
     );
     return response.data;

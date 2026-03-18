@@ -7,6 +7,16 @@ export enum CheckStatus {
   DUE = "Due",
 }
 
+export interface DriverAttachment {
+  _id: string;
+  filename: string;
+  originalName: string;
+  mimeType: string;
+  size: number;
+  url: string;
+  downloadUrl: string;
+}
+
 /** Shape of a single driver returned by the backend */
 export interface DriverRow {
   _id: string;
@@ -24,7 +34,7 @@ export interface DriverRow {
   nextCheckDueDate: string;
   employed: boolean;
   checkStatus?: CheckStatus;
-  attachments?: string[];
+  attachments?: DriverAttachment[];
   standAloneId?: string;
   createdBy: string;
   createdAt?: string;
@@ -74,4 +84,6 @@ export interface UpdateDriverInput {
   endorsementCodes?: string[];
   lastChecked?: string;
   checkStatus?: CheckStatus;
+  attachments?: File[];
+  removeAttachmentIds?: string[];
 }
