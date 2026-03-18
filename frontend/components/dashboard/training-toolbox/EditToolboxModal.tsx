@@ -192,7 +192,9 @@ export default function EditToolboxModal({
       return (
         <div className="mt-4 rounded-md border p-3">
           <p className="text-sm font-semibold">Remove Existing Attachments</p>
-          <p className="text-muted-foreground mt-2 text-sm">No attachments found.</p>
+          <p className="text-muted-foreground mt-2 text-sm">
+            No attachments found.
+          </p>
         </div>
       );
     }
@@ -202,7 +204,9 @@ export default function EditToolboxModal({
         <p className="text-sm font-semibold">Remove Existing Attachments</p>
         <div className="mt-2 space-y-2">
           {toolbox.attachments.map((attachment) => {
-            const markedForRemoval = removeAttachmentIds.includes(attachment._id);
+            const markedForRemoval = removeAttachmentIds.includes(
+              attachment._id,
+            );
 
             return (
               <div
@@ -234,7 +238,9 @@ export default function EditToolboxModal({
                         ? "text-red-600 hover:text-red-700"
                         : "text-muted-foreground hover:text-red-600"
                     }
-                    title={markedForRemoval ? "Undo remove" : "Remove on update"}
+                    title={
+                      markedForRemoval ? "Undo remove" : "Remove on update"
+                    }
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>

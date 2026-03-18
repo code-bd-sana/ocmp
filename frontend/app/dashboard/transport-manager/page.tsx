@@ -20,6 +20,51 @@ import {
 } from "@/lib/transport-manager-training/transport-manager-training.types";
 import { TransportManagerTrainingAction } from "@/service/transport-manager-training";
 
+function resolveTrainingPayload(
+  payload: unknown,
+): TransportManagerTrainingRow | null {
+  if (!payload) return null;
+
+  if (Array.isArray(payload)) {
+    return payload.length ? resolveTrainingPayload(payload[0]) : null;
+  }
+
+  if (typeof payload !== "object") return null;
+
+  const direct = payload as Partial<TransportManagerTrainingRow>;
+  if (typeof direct._id === "string") {
+    return payload as TransportManagerTrainingRow;
+  }
+
+  const maybeNested = payload as {
+    data?: unknown;
+    training?: unknown;
+    transportManagerTraining?: unknown;
+    result?: unknown;
+    item?: unknown;
+  };
+
+  const nestedCandidates = [
+    maybeNested.data,
+    maybeNested.training,
+    maybeNested.transportManagerTraining,
+    maybeNested.result,
+    maybeNested.item,
+  ];
+
+  for (const candidate of nestedCandidates) {
+    const resolved = resolveTrainingPayload(candidate);
+    if (resolved) return resolved;
+  }
+
+  const nested = (payload as { data?: Partial<TransportManagerTrainingRow> }).data;
+  if (nested && typeof nested._id === "string") {
+    return nested as TransportManagerTrainingRow;
+  }
+
+  return null;
+}
+
 export default function TransportManagerTrainingPage() {
   const [rows, setRows] = useState<TransportManagerTrainingTableRow[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -112,11 +157,27 @@ export default function TransportManagerTrainingPage() {
 
     try {
       const res = await TransportManagerTrainingAction.getTraining(row._id);
-      if (res.status && res.data) {
-        setViewTraining(res.data);
+      const trainingData = resolveTrainingPayload(res.data);
+
+      if (res.status && trainingData) {
+        setViewTraining(trainingData);
       } else {
-        toast.error(res.message || "Failed to load training details");
-        setViewOpen(false);
+        if (res.status) {
+          setViewTraining({
+            _id: row._id,
+            name: row.name,
+            trainingCourse: row.trainingCourse,
+            unitTitle: row.unitTitle,
+            completionDate: row.completionDate,
+            renewalTracker: row.renewalTracker,
+            nextDueDate: row.nextDueDate,
+            attachments: [],
+            createdBy: "",
+          });
+        } else {
+          toast.error(res.message || "Failed to load training details");
+          setViewOpen(false);
+        }
       }
     } catch (err) {
       toast.error(
@@ -134,11 +195,27 @@ export default function TransportManagerTrainingPage() {
 
     try {
       const res = await TransportManagerTrainingAction.getTraining(row._id);
-      if (res.status && res.data) {
-        setEditTraining(res.data);
+      const trainingData = resolveTrainingPayload(res.data);
+
+      if (res.status && trainingData) {
+        setEditTraining(trainingData);
       } else {
-        toast.error(res.message || "Failed to load training details");
-        setEditOpen(false);
+        if (res.status) {
+          setEditTraining({
+            _id: row._id,
+            name: row.name,
+            trainingCourse: row.trainingCourse,
+            unitTitle: row.unitTitle,
+            completionDate: row.completionDate,
+            renewalTracker: row.renewalTracker,
+            nextDueDate: row.nextDueDate,
+            attachments: [],
+            createdBy: "",
+          });
+        } else {
+          toast.error(res.message || "Failed to load training details");
+          setEditOpen(false);
+        }
       }
     } catch (err) {
       toast.error(

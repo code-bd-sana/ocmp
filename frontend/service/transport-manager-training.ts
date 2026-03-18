@@ -95,9 +95,24 @@ const createTraining = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
+    const formData = new FormData();
+
+    formData.append("trainingCourse", data.trainingCourse);
+    formData.append("unitTitle", data.unitTitle);
+    formData.append("completionDate", data.completionDate);
+    formData.append("renewalTracker", data.renewalTracker);
+
+    if (data.nextDueDate) formData.append("nextDueDate", data.nextDueDate);
+
+    if (data.attachments?.length) {
+      data.attachments.forEach((file) => {
+        formData.append("attachments", file);
+      });
+    }
+
     const response = await axios.post<IApiResponse>(
       `${base_url}/transport-manager-training/create-transport-manager-training`,
-      data,
+      formData,
       {
         headers: { Authorization: `Bearer ${token}` },
       },
@@ -121,9 +136,29 @@ const updateTraining = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
+    const formData = new FormData();
+
+    if (data.trainingCourse) formData.append("trainingCourse", data.trainingCourse);
+    if (data.unitTitle) formData.append("unitTitle", data.unitTitle);
+    if (data.completionDate) formData.append("completionDate", data.completionDate);
+    if (data.renewalTracker) formData.append("renewalTracker", data.renewalTracker);
+    if (data.nextDueDate) formData.append("nextDueDate", data.nextDueDate);
+
+    if (data.removeAttachmentIds?.length) {
+      data.removeAttachmentIds.forEach((id) => {
+        formData.append("removeAttachmentIds", id);
+      });
+    }
+
+    if (data.attachments?.length) {
+      data.attachments.forEach((file) => {
+        formData.append("attachments", file);
+      });
+    }
+
     const response = await axios.patch<IApiResponse>(
       `${base_url}/transport-manager-training/update-transport-manager-training/${trainingId}`,
-      data,
+      formData,
       {
         headers: { Authorization: `Bearer ${token}` },
       },

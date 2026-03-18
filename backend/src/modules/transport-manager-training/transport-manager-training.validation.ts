@@ -36,10 +36,10 @@ const zodCreateTransportManagerTrainingSchema = z
     renewalTracker: z.nativeEnum(RenewalTracker, {
       message: 'renewalTracker must be one of the valid values',
     }),
-    nextDueDate: z.coerce.date({ message: 'nextDueDate must be a valid date' }),
-    attachments: z.array(
-      z.string().refine(isMongoId, { message: 'attachments must be valid ObjectIds' })
-    ),
+    nextDueDate: z.coerce.date({ message: 'nextDueDate must be a valid date' }).optional(),
+    attachments: z
+      .array(z.string().refine(isMongoId, { message: 'attachments must be valid ObjectIds' }))
+      .optional(),
   })
   .strict();
 
@@ -88,6 +88,18 @@ const zodUpdateTransportManagerTrainingSchema = z
     nextDueDate: z.coerce.date({ message: 'nextDueDate must be a valid date' }).optional(),
     attachments: z
       .array(z.string().refine(isMongoId, { message: 'attachments must be valid ObjectIds' }))
+      .optional(),
+    removeAttachmentIds: z
+      .union([
+        z.string().refine(isMongoId, {
+          message: 'Please provide a valid MongoDB ObjectId',
+        }),
+        z.array(
+          z.string().refine(isMongoId, {
+            message: 'Please provide a valid MongoDB ObjectId',
+          })
+        ),
+      ])
       .optional(),
   })
   .strict()
