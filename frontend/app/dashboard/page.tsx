@@ -2,7 +2,7 @@
 
 import DashboardHome from "@/components/dashboard/dashboard-home";
 import UniversalTable, {
-  HeaderActionGroup
+  HeaderActionGroup,
 } from "@/components/universal-table/UniversalTable";
 import { Column, TableAction } from "@/components/universal-table/table.types";
 import { Edit, Trash } from "lucide-react";
@@ -28,7 +28,7 @@ const columns: Column<Vehicle>[] = [
   {
     key: "status",
     title: "Status",
-    render: (row) => <span className='font-semibold'>{row.status}</span>,
+    render: (row) => <span className="font-semibold">{row.status}</span>,
   },
 ];
 
@@ -59,7 +59,6 @@ const data: Vehicle[] = [
   { id: "V003", driver: "Bob Johnson", status: "Maintenance" },
   { id: "V004", driver: "Alice Brown", status: "Active" },
 ];
-
 
 const headerActionGroups: HeaderActionGroup[] = [
   {
@@ -102,7 +101,7 @@ const headerActionGroups: HeaderActionGroup[] = [
         onClick: () => console.log("Filter Clicked"),
         selectTriggerCalssName: "bg-white",
         selectItemClassName: "bg-red-700",
-        options: ['Active', 'Idle', 'Maintenance', 'Inactive'],
+        options: ["Active", "Idle", "Maintenance", "Inactive"],
         visibility: true,
         positionIndex: 1,
         filter: true,
@@ -149,16 +148,14 @@ const headerActionGroups: HeaderActionGroup[] = [
         variant: "secondary",
         size: "sm",
         position: "center",
-        options: ['Active', 'Idle', 'Maintenance', 'Inactive'],
+        options: ["Active", "Idle", "Maintenance", "Inactive"],
         visibility: true,
         positionIndex: 1,
         filter: true,
       },
-
-    ]
-  }
+    ],
+  },
 ];
-
 
 const innerActionGroup: HeaderActionGroup[] = [
   {
@@ -239,9 +236,9 @@ const innerActionGroup: HeaderActionGroup[] = [
       {
         label: "Filter",
         onClick: () => console.log("Filter Clicked"),
-        selectTriggerCalssName: "bg-white",  // Custom background for select trigger
-        selectItemClassName: "bg-red-700",   // Custom background for select items
-        options: ['Active', 'Idle', 'Maintenance', 'Inactive'],
+        selectTriggerCalssName: "bg-white", // Custom background for select trigger
+        selectItemClassName: "bg-red-700", // Custom background for select items
+        options: ["Active", "Idle", "Maintenance", "Inactive"],
         visibility: true,
         positionIndex: 1,
         filter: true,
@@ -286,26 +283,18 @@ const innerActionGroup: HeaderActionGroup[] = [
         className: "bg-[#F0F0F0] text-black",
         selectTriggerCalssName: "bg-white",
         selectItemClassName: "bg-red-700",
-        options: ['Active', 'Idle', 'Maintenance', 'Inactive'],
+        options: ["Active", "Idle", "Maintenance", "Inactive"],
         visibility: true,
         positionIndex: 1,
         filter: true,
       },
-    ]
-  }
+    ],
+  },
 ];
 
-
-
-
-
 export default function Page() {
-
-
-
-
   return (
-    <div className='pt-5 bg-white'>
+    <div className="bg-white pt-5">
       {/* Dashboard header / overview */}
       <DashboardHome />
 

@@ -480,16 +480,18 @@ const getManyDriver = async (
     });
   }
 
-  // For Transport Manager: filter by BOTH standAloneId (the specific client) AND createdBy (the manager).
-  // Using AND ensures we only return drivers belonging to that exact client AND created by this manager.
-  if (standAloneId) {
-    andConditions.push({ standAloneId: new mongoose.Types.ObjectId(standAloneId) });
-    if (createdBy) {
-      andConditions.push({ createdBy: new mongoose.Types.ObjectId(createdBy) });
-    }
-  } else if (createdBy) {
-    // Stand-alone user: filter by createdBy only
-    andConditions.push({ createdBy: new mongoose.Types.ObjectId(createdBy) });
+  // Determine the SA user's ID:
+  //   - TM passes it as standAloneId (the client they're viewing)
+  //   - SA passes it as createdBy (their own ID, set by the controller)
+  // A driver belongs to an SA user if EITHER:
+  //   a) standAloneId = SA_id  (created by TM on behalf of SA user)
+  //   b) createdBy   = SA_id  (created by SA user themselves)
+  const ownerId = standAloneId || createdBy;
+  if (ownerId) {
+    const ownerObjectId = new mongoose.Types.ObjectId(ownerId);
+    andConditions.push({
+      $or: [{ standAloneId: ownerObjectId }, { createdBy: ownerObjectId }],
+    });
   }
 
   // Final filter build
@@ -519,7 +521,10 @@ const uploadDriverAttachments = async (
   userId: string,
   files: UploadedFile[],
   standAloneId?: string
-): Promise<{ driver: Partial<IDriver>; documents: { _id: mongoose.Types.ObjectId; url: string }[] }> => {
+): Promise<{
+  driver: Partial<IDriver>;
+  documents: { _id: mongoose.Types.ObjectId; url: string }[];
+}> => {
   if (!files.length) {
     throw new Error('No files provided for upload');
   }
@@ -556,11 +561,7 @@ const uploadDriverAttachments = async (
     throw new Error('Driver not found or access denied');
   }
 
-  const { documents } = await uploadFilesAndCreateDocuments(
-    files,
-    userId,
-    `driver/${String(id)}`
-  );
+  const { documents } = await uploadFilesAndCreateDocuments(files, userId, `driver/${String(id)}`);
 
   try {
     const documentIds = documents.map((doc) => doc._id as mongoose.Types.ObjectId);

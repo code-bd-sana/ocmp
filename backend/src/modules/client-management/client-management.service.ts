@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import mongoose from 'mongoose';
 import { SearchQueryInput } from '../../handlers/common-zod-validator';
-import { User, UserRole, ClientManagement, ClientStatus, IClientManagement } from '../../models';
+import { ClientManagement, ClientStatus, IClientManagement, User, UserRole } from '../../models';
 import HashInfo from '../../utils/bcrypt/hash-info';
 import SendEmail from '../../utils/email/send-email';
 import { repositorySettingsServices } from '../repository-settings/repository-settings.service';
@@ -517,13 +517,21 @@ const updateJoinRequest = async (
  * Service: Get all active Transport Managers (id + name).
  * For standalone users to browse and select a manager to request joining.
  *
+ * @param {SearchQueryInput} query - Search parameters.
  * @returns {Promise<{ _id: string; fullName: string }[]>} - List of active managers.
  */
-const getManagerList = async (): Promise<{ _id: any; fullName: string }[]> => {
-  return User.find(
-    { role: UserRole.TRANSPORT_MANAGER, isActive: true },
-    { _id: 1, fullName: 1 }
-  ).lean();
+const getManagerList = async (
+  query: SearchQueryInput
+): Promise<{ _id: any; fullName: string }[]> => {
+  const searchKey = query.searchKey;
+
+  // Build match condition
+  const matchCondition: any = { role: UserRole.TRANSPORT_MANAGER, isActive: true };
+  if (searchKey) {
+    matchCondition.fullName = { $regex: searchKey, $options: 'i' };
+  }
+
+  return User.find(matchCondition, { _id: 1, fullName: 1 }).lean();
 };
 
 // ═══════════════════════════════════════════════════════════════
@@ -800,6 +808,53 @@ const handleRemoveRequest = async (
 
   return { clientId, action: data.action, newStatus };
 };
+/**
+ * Service: Get the Transport Manager assigned to a client.
+ * Finds the ClientManagement document where the client is assigned with an active status.
+ *
+ * @param {string} clientId - The client's user ID.
+ * @returns {Promise<any>} - The manager info if assigned, or null.
+ */
+const getMyManager = async (clientId: string) => {
+  const clientObjId = new mongoose.Types.ObjectId(clientId);
+
+  const assignment = await ClientManagement.findOne({
+    clients: {
+      $elemMatch: {
+        clientId: clientObjId,
+        status: {
+          $in: [
+            ClientStatus.PENDING,
+            ClientStatus.APPROVED,
+            ClientStatus.LEAVE_REQUESTED,
+            ClientStatus.REMOVE_REQUESTED,
+          ],
+        },
+      },
+    },
+  })
+    .populate({
+      path: 'managerId',
+      select: '-password -resetToken -resetTokenExpiry -emailVerificationToken -emailVerificationTokenExpiry',
+    })
+    .lean();
+
+  if (!assignment) return null;
+
+  // Extract the specific client entry
+  const clientEntry = assignment.clients.find(
+    (c) => c.clientId.toString() === clientId
+  );
+
+  return {
+    manager: assignment.managerId,
+    clientStatus: clientEntry?.status,
+    requestedAt: clientEntry?.requestedAt,
+    approvedAt: clientEntry?.approvedAt,
+  };
+};
+
+
 
 // Export all service functions as a namespace
 export const clientManagementServices = {
@@ -819,4 +874,5 @@ export const clientManagementServices = {
   requestRemove,
   getRemoveRequest,
   handleRemoveRequest,
+  getMyManager
 };

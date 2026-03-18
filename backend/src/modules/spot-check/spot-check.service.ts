@@ -119,32 +119,81 @@ const getSpotCheckById = async (
  * @param {SearchQueryInput} query - The query parameters for filtering spot-check.
  * @returns {Promise<Partial<ISpotCheck>[]>} - The retrieved spot-check
  */
+// const getManySpotCheck = async (
+//   query: SearchQueryInput
+// ): Promise<{ spotChecks: Partial<ISpotCheck>[]; totalData: number; totalPages: number }> => {
+//   const { searchKey = '', showPerPage = 10, pageNo = 1, standAloneId, createdBy } = query as any;
+//   const skipItems = (pageNo - 1) * showPerPage;
+
+//   const baseOr: any[] = [];
+//   // Add searchable fields here if needed
+
+//   const searchFilter: any = {};
+//   if (baseOr.length > 0) searchFilter.$or = baseOr;
+
+//   // If standAloneId filter is present, restrict to docs where createdBy OR standAloneId matches
+//   if (standAloneId) {
+//     searchFilter.$and = searchFilter.$and || [];
+//     searchFilter.$and.push({
+//       $or: [
+//         { standAloneId: new mongoose.Types.ObjectId(standAloneId) },
+//         { createdBy: new mongoose.Types.ObjectId(standAloneId) },
+//       ],
+//     });
+//   }
+
+//   const totalData = await SpotCheckModel.countDocuments(searchFilter);
+//   const totalPages = Math.ceil(totalData / showPerPage);
+//   const spotChecks = await SpotCheckModel.find(searchFilter).skip(skipItems).limit(showPerPage);
+//   return { spotChecks, totalData, totalPages };
+// };
+
+// ...existing code...
+
 const getManySpotCheck = async (
-  query: SearchQueryInput
+  query: SearchQueryInput & { createdBy?: string; standAloneId?: string }
 ): Promise<{ spotChecks: Partial<ISpotCheck>[]; totalData: number; totalPages: number }> => {
-  const { searchKey = '', showPerPage = 10, pageNo = 1, standAloneId } = query as any;
+  const { searchKey = '', showPerPage = 10, pageNo = 1, standAloneId, createdBy } = query;
   const skipItems = (pageNo - 1) * showPerPage;
 
-  const baseOr: any[] = [];
-  // Add searchable fields here if needed
+  const searchConditions: any[] = [];
+  const andConditions: any[] = [];
 
-  const searchFilter: any = {};
-  if (baseOr.length > 0) searchFilter.$or = baseOr;
-
-  // If standAloneId filter is present, restrict to docs where createdBy OR standAloneId matches
-  if (standAloneId) {
-    searchFilter.$and = searchFilter.$and || [];
-    searchFilter.$and.push({
+  // Search filter
+  if (searchKey) {
+    searchConditions.push({
       $or: [
-        { standAloneId: new mongoose.Types.ObjectId(standAloneId) },
-        { createdBy: new mongoose.Types.ObjectId(standAloneId) },
+        { driverName: { $regex: searchKey, $options: 'i' } },
+        { vehicleReg: { $regex: searchKey, $options: 'i' } },
       ],
     });
   }
 
-  const totalData = await SpotCheckModel.countDocuments(searchFilter);
+  // A spot-check belongs to an SA user if EITHER:
+  //   a) standAloneId = SA_id  (created by TM on behalf of SA user)
+  //   b) createdBy   = SA_id  (created by SA user themselves)
+  const ownerId = standAloneId || createdBy;
+  if (ownerId) {
+    const ownerObjectId = new mongoose.Types.ObjectId(ownerId);
+    andConditions.push({
+      $or: [{ standAloneId: ownerObjectId }, { createdBy: ownerObjectId }],
+    });
+  }
+
+  // Final filter build
+  const finalFilter: any = {};
+
+  if (searchConditions.length) {
+    finalFilter.$and = searchConditions;
+  }
+
+  if (andConditions.length) {
+    finalFilter.$and = [...(finalFilter.$and || []), ...andConditions];
+  }
+
+  const totalData = await SpotCheckModel.countDocuments(finalFilter);
   const totalPages = Math.ceil(totalData / showPerPage);
-  const spotChecks = await SpotCheckModel.find(searchFilter).skip(skipItems).limit(showPerPage);
+  const spotChecks = await SpotCheckModel.find(finalFilter).skip(skipItems).limit(showPerPage);
   return { spotChecks, totalData, totalPages };
 };
 
@@ -157,4 +206,3 @@ export const spotCheckServices = {
   getSpotCheckById,
   getManySpotCheck,
 };
-

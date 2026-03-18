@@ -1,37 +1,3 @@
-// const DriverTachographSchema: Schema<IDriverTachograph> = new Schema(
-//   {
-//     driverId: {
-//       type: Schema.Types.ObjectId,
-//       required: true,
-//       ref: "Driver", // Reference from Driver model
-//     },
-//     vehicleId: {
-//       type: Schema.Types.ObjectId,
-//       required: true,
-//       ref: "Vehicle", // Reference from Vehicle model
-//     },
-//     typeOfInfringement: {
-//       type: String,
-//     },
-//     details: {
-//       type: String,
-//     },
-//     actionTaken: {
-//       type: String,
-//     },
-//     reviewedBy: {
-//       type: Schema.Types.ObjectId,
-//       // required: true,
-//       ref: "User", // Reference from User model
-//     },
-//     signed: {
-//       type: Boolean,
-//       default: false,
-//     },
-//   },
-//   { timestamps: true, versionKey: false },
-// );
-
 export interface DriverTachographRow {
   _id: string;
   driverId: string;

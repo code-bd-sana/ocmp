@@ -16,6 +16,10 @@ export interface ILogin {
 
 export interface ILoginResponseData {
   token: string;
+  user?: {
+    role?: string;
+    [key: string]: unknown;
+  };
   [key: string]: unknown;
 }
 
@@ -45,6 +49,8 @@ export interface IResetForgetPassword {
 }
 
 const RegisterUser = async (data: IRegister): Promise<IApiResponse> => {
+  console.log(data, 'user data');
+
   try {
     const response = await axios.post<IApiResponse>(
       `${base_url}/auth/register`,
@@ -191,7 +197,61 @@ const LogOut = async (): Promise<IApiResponse> => {
     throw new Error("Something went wrong");
   }
 };
-export const AuthAction = {
+// get user Profile
+const myProfile = async() =>{
+
+    const token =await GetAuthToken();
+
+  if (!token) {
+    throw new Error("No authentication token found");
+  }
+  try {
+const response = await axios.get(
+      `${base_url}/user/me`,
+  
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    );
+    return response.data;
+
+    
+  } catch (error: unknown) {
+    if (axios.isAxiosError<IApiResponse>(error)) {
+      const apiError = error.response?.data?.error;
+      throw new Error(
+        typeof apiError === "string" ? apiError : "Something went wrong",
+      );
+    }
+    throw new Error("Something went wrong");
+  }
+}
+const myRole = async() =>{
+  console.log(base_url, 'this is base url!');
+    const token =await GetAuthToken();
+
+  if (!token) {
+    throw new Error("No authentication token found");
+  }
+  try {
+const response = await myProfile();
+return response.data.role;
+    
+  } catch (error: unknown) {
+    if (axios.isAxiosError<IApiResponse>(error)) {
+      const apiError = error.response?.data?.error;
+      throw new Error(
+        typeof apiError === "string" ? apiError : "Something went wrong",
+      );
+    }
+    throw new Error("Something went wrong");
+  }
+}
+
+
+export const AuthAction = { 
   RegisterUser,
   LoginUser,
   VerifyEmail,
@@ -201,4 +261,6 @@ export const AuthAction = {
   GetAuthToken,
   RemoveAuthToken,
   LogOut,
+  myProfile,
+  myRole
 };

@@ -128,31 +128,39 @@ export const getTrainingToolboxById = catchAsync(
 );
 
 /**
- * Controller function to handle the retrieval of multiple training-toolboxs.
+ * Controller function to handle the retrieval of multiple training-toolboxes.
  *
  * @param {Request} req - The request object containing query parameters for filtering.
  * @param {Response} res - The response object used to send the response.
- * @returns {Promise<Partial<ITrainingToolbox>[]>} - The retrieved training-toolboxs.
- * @throws {Error} - Throws an error if the training-toolboxs retrieval fails.
+ * @returns {Promise<Partial<ITrainingToolbox>[]>} - The retrieved training-toolboxes.
+ * @throws {Error} - Throws an error if the training-toolboxes retrieval fails.
  */
-export const getManyTrainingToolbox = catchAsync(async (req: Request, res: Response) => {
-  const authReq = req as AuthenticatedRequest;
-  const query = {
-    ...((req as any).validatedQuery as SearchQueryInput),
-    requesterId: authReq.user?._id,
-    requesterRole: authReq.user?.role,
-  } as any;
+export const getManyTrainingToolbox = catchAsync(
+  async (req: AuthenticatedRequest, res: Response) => {
+    // Query field assignment by role
+    type TrainingToolboxSearchQuery = SearchQueryInput & {
+      createdBy?: string;
+      standAloneId?: string;
+    };
+    const query: TrainingToolboxSearchQuery = {
+      ...((req as any).validatedQuery as SearchQueryInput),
+    } as any;
 
-  if (authReq.user?.role === UserRole.STANDALONE_USER) {
-    query.standAloneId = authReq.user._id;
+    if (req.user?.role === UserRole.STANDALONE_USER) {
+      query.createdBy = req.user._id;
+    }
+    if (req.user?.role === UserRole.TRANSPORT_MANAGER) {
+      query.createdBy = req.user._id;
+      query.standAloneId = (req as any).validatedQuery.standAloneId;
+    }
+
+    const { toolboxes, totalData, totalPages } =
+      await trainingToolboxServices.getManyTrainingToolbox(query);
+    if (!toolboxes) throw new Error('Failed to retrieve training-toolboxes');
+    ServerResponse(res, true, 200, 'Training-toolboxes retrieved successfully', {
+      toolboxes,
+      totalData,
+      totalPages,
+    });
   }
-
-  const { toolboxes, totalData, totalPages } =
-    await trainingToolboxServices.getManyTrainingToolbox(query);
-  if (!toolboxes) throw new Error('Failed to retrieve training-toolboxs');
-  ServerResponse(res, true, 200, 'Training-toolboxs retrieved successfully', {
-    toolboxes,
-    totalData,
-    totalPages,
-  });
-});
+);

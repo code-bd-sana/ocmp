@@ -27,9 +27,8 @@ export const createDriverAsTransportManager = catchAsync(
     req.body.standAloneId = new mongoose.Types.ObjectId(req.body.standAloneId);
     const files = extractUploadedFiles((req as any).files, ['attachments', 'files']);
 
-    let uploadedDocuments: Awaited<
-      ReturnType<typeof uploadFilesAndCreateDocuments>
-    >['documents'] = [];
+    let uploadedDocuments: Awaited<ReturnType<typeof uploadFilesAndCreateDocuments>>['documents'] =
+      [];
 
     try {
       if (files.length) {
@@ -72,9 +71,8 @@ export const createDriverAsStandAlone = catchAsync(
 
     const files = extractUploadedFiles((req as any).files, ['attachments', 'files']);
 
-    let uploadedDocuments: Awaited<
-      ReturnType<typeof uploadFilesAndCreateDocuments>
-    >['documents'] = [];
+    let uploadedDocuments: Awaited<ReturnType<typeof uploadFilesAndCreateDocuments>>['documents'] =
+      [];
 
     try {
       if (files.length) {
@@ -207,7 +205,7 @@ export const getManyDriver = catchAsync(async (req: AuthenticatedRequest, res: R
   const query: DriverSearchQuery = { ...((req as any).validatedQuery as SearchDriverQueryInput) };
 
   if (req.user?.role === UserRole.STANDALONE_USER) {
-    query.standAloneId = req.user._id;
+    query.createdBy = req.user._id;
   }
   if (req.user?.role === UserRole.TRANSPORT_MANAGER) {
     query.createdBy = req.user._id;

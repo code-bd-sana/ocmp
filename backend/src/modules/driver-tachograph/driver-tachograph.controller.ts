@@ -6,6 +6,7 @@ import ServerResponse from '../../helpers/responses/custom-response';
 import catchAsync from '../../utils/catch-async/catch-async';
 import { AuthenticatedRequest } from '../../middlewares/is-authorized';
 import { UserRole } from '../../models';
+import { SearchDriverQueryInput } from '../driver/driver.validation';
 
 /**
  * Controller function to handle the creation of a single driver-tachograph as transport manager.
@@ -136,18 +137,22 @@ export const getDriverTachographById = catchAsync(async (req: Request, res: Resp
 export const getManyDriverTachograph = catchAsync(
   async (req: AuthenticatedRequest, res: Response) => {
     // Use the validated and transformed query from Zod middleware
-    const query = {
+    type DriverTachographSearchQuery = SearchDriverQueryInput & {
+      createdBy?: string;
+      standAloneId?: string;
+    };
+    const query: DriverTachographSearchQuery = {
       ...((req as any).validatedQuery as SearchQueryInput),
-      requesterId: req.user?._id,
-      requesterRole: req.user?.role,
-    } as any;
+    } as DriverTachographSearchQuery;
 
-    // For standalone users, always restrict to own scope
     if (req.user?.role === UserRole.STANDALONE_USER) {
-      query.standAloneId = req.user._id;
+      query.createdBy = req.user._id;
+    }
+    if (req.user?.role === UserRole.TRANSPORT_MANAGER) {
+      query.createdBy = req.user._id;
+      query.standAloneId = (req as any).validatedQuery.standAloneId;
     }
 
-    // For transport managers, standAloneId from query is optional and handled in service
     // Call the service method to get multiple driver-tachographs based on query parameters and get the result
     const { driverTachographs, totalData, totalPages } =
       await driverTachographServices.getManyDriverTachograph(query);

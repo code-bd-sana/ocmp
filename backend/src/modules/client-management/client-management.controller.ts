@@ -2,7 +2,6 @@ import { Request, Response } from 'express';
 import { SearchQueryInput } from '../../handlers/common-zod-validator';
 import ServerResponse from '../../helpers/responses/custom-response';
 import { AuthenticatedRequest } from '../../middlewares/is-authorized';
-import { UserRole } from '../../models';
 import catchAsync from '../../utils/catch-async/catch-async';
 import { clientManagementServices } from './client-management.service';
 
@@ -158,7 +157,8 @@ export const updateJoinRequest = catchAsync(async (req: AuthenticatedRequest, re
  * @returns {Promise<void>}
  */
 export const getManagerList = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
-  const result = await clientManagementServices.getManagerList();
+  const query = req.query as unknown as SearchQueryInput;
+  const result = await clientManagementServices.getManagerList(query);
   ServerResponse(res, true, 200, 'Manager list retrieved successfully', result);
 });
 
@@ -267,4 +267,20 @@ export const handleRemoveRequest = catchAsync(async (req: AuthenticatedRequest, 
 
   const result = await clientManagementServices.handleRemoveRequest(clientId as string, req.body);
   ServerResponse(res, true, 200, `Remove request ${result.action}ed successfully`, result);
+});
+
+/**
+ * Controller: Get the Transport Manager assigned to the authenticated client.
+ * ClientId from token.
+ *
+ * @param {AuthenticatedRequest} req - The request object (user._id = clientId from Redis→JWT decode).
+ * @param {Response} res - The response object used to send the response.
+ * @returns {Promise<void>}
+ */
+export const getMyManager = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+  const clientId = req.user!._id;
+
+  const result = await clientManagementServices.getMyManager(clientId as string);
+  if (!result) return ServerResponse(res, false, 404, 'No Transport Manager assigned');
+  ServerResponse(res, true, 200, 'Transport Manager retrieved successfully', result);
 });

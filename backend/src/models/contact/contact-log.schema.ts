@@ -1,10 +1,8 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
-
 // Define and export an interface representing a contact-log document
 export interface IContactLog extends Document {
   // Define the schema fields with their types
-  // Example fields (replace with actual fields)
   date: Date;
   contactMethod?: string;
   person: string;
@@ -67,4 +65,3 @@ const ContactLog = mongoose.model<IContactLog>('ContactLog', ContactLogSchema);
 
 // Export the contact-log model
 export default ContactLog;
-
