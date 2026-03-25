@@ -21,6 +21,7 @@ import {
 } from "@/lib/spot-checks/spot-check.types";
 import { UserAction } from "@/service/user";
 import { useRouter } from "next/navigation";
+import { resolveRoleScopedRoute } from "@/lib/utils/role-route";
 
 interface PageProps {
   params: Promise<{ standAloneId: string }>;
@@ -70,23 +71,21 @@ export default function SpotChecksPage({ params }: PageProps) {
 
         if (!isActive) return;
 
-        if (userRole === "STANDALONE_USER") {
-          if (!userId) {
-            setError("Unable to load your profile. Please sign in again.");
-            return;
-          }
+        const routeResult = resolveRoleScopedRoute({
+          role: userRole,
+          userId,
+          standAloneId,
+          basePath: "/dashboard/spot-checks",
+        });
 
-          if (standAloneId !== userId) {
-            router.replace(`/dashboard/spot-checks/${userId}`);
-            return;
-          }
+        if (routeResult.error) {
+          setError(routeResult.error);
+          return;
         }
 
-        if (userRole === "TRANSPORT_MANAGER") {
-          if (!standAloneId || standAloneId === "null" || standAloneId === "undefined") {
-            router.replace("/dashboard/spot-checks");
-            return;
-          }
+        if (routeResult.redirectTo) {
+          router.replace(routeResult.redirectTo);
+          return;
         }
 
         setRoleReady(true);

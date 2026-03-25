@@ -7,7 +7,12 @@ import {
   SpotCheckListResponse,
   SpotCheckRow,
 } from "@/lib/spot-checks/spot-check.types";
-import { UserAction } from "./user";
+import {
+  buildRoleScopedQuery,
+  getCurrentUserRole,
+  isStandaloneRole,
+  requireScopedClientId,
+} from "./shared/role-scope";
 
 /**
  * Extract the most useful error message from a backend error response.
@@ -34,34 +39,6 @@ function extractApiError(data: IApiResponse | undefined): string {
 }
 
 /**
- * Get the current user's role (cached or fresh fetch)
- */
-let cachedUserRole: string | null = null;
-let cachedRoleToken: string | null = null;
-
-const getUserRole = async (token: string): Promise<string> => {
-  if (cachedUserRole && cachedRoleToken === token) return cachedUserRole;
-
-  try {
-    const profileResp = await UserAction.getProfile();
-
-    const resolvedRole = profileResp.data?.role || null;
-    if (!resolvedRole) {
-      throw new Error("Unable to determine current user role");
-    }
-
-    cachedUserRole = resolvedRole;
-    cachedRoleToken = token;
-
-    return cachedUserRole;
-  } catch {
-    cachedUserRole = null;
-    cachedRoleToken = null;
-    throw new Error("Unable to determine user role. Please sign in again.");
-  }
-};
-
-/**
  * GET /api/v1/spot-check/get-spot-check/many?standAloneId=...
  */
 const getSpotChecks = async (
@@ -76,26 +53,13 @@ const getSpotChecks = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
-    const userRole = await getUserRole(token);
+    const userRole = await getCurrentUserRole();
 
-    if (userRole !== "STANDALONE_USER" && !standAloneId) {
-      throw new Error("standAloneId is required for transport manager");
-    }
-
-    // For standalone users, don't include standAloneId in query params
-    const queryParams =
-      userRole === "STANDALONE_USER"
-        ? {
-            searchKey: params?.searchKey || undefined,
-            showPerPage: params?.showPerPage || 10,
-            pageNo: params?.pageNo || 1,
-          }
-        : {
-            standAloneId,
-            searchKey: params?.searchKey || undefined,
-            showPerPage: params?.showPerPage || 10,
-            pageNo: params?.pageNo || 1,
-          };
+    const queryParams = buildRoleScopedQuery(userRole, standAloneId, {
+      searchKey: params?.searchKey || undefined,
+      showPerPage: params?.showPerPage || 10,
+      pageNo: params?.pageNo || 1,
+    });
 
     const response = await axios.get<IApiResponse<SpotCheckListResponse>>(
       `${base_url}/spot-check/get-spot-check/many`,
@@ -124,20 +88,16 @@ const getSpotCheck = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
-    const userRole = await getUserRole(token);
-
-    if (userRole !== "STANDALONE_USER" && !standAloneId) {
-      throw new Error("standAloneId is required for transport manager");
-    }
+    const userRole = await getCurrentUserRole();
+    requireScopedClientId(userRole, standAloneId);
 
     // Backend route: /get-spot-check/:id with optional standAloneId query param for TM
     // SA users: no standAloneId in any form
     // TM users: standAloneId must be in query params (not URL path)
     const url = `${base_url}/spot-check/get-spot-check/${spotCheckId}`;
-    const params =
-      userRole === "STANDALONE_USER"
-        ? {} // SA users should not send standAloneId
-        : { standAloneId }; // TM users must send standAloneId in query
+    const params = isStandaloneRole(userRole)
+      ? {} // SA users should not send standAloneId
+      : { standAloneId }; // TM users must send standAloneId in query
 
     const response = await axios.get<IApiResponse<SpotCheckRow>>(url, {
       headers: { Authorization: `Bearer ${token}` },
@@ -162,14 +122,11 @@ const createSpotCheck = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
-    const userRole = await getUserRole(token);
-
-    if (userRole !== "STANDALONE_USER" && !data.standAloneId) {
-      throw new Error("standAloneId is required for transport manager");
-    }
+    const userRole = await getCurrentUserRole();
+    requireScopedClientId(userRole, data.standAloneId);
 
     const endpoint =
-      userRole === "STANDALONE_USER"
+      isStandaloneRole(userRole)
         ? `${base_url}/spot-check/create-stand-alone-spot-check`
         : `${base_url}/spot-check/create-spot-check`;
 
@@ -178,7 +135,7 @@ const createSpotCheck = async (
     formData.append("vehicleId", data.vehicleId);
     formData.append("issueDetails", data.issueDetails);
 
-    if (userRole !== "STANDALONE_USER" && data.standAloneId) {
+    if (!isStandaloneRole(userRole) && data.standAloneId) {
       formData.append("standAloneId", data.standAloneId);
     }
 
@@ -224,11 +181,8 @@ const updateSpotCheck = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
-    const userRole = await getUserRole(token);
-
-    if (userRole !== "STANDALONE_USER" && !standAloneId) {
-      throw new Error("standAloneId is required for transport manager");
-    }
+    const userRole = await getCurrentUserRole();
+    requireScopedClientId(userRole, standAloneId);
 
     const formData = new FormData();
 
@@ -258,7 +212,7 @@ const updateSpotCheck = async (
     }
 
     const url =
-      userRole === "STANDALONE_USER"
+      isStandaloneRole(userRole)
         ? `${base_url}/spot-check/update-spot-check/${spotCheckId}`
         : `${base_url}/spot-check/update-spot-check/${spotCheckId}/${standAloneId}`;
 
@@ -285,14 +239,11 @@ const deleteSpotCheck = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
-    const userRole = await getUserRole(token);
-
-    if (userRole !== "STANDALONE_USER" && !standAloneId) {
-      throw new Error("standAloneId is required for transport manager");
-    }
+    const userRole = await getCurrentUserRole();
+    requireScopedClientId(userRole, standAloneId);
 
     const url =
-      userRole === "STANDALONE_USER"
+      isStandaloneRole(userRole)
         ? `${base_url}/spot-check/delete-spot-check/${spotCheckId}`
         : `${base_url}/spot-check/delete-spot-check/${spotCheckId}/${standAloneId}`;
 
