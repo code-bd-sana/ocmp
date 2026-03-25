@@ -9,7 +9,12 @@ import {
   UpdateDriverTachographInput,
 } from "@/lib/driver-tachograph/tachograph.types";
 import axios from "axios";
-import { UserAction } from "./user";
+import {
+  buildRoleScopedQuery,
+  getCurrentUserRole,
+  isStandaloneRole,
+  requireScopedClientId,
+} from "./shared/role-scope";
 
 /**
  * Extract the most useful error message from a backend error response.
@@ -58,20 +63,7 @@ function normalizeDriverTachographListResponse(
   };
 }
 
-/**
- * Get the current user's role (cached or fresh fetch)
- */
-let cachedUserRole: string | null = null;
-const getUserRole = async (): Promise<string | null> => {
-  if (cachedUserRole) return cachedUserRole;
-  try {
-    const profileResp = await UserAction.getProfile();
-    cachedUserRole = profileResp.data?.role || null;
-    return cachedUserRole;
-  } catch {
-    return null;
-  }
-};
+
 
 /**
  * GET /api/v1/driver-tachograph/get-driver-tachograph/many
@@ -90,23 +82,13 @@ const getDriverTachographs = async (
   const token = AuthAction.GetAuthToken();
   if (!token) throw new Error("No authentication token found");
   try {
-    const userRole = await getUserRole();
+    const userRole = await getCurrentUserRole();
 
-    // TM users: include standAloneId in query params
-    // SA users: no standAloneId in query params
-    const queryParams =
-      userRole === "STANDALONE_USER"
-        ? {
-            searchKey: params?.searchKey || undefined,
-            showPerPage: params?.showPerPage || 10,
-            pageNo: params?.pageNo || 1,
-          }
-        : {
-            standAloneId,
-            searchKey: params?.searchKey || undefined,
-            showPerPage: params?.showPerPage || 10,
-            pageNo: params?.pageNo || 1,
-          };
+    const queryParams = buildRoleScopedQuery(userRole, standAloneId, {
+      searchKey: params?.searchKey || undefined,
+      showPerPage: params?.showPerPage || 10,
+      pageNo: params?.pageNo || 1,
+    });
 
     const response = await axios.get<IApiResponse<DriverTachographListPayload>>(
       `${base_url}/driver-tachograph/get-driver-tachograph/many`,
@@ -140,12 +122,13 @@ const getDriverTachograph = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
-    const userRole = await getUserRole();
+    const userRole = await getCurrentUserRole();
+    requireScopedClientId(userRole, standAloneId);
 
     // TM: separate route with standAloneId in URL path
     // SA: separate route without standAloneId
     const url =
-      userRole === "STANDALONE_USER"
+      isStandaloneRole(userRole)
         ? `${base_url}/driver-tachograph/get-driver-tachograph/${tachographId}`
         : `${base_url}/driver-tachograph/get-driver-tachograph/${tachographId}/${standAloneId}`;
 
@@ -173,20 +156,17 @@ const createDriverTachograph = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
-    const userRole = await getUserRole();
+    const userRole = await getCurrentUserRole();
+    requireScopedClientId(userRole, data.standAloneId);
 
     const endpoint =
-      userRole === "STANDALONE_USER"
+      isStandaloneRole(userRole)
         ? `${base_url}/driver-tachograph/create-stand-alone-driver-tachograph`
         : `${base_url}/driver-tachograph/create-driver-tachograph`;
 
     // SA endpoint uses .strict() — must not include standAloneId in body
-    const body =
-      userRole === "STANDALONE_USER"
-        ? Object.fromEntries(
-            Object.entries(data).filter(([key]) => key !== "standAloneId"),
-          )
-        : data;
+    const { standAloneId: _standAloneId, ...saData } = data;
+    const body = isStandaloneRole(userRole) ? saData : data;
 
     const response = await axios.post<IApiResponse>(endpoint, body, {
       headers: { Authorization: `Bearer ${token}` },
@@ -214,12 +194,13 @@ const updateDriverTachograph = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
-    const userRole = await getUserRole();
+    const userRole = await getCurrentUserRole();
+    requireScopedClientId(userRole, standAloneId);
 
     // TM: separate route with standAloneId in URL path
     // SA: separate route without standAloneId
     const url =
-      userRole === "STANDALONE_USER"
+      isStandaloneRole(userRole)
         ? `${base_url}/driver-tachograph/update-driver-tachograph/${tachographId}`
         : `${base_url}/driver-tachograph/update-driver-tachograph/${tachographId}/${standAloneId}`;
 
@@ -251,12 +232,13 @@ const deleteDriverTachograph = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
-    const userRole = await getUserRole();
+    const userRole = await getCurrentUserRole();
+    requireScopedClientId(userRole, standAloneId);
 
     // TM: separate route with standAloneId in URL path
     // SA: separate route without standAloneId
     const url =
-      userRole === "STANDALONE_USER"
+      isStandaloneRole(userRole)
         ? `${base_url}/driver-tachograph/delete-driver-tachograph/${tachographId}`
         : `${base_url}/driver-tachograph/delete-driver-tachograph/${tachographId}/${standAloneId}`;
 

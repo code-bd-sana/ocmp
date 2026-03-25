@@ -17,6 +17,9 @@ import {
 import { DriverTachographAction } from "@/service/driver-tachograph";
 import { use, useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+import { UserAction } from "@/service/user";
+import { resolveRoleScopedRoute } from "@/lib/utils/role-route";
 
 interface PageProps {
   params: Promise<{ standAloneId: string }>;
@@ -24,6 +27,8 @@ interface PageProps {
 
 export default function TachographListPage({ params }: PageProps) {
   const { standAloneId } = use(params);
+  const router = useRouter();
+  const [roleReady, setRoleReady] = useState(false);
 
   const [rows, setRows] = useState<TachoGraphTableRow[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -53,6 +58,50 @@ export default function TachographListPage({ params }: PageProps) {
   const [deleteLoading, setDeleteLoading] = useState(false);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // ---------- Role validation & route normalization ----------
+  useEffect(() => {
+    let isActive = true;
+
+    const ensureRoleScopedRoute = async () => {
+      try {
+        const profileResp = await UserAction.getProfile();
+        const userRole = profileResp.data?.role;
+        const userId = profileResp.data?._id;
+
+        if (!isActive) return;
+
+        const routeResult = resolveRoleScopedRoute({
+          role: userRole,
+          userId,
+          standAloneId,
+          basePath: "/dashboard/driver-tachograph",
+        });
+
+        if (routeResult.error) {
+          setError(routeResult.error);
+          return;
+        }
+
+        if (routeResult.redirectTo) {
+          router.replace(routeResult.redirectTo);
+          return;
+        }
+
+        setRoleReady(true);
+      } catch {
+        if (!isActive) return;
+        setError("Failed to load your profile. Please sign in again.");
+      }
+    };
+
+    setRoleReady(false);
+    ensureRoleScopedRoute();
+
+    return () => {
+      isActive = false;
+    };
+  }, [standAloneId, router]);
 
   // ---------- Fetch tachographs ----------
   const fetchTachographs = useCallback(
@@ -85,8 +134,9 @@ export default function TachographListPage({ params }: PageProps) {
   );
 
   useEffect(() => {
+    if (!roleReady) return;
     fetchTachographs();
-  }, [fetchTachographs]);
+  }, [roleReady, fetchTachographs]);
 
   // Debounced search
   const handleSearchChange = (value: string) => {
@@ -229,6 +279,17 @@ export default function TachographListPage({ params }: PageProps) {
       <div className="container mx-auto max-w-6xl py-10">
         <div className="flex h-64 items-center justify-center">
           <p className="text-destructive">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ---------- Role ready check ----------
+  if (!roleReady) {
+    return (
+      <div className="container mx-auto max-w-6xl py-10">
+        <div className="flex h-64 items-center justify-center">
+          <p className="text-muted-foreground">Validating access...</p>
         </div>
       </div>
     );
