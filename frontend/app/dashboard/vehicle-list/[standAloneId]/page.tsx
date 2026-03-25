@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import VehicleHeader from "@/components/dashboard/vehicles/VehicleHeader";
@@ -19,6 +20,8 @@ import {
   UpdateVehicleInput,
   VehicleRow,
 } from "@/lib/vehicles/vehicle.types";
+import { UserAction } from "@/service/user";
+import { resolveRoleScopedRoute } from "@/lib/utils/role-route";
 
 interface PageProps {
   params: Promise<{ standAloneId: string }>;
@@ -26,6 +29,9 @@ interface PageProps {
 
 export default function VehicleListPage({ params }: PageProps) {
   const { standAloneId } = use(params);
+  const router = useRouter();
+
+  const [roleReady, setRoleReady] = useState(false);
 
   const [rows, setRows] = useState<VehicleTableRow[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -54,6 +60,49 @@ export default function VehicleListPage({ params }: PageProps) {
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  useEffect(() => {
+    let isActive = true;
+
+    const ensureRoleScopedRoute = async () => {
+      try {
+        const profileResp = await UserAction.getProfile();
+        const userRole = profileResp.data?.role;
+        const userId = profileResp.data?._id;
+
+        if (!isActive) return;
+
+        const routeResult = resolveRoleScopedRoute({
+          role: userRole,
+          userId,
+          standAloneId,
+          basePath: "/dashboard/vehicle-list",
+        });
+
+        if (routeResult.error) {
+          setError(routeResult.error);
+          return;
+        }
+
+        if (routeResult.redirectTo) {
+          router.replace(routeResult.redirectTo);
+          return;
+        }
+
+        setRoleReady(true);
+      } catch {
+        if (!isActive) return;
+        setError("Failed to load your profile. Please sign in again.");
+      }
+    };
+
+    setRoleReady(false);
+    ensureRoleScopedRoute();
+
+    return () => {
+      isActive = false;
+    };
+  }, [standAloneId, router]);
+
   // ---------- Fetch vehicles ----------
   const fetchVehicles = useCallback(
     async (search?: string) => {
@@ -79,8 +128,9 @@ export default function VehicleListPage({ params }: PageProps) {
   );
 
   useEffect(() => {
+    if (!roleReady) return;
     fetchVehicles();
-  }, [fetchVehicles]);
+  }, [fetchVehicles, roleReady]);
 
   // Debounced search
   const handleSearchChange = (value: string) => {
@@ -220,6 +270,16 @@ export default function VehicleListPage({ params }: PageProps) {
 
   // ---------- Loading state ----------
   if (loading && rows.length === 0) {
+    return (
+      <div className="container mx-auto max-w-6xl py-10">
+        <div className="flex h-64 items-center justify-center">
+          <p className="text-muted-foreground">Loading vehicles...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!roleReady) {
     return (
       <div className="container mx-auto max-w-6xl py-10">
         <div className="flex h-64 items-center justify-center">
