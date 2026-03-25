@@ -380,7 +380,8 @@ const updateDriver = async (
 
 const deleteDriver = async (
   id: IdOrIdsInput['id'],
-  userId: string
+  userId: string,
+  standAloneId?: string
 ): Promise<Partial<IDriver | null>> => {
   const [driverTachographExists, fuelUsageExists, vehicleExists] = await Promise.all([
     DriverTachograph.exists({
@@ -410,6 +411,17 @@ const deleteDriver = async (
     const userObjectId = new mongoose.Types.ObjectId(userId);
     ownershipFilters.push({ createdBy: userObjectId });
     ownershipFilters.push({ standAloneId: userObjectId });
+  }
+
+  if (standAloneId) {
+    ownershipFilters.push({ standAloneId });
+    ownershipFilters.push({ createdBy: standAloneId });
+
+    if (mongoose.Types.ObjectId.isValid(standAloneId)) {
+      const standAloneObjectId = new mongoose.Types.ObjectId(standAloneId);
+      ownershipFilters.push({ standAloneId: standAloneObjectId });
+      ownershipFilters.push({ createdBy: standAloneObjectId });
+    }
   }
 
   const ownershipFilter = {

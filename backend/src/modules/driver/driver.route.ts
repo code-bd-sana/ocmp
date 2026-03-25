@@ -18,6 +18,7 @@ import { validateId } from '../../handlers/common-zod-validator';
 import authorizedRoles from '../../middlewares/authorized-roles';
 import isAuthorized, { AuthenticatedRequest } from '../../middlewares/is-authorized';
 import { validateClientForManagerMiddleware } from '../../middlewares/validate-client-for-manager';
+import ServerResponse from '../../helpers/responses/custom-response';
 import { UserRole } from '../../models';
 import {
   validateCreateDriverAsStandAlone,
@@ -172,6 +173,15 @@ router.get(
   '/get-drivers',
   authorizedRoles([UserRole.STANDALONE_USER, UserRole.TRANSPORT_MANAGER]),
   (req: AuthenticatedRequest, res, next) => {
+    if (req.user!.role === UserRole.STANDALONE_USER && req.query?.standAloneId) {
+      return ServerResponse(
+        res,
+        false,
+        403,
+        'Forbidden: standAloneId is only allowed for transport managers'
+      );
+    }
+
     // For transport managers, ensure they can only access drivers of their approved clients
     if (req.user!.role === UserRole.TRANSPORT_MANAGER) {
       return validateClientForManagerMiddleware(req, res, next);
