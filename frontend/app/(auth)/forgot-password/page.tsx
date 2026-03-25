@@ -50,11 +50,11 @@ export default function ForgotPasswordPage() {
 
     try {
       const response = await AuthAction.ForgotPassword({ email });
-      
+
       if (response.status) {
         toast.success(response.message || "Reset link sent to your email!");
         setIsSubmitted(true);
-        
+
         // Set cooldown for resend
         setResendCooldown(60);
         const timer = setInterval(() => {
@@ -95,10 +95,10 @@ export default function ForgotPasswordPage() {
 
     try {
       const response = await AuthAction.ForgotPassword({ email });
-      
+
       if (response.status) {
         toast.success(response.message || "Reset link resent successfully!");
-        
+
         // Reset cooldown
         setResendCooldown(60);
         const timer = setInterval(() => {
@@ -124,9 +124,9 @@ export default function ForgotPasswordPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-linear-to-br from-gray-50 to-gray-100 p-4 dark:from-gray-900 dark:to-gray-800">
       <Toaster richColors position="top-center" />
-      
+
       <Card className="w-full max-w-md shadow-xl">
-      
+
 
         <CardHeader className="space-y-1">
           <div className="flex justify-center mb-2">
@@ -251,7 +251,7 @@ export default function ForgotPasswordPage() {
         </CardFooter>
       </Card>
 
-  
+
     </div>
   );
 }

@@ -37,14 +37,27 @@ function extractApiError(data: IApiResponse | undefined): string {
  * Get the current user's role (cached or fresh fetch)
  */
 let cachedUserRole: string | null = null;
-const getUserRole = async (): Promise<string | null> => {
-  if (cachedUserRole) return cachedUserRole;
+let cachedRoleToken: string | null = null;
+
+const getUserRole = async (token: string): Promise<string> => {
+  if (cachedUserRole && cachedRoleToken === token) return cachedUserRole;
+
   try {
     const profileResp = await UserAction.getProfile();
-    cachedUserRole = profileResp.data?.role || null;
+
+    const resolvedRole = profileResp.data?.role || null;
+    if (!resolvedRole) {
+      throw new Error("Unable to determine current user role");
+    }
+
+    cachedUserRole = resolvedRole;
+    cachedRoleToken = token;
+
     return cachedUserRole;
   } catch {
-    return null;
+    cachedUserRole = null;
+    cachedRoleToken = null;
+    throw new Error("Unable to determine user role. Please sign in again.");
   }
 };
 
@@ -63,7 +76,11 @@ const getSpotChecks = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
-    const userRole = await getUserRole();
+    const userRole = await getUserRole(token);
+
+    if (userRole !== "STANDALONE_USER" && !standAloneId) {
+      throw new Error("standAloneId is required for transport manager");
+    }
 
     // For standalone users, don't include standAloneId in query params
     const queryParams =
@@ -107,7 +124,11 @@ const getSpotCheck = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
-    const userRole = await getUserRole();
+    const userRole = await getUserRole(token);
+
+    if (userRole !== "STANDALONE_USER" && !standAloneId) {
+      throw new Error("standAloneId is required for transport manager");
+    }
 
     // Backend route: /get-spot-check/:id with optional standAloneId query param for TM
     // SA users: no standAloneId in any form
@@ -141,7 +162,12 @@ const createSpotCheck = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
-    const userRole = await getUserRole();
+    const userRole = await getUserRole(token);
+
+    if (userRole !== "STANDALONE_USER" && !data.standAloneId) {
+      throw new Error("standAloneId is required for transport manager");
+    }
+
     const endpoint =
       userRole === "STANDALONE_USER"
         ? `${base_url}/spot-check/create-stand-alone-spot-check`
@@ -198,6 +224,12 @@ const updateSpotCheck = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
+    const userRole = await getUserRole(token);
+
+    if (userRole !== "STANDALONE_USER" && !standAloneId) {
+      throw new Error("standAloneId is required for transport manager");
+    }
+
     const formData = new FormData();
 
     if (data.vehicleId) formData.append("vehicleId", data.vehicleId);
@@ -224,8 +256,6 @@ const updateSpotCheck = async (
         formData.append("attachments", file);
       });
     }
-
-    const userRole = await getUserRole();
 
     const url =
       userRole === "STANDALONE_USER"
@@ -255,7 +285,11 @@ const deleteSpotCheck = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
-    const userRole = await getUserRole();
+    const userRole = await getUserRole(token);
+
+    if (userRole !== "STANDALONE_USER" && !standAloneId) {
+      throw new Error("standAloneId is required for transport manager");
+    }
 
     const url =
       userRole === "STANDALONE_USER"

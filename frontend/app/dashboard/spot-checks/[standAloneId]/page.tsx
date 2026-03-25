@@ -19,6 +19,8 @@ import {
   UpdateSpotCheckInput,
   SpotCheckRow,
 } from "@/lib/spot-checks/spot-check.types";
+import { UserAction } from "@/service/user";
+import { useRouter } from "next/navigation";
 
 interface PageProps {
   params: Promise<{ standAloneId: string }>;
@@ -26,6 +28,9 @@ interface PageProps {
 
 export default function SpotChecksPage({ params }: PageProps) {
   const { standAloneId } = use(params);
+  const router = useRouter();
+
+  const [roleReady, setRoleReady] = useState(false);
 
   const [rows, setRows] = useState<SpotCheckTableRow[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -54,6 +59,51 @@ export default function SpotChecksPage({ params }: PageProps) {
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  useEffect(() => {
+    let isActive = true;
+
+    const ensureRoleScopedRoute = async () => {
+      try {
+        const profileResp = await UserAction.getProfile();
+        const userRole = profileResp.data?.role;
+        const userId = profileResp.data?._id;
+
+        if (!isActive) return;
+
+        if (userRole === "STANDALONE_USER") {
+          if (!userId) {
+            setError("Unable to load your profile. Please sign in again.");
+            return;
+          }
+
+          if (standAloneId !== userId) {
+            router.replace(`/dashboard/spot-checks/${userId}`);
+            return;
+          }
+        }
+
+        if (userRole === "TRANSPORT_MANAGER") {
+          if (!standAloneId || standAloneId === "null" || standAloneId === "undefined") {
+            router.replace("/dashboard/spot-checks");
+            return;
+          }
+        }
+
+        setRoleReady(true);
+      } catch {
+        if (!isActive) return;
+        setError("Failed to load your profile. Please sign in again.");
+      }
+    };
+
+    setRoleReady(false);
+    ensureRoleScopedRoute();
+
+    return () => {
+      isActive = false;
+    };
+  }, [standAloneId, router]);
+
   // ---------- Fetch spot checks ----------
   const fetchSpotChecks = useCallback(
     async (search?: string) => {
@@ -80,8 +130,9 @@ export default function SpotChecksPage({ params }: PageProps) {
   );
 
   useEffect(() => {
+    if (!roleReady) return;
     fetchSpotChecks();
-  }, [fetchSpotChecks]);
+  }, [fetchSpotChecks, roleReady]);
 
   // Debounced search
   const handleSearchChange = (value: string) => {
@@ -225,6 +276,16 @@ export default function SpotChecksPage({ params }: PageProps) {
 
   // ---------- Loading state ----------
   if (loading && rows.length === 0) {
+    return (
+      <div className="container mx-auto max-w-6xl py-10">
+        <div className="flex h-64 items-center justify-center">
+          <p className="text-muted-foreground">Loading spot checks...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!roleReady) {
     return (
       <div className="container mx-auto max-w-6xl py-10">
         <div className="flex h-64 items-center justify-center">
