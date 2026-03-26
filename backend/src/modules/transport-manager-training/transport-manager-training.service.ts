@@ -5,7 +5,7 @@ import TransportManagerTrainingModel, {
   ITransportManagerTraining,
 } from '../../models/training/transportManagerTraining.schema';
 import { User } from '../../models';
-import { IdOrIdsInput, SearchQueryInput } from '../../handlers/common-zod-validator';
+import { IdOrIdsInput } from '../../handlers/common-zod-validator';
 import DocumentModel from '../../models/document.schema';
 import { deleteObjects, getSignedDownloadUrl } from '../../utils/aws/s3';
 import {
@@ -13,7 +13,9 @@ import {
   uploadFilesAndCreateDocuments,
 } from '../../utils/aws/document-upload';
 import {
-  CreateTransportManagerTrainingInput,
+  CreateTransportManagerTrainingAsManagerInput,
+  CreateTransportManagerTrainingAsStandAloneInput,
+  SearchTransportManagerTrainingQueriesInput,
   UpdateTransportManagerTrainingInput,
 } from './transport-manager-training.validation';
 
@@ -46,14 +48,17 @@ const withSignedAttachmentUrls = async (
 
   const attachmentIds = Array.isArray(trainingObject.attachments)
     ? trainingObject.attachments
-      .map((id) => {
+      .map((id: mongoose.Types.ObjectId | string) => {
         if (id instanceof mongoose.Types.ObjectId) return id;
         if (mongoose.Types.ObjectId.isValid(String(id))) {
           return new mongoose.Types.ObjectId(String(id));
         }
         return null;
       })
-      .filter((id): id is mongoose.Types.ObjectId => Boolean(id))
+      .filter(
+        (id: mongoose.Types.ObjectId | null): id is mongoose.Types.ObjectId =>
+          Boolean(id)
+      )
     : [];
 
   if (!attachmentIds.length) {
@@ -91,8 +96,12 @@ const withSignedAttachmentUrls = async (
 
   const byId = new Map(signedDocuments.map((doc) => [doc._id, doc]));
   const orderedAttachments = attachmentIds
-    .map((id) => byId.get(String(id)))
-    .filter((doc): doc is TransportManagerTrainingAttachmentResponse => Boolean(doc));
+    .map((id: mongoose.Types.ObjectId) => byId.get(String(id)))
+    .filter(
+      (
+        doc: TransportManagerTrainingAttachmentResponse | undefined
+      ): doc is TransportManagerTrainingAttachmentResponse => Boolean(doc)
+    );
 
   return {
     ...(trainingObject as Partial<ITransportManagerTraining>),
@@ -100,7 +109,9 @@ const withSignedAttachmentUrls = async (
   } as TransportManagerTrainingWithAttachmentsResponse;
 };
 
-const normalizeCreatePayload = (data: CreateTransportManagerTrainingInput) => ({
+const normalizeCreatePayload = (
+  data: CreateTransportManagerTrainingAsManagerInput | CreateTransportManagerTrainingAsStandAloneInput
+) => ({
   ...data,
   attachments: data.attachments?.map((attachmentId) => new mongoose.Types.ObjectId(attachmentId)),
 });
@@ -118,14 +129,38 @@ const getTransportManagerNameById = async (userId: IdOrIdsInput['id']): Promise<
   return user.fullName;
 };
 
+const buildOwnershipFilter = (accessId: IdOrIdsInput['id']) => {
+  const objectId = new mongoose.Types.ObjectId(accessId);
+  return {
+    $or: [{ createdBy: objectId }, { standAloneId: objectId }],
+  };
+};
+
 /**
  * Service function to create a new transport-manager-training.
  *
  * @param {CreateTransportManagerTrainingInput} data - The data to create a new transport-manager-training.
  * @returns {Promise<Partial<ITransportManagerTraining>>} - The created transport-manager-training.
  */
-const createTransportManagerTraining = async (
-  data: CreateTransportManagerTrainingInput,
+const createTransportManagerTrainingAsManager = async (
+  data: CreateTransportManagerTrainingAsManagerInput,
+  userId: IdOrIdsInput['id'],
+  standAloneId: IdOrIdsInput['id']
+): Promise<Partial<ITransportManagerTraining>> => {
+  const transportManagerName = await getTransportManagerNameById(userId);
+
+  const newTransportManagerTraining = new TransportManagerTrainingModel({
+    ...normalizeCreatePayload(data),
+    name: transportManagerName,
+    standAloneId: new mongoose.Types.ObjectId(standAloneId),
+    createdBy: new mongoose.Types.ObjectId(userId),
+  });
+  const savedTransportManagerTraining = await newTransportManagerTraining.save();
+  return savedTransportManagerTraining;
+};
+
+const createTransportManagerTrainingAsStandAlone = async (
+  data: CreateTransportManagerTrainingAsStandAloneInput,
   userId: IdOrIdsInput['id']
 ): Promise<Partial<ITransportManagerTraining>> => {
   const transportManagerName = await getTransportManagerNameById(userId);
@@ -133,8 +168,10 @@ const createTransportManagerTraining = async (
   const newTransportManagerTraining = new TransportManagerTrainingModel({
     ...normalizeCreatePayload(data),
     name: transportManagerName,
+    standAloneId: new mongoose.Types.ObjectId(userId),
     createdBy: new mongoose.Types.ObjectId(userId),
   });
+
   const savedTransportManagerTraining = await newTransportManagerTraining.save();
   return savedTransportManagerTraining;
 };
@@ -149,15 +186,13 @@ const createTransportManagerTraining = async (
 const updateTransportManagerTraining = async (
   id: IdOrIdsInput['id'],
   data: UpdateTransportManagerTrainingInput,
-  userId: IdOrIdsInput['id'],
+  accessId: IdOrIdsInput['id'],
   files: UploadedFile[] = [],
   removeAttachmentIds: string[] = []
 ): Promise<Partial<ITransportManagerTraining | null>> => {
-  const transportManagerName = await getTransportManagerNameById(userId);
-
   const existing = await TransportManagerTrainingModel.findOne({
     _id: id,
-    createdBy: new mongoose.Types.ObjectId(userId),
+    ...buildOwnershipFilter(accessId),
   })
     .select('attachments')
     .lean();
@@ -209,7 +244,7 @@ const updateTransportManagerTraining = async (
   if (files.length) {
     const uploadResult = await uploadFilesAndCreateDocuments(
       files,
-      String(userId),
+      String(accessId),
       'transport-manager-training'
     );
     uploadedDocuments = uploadResult.documents;
@@ -228,11 +263,10 @@ const updateTransportManagerTraining = async (
       updatedTransportManagerTraining = await TransportManagerTrainingModel.findOneAndUpdate(
         {
           _id: id,
-          createdBy: new mongoose.Types.ObjectId(userId),
+          ...buildOwnershipFilter(accessId),
         },
         {
           ...normalizedPayload,
-          name: transportManagerName,
         },
         { new: true }
       );
@@ -242,7 +276,7 @@ const updateTransportManagerTraining = async (
       updatedTransportManagerTraining = await TransportManagerTrainingModel.findOneAndUpdate(
         {
           _id: id,
-          createdBy: new mongoose.Types.ObjectId(userId),
+          ...buildOwnershipFilter(accessId),
         },
         {
           $pull: {
@@ -259,7 +293,7 @@ const updateTransportManagerTraining = async (
       updatedTransportManagerTraining = await TransportManagerTrainingModel.findOneAndUpdate(
         {
           _id: id,
-          createdBy: new mongoose.Types.ObjectId(userId),
+          ...buildOwnershipFilter(accessId),
         },
         {
           $addToSet: {
@@ -275,7 +309,7 @@ const updateTransportManagerTraining = async (
     if (!updatedTransportManagerTraining) {
       updatedTransportManagerTraining = await TransportManagerTrainingModel.findOne({
         _id: id,
-        createdBy: new mongoose.Types.ObjectId(userId),
+        ...buildOwnershipFilter(accessId),
       });
     }
 
@@ -296,11 +330,11 @@ const updateTransportManagerTraining = async (
  */
 const deleteTransportManagerTraining = async (
   id: IdOrIdsInput['id'],
-  userId: IdOrIdsInput['id']
+  accessId: IdOrIdsInput['id']
 ): Promise<Partial<ITransportManagerTraining | null>> => {
   const existing = await TransportManagerTrainingModel.findOne({
     _id: id,
-    createdBy: new mongoose.Types.ObjectId(userId),
+    ...buildOwnershipFilter(accessId),
   })
     .select('_id attachments')
     .lean();
@@ -345,7 +379,7 @@ const deleteTransportManagerTraining = async (
 
   const deletedTransportManagerTraining = await TransportManagerTrainingModel.findOneAndDelete({
     _id: id,
-    createdBy: new mongoose.Types.ObjectId(userId),
+    ...buildOwnershipFilter(accessId),
   });
   return deletedTransportManagerTraining;
 };
@@ -358,11 +392,11 @@ const deleteTransportManagerTraining = async (
  */
 const getTransportManagerTrainingById = async (
   id: IdOrIdsInput['id'],
-  userId: IdOrIdsInput['id']
+  accessId: IdOrIdsInput['id']
 ): Promise<TransportManagerTrainingWithAttachmentsResponse | null> => {
   const transportManagerTraining = await TransportManagerTrainingModel.findOne({
     _id: id,
-    createdBy: new mongoose.Types.ObjectId(userId),
+    ...buildOwnershipFilter(accessId),
   });
   if (!transportManagerTraining) return null;
   return withSignedAttachmentUrls(transportManagerTraining);
@@ -375,14 +409,13 @@ const getTransportManagerTrainingById = async (
  * @returns {Promise<Partial<ITransportManagerTraining>[]>} - The retrieved transport-manager-training
  */
 const getManyTransportManagerTraining = async (
-  query: SearchQueryInput,
-  userId: IdOrIdsInput['id']
+  query: SearchTransportManagerTrainingQueriesInput
 ): Promise<{
   transportManagerTrainings: Partial<ITransportManagerTraining>[];
   totalData: number;
   totalPages: number;
 }> => {
-  const { searchKey = '', showPerPage = 10, pageNo = 1 } = query;
+  const { searchKey = '', showPerPage = 10, pageNo = 1, standAloneId } = query;
   // Build the search filter based on the search key
   const searchConditions = [
     { name: { $regex: searchKey, $options: 'i' } },
@@ -390,13 +423,29 @@ const getManyTransportManagerTraining = async (
     { unitTitle: { $regex: searchKey, $options: 'i' } },
   ];
 
-  const searchFilter: any = {
-    createdBy: new mongoose.Types.ObjectId(userId),
-  };
+  const andFilters: any[] = [];
+
+  if (standAloneId) {
+    andFilters.push({
+      $or: [
+        { createdBy: new mongoose.Types.ObjectId(standAloneId) },
+        { standAloneId: new mongoose.Types.ObjectId(standAloneId) },
+      ],
+    });
+  }
 
   if (searchKey?.trim()) {
-    searchFilter.$or = searchConditions;
+    andFilters.push({
+      $or: searchConditions,
+    });
   }
+
+  const searchFilter: any =
+    andFilters.length === 0
+      ? {}
+      : andFilters.length === 1
+        ? andFilters[0]
+        : { $and: andFilters };
   // Calculate the number of items to skip based on the page number
   const skipItems = (pageNo - 1) * showPerPage;
   // Find the total count of matching transport-manager-training
@@ -412,7 +461,8 @@ const getManyTransportManagerTraining = async (
 };
 
 export const transportManagerTrainingServices = {
-  createTransportManagerTraining,
+  createTransportManagerTrainingAsManager,
+  createTransportManagerTrainingAsStandAlone,
   updateTransportManagerTraining,
   deleteTransportManagerTraining,
   getTransportManagerTrainingById,

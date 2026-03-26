@@ -176,10 +176,14 @@ export const TrafficCommissionerAction = {
 
       const formData = new FormData();
 
-      formData.append("type", data.type);
-      formData.append("contactedPerson", data.contactedPerson);
-      formData.append("reason", data.reason);
-      formData.append("communicationDate", data.communicationDate);
+      if (data.type) formData.append("type", data.type);
+      if (data.contactedPerson) {
+        formData.append("contactedPerson", data.contactedPerson);
+      }
+      if (data.reason) formData.append("reason", data.reason);
+      if (data.communicationDate) {
+        formData.append("communicationDate", data.communicationDate);
+      }
 
       if (data.comments) formData.append("comments", data.comments);
 

@@ -15,6 +15,7 @@ export interface ITransportManagerTraining extends Document {
   renewalTracker: RenewalTracker;
   nextDueDate: Date;
   attachments: mongoose.Types.ObjectId[];
+  standAloneId?: mongoose.Types.ObjectId;
   createdBy: mongoose.Types.ObjectId;
 }
 
@@ -55,6 +56,10 @@ const TransportManagerTrainingSchema: Schema<ITransportManagerTraining> = new Sc
     ],
     nextDueDate: {
       type: Date,
+    },
+    standAloneId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
     },
     createdBy: {
       type: Schema.Types.ObjectId,

@@ -1,6 +1,7 @@
 import { isMongoId } from 'validator';
 import { z } from 'zod';
-import { validateBody } from '../../handlers/zod-error-handler';
+import { zodSearchQuerySchema } from '../../handlers/common-zod-validator';
+import { validateBody, validateParams, validateQuery } from '../../handlers/zod-error-handler';
 import { RenewalTracker } from '../../models/training/transportManagerTraining.schema';
 
 /**
@@ -20,38 +21,57 @@ import { RenewalTracker } from '../../models/training/transportManagerTraining.s
  *
  * → Add all **required** fields here
  */
-const zodCreateTransportManagerTrainingSchema = z
+const baseCreateTransportManagerTrainingFields = {
+  trainingCourse: z
+    .string({ message: 'trainingCourse is required' })
+    .min(1, 'trainingCourse cannot be empty')
+    .max(200, 'trainingCourse cannot exceed 200 characters')
+    .trim(),
+  unitTitle: z
+    .string({ message: 'unitTitle is required' })
+    .min(1, 'unitTitle cannot be empty')
+    .max(200, 'unitTitle cannot exceed 200 characters')
+    .trim(),
+  completionDate: z.coerce.date({ message: 'completionDate must be a valid date' }),
+  renewalTracker: z.nativeEnum(RenewalTracker, {
+    message: 'renewalTracker must be one of the valid values',
+  }),
+  nextDueDate: z.coerce.date({ message: 'nextDueDate must be a valid date' }).optional(),
+  attachments: z
+    .array(z.string().refine(isMongoId, { message: 'attachments must be valid ObjectIds' }))
+    .optional(),
+};
+
+const zodCreateTransportManagerTrainingAsManagerSchema = z
   .object({
-    trainingCourse: z
-      .string({ message: 'trainingCourse is required' })
-      .min(1, 'trainingCourse cannot be empty')
-      .max(200, 'trainingCourse cannot exceed 200 characters')
-      .trim(),
-    unitTitle: z
-      .string({ message: 'unitTitle is required' })
-      .min(1, 'unitTitle cannot be empty')
-      .max(200, 'unitTitle cannot exceed 200 characters')
-      .trim(),
-    completionDate: z.coerce.date({ message: 'completionDate must be a valid date' }),
-    renewalTracker: z.nativeEnum(RenewalTracker, {
-      message: 'renewalTracker must be one of the valid values',
-    }),
-    nextDueDate: z.coerce.date({ message: 'nextDueDate must be a valid date' }).optional(),
-    attachments: z
-      .array(z.string().refine(isMongoId, { message: 'attachments must be valid ObjectIds' }))
-      .optional(),
+    ...baseCreateTransportManagerTrainingFields,
+    standAloneId: z
+      .string({ message: 'standAloneId is required for transport manager' })
+      .refine(isMongoId, { message: 'standAloneId must be a valid ObjectId' }),
   })
   .strict();
 
-export type CreateTransportManagerTrainingInput = z.infer<
-  typeof zodCreateTransportManagerTrainingSchema
+export type CreateTransportManagerTrainingAsManagerInput = z.infer<
+  typeof zodCreateTransportManagerTrainingAsManagerSchema
 >;
+
+const zodCreateTransportManagerTrainingAsStandAloneSchema = z
+  .object(baseCreateTransportManagerTrainingFields)
+  .strict();
+
+export type CreateTransportManagerTrainingAsStandAloneInput = z.infer<
+  typeof zodCreateTransportManagerTrainingAsStandAloneSchema
+>;
+
+export type CreateTransportManagerTrainingInput =
+  | CreateTransportManagerTrainingAsManagerInput
+  | CreateTransportManagerTrainingAsStandAloneInput;
 
 /**
  * Zod schema for validating **bulk creation** (array of transport-manager-training objects).
  */
 const zodCreateManyTransportManagerTrainingSchema = z
-  .array(zodCreateTransportManagerTrainingSchema)
+  .array(zodCreateTransportManagerTrainingAsManagerSchema)
   .min(1, {
     message: 'At least one transport-manager-training must be provided for bulk creation',
   });
@@ -111,15 +131,65 @@ export type UpdateTransportManagerTrainingInput = z.infer<
   typeof zodUpdateTransportManagerTrainingSchema
 >;
 
+const zodTransportManagerTrainingIdParamSchema = z
+  .object({
+    id: z
+      .string({ message: 'Transport-manager-training id is required' })
+      .refine(isMongoId, { message: 'Please provide a valid MongoDB ObjectId' }),
+  })
+  .strict();
+
+export type TransportManagerTrainingIdParamInput = z.infer<
+  typeof zodTransportManagerTrainingIdParamSchema
+>;
+
+const zodTransportManagerTrainingAndManagerIdParamSchema = z
+  .object({
+    id: z
+      .string({ message: 'Transport-manager-training id is required' })
+      .refine(isMongoId, { message: 'Please provide a valid MongoDB ObjectId for id' }),
+    standAloneId: z
+      .string({ message: 'standAloneId is required' })
+      .refine(isMongoId, { message: 'Please provide a valid MongoDB ObjectId for standAloneId' }),
+  })
+  .strict();
+
+export type TransportManagerTrainingAndManagerIdParamInput = z.infer<
+  typeof zodTransportManagerTrainingAndManagerIdParamSchema
+>;
+
+const zodSearchTransportManagerTrainingQueriesSchema = zodSearchQuerySchema.extend({
+  standAloneId: z
+    .string()
+    .refine(isMongoId, { message: 'Please provide a valid MongoDB ObjectId for standAloneId' })
+    .optional(),
+});
+
+export type SearchTransportManagerTrainingQueriesInput = z.infer<
+  typeof zodSearchTransportManagerTrainingQueriesSchema
+>;
+
 /**
  * Named validators — use these directly in your Express routes
  */
-export const validateCreateTransportManagerTraining = validateBody(
-  zodCreateTransportManagerTrainingSchema
+export const validateCreateTransportManagerTrainingAsManager = validateBody(
+  zodCreateTransportManagerTrainingAsManagerSchema
+);
+export const validateCreateTransportManagerTrainingAsStandAlone = validateBody(
+  zodCreateTransportManagerTrainingAsStandAloneSchema
 );
 export const validateCreateManyTransportManagerTraining = validateBody(
   zodCreateManyTransportManagerTrainingSchema
 );
 export const validateUpdateTransportManagerTraining = validateBody(
   zodUpdateTransportManagerTrainingSchema
+);
+export const validateTransportManagerTrainingIdParam = validateParams(
+  zodTransportManagerTrainingIdParamSchema
+);
+export const validateTransportManagerTrainingAndManagerIdParam = validateParams(
+  zodTransportManagerTrainingAndManagerIdParamSchema
+);
+export const validateSearchTransportManagerTrainingQueries = validateQuery(
+  zodSearchTransportManagerTrainingQueriesSchema
 );

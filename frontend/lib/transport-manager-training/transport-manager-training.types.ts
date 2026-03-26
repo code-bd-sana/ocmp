@@ -41,6 +41,7 @@ export interface TransportManagerTrainingListResponse {
 
 /** Body for POST /transport-manager-training/create-transport-manager-training */
 export interface CreateTransportManagerTrainingInput {
+  standAloneId?: string;
   trainingCourse: string;
   unitTitle: string;
   completionDate: string;
