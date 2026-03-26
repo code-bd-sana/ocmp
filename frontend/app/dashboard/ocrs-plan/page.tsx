@@ -4,7 +4,10 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ClientAction } from "@/service/client";
 import { UserAction } from "@/service/user";
-import { getCurrentUserRole, isStandaloneRole } from "@/service/shared/role-scope";
+import {
+  getCurrentUserRole,
+  isStandaloneRole,
+} from "@/service/shared/role-scope";
 
 /**
  * Landing page for /dashboard/ocrs-plan (no standAloneId).
