@@ -6,7 +6,12 @@ import {
 } from "@/lib/training-toolbox/training-toolbox.type";
 import { base_url } from "@/lib/utils";
 import { AuthAction, IApiResponse } from "./auth";
-import { UserAction } from "./user";
+import {
+  buildRoleScopedQuery,
+  getCurrentUserRole,
+  isStandaloneRole,
+  requireScopedClientId,
+} from "./shared/role-scope";
 
 interface ToolboxResponse {
   status: boolean;
@@ -64,20 +69,7 @@ function toErrorMessage(error: unknown, fallback: string): string {
   return fallback;
 }
 
-/**
- * Get the current user's role (cached or fresh fetch)
- */
-let cachedUserRole: string | null = null;
-const getUserRole = async (): Promise<string | null> => {
-  if (cachedUserRole) return cachedUserRole;
-  try {
-    const profileResp = await UserAction.getProfile();
-    cachedUserRole = profileResp.data?.role || null;
-    return cachedUserRole;
-  } catch {
-    return null;
-  }
-};
+
 
 export const TrainingToolboxAction = {
   buildTrainingToolboxFormData(
@@ -139,15 +131,16 @@ export const TrainingToolboxAction = {
     const token = AuthAction.GetAuthToken();
     if (!token) throw new Error("No authentication token found");
     try {
-      const userRole = await getUserRole();
+      const userRole = await getCurrentUserRole();
+      requireScopedClientId(userRole, data.standAloneId);
 
       const endpoint =
-        userRole === "STANDALONE_USER"
+        isStandaloneRole(userRole)
           ? `${base_url}/training-toolbox/create-stand-alone-training-toolbox`
           : `${base_url}/training-toolbox/create-training-toolbox`;
 
       const formData = this.buildTrainingToolboxFormData(
-        userRole === "STANDALONE_USER"
+        isStandaloneRole(userRole)
           ? {
               ...data,
               standAloneId: undefined,
@@ -177,23 +170,13 @@ export const TrainingToolboxAction = {
     const token = AuthAction.GetAuthToken();
     if (!token) throw new Error("No authentication token found");
     try {
-      const userRole = await getUserRole();
+      const userRole = await getCurrentUserRole();
 
-      // SA users: no standAloneId in query params
-      // TM users: include standAloneId in query params
-      const queryParams =
-        userRole === "STANDALONE_USER"
-          ? {
-              searchKey: params?.searchKey || undefined,
-              showPerPage: params?.showPerPage || 10,
-              pageNo: params?.pageNo || 1,
-            }
-          : {
-              standAloneId,
-              searchKey: params?.searchKey || undefined,
-              showPerPage: params?.showPerPage || 10,
-              pageNo: params?.pageNo || 1,
-            };
+      const queryParams = buildRoleScopedQuery(userRole, standAloneId, {
+        searchKey: params?.searchKey || undefined,
+        showPerPage: params?.showPerPage || 10,
+        pageNo: params?.pageNo || 1,
+      });
 
       const response = await axios.get<ToolboxListResponse>(
         `${base_url}/training-toolbox/get-training-toolbox/many`,
@@ -221,12 +204,13 @@ export const TrainingToolboxAction = {
     const token = AuthAction.GetAuthToken();
     if (!token) throw new Error("No authentication token found");
     try {
-      const userRole = await getUserRole();
+      const userRole = await getCurrentUserRole();
+      requireScopedClientId(userRole, standAloneId);
 
       // TM: separate route with standAloneId in URL path
       // SA: separate route without standAloneId
       const url =
-        userRole === "STANDALONE_USER"
+        isStandaloneRole(userRole)
           ? `${base_url}/training-toolbox/get-training-toolbox/${toolboxId}`
           : `${base_url}/training-toolbox/get-training-toolbox/${toolboxId}/${standAloneId}`;
 
@@ -253,12 +237,13 @@ export const TrainingToolboxAction = {
     const token = AuthAction.GetAuthToken();
     if (!token) throw new Error("No authentication token found");
     try {
-      const userRole = await getUserRole();
+      const userRole = await getCurrentUserRole();
+      requireScopedClientId(userRole, standAloneId);
 
       // TM: separate route with standAloneId in URL path
       // SA: separate route without standAloneId
       const url =
-        userRole === "STANDALONE_USER"
+        isStandaloneRole(userRole)
           ? `${base_url}/training-toolbox/update-training-toolbox/${toolboxId}`
           : `${base_url}/training-toolbox/update-training-toolbox/${toolboxId}/${standAloneId}`;
 
@@ -286,12 +271,13 @@ export const TrainingToolboxAction = {
     const token = AuthAction.GetAuthToken();
     if (!token) throw new Error("No authentication token found");
     try {
-      const userRole = await getUserRole();
+      const userRole = await getCurrentUserRole();
+      requireScopedClientId(userRole, standAloneId);
 
       // TM: separate route with standAloneId in URL path
       // SA: separate route without standAloneId
       const url =
-        userRole === "STANDALONE_USER"
+        isStandaloneRole(userRole)
           ? `${base_url}/training-toolbox/delete-training-toolbox/${toolboxId}`
           : `${base_url}/training-toolbox/delete-training-toolbox/${toolboxId}/${standAloneId}`;
 

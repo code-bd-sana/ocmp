@@ -2,6 +2,9 @@
 
 import { use, useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+import { UserAction } from "@/service/user";
+import { resolveRoleScopedRoute } from "@/lib/utils/role-route";
 
 import AddToolboxModal from "@/components/dashboard/training-toolbox/AddToolboxModal";
 import DeleteToolboxDialog from "@/components/dashboard/training-toolbox/DeleteToolboxModal";
@@ -25,6 +28,8 @@ interface PageProps {
 
 export default function TrainingToolboxPage({ params }: PageProps) {
   const { standAloneId } = use(params);
+  const router = useRouter();
+  const [roleReady, setRoleReady] = useState(false);
 
   const [rows, setRows] = useState<ToolboxTableRow[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -52,6 +57,49 @@ export default function TrainingToolboxPage({ params }: PageProps) {
   const [deleteLoading, setDeleteLoading] = useState(false);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    let isActive = true;
+
+    const ensureRoleScopedRoute = async () => {
+      try {
+        const profileResp = await UserAction.getProfile();
+        const userRole = profileResp.data?.role;
+        const userId = profileResp.data?._id;
+
+        if (!isActive) return;
+
+        const routeResult = resolveRoleScopedRoute({
+          role: userRole,
+          userId,
+          standAloneId,
+          basePath: "/dashboard/training-toolbox",
+        });
+
+        if (routeResult.error) {
+          setError(routeResult.error);
+          return;
+        }
+
+        if (routeResult.redirectTo) {
+          router.replace(routeResult.redirectTo);
+          return;
+        }
+
+        setRoleReady(true);
+      } catch {
+        if (!isActive) return;
+        setError("Failed to load your profile. Please sign in again.");
+      }
+    };
+
+    setRoleReady(false);
+    ensureRoleScopedRoute();
+
+    return () => {
+      isActive = false;
+    };
+  }, [standAloneId, router]);
 
   const fetchToolboxes = useCallback(
     async (search?: string) => {
@@ -85,8 +133,9 @@ export default function TrainingToolboxPage({ params }: PageProps) {
   );
 
   useEffect(() => {
+    if (!roleReady) return;
     fetchToolboxes();
-  }, [fetchToolboxes]);
+  }, [fetchToolboxes, roleReady]);
 
   const handleSearchChange = (value: string) => {
     setSearchQuery(value);
@@ -228,6 +277,16 @@ export default function TrainingToolboxPage({ params }: PageProps) {
       <div className="container mx-auto max-w-6xl py-10">
         <div className="flex h-64 items-center justify-center">
           <p className="text-destructive">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!roleReady) {
+    return (
+      <div className="container mx-auto max-w-6xl py-10">
+        <div className="flex h-64 items-center justify-center">
+          <p className="text-muted-foreground">Validating access...</p>
         </div>
       </div>
     );
