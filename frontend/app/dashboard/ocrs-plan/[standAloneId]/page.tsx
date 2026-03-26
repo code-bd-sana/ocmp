@@ -16,7 +16,10 @@ import {
   UpdateOcrsPlanInput,
 } from "@/lib/ocrs-plan/ocrs-plan.types";
 import { OcrsPlanAction } from "@/service/ocrs-plan";
+import { UserAction } from "@/service/user";
+import { resolveRoleScopedRoute } from "@/lib/utils/role-route";
 import { use, useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 interface PageProps {
@@ -25,6 +28,10 @@ interface PageProps {
 
 export default function OcrsPlanListPage({ params }: PageProps) {
   const { standAloneId } = use(params);
+  const router = useRouter();
+
+  // Role validation state
+  const [roleReady, setRoleReady] = useState(false);
 
   const [rows, setRows] = useState<OcrsPlanTableRow[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -79,9 +86,53 @@ export default function OcrsPlanListPage({ params }: PageProps) {
     [standAloneId],
   );
 
+  // ---------- Role-route validation ----------
   useEffect(() => {
-    fetchOcrsPlans();
-  }, [fetchOcrsPlans]);
+    let isActive = true;
+
+    const ensureRoleScopedRoute = async () => {
+      try {
+        const profileRes = await UserAction.getProfile();
+        if (!isActive) return;
+
+        const routeResult = resolveRoleScopedRoute({
+          role: profileRes.data?.role,
+          userId: profileRes.data?._id,
+          standAloneId,
+          basePath: "/dashboard/ocrs-plan",
+        });
+
+        if (routeResult.error) {
+          setError(routeResult.error);
+          setRoleReady(false);
+          return;
+        }
+
+        if (routeResult.redirectTo) {
+          router.replace(routeResult.redirectTo);
+          return;
+        }
+
+        // Role validation passed
+        setRoleReady(true);
+      } catch {
+        if (!isActive) return;
+        setError("Failed to validate access. Please try again.");
+        setRoleReady(false);
+      }
+    };
+
+    ensureRoleScopedRoute();
+    return () => {
+      isActive = false;
+    };
+  }, [standAloneId, router]);
+
+  useEffect(() => {
+    if (roleReady) {
+      fetchOcrsPlans();
+    }
+  }, [fetchOcrsPlans, roleReady]);
 
   // Debounced search
   const handleSearchChange = (value: string) => {
@@ -209,6 +260,17 @@ export default function OcrsPlanListPage({ params }: PageProps) {
       <div className="container mx-auto max-w-6xl py-10">
         <div className="flex h-64 items-center justify-center">
           <p className="text-destructive">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ---------- Role validation state ----------
+  if (!roleReady) {
+    return (
+      <div className="container mx-auto max-w-6xl py-10">
+        <div className="flex h-64 items-center justify-center">
+          <p className="text-muted-foreground">Validating access...</p>
         </div>
       </div>
     );

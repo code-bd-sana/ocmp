@@ -1,12 +1,16 @@
 import { axiosInstance } from "@/lib/utils/axiosInstance";
 import { base_url } from "@/lib/utils";
 import {
-  CreateOcrsPlanAsStandAloneInput,
   CreateOcrsPlanInput,
   OcrsPlanRow,
-  UpdateOcrsPlanAsStandAloneInput,
   UpdateOcrsPlanInput,
 } from "@/lib/ocrs-plan/ocrs-plan.types";
+import {
+  buildRoleScopedQuery,
+  getCurrentUserRole,
+  isStandaloneRole,
+  requireScopedClientId,
+} from "./shared/role-scope";
 
 interface OcrsPlanResponse {
   status: boolean;
@@ -34,10 +38,13 @@ interface SearchParams {
 
 export const OcrsPlanAction = {
   /**
-   * Create an ocrs plan as transport manager
+   * Create an ocrs plan - role-aware routing and body filtering
    */
   async createOcrsPlan(data: CreateOcrsPlanInput): Promise<OcrsPlanResponse> {
     try {
+      const userRole = await getCurrentUserRole();
+      requireScopedClientId(userRole, data.standAloneId);
+
       const formData = new FormData();
 
       if (data.roadWorthinessScore) {
@@ -49,7 +56,11 @@ export const OcrsPlanAction = {
       if (data.actionRequired) {
         formData.append("actionRequired", data.actionRequired);
       }
-      formData.append("standAloneId", data.standAloneId);
+
+      // Only add standAloneId for transport managers
+      if (!isStandaloneRole(userRole) && data.standAloneId) {
+        formData.append("standAloneId", data.standAloneId);
+      }
 
       if (data.attachments?.length) {
         data.attachments.forEach((file) => {
@@ -57,10 +68,11 @@ export const OcrsPlanAction = {
         });
       }
 
-      const response = await axiosInstance.post(
-        `${base_url}/ocrs-plan/create-ocrs-plan`,
-        formData,
-      );
+      const endpoint = isStandaloneRole(userRole)
+        ? `${base_url}/ocrs-plan/create-stand-alone-ocrs-plan`
+        : `${base_url}/ocrs-plan/create-ocrs-plan`;
+
+      const response = await axiosInstance.post(endpoint, formData);
       return response.data;
     } catch (error: unknown) {
       const err = error as {
@@ -78,66 +90,24 @@ export const OcrsPlanAction = {
   },
 
   /**
-   * Create an ocrs plan as standalone user
-   */
-  async createOcrsPlanAsStandAlone(
-    data: CreateOcrsPlanAsStandAloneInput,
-  ): Promise<OcrsPlanResponse> {
-    try {
-      const formData = new FormData();
-
-      if (data.roadWorthinessScore) {
-        formData.append("roadWorthinessScore", data.roadWorthinessScore);
-      }
-      if (data.overallTrafficScore) {
-        formData.append("overallTrafficScore", data.overallTrafficScore);
-      }
-      if (data.actionRequired) {
-        formData.append("actionRequired", data.actionRequired);
-      }
-
-      if (data.attachments?.length) {
-        data.attachments.forEach((file) => {
-          formData.append("attachments", file);
-        });
-      }
-
-      const response = await axiosInstance.post(
-        `${base_url}/ocrs-plan/create-stand-alone-ocrs-plan`,
-        formData,
-      );
-      return response.data;
-    } catch (error: unknown) {
-      const err = error as {
-        response?: { data?: { message?: string } };
-        message?: string;
-      };
-      return {
-        status: false,
-        message:
-          err.response?.data?.message ||
-          err.message ||
-          "Failed to create OCRS plan",
-      };
-    }
-  },
-
-  /**
-   * Get all ocrs plans for a client (transport manager)
+   * Get all ocrs plans - role-aware routing for query params
    */
   async getOcrsPlans(
     standAloneId: string,
     params?: SearchParams,
   ): Promise<OcrsPlansListResponse> {
     try {
+      const userRole = await getCurrentUserRole();
+
+      const queryParams = buildRoleScopedQuery(userRole, standAloneId, {
+        searchKey: params?.searchKey || undefined,
+        showPerPage: params?.showPerPage || 10,
+        pageNo: params?.pageNo || 1,
+      });
+
       const response = await axiosInstance.get(
         `${base_url}/ocrs-plan/get-ocrs-plan/many`,
-        {
-          params: {
-            standAloneId,
-            ...params,
-          },
-        },
+        { params: queryParams }
       );
       return response.data;
     } catch (error: unknown) {
@@ -156,43 +126,21 @@ export const OcrsPlanAction = {
   },
 
   /**
-   * Get all ocrs plans (standalone user)
-   */
-  async getOcrsPlansAsStandAlone(
-    params?: SearchParams,
-  ): Promise<OcrsPlansListResponse> {
-    try {
-      const response = await axiosInstance.get(
-        `${base_url}/ocrs-plan/get-ocrs-plan/many`,
-        { params },
-      );
-      return response.data;
-    } catch (error: unknown) {
-      const err = error as {
-        response?: { data?: { message?: string } };
-        message?: string;
-      };
-      return {
-        status: false,
-        message:
-          err.response?.data?.message ||
-          err.message ||
-          "Failed to fetch OCRS plans",
-      };
-    }
-  },
-
-  /**
-   * Get a single ocrs plan by ID (transport manager)
+   * Get a single ocrs plan by ID - role-aware routing
    */
   async getOcrsPlan(
     id: string,
     standAloneId: string,
   ): Promise<OcrsPlanResponse> {
     try {
-      const response = await axiosInstance.get(
-        `${base_url}/ocrs-plan/get-ocrs-plan/${id}/${standAloneId}`,
-      );
+      const userRole = await getCurrentUserRole();
+      requireScopedClientId(userRole, standAloneId);
+
+      const url = isStandaloneRole(userRole)
+        ? `${base_url}/ocrs-plan/get-ocrs-plan/${id}`
+        : `${base_url}/ocrs-plan/get-ocrs-plan/${id}/${standAloneId}`;
+
+      const response = await axiosInstance.get(url);
       return response.data;
     } catch (error: unknown) {
       const err = error as {
@@ -210,31 +158,7 @@ export const OcrsPlanAction = {
   },
 
   /**
-   * Get a single ocrs plan by ID (standalone user)
-   */
-  async getOcrsPlanAsStandAlone(id: string): Promise<OcrsPlanResponse> {
-    try {
-      const response = await axiosInstance.get(
-        `${base_url}/ocrs-plan/get-ocrs-plan/${id}`,
-      );
-      return response.data;
-    } catch (error: unknown) {
-      const err = error as {
-        response?: { data?: { message?: string } };
-        message?: string;
-      };
-      return {
-        status: false,
-        message:
-          err.response?.data?.message ||
-          err.message ||
-          "Failed to fetch OCRS plan",
-      };
-    }
-  },
-
-  /**
-   * Update an ocrs plan (transport manager)
+   * Update an ocrs plan - role-aware routing
    */
   async updateOcrsPlan(
     id: string,
@@ -242,6 +166,9 @@ export const OcrsPlanAction = {
     data: UpdateOcrsPlanInput,
   ): Promise<OcrsPlanResponse> {
     try {
+      const userRole = await getCurrentUserRole();
+      requireScopedClientId(userRole, standAloneId);
+
       const formData = new FormData();
 
       if (data.roadWorthinessScore) {
@@ -255,8 +182,8 @@ export const OcrsPlanAction = {
       }
 
       if (data.removeAttachmentIds?.length) {
-        data.removeAttachmentIds.forEach((id) => {
-          formData.append("removeAttachmentIds", id);
+        data.removeAttachmentIds.forEach((itemId) => {
+          formData.append("removeAttachmentIds", itemId);
         });
       }
 
@@ -266,10 +193,11 @@ export const OcrsPlanAction = {
         });
       }
 
-      const response = await axiosInstance.patch(
-        `${base_url}/ocrs-plan/update-ocrs-plan/${id}/${standAloneId}`,
-        formData,
-      );
+      const url = isStandaloneRole(userRole)
+        ? `${base_url}/ocrs-plan/update-ocrs-plan/${id}`
+        : `${base_url}/ocrs-plan/update-ocrs-plan/${id}/${standAloneId}`;
+
+      const response = await axiosInstance.patch(url, formData);
       return response.data;
     } catch (error: unknown) {
       const err = error as {
@@ -287,92 +215,21 @@ export const OcrsPlanAction = {
   },
 
   /**
-   * Update an ocrs plan (standalone user)
-   */
-  async updateOcrsPlanAsStandAlone(
-    id: string,
-    data: UpdateOcrsPlanAsStandAloneInput,
-  ): Promise<OcrsPlanResponse> {
-    try {
-      const formData = new FormData();
-
-      if (data.roadWorthinessScore) {
-        formData.append("roadWorthinessScore", data.roadWorthinessScore);
-      }
-      if (data.overallTrafficScore) {
-        formData.append("overallTrafficScore", data.overallTrafficScore);
-      }
-      if (data.actionRequired) {
-        formData.append("actionRequired", data.actionRequired);
-      }
-
-      if (data.removeAttachmentIds?.length) {
-        data.removeAttachmentIds.forEach((id) => {
-          formData.append("removeAttachmentIds", id);
-        });
-      }
-
-      if (data.attachments?.length) {
-        data.attachments.forEach((file) => {
-          formData.append("attachments", file);
-        });
-      }
-
-      const response = await axiosInstance.patch(
-        `${base_url}/ocrs-plan/update-ocrs-plan/${id}`,
-        formData,
-      );
-      return response.data;
-    } catch (error: unknown) {
-      const err = error as {
-        response?: { data?: { message?: string } };
-        message?: string;
-      };
-      return {
-        status: false,
-        message:
-          err.response?.data?.message ||
-          err.message ||
-          "Failed to update OCRS plan",
-      };
-    }
-  },
-
-  /**
-   * Delete an ocrs plan (transport manager)
+   * Delete an ocrs plan - role-aware routing
    */
   async deleteOcrsPlan(
     id: string,
     standAloneId: string,
   ): Promise<OcrsPlanResponse> {
     try {
-      const response = await axiosInstance.delete(
-        `${base_url}/ocrs-plan/delete-ocrs-plan/${id}/${standAloneId}`,
-      );
-      return response.data;
-    } catch (error: unknown) {
-      const err = error as {
-        response?: { data?: { message?: string } };
-        message?: string;
-      };
-      return {
-        status: false,
-        message:
-          err.response?.data?.message ||
-          err.message ||
-          "Failed to delete OCRS plan",
-      };
-    }
-  },
+      const userRole = await getCurrentUserRole();
+      requireScopedClientId(userRole, standAloneId);
 
-  /**
-   * Delete an ocrs plan (standalone user)
-   */
-  async deleteOcrsPlanAsStandAlone(id: string): Promise<OcrsPlanResponse> {
-    try {
-      const response = await axiosInstance.delete(
-        `${base_url}/ocrs-plan/delete-ocrs-plan/${id}`,
-      );
+      const url = isStandaloneRole(userRole)
+        ? `${base_url}/ocrs-plan/delete-ocrs-plan/${id}`
+        : `${base_url}/ocrs-plan/delete-ocrs-plan/${id}/${standAloneId}`;
+
+      const response = await axiosInstance.delete(url);
       return response.data;
     } catch (error: unknown) {
       const err = error as {
