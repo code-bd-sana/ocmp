@@ -103,10 +103,15 @@ export const deleteSelfService = catchAsync(async (req: AuthenticatedRequest, re
  * @returns {Promise<Partial<ISelfService>>} - The retrieved self-service.
  * @throws {Error} - Throws an error if the self-service retrieval fails.
  */
-export const getSelfServiceById = catchAsync(async (req: Request, res: Response) => {
-  const { id } = req.params;
+export const getSelfServiceById = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+  const paramToString = (p?: string | string[]) => (Array.isArray(p) ? p[0] : p);
+  const id = paramToString(req.params.id);
+  const standAloneId = paramToString((req.params as any).standAloneId);
+  const accessOwnerId =
+    req.user!.role === UserRole.TRANSPORT_MANAGER ? standAloneId : req.user!._id;
+
   // Call the service method to get the self-service by ID and get the result
-  const result = await selfServiceServices.getSelfServiceById(id as string);
+  const result = await selfServiceServices.getSelfServiceById(id as string, accessOwnerId);
   if (!result) throw new Error('Self-service not found');
   // Send a success response with the retrieved resource data
   ServerResponse(res, true, 200, 'Self-service retrieved successfully', result);

@@ -1,7 +1,10 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { use, useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { resolveRoleScopedRoute } from "@/lib/utils/role-route";
+import { UserAction } from "@/service/user";
 
 import SelfServiceHeader from "@/components/dashboard/self-service/SelfServiceHeader";
 import SelfServiceTable, {
@@ -26,6 +29,9 @@ interface PageProps {
 
 export default function SelfServiceDetailsPage({ params }: PageProps) {
   const { standAloneId } = use(params);
+  const router = useRouter();
+
+  const [roleReady, setRoleReady] = useState(false);
 
   const [rows, setRows] = useState<SelfServiceTableRow[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -81,8 +87,52 @@ export default function SelfServiceDetailsPage({ params }: PageProps) {
   );
 
   useEffect(() => {
-    fetchSelfServices();
-  }, [fetchSelfServices]);
+    let isActive = true;
+
+    const ensureRoleScopedRoute = async () => {
+      try {
+        const profileRes = await UserAction.getProfile();
+        if (!isActive) return;
+
+        const routeResult = resolveRoleScopedRoute({
+          role: profileRes.data?.role,
+          userId: profileRes.data?._id,
+          standAloneId,
+          basePath: "/dashboard/self-service",
+        });
+
+        if (routeResult.error) {
+          setError(routeResult.error);
+          setRoleReady(false);
+          return;
+        }
+
+        if (routeResult.redirectTo) {
+          router.replace(routeResult.redirectTo);
+          return;
+        }
+
+        setRoleReady(true);
+      } catch {
+        if (!isActive) return;
+        setError("Failed to validate access. Please try again.");
+        setRoleReady(false);
+      }
+    };
+
+    setRoleReady(false);
+    ensureRoleScopedRoute();
+
+    return () => {
+      isActive = false;
+    };
+  }, [standAloneId, router]);
+
+  useEffect(() => {
+    if (roleReady) {
+      fetchSelfServices();
+    }
+  }, [fetchSelfServices, roleReady]);
 
   const handleSearchChange = (value: string) => {
     setSearchQuery(value);
@@ -215,6 +265,16 @@ export default function SelfServiceDetailsPage({ params }: PageProps) {
       <div className="container mx-auto max-w-6xl py-10">
         <div className="flex h-64 items-center justify-center">
           <p className="text-destructive">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!roleReady) {
+    return (
+      <div className="container mx-auto max-w-6xl py-10">
+        <div className="flex h-64 items-center justify-center">
+          <p className="text-muted-foreground">Validating access...</p>
         </div>
       </div>
     );
