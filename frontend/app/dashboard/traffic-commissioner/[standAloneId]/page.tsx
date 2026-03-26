@@ -15,7 +15,10 @@ import {
   UpdateTrafficCommissionerInput,
   trafficCommissionerRow,
 } from "@/lib/traffic-commissioner/traffic-commissioner.type";
+import { resolveRoleScopedRoute } from "@/lib/utils/role-route";
 import { TrafficCommissionerAction } from "@/service/traffic-commissioner";
+import { UserAction } from "@/service/user";
+import { useRouter } from "next/navigation";
 import { use, useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -25,6 +28,9 @@ interface PageProps {
 
 export default function TrafficCommissionerPage({ params }: PageProps) {
   const { standAloneId } = use(params);
+  const router = useRouter();
+
+  const [roleReady, setRoleReady] = useState(false);
   const [rows, setRows] = useState<TrafficCommissionerTableRow[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
@@ -86,8 +92,50 @@ export default function TrafficCommissionerPage({ params }: PageProps) {
   );
 
   useEffect(() => {
-    fetchTrafficCommissioner();
-  }, [fetchTrafficCommissioner]);
+    let isActive = true;
+
+    const ensureRoleScopedRoute = async () => {
+      try {
+        const profileRes = await UserAction.getProfile();
+        if (!isActive) return;
+
+        const routeResult = resolveRoleScopedRoute({
+          role: profileRes.data?.role,
+          userId: profileRes.data?._id,
+          standAloneId,
+          basePath: "/dashboard/traffic-commissioner",
+        });
+
+        if (routeResult.error) {
+          setError(routeResult.error);
+          setRoleReady(false);
+          return;
+        }
+
+        if (routeResult.redirectTo) {
+          router.replace(routeResult.redirectTo);
+          return;
+        }
+
+        setRoleReady(true);
+      } catch {
+        if (!isActive) return;
+        setError("Failed to validate access. Please try again.");
+        setRoleReady(false);
+      }
+    };
+
+    ensureRoleScopedRoute();
+    return () => {
+      isActive = false;
+    };
+  }, [standAloneId, router]);
+
+  useEffect(() => {
+    if (roleReady) {
+      fetchTrafficCommissioner();
+    }
+  }, [fetchTrafficCommissioner, roleReady]);
 
   // Debounced search
   const handleSearchChange = (value: string) => {
@@ -262,6 +310,16 @@ export default function TrafficCommissionerPage({ params }: PageProps) {
       <div className="container mx-auto max-w-6xl py-10">
         <div className="flex h-64 items-center justify-center">
           <p className="text-destructive">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!roleReady) {
+    return (
+      <div className="container mx-auto max-w-6xl py-10">
+        <div className="flex h-64 items-center justify-center">
+          <p className="text-muted-foreground">Validating access...</p>
         </div>
       </div>
     );
