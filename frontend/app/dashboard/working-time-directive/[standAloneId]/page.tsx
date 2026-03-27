@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import WorkingTimeDirectiveHeader from "@/components/dashboard/working-time-directives/WorkingTimeDirectiveHeader";
@@ -18,6 +19,8 @@ import {
   CreateWorkingTimeDirectiveInput,
   UpdateWorkingTimeDirectiveInput,
 } from "@/lib/working-time-directives/working-time-directive.types";
+import { UserAction } from "@/service/user";
+import { resolveRoleScopedRoute } from "@/lib/utils/role-route";
 
 interface PageProps {
   params: Promise<{ standAloneId: string }>;
@@ -25,6 +28,8 @@ interface PageProps {
 
 export default function WorkingTimeDirectivePage({ params }: PageProps) {
   const { standAloneId } = use(params);
+  const router = useRouter();
+  const [roleReady, setRoleReady] = useState(false);
 
   const [rows, setRows] = useState<WTDTableRow[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -48,6 +53,49 @@ export default function WorkingTimeDirectivePage({ params }: PageProps) {
   const [deleteLoading, setDeleteLoading] = useState(false);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    let isActive = true;
+
+    const ensureRoleScopedRoute = async () => {
+      try {
+        const profileResp = await UserAction.getProfile();
+        const userRole = profileResp.data?.role;
+        const userId = profileResp.data?._id;
+
+        if (!isActive) return;
+
+        const routeResult = resolveRoleScopedRoute({
+          role: userRole,
+          userId,
+          standAloneId,
+          basePath: "/dashboard/working-time-directive",
+        });
+
+        if (routeResult.error) {
+          setError(routeResult.error);
+          return;
+        }
+
+        if (routeResult.redirectTo) {
+          router.replace(routeResult.redirectTo);
+          return;
+        }
+
+        setRoleReady(true);
+      } catch {
+        if (!isActive) return;
+        setError("Failed to load your profile. Please sign in again.");
+      }
+    };
+
+    setRoleReady(false);
+    ensureRoleScopedRoute();
+
+    return () => {
+      isActive = false;
+    };
+  }, [standAloneId, router]);
 
   // ---------- Fetch working time directives ----------
   const fetchDirectives = useCallback(
@@ -80,8 +128,9 @@ export default function WorkingTimeDirectivePage({ params }: PageProps) {
   );
 
   useEffect(() => {
+    if (!roleReady) return;
     fetchDirectives();
-  }, [fetchDirectives]);
+  }, [fetchDirectives, roleReady]);
 
   // Debounced search
   const handleSearchChange = (value: string) => {
@@ -207,6 +256,17 @@ export default function WorkingTimeDirectivePage({ params }: PageProps) {
       <div className="container mx-auto max-w-6xl py-10">
         <div className="flex h-64 items-center justify-center">
           <p className="text-destructive">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ---------- Loading state ----------
+  if (!roleReady) {
+    return (
+      <div className="container mx-auto max-w-6xl py-10">
+        <div className="flex h-64 items-center justify-center">
+          <p className="text-muted-foreground">Validating access...</p>
         </div>
       </div>
     );

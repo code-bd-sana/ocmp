@@ -13,8 +13,11 @@ import {
   CreateFuelUsageBody,
   UpdateFuelUsageBody,
 } from "@/lib/fuel-usage/fuel-usage.types";
+import { resolveRoleScopedRoute } from "@/lib/utils/role-route";
 import { FuelUsageAction } from "@/service/fuel-usage";
+import { UserAction } from "@/service/user";
 import { use, useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 interface PageProps {
@@ -23,6 +26,8 @@ interface PageProps {
 
 export default function FuelUsagePage({ params }: PageProps) {
   const { standAloneId } = use(params);
+  const router = useRouter();
+  const [roleReady, setRoleReady] = useState(false);
 
   const [rows, setRows] = useState<FuelUsageTableRow[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -63,6 +68,7 @@ export default function FuelUsagePage({ params }: PageProps) {
         });
         if (res.status && res.data) {
           setRows(toFuelUsageTableRows(res.data.fuelUsages));
+          setError(null);
         } else {
           setError(res.message || "Failed to load fuel usage");
         }
@@ -78,8 +84,52 @@ export default function FuelUsagePage({ params }: PageProps) {
   );
 
   useEffect(() => {
+    let isActive = true;
+
+    const ensureRoleScopedRoute = async () => {
+      try {
+        const profileResp = await UserAction.getProfile();
+        const userRole = profileResp.data?.role;
+        const userId = profileResp.data?._id;
+
+        if (!isActive) return;
+
+        const routeResult = resolveRoleScopedRoute({
+          role: userRole,
+          userId,
+          standAloneId,
+          basePath: "/dashboard/fuel-usage",
+        });
+
+        if (routeResult.error) {
+          setError(routeResult.error);
+          return;
+        }
+
+        if (routeResult.redirectTo) {
+          router.replace(routeResult.redirectTo);
+          return;
+        }
+
+        setRoleReady(true);
+      } catch {
+        if (!isActive) return;
+        setError("Failed to load your profile. Please sign in again.");
+      }
+    };
+
+    setRoleReady(false);
+    ensureRoleScopedRoute();
+
+    return () => {
+      isActive = false;
+    };
+  }, [standAloneId, router]);
+
+  useEffect(() => {
+    if (!roleReady) return;
     fetchFuelUsage();
-  }, [fetchFuelUsage]);
+  }, [fetchFuelUsage, roleReady]);
 
   // Debounced search
   const handleSearchChange = (value: string) => {
@@ -90,13 +140,20 @@ export default function FuelUsagePage({ params }: PageProps) {
     }, 400);
   };
 
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
+
   // Create Fuel Usage
 
   const handleCreateFuelUsage = async (data: CreateFuelUsageBody) => {
     try {
-      // If we have a standAloneId, include it and use the standalone endpoint
-      if (standAloneId) data.standAloneId = standAloneId;
-      const res = await FuelUsageAction.createFuelUsageAsManager(data);
+      const res = await FuelUsageAction.createFuelUsageAsManager({
+        ...data,
+        standAloneId,
+      });
       if (res.status) {
         toast.success(res.message || "Fuel usage created successfully");
         setAddOpen(false);
@@ -179,6 +236,17 @@ export default function FuelUsagePage({ params }: PageProps) {
       <div className="container mx-auto max-w-6xl py-10">
         <div className="flex h-64 items-center justify-center">
           <p className="text-destructive">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Loading state
+  if (!roleReady) {
+    return (
+      <div className="container mx-auto max-w-6xl py-10">
+        <div className="flex h-64 items-center justify-center">
+          <p className="text-muted-foreground">Validating access...</p>
         </div>
       </div>
     );

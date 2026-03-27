@@ -6,6 +6,12 @@ import {
   UpdateWheelReTorqueInput,
   WheelReTorqueRow,
 } from "@/lib/wheel-retorque/wheel-retorque.types";
+import {
+  buildRoleScopedQuery,
+  getCurrentUserRole,
+  isStandaloneRole,
+  requireScopedClientId,
+} from "./shared/role-scope";
 
 interface WheelRetorqueResponse {
   status: boolean;
@@ -79,16 +85,26 @@ export const WheelRetorquePolicyAction = {
    * Create a new Wheel Retorque Policy Monitoring as Transport Manager
    */
   async createWheelRetorque(
-    // TODO: Issue can arise as the standalone id is optional in create input, but required in API. Need to handle this better.
     data: CreateWheelReTorqueInput,
   ): Promise<WheelRetorqueResponse> {
     const token = AuthAction.GetAuthToken();
     if (!token) throw new Error("No authentication token found");
 
     try {
+      const userRole = await getCurrentUserRole();
+      requireScopedClientId(userRole, data.standAloneId);
+
+      const endpoint = isStandaloneRole(userRole)
+        ? `${base_url}/wheel-retorque-policy/create-stand-alone-wheel-retorque-policy-monitoring`
+        : `${base_url}/wheel-retorque-policy/create-wheel-retorque-policy-monitoring`;
+
+      const standAloneBody = { ...data };
+      delete (standAloneBody as { standAloneId?: string }).standAloneId;
+      const body = isStandaloneRole(userRole) ? standAloneBody : data;
+
       const response = await axios.post<WheelRetorqueResponse>(
-        `${base_url}/wheel-retorque-policy/create-wheel-retorque-policy-monitoring`,
-        data,
+        endpoint,
+        body,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -145,16 +161,18 @@ export const WheelRetorquePolicyAction = {
     if (!token) throw new Error("No authentication token found");
 
     try {
+      const userRole = await getCurrentUserRole();
+      const queryParams = buildRoleScopedQuery(userRole, standAloneId, {
+        searchKey: params?.searchKey || undefined,
+        showPerPage: params?.showPerPage || 10,
+        pageNo: params?.pageNo || 1,
+      });
+
       const response = await axios.get<BackendWheelRetorqueListResponse>(
         `${base_url}/wheel-retorque-policy/get-wheel-retorque-policy-monitorings`,
         {
           headers: { Authorization: `Bearer ${token}` },
-          params: {
-            standAloneId,
-            searchKey: params?.searchKey || undefined,
-            showPerPage: params?.showPerPage || 10,
-            pageNo: params?.pageNo || 1,
-          },
+          params: queryParams,
         },
       );
 
@@ -235,11 +253,17 @@ export const WheelRetorquePolicyAction = {
     if (!token) throw new Error("No authentication token found");
 
     try {
+      const userRole = await getCurrentUserRole();
+      requireScopedClientId(userRole, standAloneId);
+
+      const url = isStandaloneRole(userRole)
+        ? `${base_url}/wheel-retorque-policy/get-wheel-retorque-policy-monitoring/${monitoringId}`
+        : `${base_url}/wheel-retorque-policy/get-wheel-retorque-policy-monitoring/${monitoringId}/${standAloneId}`;
+
       const response = await axios.get<WheelRetorqueResponse>(
-        `${base_url}/wheel-retorque-policy/get-wheel-retorque-policy-monitoring/${monitoringId}`,
+        url,
         {
           headers: { Authorization: `Bearer ${token}` },
-          params: { standAloneId },
         },
       );
       return response.data;
@@ -266,8 +290,15 @@ export const WheelRetorquePolicyAction = {
     if (!token) throw new Error("No authentication token found");
 
     try {
+      const userRole = await getCurrentUserRole();
+      requireScopedClientId(userRole, standAloneId);
+
+      const url = isStandaloneRole(userRole)
+        ? `${base_url}/wheel-retorque-policy/update-wheel-retorque-policy-monitoring/${monitoringId}`
+        : `${base_url}/wheel-retorque-policy/update-wheel-retorque-policy-monitoring-by-manager/${monitoringId}/${standAloneId}`;
+
       const response = await axios.patch<WheelRetorqueResponse>(
-        `${base_url}/wheel-retorque-policy/update-wheel-retorque-policy-monitoring-by-manager/${monitoringId}/${standAloneId}`,
+        url,
         data,
         { headers: { Authorization: `Bearer ${token}` } },
       );
@@ -322,8 +353,15 @@ export const WheelRetorquePolicyAction = {
     if (!token) throw new Error("No authentication token found");
 
     try {
+      const userRole = await getCurrentUserRole();
+      requireScopedClientId(userRole, standAloneId);
+
+      const url = isStandaloneRole(userRole)
+        ? `${base_url}/wheel-retorque-policy/delete-wheel-retorque-policy-monitoring/${monitoringId}`
+        : `${base_url}/wheel-retorque-policy/delete-wheel-retorque-policy-monitoring-by-manager/${monitoringId}/${standAloneId}`;
+
       const response = await axios.delete<WheelRetorqueResponse>(
-        `${base_url}/wheel-retorque-policy/delete-wheel-retorque-policy-monitoring-by-manager/${monitoringId}/${standAloneId}`,
+        url,
         { headers: { Authorization: `Bearer ${token}` } },
       );
       return response.data;

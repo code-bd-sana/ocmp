@@ -11,6 +11,7 @@ import {
 } from './working-time-directive.controller';
 
 import { validateSearchQueries } from '../../handlers/common-zod-validator';
+import ServerResponse from '../../helpers/responses/custom-response';
 import {
   validateCreateWorkingTimeDirectiveAsManager,
   validateCreateWorkingTimeDirectiveAsStandAlone,
@@ -41,8 +42,8 @@ router.post(
   '/create-working-time-directive',
   authorizedRoles([UserRole.TRANSPORT_MANAGER]),
   // checkSubscriptionValidity,
-  validateClientForManagerMiddleware,
   validateCreateWorkingTimeDirectiveAsManager,
+  validateClientForManagerMiddleware,
   createWorkingTimeDirectiveAsManager
 );
 
@@ -136,7 +137,13 @@ router.get(
   '/get-working-time-directives',
   authorizedRoles([UserRole.STANDALONE_USER, UserRole.TRANSPORT_MANAGER]),
   (req: AuthenticatedRequest, res, next) => {
+    if (req.user!.role === UserRole.STANDALONE_USER && req.query?.standAloneId) {
+      return ServerResponse(res, false, 400, 'standAloneId is not needed for standalone users');
+    }
     if (req.user!.role === UserRole.TRANSPORT_MANAGER) {
+      if (!req.query?.standAloneId) {
+        return ServerResponse(res, false, 400, 'standAloneId is required for transport managers');
+      }
       return validateClientForManagerMiddleware(req, res, next);
     }
     next();
@@ -151,19 +158,26 @@ router.get(
 );
 
 /**
+ * @route   GET /api/v1/working-time-directive/get-working-time-directive/:workingTimeDirectiveId/:standAloneId
+ * @desc    Get a single working time directive by ID
+ * @access  Transport Manager
+ */
+router.get(
+  '/get-working-time-directive/:workingTimeDirectiveId/:standAloneId',
+  authorizedRoles([UserRole.TRANSPORT_MANAGER]),
+  validateClientForManagerMiddleware,
+  validateWorkingTimeDirectiveAndManagerIdParam,
+  getWorkingTimeDirectiveById
+);
+
+/**
  * @route   GET /api/v1/working-time-directive/get-working-time-directive/:workingTimeDirectiveId
  * @desc    Get a single working time directive by ID
- * @access  Transport Manager & Standalone User
+ * @access  Standalone User
  */
 router.get(
   '/get-working-time-directive/:workingTimeDirectiveId',
-  authorizedRoles([UserRole.STANDALONE_USER, UserRole.TRANSPORT_MANAGER]),
-  (req: AuthenticatedRequest, res, next) => {
-    if (req.user!.role === UserRole.TRANSPORT_MANAGER) {
-      return validateClientForManagerMiddleware(req, res, next);
-    }
-    next();
-  },
+  authorizedRoles([UserRole.STANDALONE_USER]),
   validateWorkingTimeDirectiveIdParam,
   getWorkingTimeDirectiveById
 );
@@ -177,7 +191,13 @@ router.get(
   '/get-drivers-with-vehicles',
   authorizedRoles([UserRole.STANDALONE_USER, UserRole.TRANSPORT_MANAGER]),
   (req: AuthenticatedRequest, res, next) => {
+    if (req.user!.role === UserRole.STANDALONE_USER && req.query?.standAloneId) {
+      return ServerResponse(res, false, 400, 'standAloneId is not needed for standalone users');
+    }
     if (req.user!.role === UserRole.TRANSPORT_MANAGER) {
+      if (!req.query?.standAloneId) {
+        return ServerResponse(res, false, 400, 'standAloneId is required for transport managers');
+      }
       return validateClientForManagerMiddleware(req, res, next);
     }
     next();

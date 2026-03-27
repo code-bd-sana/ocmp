@@ -9,6 +9,12 @@ import {
 import { AuthAction, IApiResponse } from "./auth";
 import axios from "axios";
 import { base_url } from "@/lib/utils";
+import {
+  buildRoleScopedQuery,
+  getCurrentUserRole,
+  isStandaloneRole,
+  requireScopedClientId,
+} from "./shared/role-scope";
 
 function extractApiError(data: IApiResponse | undefined): string {
   if (!data) return "Something went wrong";
@@ -34,9 +40,20 @@ const createFuelUsageAsManager = async (
   const token = AuthAction.GetAuthToken();
   if (!token) throw new Error("No authentication token found");
   try {
+    const userRole = await getCurrentUserRole();
+    requireScopedClientId(userRole, data.standAloneId);
+
+    const endpoint = isStandaloneRole(userRole)
+      ? `${base_url}/fuel-usage/create-stand-alone-fuel-usage`
+      : `${base_url}/fuel-usage/create-fuel-usage`;
+
+    const standAloneBody = { ...data };
+    delete (standAloneBody as { standAloneId?: string }).standAloneId;
+    const body = isStandaloneRole(userRole) ? standAloneBody : data;
+
     const response = await axios.post<IApiResponse<FuelUsageListResponse>>(
-      `${base_url}/fuel-usage/create-fuel-usage`,
-      data,
+      endpoint,
+      body,
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -90,18 +107,20 @@ const getFuelUsages = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
+    const userRole = await getCurrentUserRole();
+    const queryParams = buildRoleScopedQuery(userRole, standAloneId, {
+      searchKey: params?.searchKey || undefined,
+      showPerPage: params?.showPerPage || 10,
+      pageNo: params?.pageNo || 1,
+    });
+
     const response = await axios.get<IApiResponse<FuelUsageListResponse>>(
       `${base_url}/fuel-usage/get-fuel-usages`,
       {
         headers: {
           Authorization: `Bearer ${token}`,
         },
-        params: {
-          standAloneId,
-          searchKey: params?.searchKey || undefined,
-          showPerPage: params?.showPerPage || 10,
-          pageNo: params?.pageNo || 1,
-        },
+        params: queryParams,
       },
     );
     return response.data;
@@ -122,13 +141,19 @@ const getFuelUsage = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
+    const userRole = await getCurrentUserRole();
+    requireScopedClientId(userRole, standAloneId);
+
+    const url = isStandaloneRole(userRole)
+      ? `${base_url}/fuel-usage/get-fuel-usage/${id}`
+      : `${base_url}/fuel-usage/get-fuel-usage/${id}/${standAloneId}`;
+
     const response = await axios.get<IApiResponse<FuelUsageListResponse>>(
-      `${base_url}/fuel-usage/get-fuel-usage/${id}/${standAloneId}`,
+      url,
       {
         headers: {
           Authorization: `Bearer ${token}`,
         },
-        params: { id, standAloneId },
       },
     );
     return response.data;
@@ -176,8 +201,15 @@ const updateFuelUsage = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
+    const userRole = await getCurrentUserRole();
+    requireScopedClientId(userRole, standAloneId);
+
+    const url = isStandaloneRole(userRole)
+      ? `${base_url}/fuel-usage/update-fuel-usage/${id}`
+      : `${base_url}/fuel-usage/update-fuel-usage/${id}/${standAloneId}`;
+
     const response = await axios.patch<IApiResponse<FuelUsageListResponse>>(
-      `${base_url}/fuel-usage/update-fuel-usage/${id}/${standAloneId}`,
+      url,
       data,
       {
         headers: {
@@ -230,8 +262,15 @@ const deleteFuelUsage = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
+    const userRole = await getCurrentUserRole();
+    requireScopedClientId(userRole, standAloneId);
+
+    const url = isStandaloneRole(userRole)
+      ? `${base_url}/fuel-usage/delete-fuel-usage/${id}`
+      : `${base_url}/fuel-usage/delete-fuel-usage/${id}/${standAloneId}`;
+
     const response = await axios.delete<IApiResponse<void>>(
-      `${base_url}/fuel-usage/delete-fuel-usage/${id}/${standAloneId}`,
+      url,
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -280,11 +319,14 @@ const getDriversWithVehicles = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
+    const userRole = await getCurrentUserRole();
+    const queryParams = buildRoleScopedQuery(userRole, standAloneId, {});
+
     const response = await axios.get<IApiResponse<DriverWithVehicles[]>>(
       `${base_url}/fuel-usage/get-drivers-with-vehicles`,
       {
         headers: { Authorization: `Bearer ${token}` },
-        params: { standAloneId },
+        params: queryParams,
       },
     );
     return response.data;

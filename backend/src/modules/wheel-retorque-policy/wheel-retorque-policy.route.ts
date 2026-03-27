@@ -10,6 +10,7 @@ import {
 } from './wheel-retorque-policy.controller';
 
 import { validateSearchQueries } from '../../handlers/common-zod-validator';
+import ServerResponse from '../../helpers/responses/custom-response';
 import {
   validateCreateWheelRetorquePolicyMonitoringAsManager,
   validateCreateWheelRetorquePolicyMonitoringAsStandAlone,
@@ -30,8 +31,8 @@ router.use(isAuthorized());
 router.post(
   '/create-wheel-retorque-policy-monitoring',
   authorizedRoles([UserRole.TRANSPORT_MANAGER]),
-  validateClientForManagerMiddleware,
   validateCreateWheelRetorquePolicyMonitoringAsManager,
+  validateClientForManagerMiddleware,
   createWheelRetorquePolicyMonitoringAsManager
 );
 
@@ -78,7 +79,13 @@ router.get(
   '/get-wheel-retorque-policy-monitorings',
   authorizedRoles([UserRole.STANDALONE_USER, UserRole.TRANSPORT_MANAGER]),
   (req: AuthenticatedRequest, res, next) => {
+    if (req.user!.role === UserRole.STANDALONE_USER && req.query?.standAloneId) {
+      return ServerResponse(res, false, 400, 'standAloneId is not needed for standalone users');
+    }
     if (req.user!.role === UserRole.TRANSPORT_MANAGER) {
+      if (!req.query?.standAloneId) {
+        return ServerResponse(res, false, 400, 'standAloneId is required for transport managers');
+      }
       return validateClientForManagerMiddleware(req, res, next);
     }
     next();
@@ -93,14 +100,16 @@ router.get(
 );
 
 router.get(
+  '/get-wheel-retorque-policy-monitoring/:wheelRetorquePolicyMonitoringId/:standAloneId',
+  authorizedRoles([UserRole.TRANSPORT_MANAGER]),
+  validateClientForManagerMiddleware,
+  validateWheelRetorquePolicyMonitoringAndManagerIdParam,
+  getWheelRetorquePolicyMonitoringById
+);
+
+router.get(
   '/get-wheel-retorque-policy-monitoring/:wheelRetorquePolicyMonitoringId',
-  authorizedRoles([UserRole.STANDALONE_USER, UserRole.TRANSPORT_MANAGER]),
-  (req: AuthenticatedRequest, res, next) => {
-    if (req.user!.role === UserRole.TRANSPORT_MANAGER) {
-      return validateClientForManagerMiddleware(req, res, next);
-    }
-    next();
-  },
+  authorizedRoles([UserRole.STANDALONE_USER]),
   validateWheelRetorquePolicyMonitoringIdParam,
   getWheelRetorquePolicyMonitoringById
 );

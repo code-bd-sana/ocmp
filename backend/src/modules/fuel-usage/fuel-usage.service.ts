@@ -1,11 +1,10 @@
 // Import the model
 import mongoose from 'mongoose';
 import FuelUsageSchema, { IFuelUsage } from '../../models/vehicle-transport/fuelUsage.schema';
-import { IdOrIdsInput, SearchQueryInput } from '../../handlers/common-zod-validator';
+import { IdOrIdsInput } from '../../handlers/common-zod-validator';
 import {
   CreateFuelUsageAsManagerInput,
   CreateFuelUsageAsStandAloneInput,
-  CreateFuelUsageInput,
   SearchFuelUsageInput,
   UpdateFuelUsageInput,
 } from './fuel-usage.validation';
@@ -192,9 +191,19 @@ const deleteFuelUsage = async (
  * @param {IdOrIdsInput['id']} id - The ID of the fuel-usage to retrieve.
  * @returns {Promise<Partial<IFuelUsage>>} - The retrieved fuel-usage.
  */
-const getFuelUsageById = async (id: IdOrIdsInput['id']): Promise<Partial<IFuelUsage | null>> => {
+const getFuelUsageById = async (
+  id: IdOrIdsInput['id'],
+  accessId?: string
+): Promise<Partial<IFuelUsage | null>> => {
+  const match: Record<string, any> = { _id: new mongoose.Types.ObjectId(id as string) };
+
+  if (accessId) {
+    const objectId = new mongoose.Types.ObjectId(accessId);
+    match.$or = [{ standAloneId: objectId }, { createdBy: objectId }];
+  }
+
   const result = await FuelUsage.aggregate([
-    { $match: { _id: new mongoose.Types.ObjectId(id as string) } },
+    { $match: match },
 
     // Join Driver
     {
@@ -206,9 +215,6 @@ const getFuelUsageById = async (id: IdOrIdsInput['id']): Promise<Partial<IFuelUs
       },
     },
     { $unwind: { path: '$driver', preserveNullAndEmptyArrays: true } },
-    {
-      $unwind: { path: '$driverDoc', preserveNullAndEmptyArrays: true },
-    },
     // Join Vehicle
     {
       $lookup: {
@@ -356,4 +362,3 @@ export const fuelUsageServices = {
   getManyFuelUsage,
   getDriversWithVehicles,
 };
-
