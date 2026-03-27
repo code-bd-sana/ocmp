@@ -377,7 +377,11 @@ export default function WheelRetorquePage({ params }: PageProps) {
       <DeleteWheelRetorqueDialog
         open={deleteOpen}
         onOpenChange={(open) => {
-          if (!open) setDeleteTarget(null);
+          setDeleteOpen(open);
+          if (!open) {
+            setDeleteTarget(null);
+            setDeleteLoading(false);
+          }
         }}
         onConfirm={handleDelete}
         itemName={
