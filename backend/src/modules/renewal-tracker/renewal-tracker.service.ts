@@ -9,18 +9,32 @@ import {
 import { deriveRenewalTrackerStatus } from './renewal-tracker.status';
 import SendEmail from '../../utils/email/send-email';
 
+/**
+ *
+ * @returns Start of today (00:00:00.000)
+ */
 const getStartOfToday = () => {
   const date = new Date();
   date.setHours(0, 0, 0, 0);
   return date;
 };
 
+/**
+ *
+ * @returns End of today (23:59:59.999)
+ * This is used to find all renewal trackers that are due for a reminder email today, ensuring we capture the entire day regardless of when the cron job runs.
+ */
 const getEndOfToday = () => {
   const date = new Date();
   date.setHours(23, 59, 59, 999);
   return date;
 };
 
+/**
+ *
+ * @param value Date or date string to format
+ * @returns Formatted date string in YYYY-MM-DD format, or 'N/A' if the input is invalid or not provided. This is used to create user-friendly email content for reminder notifications.
+ */
 const formatDate = (value?: Date | string) => {
   if (!value) return 'N/A';
   const date = new Date(value);
@@ -84,6 +98,11 @@ const mapPolicyProcedureRefs = (tracker: any) => {
   };
 };
 
+/**
+ *
+ * @param data Data for creating a renewal tracker as a manager, including all required fields and the ID of the user creating it.
+ * @returns The created renewal tracker document as Transport Manager
+ */
 const createRenewalTrackerAsManager = async (
   data: CreateRenewalTrackerAsManagerInput & { createdBy: mongoose.Types.ObjectId }
 ): Promise<Partial<IRenewalTracker>> => {
@@ -100,6 +119,11 @@ const createRenewalTrackerAsManager = async (
   return await newRenewalTracker.save();
 };
 
+/**
+ *
+ * @param data Data for creating a renewal tracker as a stand-alone user, including all required fields and the ID of the user creating it. The standAloneId will be set to the createdBy user ID to ensure it's scoped correctly.
+ * @returns The created renewal tracker document as Stand-alone user
+ */
 const createRenewalTrackerAsStandAlone = async (
   data: CreateRenewalTrackerAsStandAloneInput & { createdBy: mongoose.Types.ObjectId }
 ): Promise<Partial<IRenewalTracker>> => {
@@ -116,6 +140,11 @@ const createRenewalTrackerAsStandAlone = async (
   return await newRenewalTracker.save();
 };
 
+/**
+ *
+ * @param query Query parameters for searching and paginating renewal trackers, including searchKey, pagination options, and the ID and role of the requester to ensure proper scoping of results.
+ * @returns A paginated list of renewal trackers that match the search criteria and are accessible to the requester, along with total data count and total pages for pagination.
+ */
 const getManyRenewalTracker = async (
   query: SearchQueryInput & {
     standAloneId?: string;
@@ -173,6 +202,11 @@ const getManyRenewalTracker = async (
   return { renewalTrackers: mappedRenewalTrackers as any, totalData, totalPages };
 };
 
+/**
+ *
+ * @param id ID of the renewal tracker to retrieve, which must be accessible to the requester based on their role and ownership (either createdBy or standAloneId).
+ * @param accessId ID of the requester, used to ensure the retrieved renewal tracker is properly scoped and accessible to them.
+ */
 const getRenewalTrackerById = async (
   id: IdOrIdsInput['id'],
   accessId: string
@@ -191,6 +225,12 @@ const getRenewalTrackerById = async (
   return mapPolicyProcedureRefs(renewalTracker) as any;
 };
 
+/**
+ *
+ * @param id ID of the renewal tracker to update, which must be accessible to the requester based on their role and ownership (either createdBy or standAloneId).
+ * @param data Data for updating the renewal tracker, which can include any of the updatable fields. The function will also handle validation of referenced PolicyProcedure IDs and automatically derive the next status based on date fields.
+ * @param accessId ID of the requester, used to ensure the updated renewal tracker is properly scoped and accessible to them.
+ */
 const updateRenewalTracker = async (
   id: IdOrIdsInput['id'],
   data: UpdateRenewalTrackerInput,
@@ -224,6 +264,11 @@ const updateRenewalTracker = async (
   return updatedRenewalTracker as Partial<IRenewalTracker | null>;
 };
 
+/**
+ *
+ * @param id ID of the renewal tracker to delete, which must be accessible to the requester based on their role and ownership (either createdBy or standAloneId).
+ * @param accessId ID of the requester, used to ensure the deleted renewal tracker is properly scoped and accessible to them.
+ */
 const deleteRenewalTracker = async (
   id: IdOrIdsInput['id'],
   accessId: string
@@ -239,6 +284,10 @@ const deleteRenewalTracker = async (
   return deletedRenewalTracker as Partial<IRenewalTracker | null>;
 };
 
+/**
+ *
+ * @returns An object containing all the service functions related to renewal tracker operations, which can be imported and used in controllers or other parts of the application to perform CRUD operations and business logic related to renewal trackers.
+ */
 const syncRenewalTrackerStatus = async (): Promise<{
   updatedStatusCount: number;
   reminderEmailSentCount: number;
@@ -315,6 +364,7 @@ const syncRenewalTrackerStatus = async (): Promise<{
 
   const successfulReminderIds: mongoose.Types.ObjectId[] = [];
 
+  // Send reminder emails sequentially to avoid overwhelming the email service, especially if there are many reminders due on the same day. This also allows us to track which emails were sent successfully and update the corresponding renewal trackers accordingly.
   for (const tracker of dueReminderTrackers) {
     const ownerId = String(tracker.standAloneId || tracker.createdBy || '');
     const owner = ownerMap.get(ownerId);
@@ -352,6 +402,7 @@ const syncRenewalTrackerStatus = async (): Promise<{
       </div>
     `;
 
+    // In a real application, you might want to use a more robust email templating solution and handle potential errors from the email service more gracefully, possibly with retries or logging for failed attempts.
     const isSent = await SendEmail({
       to: owner.email,
       subject,
@@ -359,6 +410,7 @@ const syncRenewalTrackerStatus = async (): Promise<{
       html,
     });
 
+    // If the email was sent successfully, we update the lastReminderEmailSentAt field of the renewal tracker to avoid sending duplicate reminders on the same day.
     if (isSent) {
       successfulReminderIds.push(new mongoose.Types.ObjectId(String(tracker._id)));
     }
@@ -377,6 +429,9 @@ const syncRenewalTrackerStatus = async (): Promise<{
   };
 };
 
+/**
+ * A collection of service functions for managing renewal trackers.
+ */
 export const renewalTrackerServices = {
   createRenewalTrackerAsManager,
   createRenewalTrackerAsStandAlone,
