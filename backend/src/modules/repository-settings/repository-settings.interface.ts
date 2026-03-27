@@ -26,4 +26,5 @@ export interface TRepositorySettings {
   workingTimeDirective: boolean;
   policyProcedureReviewTracker: boolean;
   subcontractorDetails: boolean;
+  trainingRecords: boolean;
 }
