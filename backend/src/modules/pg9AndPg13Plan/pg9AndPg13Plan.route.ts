@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response, Router } from 'express';
 import authorizedRoles from '../../middlewares/authorized-roles';
 import isAuthorized from '../../middlewares/is-authorized';
+import ServerResponse from '../../helpers/responses/custom-response';
 import { validateClientForManagerMiddleware } from '../../middlewares/validate-client-for-manager';
 import { UserRole } from '../../models';
 import {
@@ -69,9 +70,17 @@ router.get(
   '/get-pg9-and-pg13-plans',
   authorizedRoles([UserRole.TRANSPORT_MANAGER, UserRole.STANDALONE_USER]),
   validateSearchPg9AndPg13PlansQueries,
-  (req: Request, _res: Response, next: NextFunction) => {
+  (req: Request, res: Response, next: NextFunction) => {
+    if ((req as any).user?.role === UserRole.STANDALONE_USER && (req as any).query?.standAloneId) {
+      return ServerResponse(
+        res,
+        false,
+        403,
+        'Forbidden: standAloneId is only allowed for transport managers'
+      );
+    }
     if ((req as any).user?.role === UserRole.TRANSPORT_MANAGER) {
-      return validateClientForManagerMiddleware(req, _res, next);
+      return validateClientForManagerMiddleware(req, res, next);
     }
     next();
   },

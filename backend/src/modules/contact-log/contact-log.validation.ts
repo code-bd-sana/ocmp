@@ -97,7 +97,8 @@ const zodContactLogSearchSchema = zodSearchQuerySchema.extend({
   // You can add meeting-note-specific search query parameters here if needed
   standAloneId: z
     .string()
-    .refine(isMongoId, { message: 'Please provide a valid MongoDB ObjectId for standAloneId' }),
+    .refine(isMongoId, { message: 'Please provide a valid MongoDB ObjectId for standAloneId' })
+    .optional(),
 });
 export type SearchContactLogQueryInput = z.infer<typeof zodContactLogSearchSchema>;
 
@@ -160,4 +161,3 @@ export const validateCreateContactLogAsStandalone = validateBody(
 export const validateUpdateContactLog = validateBody(zodUpdateContactLogSchema);
 export const validateUpdateContactLogIds = validateParams(zodContactLogAndManagerIdSchema);
 export const validateDeleteContactLogIds = validateParams(zodContactLogAndManagerIdSchema);
-
