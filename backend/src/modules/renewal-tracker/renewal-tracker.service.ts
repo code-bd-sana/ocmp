@@ -1,17 +1,32 @@
 import mongoose from 'mongoose';
 import { IdOrIdsInput, SearchQueryInput } from '../../handlers/common-zod-validator';
-import {
-  IRenewalTracker,
-  PolicyProcedure,
-  RenewalTracker,
-  UserRole,
-} from '../../models';
+import { IRenewalTracker, PolicyProcedure, RenewalTracker, User, UserRole } from '../../models';
 import {
   CreateRenewalTrackerAsManagerInput,
   CreateRenewalTrackerAsStandAloneInput,
   UpdateRenewalTrackerInput,
 } from './renewal-tracker.validation';
 import { deriveRenewalTrackerStatus } from './renewal-tracker.status';
+import SendEmail from '../../utils/email/send-email';
+
+const getStartOfToday = () => {
+  const date = new Date();
+  date.setHours(0, 0, 0, 0);
+  return date;
+};
+
+const getEndOfToday = () => {
+  const date = new Date();
+  date.setHours(23, 59, 59, 999);
+  return date;
+};
+
+const formatDate = (value?: Date | string) => {
+  if (!value) return 'N/A';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'N/A';
+  return date.toISOString().slice(0, 10);
+};
 
 // Validate that the provided refOrPolicyNo and responsiblePerson (if any) are valid PolicyProcedure references
 const validatePolicyProcedureRefs = async (data: {
@@ -133,8 +148,7 @@ const getManyRenewalTracker = async (
     ];
   }
 
-  const ownerIdForScope =
-    requesterRole === UserRole.TRANSPORT_MANAGER ? standAloneId : requesterId;
+  const ownerIdForScope = requesterRole === UserRole.TRANSPORT_MANAGER ? standAloneId : requesterId;
 
   if (ownerIdForScope) {
     const ownerObjectId = new mongoose.Types.ObjectId(String(ownerIdForScope));
@@ -161,7 +175,7 @@ const getManyRenewalTracker = async (
 
 const getRenewalTrackerById = async (
   id: IdOrIdsInput['id'],
-  accessId: string,
+  accessId: string
 ): Promise<Partial<IRenewalTracker | null>> => {
   const ownerObjectId = new mongoose.Types.ObjectId(accessId);
   const renewalTracker = await RenewalTracker.findOne({
@@ -212,17 +226,155 @@ const updateRenewalTracker = async (
 
 const deleteRenewalTracker = async (
   id: IdOrIdsInput['id'],
-  accessId: string,
+  accessId: string
 ): Promise<Partial<IRenewalTracker | null>> => {
-    const ownerObjectId = new mongoose.Types.ObjectId(accessId);
-    const existingRenewalTracker = await RenewalTracker.findOne({
-        _id: id,
-        $or: [{ standAloneId: ownerObjectId }, { createdBy: ownerObjectId }],
+  const ownerObjectId = new mongoose.Types.ObjectId(accessId);
+  const existingRenewalTracker = await RenewalTracker.findOne({
+    _id: id,
+    $or: [{ standAloneId: ownerObjectId }, { createdBy: ownerObjectId }],
+  });
+  if (!existingRenewalTracker) return null;
+
+  const deletedRenewalTracker = await RenewalTracker.findByIdAndDelete(id).lean();
+  return deletedRenewalTracker as Partial<IRenewalTracker | null>;
+};
+
+const syncRenewalTrackerStatus = async (): Promise<{
+  updatedStatusCount: number;
+  reminderEmailSentCount: number;
+}> => {
+  const trackers = await RenewalTracker.find({
+    $or: [
+      { startDate: { $exists: true } },
+      { expiryOrDueDate: { $exists: true } },
+      { reminderDate: { $exists: true } },
+    ],
+  })
+    .select(
+      '_id type item startDate expiryOrDueDate reminderSet reminderDate status standAloneId createdBy lastReminderEmailSentAt'
+    )
+    .lean();
+
+  const statusBulkUpdates = trackers
+    .map((tracker) => {
+      const nextStatus = deriveRenewalTrackerStatus({
+        startDate: tracker.startDate,
+        expiryOrDueDate: tracker.expiryOrDueDate,
+        reminderSet: Boolean(tracker.reminderSet),
+        reminderDate: tracker.reminderDate,
+      });
+
+      if (tracker.status === nextStatus) return null;
+      return {
+        updateOne: {
+          filter: { _id: tracker._id },
+          update: { $set: { status: nextStatus } },
+        },
+      };
+    })
+    .filter(Boolean);
+
+  let updatedStatusCount = 0;
+  if (statusBulkUpdates.length > 0) {
+    const statusUpdateResult = await RenewalTracker.bulkWrite(statusBulkUpdates as any);
+    updatedStatusCount = statusUpdateResult.modifiedCount;
+  }
+
+  const startOfToday = getStartOfToday();
+  const endOfToday = getEndOfToday();
+
+  const dueReminderTrackers = await RenewalTracker.find({
+    reminderSet: true,
+    reminderDate: { $gte: startOfToday, $lte: endOfToday },
+    $or: [
+      { lastReminderEmailSentAt: { $exists: false } },
+      { lastReminderEmailSentAt: { $lt: startOfToday } },
+    ],
+  })
+    .select(
+      '_id type item expiryOrDueDate reminderDate standAloneId createdBy providerOrIssuer description notes'
+    )
+    .lean();
+
+  if (dueReminderTrackers.length === 0) {
+    return { updatedStatusCount, reminderEmailSentCount: 0 };
+  }
+
+  const ownerIds = Array.from(
+    new Set(
+      dueReminderTrackers
+        .map((tracker) => String(tracker.standAloneId || tracker.createdBy || ''))
+        .filter(Boolean)
+    )
+  );
+
+  const owners = await User.find({ _id: { $in: ownerIds } })
+    .select('_id fullName email')
+    .lean();
+  const ownerMap = new Map(owners.map((owner) => [String(owner._id), owner]));
+
+  const successfulReminderIds: mongoose.Types.ObjectId[] = [];
+
+  for (const tracker of dueReminderTrackers) {
+    const ownerId = String(tracker.standAloneId || tracker.createdBy || '');
+    const owner = ownerMap.get(ownerId);
+
+    if (!owner?.email) continue;
+
+    const subject = `Renewal Reminder: ${tracker.item}`;
+    const text = [
+      `Hello ${owner.fullName || 'User'},`,
+      '',
+      `This is your reminder for renewal tracker item "${tracker.item}" (${tracker.type}).`,
+      `Reminder date: ${formatDate(tracker.reminderDate)}`,
+      `Expiry/Due date: ${formatDate(tracker.expiryOrDueDate)}`,
+      tracker.providerOrIssuer ? `Provider/Issuer: ${tracker.providerOrIssuer}` : '',
+      tracker.description ? `Description: ${tracker.description}` : '',
+      tracker.notes ? `Notes: ${tracker.notes}` : '',
+      '',
+      'Please review and take action if needed.',
+    ]
+      .filter(Boolean)
+      .join('\n');
+
+    const html = `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #111827;">
+        <p>Hello ${owner.fullName || 'User'},</p>
+        <p>This is your reminder for renewal tracker item <strong>${tracker.item}</strong> (${tracker.type}).</p>
+        <table style="border-collapse: collapse; margin: 8px 0;">
+          <tr><td style="padding: 4px 8px; font-weight: 600;">Reminder date</td><td style="padding: 4px 8px;">${formatDate(tracker.reminderDate)}</td></tr>
+          <tr><td style="padding: 4px 8px; font-weight: 600;">Expiry/Due date</td><td style="padding: 4px 8px;">${formatDate(tracker.expiryOrDueDate)}</td></tr>
+          ${tracker.providerOrIssuer ? `<tr><td style="padding: 4px 8px; font-weight: 600;">Provider/Issuer</td><td style="padding: 4px 8px;">${tracker.providerOrIssuer}</td></tr>` : ''}
+          ${tracker.description ? `<tr><td style="padding: 4px 8px; font-weight: 600;">Description</td><td style="padding: 4px 8px;">${tracker.description}</td></tr>` : ''}
+          ${tracker.notes ? `<tr><td style="padding: 4px 8px; font-weight: 600;">Notes</td><td style="padding: 4px 8px;">${tracker.notes}</td></tr>` : ''}
+        </table>
+        <p>Please review and take action if needed.</p>
+      </div>
+    `;
+
+    const isSent = await SendEmail({
+      to: owner.email,
+      subject,
+      text,
+      html,
     });
-    if (!existingRenewalTracker) return null;
-    
-    const deletedRenewalTracker = await RenewalTracker.findByIdAndDelete(id).lean();
-    return deletedRenewalTracker as Partial<IRenewalTracker | null>;
+
+    if (isSent) {
+      successfulReminderIds.push(new mongoose.Types.ObjectId(String(tracker._id)));
+    }
+  }
+
+  if (successfulReminderIds.length > 0) {
+    await RenewalTracker.updateMany(
+      { _id: { $in: successfulReminderIds } },
+      { $set: { lastReminderEmailSentAt: new Date() } }
+    );
+  }
+
+  return {
+    updatedStatusCount,
+    reminderEmailSentCount: successfulReminderIds.length,
+  };
 };
 
 export const renewalTrackerServices = {
@@ -232,4 +384,5 @@ export const renewalTrackerServices = {
   getRenewalTrackerById,
   updateRenewalTracker,
   deleteRenewalTracker,
+  syncRenewalTrackerStatus,
 };

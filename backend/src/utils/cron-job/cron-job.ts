@@ -11,11 +11,11 @@ export const startCronJob = () => {
   // Run every day at midnight
   cron.schedule('0 0 * * *', async () => {
     try {
-      const renewalCount = await renewalTrackerServices.syncRenewalTrackerStatus();
+      const renewalResult = await renewalTrackerServices.syncRenewalTrackerStatus();
       const plannerCount = await plannerServices.plannerStatusUpdateToDue();
 
       console.log(
-        `[Cron] Completed scheduled jobs. Renewal Tracker updated: ${renewalCount}, Planner updated: ${plannerCount}`
+        `[Cron] Completed scheduled jobs. Renewal Tracker status updated: ${renewalResult.updatedStatusCount}, Renewal reminder emails sent: ${renewalResult.reminderEmailSentCount}, Planner updated: ${plannerCount}`
       );
     } catch (error) {
       console.error('[Cron] Error running scheduled jobs:', error);

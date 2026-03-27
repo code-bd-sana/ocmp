@@ -22,6 +22,7 @@ export interface IRenewalTracker extends Document {
   reminderDate?: Date;
   status?: RenewalTrackerStatus;
   notes?: string;
+  lastReminderEmailSentAt?: Date;
   standAloneId?: mongoose.Types.ObjectId;
   createdBy: mongoose.Types.ObjectId;
 }
@@ -69,6 +70,9 @@ const RenewalTrackerSchema: Schema<IRenewalTracker> = new Schema(
     },
     notes: {
       type: String,
+    },
+    lastReminderEmailSentAt: {
+      type: Date,
     },
     standAloneId: {
       type: Schema.Types.ObjectId,
