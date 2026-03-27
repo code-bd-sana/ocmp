@@ -8,6 +8,12 @@ import {
   UpdatePolicyProcedureInput,
 } from "@/lib/policy-procedures/policy-procedure.types";
 import axios from "axios";
+import {
+  buildRoleScopedQuery,
+  getCurrentUserRole,
+  isStandaloneRole,
+  requireScopedClientId,
+} from "./shared/role-scope";
 
 /* ────────── helpers ────────── */
 
@@ -42,16 +48,18 @@ const getPolicyProcedures = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
+    const userRole = await getCurrentUserRole();
+    const queryParams = buildRoleScopedQuery(userRole, standAloneId, {
+      searchKey: params?.searchKey || undefined,
+      showPerPage: params?.showPerPage || 10,
+      pageNo: params?.pageNo || 1,
+    });
+
     const response = await axios.get<IApiResponse<PolicyProcedureListResponse>>(
       `${base_url}/policy-procedure/get-policy-procedures`,
       {
         headers: { Authorization: `Bearer ${token}` },
-        params: {
-          standAloneId,
-          searchKey: params?.searchKey || undefined,
-          showPerPage: params?.showPerPage || 10,
-          pageNo: params?.pageNo || 1,
-        },
+        params: queryParams,
       },
     );
     return response.data;
@@ -102,11 +110,17 @@ const getPolicyProcedure = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
+    const userRole = await getCurrentUserRole();
+    requireScopedClientId(userRole, standAloneId);
+
+    const url = isStandaloneRole(userRole)
+      ? `${base_url}/policy-procedure/get-policy-procedure/${policyProcedureId}`
+      : `${base_url}/policy-procedure/get-policy-procedure/${policyProcedureId}/${standAloneId}`;
+
     const response = await axios.get<IApiResponse<PolicyProcedureRow>>(
-      `${base_url}/policy-procedure/get-policy-procedure/${policyProcedureId}`,
+      url,
       {
         headers: { Authorization: `Bearer ${token}` },
-        params: { standAloneId },
       },
     );
     return response.data;
@@ -127,9 +141,20 @@ const createPolicyProcedure = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
+    const userRole = await getCurrentUserRole();
+    requireScopedClientId(userRole, data.standAloneId);
+
+    const endpoint = isStandaloneRole(userRole)
+      ? `${base_url}/policy-procedure/create-stand-alone-policy-procedure`
+      : `${base_url}/policy-procedure/create-policy-procedure`;
+
+    const standAloneBody = { ...data };
+    delete (standAloneBody as { standAloneId?: string }).standAloneId;
+    const body = isStandaloneRole(userRole) ? standAloneBody : data;
+
     const response = await axios.post<IApiResponse>(
-      `${base_url}/policy-procedure/create-policy-procedure`,
-      data,
+      endpoint,
+      body,
       { headers: { Authorization: `Bearer ${token}` } },
     );
     return response.data;
@@ -152,8 +177,15 @@ const updatePolicyProcedure = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
+    const userRole = await getCurrentUserRole();
+    requireScopedClientId(userRole, standAloneId);
+
+    const url = isStandaloneRole(userRole)
+      ? `${base_url}/policy-procedure/update-policy-procedure/${policyProcedureId}`
+      : `${base_url}/policy-procedure/update-policy-procedure-by-manager/${policyProcedureId}/${standAloneId}`;
+
     const response = await axios.patch<IApiResponse>(
-      `${base_url}/policy-procedure/update-policy-procedure-by-manager/${policyProcedureId}/${standAloneId}`,
+      url,
       data,
       { headers: { Authorization: `Bearer ${token}` } },
     );
@@ -176,8 +208,15 @@ const deletePolicyProcedure = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
+    const userRole = await getCurrentUserRole();
+    requireScopedClientId(userRole, standAloneId);
+
+    const url = isStandaloneRole(userRole)
+      ? `${base_url}/policy-procedure/delete-policy-procedure/${policyProcedureId}`
+      : `${base_url}/policy-procedure/delete-policy-procedure-by-manager/${policyProcedureId}/${standAloneId}`;
+
     const response = await axios.delete<IApiResponse>(
-      `${base_url}/policy-procedure/delete-policy-procedure-by-manager/${policyProcedureId}/${standAloneId}`,
+      url,
       { headers: { Authorization: `Bearer ${token}` } },
     );
     return response.data;

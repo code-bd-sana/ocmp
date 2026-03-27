@@ -10,6 +10,7 @@ import {
 } from './policy-procedure.controller';
 
 import { validateSearchQueries } from '../../handlers/common-zod-validator';
+import ServerResponse from '../../helpers/responses/custom-response';
 import {
   validateCreatePolicyProcedureAsManager,
   validateCreatePolicyProcedureAsStandAlone,
@@ -40,8 +41,8 @@ router.post(
   '/create-policy-procedure',
   authorizedRoles([UserRole.TRANSPORT_MANAGER]),
   // checkSubscriptionValidity,
-  validateClientForManagerMiddleware,
   validateCreatePolicyProcedureAsManager,
+  validateClientForManagerMiddleware,
   createPolicyProcedureAsManager
 );
 
@@ -135,7 +136,13 @@ router.get(
   '/get-policy-procedures',
   authorizedRoles([UserRole.STANDALONE_USER, UserRole.TRANSPORT_MANAGER]),
   (req: AuthenticatedRequest, res, next) => {
+    if (req.user!.role === UserRole.STANDALONE_USER && req.query?.standAloneId) {
+      return ServerResponse(res, false, 400, 'standAloneId is not needed for standalone users');
+    }
     if (req.user!.role === UserRole.TRANSPORT_MANAGER) {
+      if (!req.query?.standAloneId) {
+        return ServerResponse(res, false, 400, 'standAloneId is required for transport managers');
+      }
       return validateClientForManagerMiddleware(req, res, next);
     }
     next();
@@ -150,19 +157,26 @@ router.get(
 );
 
 /**
+ * @route   GET /api/v1/policy-procedure/get-policy-procedure/:policyProcedureId/:standAloneId
+ * @desc    Get a single policy procedure by ID
+ * @access  Transport Manager
+ */
+router.get(
+  '/get-policy-procedure/:policyProcedureId/:standAloneId',
+  authorizedRoles([UserRole.TRANSPORT_MANAGER]),
+  validateClientForManagerMiddleware,
+  validatePolicyProcedureAndManagerIdParam,
+  getPolicyProcedureById
+);
+
+/**
  * @route   GET /api/v1/policy-procedure/get-policy-procedure/:policyProcedureId
  * @desc    Get a single policy procedure by ID
- * @access  Transport Manager & Standalone User
+ * @access  Standalone User
  */
 router.get(
   '/get-policy-procedure/:policyProcedureId',
-  authorizedRoles([UserRole.STANDALONE_USER, UserRole.TRANSPORT_MANAGER]),
-  (req: AuthenticatedRequest, res, next) => {
-    if (req.user!.role === UserRole.TRANSPORT_MANAGER) {
-      return validateClientForManagerMiddleware(req, res, next);
-    }
-    next();
-  },
+  authorizedRoles([UserRole.STANDALONE_USER]),
   validatePolicyProcedureIdParam,
   getPolicyProcedureById
 );
