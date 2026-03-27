@@ -206,8 +206,8 @@ const updateRenewalTracker = async (
 
   const updatedRenewalTracker = await RenewalTracker.findByIdAndUpdate(id, payload, {
     new: true,
-  });
-  return updatedRenewalTracker;
+  }).lean();
+  return updatedRenewalTracker as Partial<IRenewalTracker | null>;
 };
 
 const deleteRenewalTracker = async (
@@ -221,7 +221,8 @@ const deleteRenewalTracker = async (
     });
     if (!existingRenewalTracker) return null;
     
-    return await RenewalTracker.findByIdAndDelete(id);
+    const deletedRenewalTracker = await RenewalTracker.findByIdAndDelete(id).lean();
+    return deletedRenewalTracker as Partial<IRenewalTracker | null>;
 };
 
 export const renewalTrackerServices = {
