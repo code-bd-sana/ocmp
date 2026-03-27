@@ -69,7 +69,7 @@ export const getWorkingTimeDirectiveById = catchAsync(async (req: AuthenticatedR
     accessId = req.user._id;
   }
   if (req.user?.role === UserRole.TRANSPORT_MANAGER) {
-    accessId = req.query?.standAloneId as string;
+    accessId = req.params?.standAloneId as string;
   }
 
   const result = await workingTimeDirectiveServices.getWorkingTimeDirectiveById(workingTimeDirectiveId as string, accessId);

@@ -9,6 +9,12 @@ import {
   WorkingTimeDirectiveRow,
 } from "@/lib/working-time-directives/working-time-directive.types";
 import axios from "axios";
+import {
+  buildRoleScopedQuery,
+  getCurrentUserRole,
+  isStandaloneRole,
+  requireScopedClientId,
+} from "./shared/role-scope";
 
 /* ────────── helpers ────────── */
 
@@ -43,16 +49,18 @@ const getWorkingTimeDirectives = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
+    const userRole = await getCurrentUserRole();
+    const queryParams = buildRoleScopedQuery(userRole, standAloneId, {
+      searchKey: params?.searchKey || undefined,
+      showPerPage: params?.showPerPage || 10,
+      pageNo: params?.pageNo || 1,
+    });
+
     const response = await axios.get<
       IApiResponse<WorkingTimeDirectiveListResponse>
     >(`${base_url}/working-time-directive/get-working-time-directives`, {
       headers: { Authorization: `Bearer ${token}` },
-      params: {
-        standAloneId,
-        searchKey: params?.searchKey || undefined,
-        showPerPage: params?.showPerPage || 10,
-        pageNo: params?.pageNo || 1,
-      },
+      params: queryParams,
     });
     return response.data;
   } catch (error: unknown) {
@@ -73,11 +81,17 @@ const getWorkingTimeDirective = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
+    const userRole = await getCurrentUserRole();
+    requireScopedClientId(userRole, standAloneId);
+
+    const url = isStandaloneRole(userRole)
+      ? `${base_url}/working-time-directive/get-working-time-directive/${workingTimeDirectiveId}`
+      : `${base_url}/working-time-directive/get-working-time-directive/${workingTimeDirectiveId}/${standAloneId}`;
+
     const response = await axios.get<IApiResponse<WorkingTimeDirectiveRow>>(
-      `${base_url}/working-time-directive/get-working-time-directive/${workingTimeDirectiveId}`,
+      url,
       {
         headers: { Authorization: `Bearer ${token}` },
-        params: { standAloneId },
       },
     );
     return response.data;
@@ -98,9 +112,20 @@ const createWorkingTimeDirective = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
+    const userRole = await getCurrentUserRole();
+    requireScopedClientId(userRole, data.standAloneId);
+
+    const endpoint = isStandaloneRole(userRole)
+      ? `${base_url}/working-time-directive/create-stand-alone-working-time-directive`
+      : `${base_url}/working-time-directive/create-working-time-directive`;
+
+    const standAloneBody = { ...data };
+    delete (standAloneBody as { standAloneId?: string }).standAloneId;
+    const body = isStandaloneRole(userRole) ? standAloneBody : data;
+
     const response = await axios.post<IApiResponse>(
-      `${base_url}/working-time-directive/create-working-time-directive`,
-      data,
+      endpoint,
+      body,
       { headers: { Authorization: `Bearer ${token}` } },
     );
     return response.data;
@@ -123,8 +148,15 @@ const updateWorkingTimeDirective = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
+    const userRole = await getCurrentUserRole();
+    requireScopedClientId(userRole, standAloneId);
+
+    const url = isStandaloneRole(userRole)
+      ? `${base_url}/working-time-directive/update-working-time-directive/${workingTimeDirectiveId}`
+      : `${base_url}/working-time-directive/update-working-time-directive-by-manager/${workingTimeDirectiveId}/${standAloneId}`;
+
     const response = await axios.patch<IApiResponse>(
-      `${base_url}/working-time-directive/update-working-time-directive-by-manager/${workingTimeDirectiveId}/${standAloneId}`,
+      url,
       data,
       { headers: { Authorization: `Bearer ${token}` } },
     );
@@ -147,8 +179,15 @@ const deleteWorkingTimeDirective = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
+    const userRole = await getCurrentUserRole();
+    requireScopedClientId(userRole, standAloneId);
+
+    const url = isStandaloneRole(userRole)
+      ? `${base_url}/working-time-directive/delete-working-time-directive/${workingTimeDirectiveId}`
+      : `${base_url}/working-time-directive/delete-working-time-directive-by-manager/${workingTimeDirectiveId}/${standAloneId}`;
+
     const response = await axios.delete<IApiResponse>(
-      `${base_url}/working-time-directive/delete-working-time-directive-by-manager/${workingTimeDirectiveId}/${standAloneId}`,
+      url,
       { headers: { Authorization: `Bearer ${token}` } },
     );
     return response.data;
@@ -169,11 +208,14 @@ const getDriversWithVehicles = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
+    const userRole = await getCurrentUserRole();
+    const queryParams = buildRoleScopedQuery(userRole, standAloneId, {});
+
     const response = await axios.get<IApiResponse<DriverWithVehicles[]>>(
       `${base_url}/working-time-directive/get-drivers-with-vehicles`,
       {
         headers: { Authorization: `Bearer ${token}` },
-        params: { standAloneId },
+        params: queryParams,
       },
     );
     return response.data;

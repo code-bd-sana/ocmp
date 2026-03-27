@@ -265,11 +265,14 @@ const getDriversWithVehicles = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
+    const userRole = await getCurrentUserRole();
+    const queryParams = buildRoleScopedQuery(userRole, standAloneId, {});
+
     const response = await axios.get<IApiResponse<DriverWithVehicles[]>>(
       `${base_url}/working-time-directive/get-drivers-with-vehicles`,
       {
         headers: { Authorization: `Bearer ${token}` },
-        params: { standAloneId },
+        params: queryParams,
       },
     );
     return response.data;
