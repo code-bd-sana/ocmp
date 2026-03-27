@@ -24,6 +24,7 @@ export interface RepositorySettingsFlags {
   workingTimeDirective: boolean;
   policyProcedureReviewTracker: boolean;
   subcontractorDetails: boolean;
+  trainingRecords: boolean;
 }
 
 /**
@@ -128,5 +129,10 @@ export const SETTINGS_META: SettingMeta[] = [
     key: "subcontractorDetails",
     label: "Subcontractor Details",
     href: "/dashboard/subcontractor-details",
+  },
+  {
+    key: "trainingRecords",
+    label: "Training Records",
+    href: "/dashboard/training-records",
   },
 ];

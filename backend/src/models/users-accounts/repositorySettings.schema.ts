@@ -23,6 +23,7 @@ export interface IRepositorySettings extends Document {
   workingTimeDirective?: boolean;
   policyProcedureReviewTracker?: boolean;
   subcontractorDetails?: boolean;
+  trainingRecords?: boolean;
   userId: mongoose.Types.ObjectId;
 }
 
@@ -90,6 +91,9 @@ const RepositorySettingsSchema: Schema<IRepositorySettings> = new Schema(
       type: Boolean,
     },
     subcontractorDetails: {
+      type: Boolean,
+    },
+    trainingRecords: {
       type: Boolean,
     },
     userId: {
