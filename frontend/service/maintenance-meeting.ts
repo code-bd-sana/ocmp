@@ -11,6 +11,12 @@ import {
   UpdateMaintenanceProviderCommunicationInput,
   UpdateMeetingNoteInput,
 } from "@/lib/maintenance-meeting/maintenance-meeting.types";
+import {
+  buildRoleScopedQuery,
+  getCurrentUserRole,
+  isStandaloneRole,
+  requireScopedClientId,
+} from "./shared/role-scope";
 
 interface EntityResponse<T> {
   status: boolean;
@@ -65,9 +71,21 @@ export const MeetingNoteAction = {
     if (!token) throw new Error("No authentication token found");
 
     try {
+      const userRole = await getCurrentUserRole();
+      requireScopedClientId(userRole, data.standAloneId);
+      const isStandalone = isStandaloneRole(userRole);
+      const endpoint = isStandalone
+        ? `${base_url}/meeting-note/create-as-standalone`
+        : `${base_url}/meeting-note/create-as-manager`;
+
+      const body = { ...data };
+      if (isStandalone) {
+        delete body.standAloneId;
+      }
+
       const response = await axios.post<EntityResponse<MeetingNoteRow>>(
-        `${base_url}/meeting-note/create-as-manager`,
-        data,
+        endpoint,
+        body,
         { headers: { Authorization: `Bearer ${token}` } },
       );
       return response.data;
@@ -87,16 +105,18 @@ export const MeetingNoteAction = {
     if (!token) throw new Error("No authentication token found");
 
     try {
+      const userRole = await getCurrentUserRole();
+      const queryParams = buildRoleScopedQuery(userRole, standAloneId, {
+        searchKey: params?.searchKey || undefined,
+        showPerPage: params?.showPerPage || 10,
+        pageNo: params?.pageNo || 1,
+      });
+
       const response = await axios.get<EntityResponse<MeetingNoteListResponse>>(
         `${base_url}/meeting-note/get-all`,
         {
           headers: { Authorization: `Bearer ${token}` },
-          params: {
-            standAloneId,
-            searchKey: params?.searchKey || undefined,
-            showPerPage: params?.showPerPage || 10,
-            pageNo: params?.pageNo || 1,
-          },
+          params: queryParams,
         },
       );
       return response.data;
@@ -116,12 +136,15 @@ export const MeetingNoteAction = {
     if (!token) throw new Error("No authentication token found");
 
     try {
-      const response = await axios.get<EntityResponse<MeetingNoteRow>>(
-        `${base_url}/meeting-note/${id}/${standAloneId}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
+      const userRole = await getCurrentUserRole();
+      requireScopedClientId(userRole, standAloneId);
+      const url = isStandaloneRole(userRole)
+        ? `${base_url}/meeting-note/${id}`
+        : `${base_url}/meeting-note/${id}/${standAloneId}`;
+
+      const response = await axios.get<EntityResponse<MeetingNoteRow>>(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       return response.data;
     } catch (error: unknown) {
       return {
@@ -140,8 +163,14 @@ export const MeetingNoteAction = {
     if (!token) throw new Error("No authentication token found");
 
     try {
+      const userRole = await getCurrentUserRole();
+      requireScopedClientId(userRole, standAloneId);
+      const url = isStandaloneRole(userRole)
+        ? `${base_url}/meeting-note/update-as-standalone/${id}`
+        : `${base_url}/meeting-note/update-as-manager/${id}/${standAloneId}`;
+
       const response = await axios.patch<EntityResponse<MeetingNoteRow>>(
-        `${base_url}/meeting-note/update-as-manager/${id}/${standAloneId}`,
+        url,
         data,
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -164,12 +193,15 @@ export const MeetingNoteAction = {
     if (!token) throw new Error("No authentication token found");
 
     try {
-      const response = await axios.delete<EntityResponse<null>>(
-        `${base_url}/meeting-note/${id}/${standAloneId}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
+      const userRole = await getCurrentUserRole();
+      requireScopedClientId(userRole, standAloneId);
+      const url = isStandaloneRole(userRole)
+        ? `${base_url}/meeting-note/${id}`
+        : `${base_url}/meeting-note/${id}/${standAloneId}`;
+
+      const response = await axios.delete<EntityResponse<null>>(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       return response.data;
     } catch (error: unknown) {
       return {
@@ -188,13 +220,21 @@ export const MaintenanceProviderCommunicationAction = {
     if (!token) throw new Error("No authentication token found");
 
     try {
+      const userRole = await getCurrentUserRole();
+      requireScopedClientId(userRole, data.standAloneId);
+      const isStandalone = isStandaloneRole(userRole);
+      const endpoint = isStandalone
+        ? `${base_url}/maintenance-provider-communication/create-as-standalone`
+        : `${base_url}/maintenance-provider-communication/create-as-manager`;
+
+      const body = { ...data };
+      if (isStandalone) {
+        delete body.standAloneId;
+      }
+
       const response = await axios.post<
         EntityResponse<MaintenanceProviderCommunicationRow>
-      >(
-        `${base_url}/maintenance-provider-communication/create-as-manager`,
-        data,
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
+      >(endpoint, body, { headers: { Authorization: `Bearer ${token}` } });
       return response.data;
     } catch (error: unknown) {
       return {
@@ -215,16 +255,18 @@ export const MaintenanceProviderCommunicationAction = {
     if (!token) throw new Error("No authentication token found");
 
     try {
+      const userRole = await getCurrentUserRole();
+      const queryParams = buildRoleScopedQuery(userRole, standAloneId, {
+        searchKey: params?.searchKey || undefined,
+        showPerPage: params?.showPerPage || 10,
+        pageNo: params?.pageNo || 1,
+      });
+
       const response = await axios.get<
         EntityResponse<MaintenanceProviderCommunicationListResponse>
       >(`${base_url}/maintenance-provider-communication/get-all`, {
         headers: { Authorization: `Bearer ${token}` },
-        params: {
-          standAloneId,
-          searchKey: params?.searchKey || undefined,
-          showPerPage: params?.showPerPage || 10,
-          pageNo: params?.pageNo || 1,
-        },
+        params: queryParams,
       });
       return response.data;
     } catch (error: unknown) {
@@ -246,14 +288,17 @@ export const MaintenanceProviderCommunicationAction = {
     if (!token) throw new Error("No authentication token found");
 
     try {
+      const userRole = await getCurrentUserRole();
+      requireScopedClientId(userRole, standAloneId);
+      const url = isStandaloneRole(userRole)
+        ? `${base_url}/maintenance-provider-communication/${id}`
+        : `${base_url}/maintenance-provider-communication/${id}/${standAloneId}`;
+
       const response = await axios.get<
         EntityResponse<MaintenanceProviderCommunicationRow>
-      >(
-        `${base_url}/maintenance-provider-communication/${id}/${standAloneId}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
+      >(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       return response.data;
     } catch (error: unknown) {
       return {
@@ -275,15 +320,17 @@ export const MaintenanceProviderCommunicationAction = {
     if (!token) throw new Error("No authentication token found");
 
     try {
+      const userRole = await getCurrentUserRole();
+      requireScopedClientId(userRole, standAloneId);
+      const url = isStandaloneRole(userRole)
+        ? `${base_url}/maintenance-provider-communication/update-as-standalone/${id}`
+        : `${base_url}/maintenance-provider-communication/update-as-manager/${id}/${standAloneId}`;
+
       const response = await axios.patch<
         EntityResponse<MaintenanceProviderCommunicationRow>
-      >(
-        `${base_url}/maintenance-provider-communication/update-as-manager/${id}/${standAloneId}`,
-        data,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
+      >(url, data, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       return response.data;
     } catch (error: unknown) {
       return {
@@ -304,12 +351,15 @@ export const MaintenanceProviderCommunicationAction = {
     if (!token) throw new Error("No authentication token found");
 
     try {
-      const response = await axios.delete<EntityResponse<null>>(
-        `${base_url}/maintenance-provider-communication/${id}/${standAloneId}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
+      const userRole = await getCurrentUserRole();
+      requireScopedClientId(userRole, standAloneId);
+      const url = isStandaloneRole(userRole)
+        ? `${base_url}/maintenance-provider-communication/${id}`
+        : `${base_url}/maintenance-provider-communication/${id}/${standAloneId}`;
+
+      const response = await axios.delete<EntityResponse<null>>(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       return response.data;
     } catch (error: unknown) {
       return {

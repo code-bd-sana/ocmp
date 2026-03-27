@@ -1,8 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { usePathname } from "next/navigation";
+import { use, useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { UserAction } from "@/service/user";
+import { resolveRoleScopedRoute } from "@/lib/utils/role-route";
 
 import MeetingNoteHeader from "@/components/dashboard/meeting-note/MeetingNoteHeader";
 import MeetingNoteTable from "@/components/dashboard/meeting-note/MeetingNoteTable";
@@ -31,9 +33,17 @@ import {
   MeetingNoteAction,
 } from "@/service/maintenance-meeting";
 
-export default function MaintenanceMeetingStandAlonePage() {
-  const pathname = usePathname();
-  const standAloneId = pathname.split("/")[3] || "";
+interface PageProps {
+  params: Promise<{ standAloneId: string }>;
+}
+
+export default function MaintenanceMeetingStandAlonePage({
+  params,
+}: PageProps) {
+  const { standAloneId } = use(params);
+  const router = useRouter();
+  const [roleReady, setRoleReady] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const [meetingRows, setMeetingRows] = useState<MeetingNoteRow[]>([]);
   const [meetingSearchQuery, setMeetingSearchQuery] = useState("");
@@ -72,6 +82,49 @@ export default function MaintenanceMeetingStandAlonePage() {
     null,
   );
   const activeStandAloneIdRef = useRef(standAloneId);
+
+  useEffect(() => {
+    let isActive = true;
+
+    const ensureRoleScopedRoute = async () => {
+      try {
+        const profileResp = await UserAction.getProfile();
+        const userRole = profileResp.data?.role;
+        const userId = profileResp.data?._id;
+
+        if (!isActive) return;
+
+        const routeResult = resolveRoleScopedRoute({
+          role: userRole,
+          userId,
+          standAloneId,
+          basePath: "/dashboard/maintenance-meeting",
+        });
+
+        if (routeResult.error) {
+          setError(routeResult.error);
+          return;
+        }
+
+        if (routeResult.redirectTo) {
+          router.replace(routeResult.redirectTo);
+          return;
+        }
+
+        setRoleReady(true);
+      } catch {
+        if (!isActive) return;
+        setError("Failed to load your profile. Please sign in again.");
+      }
+    };
+
+    setRoleReady(false);
+    ensureRoleScopedRoute();
+
+    return () => {
+      isActive = false;
+    };
+  }, [standAloneId, router]);
 
   useEffect(() => {
     activeStandAloneIdRef.current = standAloneId;
@@ -172,9 +225,10 @@ export default function MaintenanceMeetingStandAlonePage() {
   );
 
   useEffect(() => {
+    if (!roleReady) return;
     fetchMeetingNotes();
     fetchMaintenanceProviders();
-  }, [fetchMeetingNotes, fetchMaintenanceProviders]);
+  }, [fetchMeetingNotes, fetchMaintenanceProviders, roleReady]);
 
   const handleMeetingSearchChange = (value: string) => {
     setMeetingSearchQuery(value);
@@ -192,6 +246,26 @@ export default function MaintenanceMeetingStandAlonePage() {
       fetchMaintenanceProviders(value);
     }, 400);
   };
+
+  if (error) {
+    return (
+      <div className="container mx-auto max-w-6xl py-10">
+        <div className="flex h-64 items-center justify-center">
+          <p className="text-destructive">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!roleReady) {
+    return (
+      <div className="container mx-auto max-w-6xl py-10">
+        <div className="flex h-64 items-center justify-center">
+          <p className="text-muted-foreground">Validating access...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto space-y-8 py-4 lg:mr-10">

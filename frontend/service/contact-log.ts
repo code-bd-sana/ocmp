@@ -7,6 +7,12 @@ import {
   CreateContactLogInput,
   UpdateContactLogInput,
 } from "@/lib/contact-log/contact-log.types";
+import {
+  buildRoleScopedQuery,
+  getCurrentUserRole,
+  isStandaloneRole,
+  requireScopedClientId,
+} from "./shared/role-scope";
 
 function extractApiError(data: IApiResponse | undefined): string {
   if (!data) return "Something went wrong";
@@ -42,16 +48,18 @@ const getContactLogs = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
+    const userRole = await getCurrentUserRole();
+    const queryParams = buildRoleScopedQuery(userRole, standAloneId, {
+      searchKey: params?.searchKey || undefined,
+      showPerPage: params?.showPerPage || 10,
+      pageNo: params?.pageNo || 1,
+    });
+
     const response = await axios.get<IApiResponse<ContactLogListResponse>>(
       `${base_url}/contact-log/get-all`,
       {
         headers: { Authorization: `Bearer ${token}` },
-        params: {
-          standAloneId,
-          searchKey: params?.searchKey || undefined,
-          showPerPage: params?.showPerPage || 10,
-          pageNo: params?.pageNo || 1,
-        },
+        params: queryParams,
       },
     );
     return response.data;
@@ -71,10 +79,16 @@ const getContactLog = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
-    const response = await axios.get<IApiResponse<ContactLogRow>>(
-      `${base_url}/contact-log/${contactLogId}/${standAloneId}`,
-      { headers: { Authorization: `Bearer ${token}` } },
-    );
+    const userRole = await getCurrentUserRole();
+    requireScopedClientId(userRole, standAloneId);
+
+    const url = isStandaloneRole(userRole)
+      ? `${base_url}/contact-log/${contactLogId}`
+      : `${base_url}/contact-log/${contactLogId}/${standAloneId}`;
+
+    const response = await axios.get<IApiResponse<ContactLogRow>>(url, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
     return response.data;
   } catch (error: unknown) {
     if (axios.isAxiosError<IApiResponse>(error)) {
@@ -91,11 +105,22 @@ const createContactLog = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
-    const response = await axios.post<IApiResponse>(
-      `${base_url}/contact-log/create-as-manager`,
-      data,
-      { headers: { Authorization: `Bearer ${token}` } },
-    );
+    const userRole = await getCurrentUserRole();
+    requireScopedClientId(userRole, data.standAloneId);
+
+    const isStandalone = isStandaloneRole(userRole);
+    const endpoint = isStandalone
+      ? `${base_url}/contact-log/create-as-standalone`
+      : `${base_url}/contact-log/create-as-manager`;
+
+    const body = { ...data };
+    if (isStandalone) {
+      delete body.standAloneId;
+    }
+
+    const response = await axios.post<IApiResponse>(endpoint, body, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
     return response.data;
   } catch (error: unknown) {
     if (axios.isAxiosError<IApiResponse>(error)) {
@@ -114,11 +139,16 @@ const updateContactLog = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
-    const response = await axios.patch<IApiResponse>(
-      `${base_url}/contact-log/update-as-manager/${contactLogId}/${standAloneId}`,
-      data,
-      { headers: { Authorization: `Bearer ${token}` } },
-    );
+    const userRole = await getCurrentUserRole();
+    requireScopedClientId(userRole, standAloneId);
+
+    const url = isStandaloneRole(userRole)
+      ? `${base_url}/contact-log/update-as-standalone/${contactLogId}`
+      : `${base_url}/contact-log/update-as-manager/${contactLogId}/${standAloneId}`;
+
+    const response = await axios.patch<IApiResponse>(url, data, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
     return response.data;
   } catch (error: unknown) {
     if (axios.isAxiosError<IApiResponse>(error)) {
@@ -136,10 +166,16 @@ const deleteContactLog = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
-    const response = await axios.delete<IApiResponse>(
-      `${base_url}/contact-log/${contactLogId}/${standAloneId}`,
-      { headers: { Authorization: `Bearer ${token}` } },
-    );
+    const userRole = await getCurrentUserRole();
+    requireScopedClientId(userRole, standAloneId);
+
+    const url = isStandaloneRole(userRole)
+      ? `${base_url}/contact-log/${contactLogId}`
+      : `${base_url}/contact-log/${contactLogId}/${standAloneId}`;
+
+    const response = await axios.delete<IApiResponse>(url, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
     return response.data;
   } catch (error: unknown) {
     if (axios.isAxiosError<IApiResponse>(error)) {
