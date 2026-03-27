@@ -73,7 +73,7 @@ export const getSubContractorById = catchAsync(async (req: AuthenticatedRequest,
     accessId = req.user._id;
   }
   if (req.user?.role === UserRole.TRANSPORT_MANAGER) {
-    accessId = req.query?.standAloneId as string;
+    accessId = req.params?.standAloneId as string;
   }
 
   const result = await subContractorServices.getSubContractorById(

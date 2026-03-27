@@ -10,6 +10,7 @@ import {
 } from './sub-contractor.controller';
 
 import { validateSearchQueries } from '../../handlers/common-zod-validator';
+import ServerResponse from '../../helpers/responses/custom-response';
 import {
   validateCreateSubContractorAsManager,
   validateCreateSubContractorAsStandAlone,
@@ -40,8 +41,8 @@ router.post(
   '/create-sub-contractor',
   authorizedRoles([UserRole.TRANSPORT_MANAGER]),
   // checkSubscriptionValidity,
-  validateClientForManagerMiddleware,
   validateCreateSubContractorAsManager,
+  validateClientForManagerMiddleware,
   createSubContractorAsManager
 );
 
@@ -135,7 +136,13 @@ router.get(
   '/get-sub-contractors',
   authorizedRoles([UserRole.STANDALONE_USER, UserRole.TRANSPORT_MANAGER]),
   (req: AuthenticatedRequest, res, next) => {
+    if (req.user!.role === UserRole.STANDALONE_USER && req.query?.standAloneId) {
+      return ServerResponse(res, false, 400, 'standAloneId is not needed for standalone users');
+    }
     if (req.user!.role === UserRole.TRANSPORT_MANAGER) {
+      if (!req.query?.standAloneId) {
+        return ServerResponse(res, false, 400, 'standAloneId is required for transport managers');
+      }
       return validateClientForManagerMiddleware(req, res, next);
     }
     next();
@@ -150,19 +157,26 @@ router.get(
 );
 
 /**
+ * @route   GET /api/v1/sub-contractor/get-sub-contractor/:subContractorId/:standAloneId
+ * @desc    Get a single sub-contractor by ID
+ * @access  Transport Manager
+ */
+router.get(
+  '/get-sub-contractor/:subContractorId/:standAloneId',
+  authorizedRoles([UserRole.TRANSPORT_MANAGER]),
+  validateClientForManagerMiddleware,
+  validateSubContractorAndManagerIdParam,
+  getSubContractorById
+);
+
+/**
  * @route   GET /api/v1/sub-contractor/get-sub-contractor/:subContractorId
  * @desc    Get a single sub-contractor by ID
- * @access  Transport Manager & Standalone User
+ * @access  Standalone User
  */
 router.get(
   '/get-sub-contractor/:subContractorId',
-  authorizedRoles([UserRole.STANDALONE_USER, UserRole.TRANSPORT_MANAGER]),
-  (req: AuthenticatedRequest, res, next) => {
-    if (req.user!.role === UserRole.TRANSPORT_MANAGER) {
-      return validateClientForManagerMiddleware(req, res, next);
-    }
-    next();
-  },
+  authorizedRoles([UserRole.STANDALONE_USER]),
   validateSubContractorIdParam,
   getSubContractorById
 );
