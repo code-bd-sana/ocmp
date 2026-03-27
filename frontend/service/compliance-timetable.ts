@@ -7,7 +7,12 @@ import {
   CreateComplianceTimetableInput,
   UpdateComplianceTimetableInput,
 } from "@/lib/compliance-timetable/compliance-timetable.types";
-import { UserAction } from "./user";
+import {
+  buildRoleScopedQuery,
+  getCurrentUserRole,
+  isStandaloneRole,
+  requireScopedClientId,
+} from "./shared/role-scope";
 
 function extractApiError(data: IApiResponse | undefined): string {
   if (!data) return "Something went wrong";
@@ -31,20 +36,7 @@ function extractApiError(data: IApiResponse | undefined): string {
   return "Something went wrong";
 }
 
-/**
- * Get the current user's role (cached or fresh fetch)
- */
-let cachedUserRole: string | null = null;
-export const getUserRole = async (): Promise<string | null> => {
-  if (cachedUserRole) return cachedUserRole;
-  try {
-    const profileResp = await UserAction.getProfile();
-    cachedUserRole = profileResp.data?.role || null;
-    return cachedUserRole;
-  } catch {
-    return null;
-  }
-};
+export const getUserRole = getCurrentUserRole;
 
 /**
  * GET /api/v1/compliance-timetable/get-all?standAloneId=...
@@ -61,21 +53,13 @@ const getComplianceTimetables = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
-    const userRole = await getUserRole();
+    const userRole = await getCurrentUserRole();
 
-    const queryParams =
-      userRole === "STANDALONE_USER"
-        ? {
-            searchKey: params?.searchKey || undefined,
-            showPerPage: params?.showPerPage || 10,
-            pageNo: params?.pageNo || 1,
-          }
-        : {
-            standAloneId,
-            searchKey: params?.searchKey || undefined,
-            showPerPage: params?.showPerPage || 10,
-            pageNo: params?.pageNo || 1,
-          };
+    const queryParams = buildRoleScopedQuery(userRole, standAloneId, {
+      searchKey: params?.searchKey || undefined,
+      showPerPage: params?.showPerPage || 10,
+      pageNo: params?.pageNo || 1,
+    });
 
     const response = await axios.get<
       IApiResponse<ComplianceTimetableListResponse>
@@ -103,12 +87,12 @@ const getComplianceTimetable = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
-    const userRole = await getUserRole();
+    const userRole = await getCurrentUserRole();
+    requireScopedClientId(userRole, standAloneId);
 
-    const url =
-      userRole === "STANDALONE_USER"
-        ? `${base_url}/compliance-timetable/${complianceTimetableId}`
-        : `${base_url}/compliance-timetable/${complianceTimetableId}/${standAloneId}`;
+    const url = isStandaloneRole(userRole)
+      ? `${base_url}/compliance-timetable/${complianceTimetableId}`
+      : `${base_url}/compliance-timetable/${complianceTimetableId}/${standAloneId}`;
 
     const response = await axios.get<IApiResponse<ComplianceTimetableRow>>(
       url,
@@ -130,14 +114,19 @@ const createComplianceTimetable = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
-    const userRole = await getUserRole();
+    const userRole = await getCurrentUserRole();
+    requireScopedClientId(userRole, data.standAloneId);
 
-    const endpoint =
-      userRole === "STANDALONE_USER"
-        ? `${base_url}/compliance-timetable/create-as-standalone`
-        : `${base_url}/compliance-timetable/create-as-manager`;
+    const endpoint = isStandaloneRole(userRole)
+      ? `${base_url}/compliance-timetable/create-as-standalone`
+      : `${base_url}/compliance-timetable/create-as-manager`;
 
-    const response = await axios.post<IApiResponse>(endpoint, data, {
+    const body = { ...data };
+    if (isStandaloneRole(userRole)) {
+      delete body.standAloneId;
+    }
+
+    const response = await axios.post<IApiResponse>(endpoint, body, {
       headers: { Authorization: `Bearer ${token}` },
     });
     return response.data;
@@ -158,12 +147,12 @@ const updateComplianceTimetable = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
-    const userRole = await getUserRole();
+    const userRole = await getCurrentUserRole();
+    requireScopedClientId(userRole, standAloneId);
 
-    const url =
-      userRole === "STANDALONE_USER"
-        ? `${base_url}/compliance-timetable/update-as-standalone/${complianceTimetableId}`
-        : `${base_url}/compliance-timetable/update-as-manager/${complianceTimetableId}/${standAloneId}`;
+    const url = isStandaloneRole(userRole)
+      ? `${base_url}/compliance-timetable/update-as-standalone/${complianceTimetableId}`
+      : `${base_url}/compliance-timetable/update-as-manager/${complianceTimetableId}/${standAloneId}`;
 
     const response = await axios.patch<IApiResponse>(url, data, {
       headers: { Authorization: `Bearer ${token}` },
@@ -185,12 +174,12 @@ const deleteComplianceTimetable = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
-    const userRole = await getUserRole();
+    const userRole = await getCurrentUserRole();
+    requireScopedClientId(userRole, standAloneId);
 
-    const url =
-      userRole === "STANDALONE_USER"
-        ? `${base_url}/compliance-timetable/${complianceTimetableId}`
-        : `${base_url}/compliance-timetable/${complianceTimetableId}/${standAloneId}`;
+    const url = isStandaloneRole(userRole)
+      ? `${base_url}/compliance-timetable/${complianceTimetableId}`
+      : `${base_url}/compliance-timetable/${complianceTimetableId}/${standAloneId}`;
 
     const response = await axios.delete<IApiResponse>(url, {
       headers: { Authorization: `Bearer ${token}` },
