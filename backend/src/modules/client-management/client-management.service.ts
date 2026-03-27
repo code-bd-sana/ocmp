@@ -338,7 +338,7 @@ const getManagerByClientId = async (clientId: string): Promise<any> => {
 
 /**
  * Service: Remove (revoke) a client from their Transport Manager's team.
- * Sets the client's status to REVOKED instead of deleting for audit trail.
+ * Revoked client is removed from the manager's clients array.
  *
  * @param {string} clientId - The client's user ID.
  * @returns {Promise<{ modifiedCount: number }>} - Number of records updated.
@@ -364,7 +364,21 @@ const removeClientFromManager = async (
         },
       },
     },
-    { $set: { 'clients.$.status': ClientStatus.REVOKED } }
+    {
+      $pull: {
+        clients: {
+          clientId: clientObjId,
+          status: {
+            $in: [
+              ClientStatus.PENDING,
+              ClientStatus.APPROVED,
+              ClientStatus.LEAVE_REQUESTED,
+              ClientStatus.REMOVE_REQUESTED,
+            ],
+          },
+        },
+      },
+    }
   );
 
   if (result.modifiedCount === 0) throw new Error('No active assignment found for this client');
@@ -470,7 +484,8 @@ const getPendingRequests = async (managerId: string): Promise<any[]> => {
 
 /**
  * Service: Approve or reject a pending join request.
- * Updates the client's status in the embedded array. If approved, sets approvedAt.
+ * approved -> updates status/approvedAt.
+ * revoked -> removes the client entry from clients array.
  *
  * @param {string} managerId - The Transport Manager's user ID (from req.user._id).
  * @param {string} clientId - The client's user ID (from URL param).
@@ -485,26 +500,35 @@ const updateJoinRequest = async (
   const managerObjId = new mongoose.Types.ObjectId(managerId);
   const clientObjId = new mongoose.Types.ObjectId(clientId);
 
-  // Build the $set object — only set approvedAt if status is approved
-  const updateFields: Record<string, any> = {
-    'clients.$.status': data.status,
-  };
-  if (data.status === 'approved') {
-    updateFields['clients.$.approvedAt'] = new Date();
-  }
-
-  const result = await ClientManagement.updateOne(
-    {
-      managerId: managerObjId,
-      clients: {
-        $elemMatch: {
-          clientId: clientObjId,
-          status: ClientStatus.PENDING,
-        },
+  const query = {
+    managerId: managerObjId,
+    clients: {
+      $elemMatch: {
+        clientId: clientObjId,
+        status: ClientStatus.PENDING,
       },
     },
-    { $set: updateFields }
-  );
+  };
+
+  const result =
+    data.status === 'approved'
+      ? await ClientManagement.updateOne(query, {
+          $set: {
+            'clients.$.status': ClientStatus.APPROVED,
+            'clients.$.approvedAt': new Date(),
+          },
+        })
+      : await ClientManagement.updateOne(
+          query,
+          {
+            $pull: {
+              clients: {
+                clientId: clientObjId,
+                status: ClientStatus.PENDING,
+              },
+            },
+          }
+        );
 
   if (result.modifiedCount === 0) {
     throw new Error('No pending request found for this client');
@@ -628,7 +652,7 @@ const getLeaveRequests = async (managerId: string): Promise<any[]> => {
 
 /**
  * Service: Transport Manager accepts or rejects a client's leave request.
- * accept → status becomes REVOKED (client leaves the team).
+ * accept → client entry is removed from clients array (client leaves the team).
  * reject → status goes back to APPROVED (client stays).
  *
  * @param {string} managerId - The Transport Manager's user ID (from req.user._id).
@@ -644,27 +668,39 @@ const handleLeaveRequest = async (
   const managerObjId = new mongoose.Types.ObjectId(managerId);
   const clientObjId = new mongoose.Types.ObjectId(clientId);
 
-  const newStatus =
-    data.action === 'accept' ? ClientStatus.REVOKED : ClientStatus.APPROVED;
-
-  const result = await ClientManagement.updateOne(
-    {
-      managerId: managerObjId,
-      clients: {
-        $elemMatch: {
-          clientId: clientObjId,
-          status: ClientStatus.LEAVE_REQUESTED,
-        },
+  const query = {
+    managerId: managerObjId,
+    clients: {
+      $elemMatch: {
+        clientId: clientObjId,
+        status: ClientStatus.LEAVE_REQUESTED,
       },
     },
-    { $set: { 'clients.$.status': newStatus } }
-  );
+  };
+
+  const result =
+    data.action === 'accept'
+      ? await ClientManagement.updateOne(query, {
+          $pull: {
+            clients: {
+              clientId: clientObjId,
+              status: ClientStatus.LEAVE_REQUESTED,
+            },
+          },
+        })
+      : await ClientManagement.updateOne(query, {
+          $set: { 'clients.$.status': ClientStatus.APPROVED },
+        });
 
   if (result.modifiedCount === 0) {
     throw new Error('No leave request found for this client');
   }
 
-  return { clientId, action: data.action, newStatus };
+  return {
+    clientId,
+    action: data.action,
+    newStatus: data.action === 'accept' ? ClientStatus.REVOKED : ClientStatus.APPROVED,
+  };
 };
 
 // ═══════════════════════════════════════════════════════════════
@@ -774,7 +810,7 @@ const getRemoveRequest = async (clientId: string): Promise<any> => {
 
 /**
  * Service: Client accepts or rejects a remove request from their manager.
- * accept → status becomes REVOKED (client is removed from the team).
+ * accept → client entry is removed from clients array.
  * reject → status goes back to APPROVED (client stays).
  *
  * @param {string} clientId - The client's user ID (from req.user._id).
@@ -787,26 +823,38 @@ const handleRemoveRequest = async (
 ): Promise<{ clientId: string; action: string; newStatus: string }> => {
   const clientObjId = new mongoose.Types.ObjectId(clientId);
 
-  const newStatus =
-    data.action === 'accept' ? ClientStatus.REVOKED : ClientStatus.APPROVED;
-
-  const result = await ClientManagement.updateOne(
-    {
-      clients: {
-        $elemMatch: {
-          clientId: clientObjId,
-          status: ClientStatus.REMOVE_REQUESTED,
-        },
+  const query = {
+    clients: {
+      $elemMatch: {
+        clientId: clientObjId,
+        status: ClientStatus.REMOVE_REQUESTED,
       },
     },
-    { $set: { 'clients.$.status': newStatus } }
-  );
+  };
+
+  const result =
+    data.action === 'accept'
+      ? await ClientManagement.updateOne(query, {
+          $pull: {
+            clients: {
+              clientId: clientObjId,
+              status: ClientStatus.REMOVE_REQUESTED,
+            },
+          },
+        })
+      : await ClientManagement.updateOne(query, {
+          $set: { 'clients.$.status': ClientStatus.APPROVED },
+        });
 
   if (result.modifiedCount === 0) {
     throw new Error('No remove request found for your account');
   }
 
-  return { clientId, action: data.action, newStatus };
+  return {
+    clientId,
+    action: data.action,
+    newStatus: data.action === 'accept' ? ClientStatus.REVOKED : ClientStatus.APPROVED,
+  };
 };
 /**
  * Service: Get the Transport Manager assigned to a client.

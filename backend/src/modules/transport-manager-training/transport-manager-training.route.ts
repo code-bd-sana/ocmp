@@ -1,9 +1,10 @@
 // Import Router from express
-import { Router } from 'express';
+import { NextFunction, Response, Router } from 'express';
 
 // Import controller from corresponding module
 import {
-  createTransportManagerTraining,
+  createTransportManagerTrainingAsManager,
+  createTransportManagerTrainingAsStandAlone,
   deleteTransportManagerTraining,
   getManyTransportManagerTraining,
   getTransportManagerTrainingById,
@@ -11,22 +12,25 @@ import {
 } from './transport-manager-training.controller';
 
 //Import validation from corresponding module
-import { validateId, validateSearchQueries } from '../../handlers/common-zod-validator';
+import { validateSearchQueries } from '../../handlers/common-zod-validator';
+import ServerResponse from '../../helpers/responses/custom-response';
 import authorizedRoles from '../../middlewares/authorized-roles';
-import isAuthorized from '../../middlewares/is-authorized';
+import isAuthorized, { AuthenticatedRequest } from '../../middlewares/is-authorized';
+import { validateClientForManagerMiddleware } from '../../middlewares/validate-client-for-manager';
 import { UserRole } from '../../models';
+
 import {
-  validateCreateTransportManagerTraining,
+  validateCreateTransportManagerTrainingAsManager,
+  validateCreateTransportManagerTrainingAsStandAlone,
+  validateSearchTransportManagerTrainingQueries,
+  validateTransportManagerTrainingAndManagerIdParam,
+  validateTransportManagerTrainingIdParam,
   validateUpdateTransportManagerTraining,
 } from './transport-manager-training.validation';
 
 // Initialize router
 const router = Router();
-router.use(
-  isAuthorized(),
-  authorizedRoles([UserRole.TRANSPORT_MANAGER])
-  // checkSubscriptionValidity,
-);
+router.use(isAuthorized());
 
 // Define route handlers
 /**
@@ -38,8 +42,17 @@ router.use(
  */
 router.post(
   '/create-transport-manager-training',
-  validateCreateTransportManagerTraining,
-  createTransportManagerTraining
+  authorizedRoles([UserRole.TRANSPORT_MANAGER]),
+  validateCreateTransportManagerTrainingAsManager,
+  validateClientForManagerMiddleware,
+  createTransportManagerTrainingAsManager
+);
+
+router.post(
+  '/create-stand-alone-transport-manager-training',
+  authorizedRoles([UserRole.STANDALONE_USER]),
+  validateCreateTransportManagerTrainingAsStandAlone,
+  createTransportManagerTrainingAsStandAlone
 );
 
 /**
@@ -51,8 +64,18 @@ router.post(
  * @param {function} controller - ['updateTransportManagerTraining']
  */
 router.patch(
+  '/update-transport-manager-training/:id/:standAloneId',
+  authorizedRoles([UserRole.TRANSPORT_MANAGER]),
+  validateClientForManagerMiddleware,
+  validateTransportManagerTrainingAndManagerIdParam,
+  validateUpdateTransportManagerTraining,
+  updateTransportManagerTraining
+);
+
+router.patch(
   '/update-transport-manager-training/:id',
-  validateId,
+  authorizedRoles([UserRole.STANDALONE_USER]),
+  validateTransportManagerTrainingIdParam,
   validateUpdateTransportManagerTraining,
   updateTransportManagerTraining
 );
@@ -65,7 +88,20 @@ router.patch(
  * @param {function} validation - ['validateId']
  * @param {function} controller - ['deleteTransportManagerTraining']
  */
-router.delete('/delete-transport-manager-training/:id', validateId, deleteTransportManagerTraining);
+router.delete(
+  '/delete-transport-manager-training/:id/:standAloneId',
+  authorizedRoles([UserRole.TRANSPORT_MANAGER]),
+  validateClientForManagerMiddleware,
+  validateTransportManagerTrainingAndManagerIdParam,
+  deleteTransportManagerTraining
+);
+
+router.delete(
+  '/delete-transport-manager-training/:id',
+  authorizedRoles([UserRole.STANDALONE_USER]),
+  validateTransportManagerTrainingIdParam,
+  deleteTransportManagerTraining
+);
 
 /**
  * @route GET /api/v1/transport-manager-training/get-transport-manager-training/many
@@ -76,7 +112,25 @@ router.delete('/delete-transport-manager-training/:id', validateId, deleteTransp
  */
 router.get(
   '/get-transport-manager-training/many',
-  validateSearchQueries,
+  authorizedRoles([UserRole.TRANSPORT_MANAGER, UserRole.STANDALONE_USER]),
+  (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    if (req.user!.role === UserRole.STANDALONE_USER && req.query?.standAloneId) {
+      return ServerResponse(res, false, 400, 'standAloneId is not needed for standalone users');
+    }
+    if (req.user!.role === UserRole.TRANSPORT_MANAGER) {
+      if (!req.query?.standAloneId) {
+        return ServerResponse(res, false, 400, 'standAloneId is required for transport managers');
+      }
+      return validateClientForManagerMiddleware(req, res, next);
+    }
+    next();
+  },
+  (req: AuthenticatedRequest, _res: Response, next: NextFunction) => {
+    if (req.user!.role === UserRole.TRANSPORT_MANAGER) {
+      return validateSearchTransportManagerTrainingQueries(req, _res, next);
+    }
+    return validateSearchQueries(req, _res, next);
+  },
   getManyTransportManagerTraining
 );
 
@@ -88,7 +142,20 @@ router.get(
  * @param {function} validation - ['validateId']
  * @param {function} controller - ['getTransportManagerTrainingById']
  */
-router.get('/get-transport-manager-training/:id', validateId, getTransportManagerTrainingById);
+router.get(
+  '/get-transport-manager-training/:id/:standAloneId',
+  authorizedRoles([UserRole.TRANSPORT_MANAGER]),
+  validateClientForManagerMiddleware,
+  validateTransportManagerTrainingAndManagerIdParam,
+  getTransportManagerTrainingById
+);
+
+router.get(
+  '/get-transport-manager-training/:id',
+  authorizedRoles([UserRole.STANDALONE_USER]),
+  validateTransportManagerTrainingIdParam,
+  getTransportManagerTrainingById
+);
 
 // Export the router
 module.exports = router;

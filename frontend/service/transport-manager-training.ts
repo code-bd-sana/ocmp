@@ -7,6 +7,12 @@ import {
   TransportManagerTrainingRow,
   UpdateTransportManagerTrainingInput,
 } from "@/lib/transport-manager-training/transport-manager-training.types";
+import {
+  buildRoleScopedQuery,
+  getCurrentUserRole,
+  isStandaloneRole,
+  requireScopedClientId,
+} from "./shared/role-scope";
 
 function extractApiError(data: IApiResponse | undefined): string {
   if (!data) return "Something went wrong";
@@ -31,7 +37,9 @@ function extractApiError(data: IApiResponse | undefined): string {
   return "Something went wrong";
 }
 
-const getTrainings = async (params?: {
+const getTrainings = async (
+  standAloneId: string,
+  params?: {
   searchKey?: string;
   showPerPage?: number;
   pageNo?: number;
@@ -40,17 +48,20 @@ const getTrainings = async (params?: {
   if (!token) throw new Error("No authentication token found");
 
   try {
+    const userRole = await getCurrentUserRole();
+    const queryParams = buildRoleScopedQuery(userRole, standAloneId, {
+      searchKey: params?.searchKey || undefined,
+      showPerPage: params?.showPerPage || 10,
+      pageNo: params?.pageNo || 1,
+    });
+
     const response = await axios.get<
       IApiResponse<TransportManagerTrainingListResponse>
     >(
       `${base_url}/transport-manager-training/get-transport-manager-training/many`,
       {
         headers: { Authorization: `Bearer ${token}` },
-        params: {
-          searchKey: params?.searchKey || undefined,
-          showPerPage: params?.showPerPage || 10,
-          pageNo: params?.pageNo || 1,
-        },
+        params: queryParams,
       },
     );
 
@@ -66,13 +77,21 @@ const getTrainings = async (params?: {
 
 const getTraining = async (
   trainingId: string,
+  standAloneId: string,
 ): Promise<IApiResponse<TransportManagerTrainingRow>> => {
   const token = AuthAction.GetAuthToken();
   if (!token) throw new Error("No authentication token found");
 
   try {
+    const userRole = await getCurrentUserRole();
+    requireScopedClientId(userRole, standAloneId);
+
+    const endpoint = isStandaloneRole(userRole)
+      ? `${base_url}/transport-manager-training/get-transport-manager-training/${trainingId}`
+      : `${base_url}/transport-manager-training/get-transport-manager-training/${trainingId}/${standAloneId}`;
+
     const response = await axios.get<IApiResponse<TransportManagerTrainingRow>>(
-      `${base_url}/transport-manager-training/get-transport-manager-training/${trainingId}`,
+      endpoint,
       {
         headers: { Authorization: `Bearer ${token}` },
       },
@@ -89,15 +108,38 @@ const getTraining = async (
 };
 
 const createTraining = async (
-  data: CreateTransportManagerTrainingInput,
+  data: CreateTransportManagerTrainingInput & { standAloneId?: string },
 ): Promise<IApiResponse> => {
   const token = AuthAction.GetAuthToken();
   if (!token) throw new Error("No authentication token found");
 
   try {
+    const userRole = await getCurrentUserRole();
+    requireScopedClientId(userRole, data.standAloneId);
+
+    const formData = new FormData();
+
+    formData.append("trainingCourse", data.trainingCourse);
+    formData.append("unitTitle", data.unitTitle);
+    formData.append("completionDate", data.completionDate);
+    formData.append("renewalTracker", data.renewalTracker);
+    if (!isStandaloneRole(userRole) && data.standAloneId) {
+      formData.append("standAloneId", data.standAloneId);
+    }
+
+    if (data.nextDueDate) formData.append("nextDueDate", data.nextDueDate);
+
+    if (data.attachments?.length) {
+      data.attachments.forEach((file) => {
+        formData.append("attachments", file);
+      });
+    }
+
     const response = await axios.post<IApiResponse>(
-      `${base_url}/transport-manager-training/create-transport-manager-training`,
-      data,
+      isStandaloneRole(userRole)
+        ? `${base_url}/transport-manager-training/create-stand-alone-transport-manager-training`
+        : `${base_url}/transport-manager-training/create-transport-manager-training`,
+      formData,
       {
         headers: { Authorization: `Bearer ${token}` },
       },
@@ -115,15 +157,41 @@ const createTraining = async (
 
 const updateTraining = async (
   trainingId: string,
+  standAloneId: string,
   data: UpdateTransportManagerTrainingInput,
 ): Promise<IApiResponse> => {
   const token = AuthAction.GetAuthToken();
   if (!token) throw new Error("No authentication token found");
 
   try {
+    const userRole = await getCurrentUserRole();
+    requireScopedClientId(userRole, standAloneId);
+
+    const formData = new FormData();
+
+    if (data.trainingCourse) formData.append("trainingCourse", data.trainingCourse);
+    if (data.unitTitle) formData.append("unitTitle", data.unitTitle);
+    if (data.completionDate) formData.append("completionDate", data.completionDate);
+    if (data.renewalTracker) formData.append("renewalTracker", data.renewalTracker);
+    if (data.nextDueDate) formData.append("nextDueDate", data.nextDueDate);
+
+    if (data.removeAttachmentIds?.length) {
+      data.removeAttachmentIds.forEach((id) => {
+        formData.append("removeAttachmentIds", id);
+      });
+    }
+
+    if (data.attachments?.length) {
+      data.attachments.forEach((file) => {
+        formData.append("attachments", file);
+      });
+    }
+
     const response = await axios.patch<IApiResponse>(
-      `${base_url}/transport-manager-training/update-transport-manager-training/${trainingId}`,
-      data,
+      isStandaloneRole(userRole)
+        ? `${base_url}/transport-manager-training/update-transport-manager-training/${trainingId}`
+        : `${base_url}/transport-manager-training/update-transport-manager-training/${trainingId}/${standAloneId}`,
+      formData,
       {
         headers: { Authorization: `Bearer ${token}` },
       },
@@ -139,13 +207,21 @@ const updateTraining = async (
   }
 };
 
-const deleteTraining = async (trainingId: string): Promise<IApiResponse> => {
+const deleteTraining = async (
+  trainingId: string,
+  standAloneId: string,
+): Promise<IApiResponse> => {
   const token = AuthAction.GetAuthToken();
   if (!token) throw new Error("No authentication token found");
 
   try {
+    const userRole = await getCurrentUserRole();
+    requireScopedClientId(userRole, standAloneId);
+
     const response = await axios.delete<IApiResponse>(
-      `${base_url}/transport-manager-training/delete-transport-manager-training/${trainingId}`,
+      isStandaloneRole(userRole)
+        ? `${base_url}/transport-manager-training/delete-transport-manager-training/${trainingId}`
+        : `${base_url}/transport-manager-training/delete-transport-manager-training/${trainingId}/${standAloneId}`,
       {
         headers: { Authorization: `Bearer ${token}` },
       },

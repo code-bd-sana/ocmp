@@ -1,13 +1,92 @@
 import mongoose from 'mongoose';
+import { UploadedFile } from 'express-fileupload';
 import TrafficCommissionerCommunicationModel, {
   ITrafficCommissionerCommunication,
 } from '../../models/compliance-enforcement-dvsa/trafficCommissionerCommunication.schema';
 import { IdOrIdsInput, SearchQueryInput } from '../../handlers/common-zod-validator';
+import DocumentModel from '../../models/document.schema';
+import { deleteObjects, getSignedDownloadUrl } from '../../utils/aws/s3';
+import {
+  rollbackUploadedDocuments,
+  uploadFilesAndCreateDocuments,
+} from '../../utils/aws/document-upload';
 import {
   CreateTrafficCommissionerCommunicationAsStandAloneInput,
   CreateTrafficCommissionerCommunicationAsTransportManagerInput,
   UpdateTrafficCommissionerCommunicationInput,
 } from './traffic-commissioner-communication.validation';
+
+interface TrafficCommissionerAttachmentResponse {
+  _id: string;
+  filename: string;
+  originalName: string;
+  mimeType: string;
+  size: number;
+  url: string;
+  downloadUrl: string;
+}
+
+type TrafficCommissionerWithAttachmentsResponse = Omit<
+  Partial<ITrafficCommissionerCommunication>,
+  'attachments'
+> & {
+  attachments?: TrafficCommissionerAttachmentResponse[];
+};
+
+const withSignedAttachmentUrls = async (
+  communication:
+    | ITrafficCommissionerCommunication
+    | (Partial<ITrafficCommissionerCommunication> & { _id: mongoose.Types.ObjectId })
+): Promise<TrafficCommissionerWithAttachmentsResponse> => {
+  const attachmentIds = Array.isArray(communication.attachments)
+    ? communication.attachments
+      .map((id) => (id instanceof mongoose.Types.ObjectId ? id : new mongoose.Types.ObjectId(id)))
+      .filter(Boolean)
+    : [];
+
+  if (!attachmentIds.length) {
+    return {
+      ...(communication as Partial<ITrafficCommissionerCommunication>),
+      attachments: [],
+    } as TrafficCommissionerWithAttachmentsResponse;
+  }
+
+  const documents = await DocumentModel.find({ _id: { $in: attachmentIds } })
+    .select('_id filename originalName mimeType size url s3Key')
+    .lean();
+
+  const signedDocuments = await Promise.all(
+    documents.map(async (doc) => {
+      let downloadUrl = doc.url;
+
+      try {
+        downloadUrl = await getSignedDownloadUrl(doc.s3Key);
+      } catch {
+        // Fallback to stored URL if signed URL generation fails.
+      }
+
+      return {
+        _id: String(doc._id),
+        filename: doc.filename,
+        originalName: doc.originalName,
+        mimeType: doc.mimeType,
+        size: doc.size,
+        url: doc.url,
+        downloadUrl,
+      } as TrafficCommissionerAttachmentResponse;
+    })
+  );
+
+  const byId = new Map(signedDocuments.map((doc) => [doc._id, doc]));
+  const orderedAttachments = attachmentIds
+    .map((id) => byId.get(String(id)))
+    .filter((doc): doc is TrafficCommissionerAttachmentResponse => Boolean(doc));
+
+  return {
+    ...(communication as Partial<ITrafficCommissionerCommunication>),
+    attachments: orderedAttachments,
+  } as TrafficCommissionerWithAttachmentsResponse;
+};
 
 const hasOwnerAccess = (doc: any, accessId?: string) => {
   if (!accessId) return true;
@@ -56,11 +135,13 @@ const updateTrafficCommissionerCommunication = async (
   id: IdOrIdsInput['id'],
   data: UpdateTrafficCommissionerCommunicationInput,
   userId: IdOrIdsInput['id'],
-  standAloneId?: string
+  standAloneId?: string,
+  files: UploadedFile[] = [],
+  removeAttachmentIds: string[] = []
 ): Promise<Partial<ITrafficCommissionerCommunication | null>> => {
   const existingTrafficCommissionerCommunication =
     await TrafficCommissionerCommunicationModel.findById(id)
-      .select('standAloneId createdBy')
+      .select('standAloneId createdBy attachments')
       .lean();
   if (!existingTrafficCommissionerCommunication) return null;
 
@@ -69,9 +150,112 @@ const updateTrafficCommissionerCommunication = async (
     return null;
   }
 
-  const updatedTrafficCommissionerCommunication =
-    await TrafficCommissionerCommunicationModel.findByIdAndUpdate(id, data, { new: true });
-  return updatedTrafficCommissionerCommunication;
+  const normalizedRemoveIds = Array.from(
+    new Set(
+      removeAttachmentIds
+        .filter((item) => mongoose.Types.ObjectId.isValid(item))
+        .map((item) => String(item))
+    )
+  );
+
+  const currentAttachmentIds = Array.isArray(existingTrafficCommissionerCommunication.attachments)
+    ? existingTrafficCommissionerCommunication.attachments.map((item) => String(item))
+    : [];
+
+  const removableAttachmentIds = normalizedRemoveIds.filter((item) =>
+    currentAttachmentIds.includes(item)
+  );
+
+  if (removableAttachmentIds.length) {
+    const documentsToDelete = await DocumentModel.find({
+      _id: {
+        $in: removableAttachmentIds.map((docId) => new mongoose.Types.ObjectId(docId)),
+      },
+    })
+      .select('_id s3Key')
+      .lean();
+
+    const keysToDelete = documentsToDelete.map((doc) => doc.s3Key).filter(Boolean);
+
+    if (keysToDelete.length) {
+      await deleteObjects(keysToDelete);
+    }
+
+    if (documentsToDelete.length) {
+      await DocumentModel.deleteMany({
+        _id: { $in: documentsToDelete.map((doc) => doc._id) },
+      });
+    }
+  }
+
+  let uploadedDocuments: Awaited<ReturnType<typeof uploadFilesAndCreateDocuments>>['documents'] = [];
+
+  if (files.length) {
+    const uploadResult = await uploadFilesAndCreateDocuments(
+      files,
+      String(userId),
+      'traffic-commissioner-communication'
+    );
+    uploadedDocuments = uploadResult.documents;
+  }
+
+  const sanitizedData: UpdateTrafficCommissionerCommunicationInput = { ...data };
+  delete (sanitizedData as any).attachments;
+  delete (sanitizedData as any).removeAttachmentIds;
+
+  try {
+    let updatedTrafficCommissionerCommunication: ITrafficCommissionerCommunication | null = null;
+
+    if (Object.keys(sanitizedData).length) {
+      updatedTrafficCommissionerCommunication =
+        await TrafficCommissionerCommunicationModel.findByIdAndUpdate(
+          id,
+          { $set: sanitizedData },
+          { new: true }
+        );
+    }
+
+    if (removableAttachmentIds.length) {
+      updatedTrafficCommissionerCommunication =
+        await TrafficCommissionerCommunicationModel.findByIdAndUpdate(
+          id,
+          {
+            $pull: {
+              attachments: {
+                $in: removableAttachmentIds.map((docId) => new mongoose.Types.ObjectId(docId)),
+              },
+            },
+          },
+          { new: true }
+        );
+    }
+
+    if (uploadedDocuments.length) {
+      updatedTrafficCommissionerCommunication =
+        await TrafficCommissionerCommunicationModel.findByIdAndUpdate(
+          id,
+          {
+            $addToSet: {
+              attachments: {
+                $each: uploadedDocuments.map((doc) => doc._id as mongoose.Types.ObjectId),
+              },
+            },
+          },
+          { new: true }
+        );
+    }
+
+    if (!updatedTrafficCommissionerCommunication) {
+      updatedTrafficCommissionerCommunication = await TrafficCommissionerCommunicationModel.findById(id);
+    }
+
+    return updatedTrafficCommissionerCommunication;
+  } catch (error) {
+    if (uploadedDocuments.length) {
+      await rollbackUploadedDocuments(uploadedDocuments);
+    }
+    throw error;
+  }
 };
 
 /**
@@ -87,13 +271,47 @@ const deleteTrafficCommissionerCommunication = async (
 ): Promise<Partial<ITrafficCommissionerCommunication | null>> => {
   const existingTrafficCommissionerCommunication =
     await TrafficCommissionerCommunicationModel.findById(id)
-      .select('standAloneId createdBy')
+      .select('standAloneId createdBy attachments')
       .lean();
   if (!existingTrafficCommissionerCommunication) return null;
 
   const accessOwnerId = String(standAloneId || userId);
   if (!hasOwnerAccess(existingTrafficCommissionerCommunication, accessOwnerId)) {
     return null;
+  }
+
+  const attachmentIds = Array.isArray(existingTrafficCommissionerCommunication.attachments)
+    ? existingTrafficCommissionerCommunication.attachments
+      .map((item) => String(item))
+      .filter((item) => mongoose.Types.ObjectId.isValid(item))
+    : [];
+
+  if (attachmentIds.length) {
+    const documents = await DocumentModel.find({
+      _id: { $in: attachmentIds.map((docId) => new mongoose.Types.ObjectId(docId)) },
+    })
+      .select('_id s3Key')
+      .lean();
+
+    const s3Keys = documents.map((doc) => doc.s3Key).filter(Boolean);
+
+    if (s3Keys.length) {
+      const s3DeleteResult = await deleteObjects(s3Keys);
+      if (s3DeleteResult.Errors?.length) {
+        throw new Error('Failed to delete one or more communication attachment files from S3');
+      }
+    }
+
+    if (documents.length) {
+      await DocumentModel.deleteMany({
+        _id: { $in: documents.map((doc) => doc._id) },
+      });
+    }
+
+    await TrafficCommissionerCommunicationModel.updateOne(
+      { _id: existingTrafficCommissionerCommunication._id },
+      { $set: { attachments: [] } }
+    );
   }
 
   const deletedTrafficCommissionerCommunication =
@@ -114,7 +332,7 @@ const getTrafficCommissionerCommunicationById = async (
     requesterRole?: string;
     standAloneId?: string;
   }
-): Promise<Partial<ITrafficCommissionerCommunication | null>> => {
+): Promise<TrafficCommissionerWithAttachmentsResponse | null> => {
   const { requesterId, standAloneId } = options || {};
   const ownerObjectId = standAloneId
     ? new mongoose.Types.ObjectId(standAloneId)
@@ -123,7 +341,11 @@ const getTrafficCommissionerCommunicationById = async (
       : undefined;
 
   if (!ownerObjectId) {
-    return TrafficCommissionerCommunicationModel.findById(id).lean();
+    const communication = await TrafficCommissionerCommunicationModel.findById(id).lean();
+    if (!communication) return null;
+    return withSignedAttachmentUrls(
+      communication as Partial<ITrafficCommissionerCommunication> & { _id: mongoose.Types.ObjectId }
+    );
   }
 
   const trafficCommissionerCommunication = await TrafficCommissionerCommunicationModel.findOne({
@@ -131,7 +353,13 @@ const getTrafficCommissionerCommunicationById = async (
     $or: [{ standAloneId: ownerObjectId }, { createdBy: ownerObjectId }],
   }).lean();
 
-  return trafficCommissionerCommunication;
+  if (!trafficCommissionerCommunication) return null;
+
+  return withSignedAttachmentUrls(
+    trafficCommissionerCommunication as Partial<ITrafficCommissionerCommunication> & {
+      _id: mongoose.Types.ObjectId;
+    }
+  );
 };
 
 /**

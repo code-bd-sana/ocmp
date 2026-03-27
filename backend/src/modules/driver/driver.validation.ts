@@ -122,6 +122,20 @@ const zodUpdateDriverSchema = zodCreateDriverAsTransportManagerSchema
     checkStatus: true,
     attachments: true,
   })
+  .extend({
+    removeAttachmentIds: z
+      .union([
+        z.string().refine(isMongoId, {
+          message: 'Please provide a valid MongoDB ObjectId',
+        }),
+        z.array(
+          z.string().refine(isMongoId, {
+            message: 'Please provide a valid MongoDB ObjectId',
+          })
+        ),
+      ])
+      .optional(),
+  })
   .partial();
 
 export type UpdateDriverInput = z.infer<typeof zodUpdateDriverSchema>;

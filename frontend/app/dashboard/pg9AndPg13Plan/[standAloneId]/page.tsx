@@ -16,6 +16,9 @@ import {
 import { Pg9AndPg13PlanAction } from "@/service/pg9AndPg13Plan";
 import { use, useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+import { UserAction } from "@/service/user";
+import { resolveRoleScopedRoute } from "@/lib/utils/role-route";
 
 interface PageProps {
   params: Promise<{ standAloneId: string }>;
@@ -23,6 +26,9 @@ interface PageProps {
 
 export default function Pg9AndPg13PlanPage({ params }: PageProps) {
   const { standAloneId } = use(params);
+  const router = useRouter();
+
+  const [roleReady, setRoleReady] = useState(false);
 
   const [rows, setRows] = useState<Pg9AndPg13PlanRow[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -47,14 +53,60 @@ export default function Pg9AndPg13PlanPage({ params }: PageProps) {
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  useEffect(() => {
+    let isActive = true;
+
+    const ensureRoleScopedRoute = async () => {
+      try {
+        const profileResp = await UserAction.getProfile();
+        const userRole = profileResp.data?.role;
+        const userId = profileResp.data?._id;
+
+        if (!isActive) return;
+
+        const routeResult = resolveRoleScopedRoute({
+          role: userRole,
+          userId,
+          standAloneId,
+          basePath: "/dashboard/pg9AndPg13Plan",
+        });
+
+        if (routeResult.error) {
+          setError(routeResult.error);
+          return;
+        }
+
+        if (routeResult.redirectTo) {
+          router.replace(routeResult.redirectTo);
+          return;
+        }
+
+        setRoleReady(true);
+      } catch {
+        if (!isActive) return;
+        setError("Failed to load your profile. Please sign in again.");
+      }
+    };
+
+    setRoleReady(false);
+    ensureRoleScopedRoute();
+
+    return () => {
+      isActive = false;
+    };
+  }, [standAloneId, router]);
+
   const fetchPg9AndPg13Plans = useCallback(
     async (search?: string) => {
       try {
         setLoading(true);
-        const res = await Pg9AndPg13PlanAction.getPg9AndPg13Plans(standAloneId, {
-          searchKey: search || undefined,
-          showPerPage: 100,
-        });
+        const res = await Pg9AndPg13PlanAction.getPg9AndPg13Plans(
+          standAloneId,
+          {
+            searchKey: search || undefined,
+            showPerPage: 100,
+          },
+        );
 
         if (res.status && res.data) {
           const transformed = toPg9AndPg13PlanRow(res.data.pg9AndPg13Plans);
@@ -77,8 +129,9 @@ export default function Pg9AndPg13PlanPage({ params }: PageProps) {
   );
 
   useEffect(() => {
+    if (!roleReady) return;
     fetchPg9AndPg13Plans();
-  }, [fetchPg9AndPg13Plans]);
+  }, [fetchPg9AndPg13Plans, roleReady]);
 
   // Debounced search
   const handleSearchChange = (value: string) => {
@@ -245,6 +298,17 @@ export default function Pg9AndPg13PlanPage({ params }: PageProps) {
       </div>
     );
   }
+
+  if (!roleReady) {
+    return (
+      <div className="container mx-auto max-w-6xl py-10">
+        <div className="flex h-64 items-center justify-center">
+          <p className="text-muted-foreground">Validating access...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto py-4 lg:mr-10">
       <Pg9AndPg13PlanHeader

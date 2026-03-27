@@ -1,13 +1,18 @@
 import axios from "axios";
 import { base_url } from "@/lib/utils";
 import { IApiResponse, AuthAction } from "./auth";
-import { UserAction } from "./user";
 import {
   CreateVehicleInput,
   UpdateVehicleInput,
   VehicleListResponse,
   VehicleRow,
 } from "@/lib/vehicles/vehicle.types";
+import {
+  buildRoleScopedQuery,
+  getCurrentUserRole,
+  isStandaloneRole,
+  requireScopedClientId,
+} from "./shared/role-scope";
 
 /**
  * Extract the most useful error message from a backend error response.
@@ -34,21 +39,6 @@ function extractApiError(data: IApiResponse | undefined): string {
 }
 
 /**
- * Get the current user's role (cached or fresh fetch)
- */
-let cachedUserRole: string | null = null;
-const getUserRole = async (): Promise<string | null> => {
-  if (cachedUserRole) return cachedUserRole;
-  try {
-    const profileResp = await UserAction.getProfile();
-    cachedUserRole = profileResp.data?.role || null;
-    return cachedUserRole;
-  } catch {
-    return null;
-  }
-};
-
-/**
  * GET /api/v1/vehicle/get-vehicle/many
  *
  * For STANDALONE_USER: No standAloneId parameter (gets their own vehicles)
@@ -66,22 +56,13 @@ const getVehicles = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
-    const userRole = await getUserRole();
+    const userRole = await getCurrentUserRole();
 
-    // For standalone users, don't include standAloneId in query params
-    const queryParams =
-      userRole === "STANDALONE_USER"
-        ? {
-            searchKey: params?.searchKey || undefined,
-            showPerPage: params?.showPerPage || 10,
-            pageNo: params?.pageNo || 1,
-          }
-        : {
-            standAloneId,
-            searchKey: params?.searchKey || undefined,
-            showPerPage: params?.showPerPage || 10,
-            pageNo: params?.pageNo || 1,
-          };
+    const queryParams = buildRoleScopedQuery(userRole, standAloneId, {
+      searchKey: params?.searchKey || undefined,
+      showPerPage: params?.showPerPage || 10,
+      pageNo: params?.pageNo || 1,
+    });
 
     const response = await axios.get<IApiResponse<VehicleListResponse>>(
       `${base_url}/vehicle/get-vehicle/many`,
@@ -113,11 +94,12 @@ const getVehicle = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
-    const userRole = await getUserRole();
+    const userRole = await getCurrentUserRole();
+    requireScopedClientId(userRole, standAloneId);
 
     // For standalone users, only use vehicleId; for transport managers, use both
     const url =
-      userRole === "STANDALONE_USER"
+      isStandaloneRole(userRole)
         ? `${base_url}/vehicle/get-vehicle/${vehicleId}`
         : `${base_url}/vehicle/get-vehicle/${vehicleId}/${standAloneId}`;
 
@@ -146,16 +128,17 @@ const createVehicle = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
-    const userRole = await getUserRole();
+    const userRole = await getCurrentUserRole();
+    requireScopedClientId(userRole, data.standAloneId);
 
     const endpoint =
-      userRole === "STANDALONE_USER"
+      isStandaloneRole(userRole)
         ? `${base_url}/vehicle/create-stand-alone-vehicle`
         : `${base_url}/vehicle/create-vehicle`;
 
     // SA endpoint uses .strict() — must not include standAloneId in body
-    const { ...saData } = data;
-    const body = userRole === "STANDALONE_USER" ? saData : data;
+    const { standAloneId: _standAloneId, ...saData } = data;
+    const body = isStandaloneRole(userRole) ? saData : data;
 
     const response = await axios.post<IApiResponse>(endpoint, body, {
       headers: { Authorization: `Bearer ${token}` },
@@ -184,10 +167,11 @@ const updateVehicle = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
-    const userRole = await getUserRole();
+    const userRole = await getCurrentUserRole();
+    requireScopedClientId(userRole, standAloneId);
 
     const url =
-      userRole === "STANDALONE_USER"
+      isStandaloneRole(userRole)
         ? `${base_url}/vehicle/update-vehicle/${vehicleId}`
         : `${base_url}/vehicle/update-vehicle/${vehicleId}/${standAloneId}`;
 
@@ -217,10 +201,11 @@ const deleteVehicle = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
-    const userRole = await getUserRole();
+    const userRole = await getCurrentUserRole();
+    requireScopedClientId(userRole, standAloneId);
 
     const url =
-      userRole === "STANDALONE_USER"
+      isStandaloneRole(userRole)
         ? `${base_url}/vehicle/delete-vehicle/${vehicleId}`
         : `${base_url}/vehicle/delete-vehicle/${vehicleId}/${standAloneId}`;
 

@@ -1,3 +1,13 @@
+export interface TrainingToolboxAttachment {
+  _id: string;
+  filename: string;
+  originalName: string;
+  mimeType: string;
+  size: number;
+  url: string;
+  downloadUrl: string;
+}
+
 export interface TrainingToolboxRow {
   _id: string;
   date: string;
@@ -11,7 +21,7 @@ export interface TrainingToolboxRow {
   followUpNeeded?: boolean;
   followUpDate?: string;
   signOff?: boolean;
-  attachments?: string[];
+  attachments?: TrainingToolboxAttachment[];
   standAloneId?: string;
   createdBy?: string;
 }
@@ -33,7 +43,7 @@ export interface CreateTrainingToolboxInput {
   followUpNeeded?: boolean;
   followUpDate?: string;
   signOff?: boolean;
-  attachments?: string[];
+  attachments?: File[];
   standAloneId?: string;
 }
 
@@ -48,5 +58,6 @@ export interface UpdateTrainingToolboxInput {
   followUpNeeded?: boolean;
   followUpDate?: string;
   signOff?: boolean;
-  attachments?: string[];
+  attachments?: File[];
+  removeAttachmentIds?: string[];
 }

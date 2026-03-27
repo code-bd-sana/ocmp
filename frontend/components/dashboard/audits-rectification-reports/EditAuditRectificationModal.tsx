@@ -1,10 +1,11 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { z } from "zod";
 import UniversalForm from "@/components/universal-form/UniversalForm";
 import { FieldConfig } from "@/components/universal-form/form.types";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { Loader2 } from "lucide-react";
+import { Download, Loader2, Trash2 } from "lucide-react";
 import {
   AuditRectificationReportRow,
   AuditStatus,
@@ -28,6 +29,7 @@ const editReportSchema = z.object({
     .max(150, "Responsible person must not exceed 150 characters")
     .optional(),
   finalizeDate: z.string().optional(),
+  attachments: z.any().optional(),
 });
 
 type EditReportForm = z.infer<typeof editReportSchema>;
@@ -92,9 +94,111 @@ export default function EditAuditRectificationModal({
       placeholder: "Enter responsible person",
     },
     { name: "finalizeDate", label: "Finalize Date", type: "date" },
+    {
+      name: "attachments",
+      label: "Add New Attachments",
+      type: "file",
+      multiple: true,
+    },
   ];
 
+  const [removeAttachmentIds, setRemoveAttachmentIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (open) {
+      setRemoveAttachmentIds([]);
+    }
+  }, [open, report?._id]);
+
+  const toggleRemoveAttachment = (attachmentId: string) => {
+    setRemoveAttachmentIds((prev) => {
+      if (prev.includes(attachmentId)) {
+        return prev.filter((id) => id !== attachmentId);
+      }
+      return [...prev, attachmentId];
+    });
+  };
+
+  const renderAttachmentRemoveSection = () => {
+    if (!report) return null;
+
+    if (!report.attachments?.length) {
+      return (
+        <div className="mt-4 rounded-md border p-3">
+          <p className="text-sm font-semibold">Remove Existing Attachments</p>
+          <p className="text-muted-foreground mt-2 text-sm">
+            No attachments found.
+          </p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="mt-4 rounded-md border p-3">
+        <p className="text-sm font-semibold">Remove Existing Attachments</p>
+        <div className="mt-2 space-y-2">
+          {report.attachments.map((attachment) => {
+            const markedForRemoval = removeAttachmentIds.includes(
+              attachment._id,
+            );
+
+            return (
+              <div
+                key={attachment._id}
+                className="flex items-center justify-between gap-3 rounded-md border p-2"
+              >
+                <span
+                  className={`min-w-0 truncate text-sm ${markedForRemoval ? "text-red-600 line-through" : ""}`}
+                >
+                  {attachment.originalName || attachment.filename}
+                </span>
+
+                <div className="flex items-center gap-2">
+                  <a
+                    href={attachment.downloadUrl || attachment.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-muted-foreground hover:text-foreground"
+                    title="Download"
+                  >
+                    <Download className="h-4 w-4" />
+                  </a>
+
+                  <button
+                    type="button"
+                    onClick={() => toggleRemoveAttachment(attachment._id)}
+                    className={
+                      markedForRemoval
+                        ? "text-red-600 hover:text-red-700"
+                        : "text-muted-foreground hover:text-red-600"
+                    }
+                    title={
+                      markedForRemoval ? "Undo remove" : "Remove on update"
+                    }
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {removeAttachmentIds.length > 0 ? (
+          <p className="mt-2 text-xs text-amber-600">
+            {removeAttachmentIds.length} attachment(s) marked for removal on
+            update.
+          </p>
+        ) : null}
+      </div>
+    );
+  };
+
   const handleSubmit = async (data: EditReportForm) => {
+    const attachmentFiles = data.attachments
+      ? Array.from(data.attachments as FileList)
+      : undefined;
+
     const payload: UpdateAuditRectificationReportInput = {
       title: data.title,
       type: data.type,
@@ -109,6 +213,8 @@ export default function EditAuditRectificationModal({
       ...(data.finalizeDate && {
         finalizeDate: new Date(data.finalizeDate).toISOString(),
       }),
+      ...(attachmentFiles?.length && { attachments: attachmentFiles }),
+      ...(removeAttachmentIds.length && { removeAttachmentIds }),
     };
 
     await onSubmit(payload);
@@ -141,10 +247,16 @@ export default function EditAuditRectificationModal({
               status: report.status || "Pending",
               responsiblePerson: report.responsiblePerson || "",
               finalizeDate: toDateInput(report.finalizeDate),
+              attachments: undefined,
             }}
             onSubmit={handleSubmit}
             submitText="Update Report"
             setOpen={onOpenChange}
+            renderAfterField={(fieldName) =>
+              fieldName === "attachments"
+                ? renderAttachmentRemoveSection()
+                : null
+            }
           />
         ) : (
           <div className="flex h-40 items-center justify-center">

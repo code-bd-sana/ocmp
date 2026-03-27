@@ -5,7 +5,7 @@ import { z } from "zod";
 import UniversalForm from "@/components/universal-form/UniversalForm";
 import { FieldConfig } from "@/components/universal-form/form.types";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { Loader2 } from "lucide-react";
+import { Download, Loader2, Trash2 } from "lucide-react";
 import {
   SpotCheckRow,
   UpdateSpotCheckInput,
@@ -25,6 +25,7 @@ const editSpotCheckSchema = z.object({
   completedBy: z.string().optional(),
   followUpNeeded: z.string().optional(),
   notes: z.string().optional(),
+  attachments: z.any().optional(),
 });
 
 type EditSpotCheckForm = z.infer<typeof editSpotCheckSchema>;
@@ -129,9 +130,111 @@ export default function EditSpotCheckModal({
       type: "textarea",
       placeholder: "Any additional notes",
     },
+    {
+      name: "attachments",
+      label: "Add New Attachments",
+      type: "file",
+      multiple: true,
+    },
   ];
 
+  const [removeAttachmentIds, setRemoveAttachmentIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (open) {
+      setRemoveAttachmentIds([]);
+    }
+  }, [open, spotCheck?._id]);
+
+  const toggleRemoveAttachment = (attachmentId: string) => {
+    setRemoveAttachmentIds((prev) => {
+      if (prev.includes(attachmentId)) {
+        return prev.filter((id) => id !== attachmentId);
+      }
+      return [...prev, attachmentId];
+    });
+  };
+
+  const renderAttachmentRemoveSection = () => {
+    if (!spotCheck) return null;
+
+    if (!spotCheck.attachments?.length) {
+      return (
+        <div className="mt-4 rounded-md border p-3">
+          <p className="text-sm font-semibold">Remove Existing Attachments</p>
+          <p className="text-muted-foreground mt-2 text-sm">
+            No attachments found.
+          </p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="mt-4 rounded-md border p-3">
+        <p className="text-sm font-semibold">Remove Existing Attachments</p>
+        <div className="mt-2 space-y-2">
+          {spotCheck.attachments.map((attachment) => {
+            const markedForRemoval = removeAttachmentIds.includes(
+              attachment._id,
+            );
+
+            return (
+              <div
+                key={attachment._id}
+                className="flex items-center justify-between gap-3 rounded-md border p-2"
+              >
+                <span
+                  className={`min-w-0 truncate text-sm ${markedForRemoval ? "text-red-600 line-through" : ""}`}
+                >
+                  {attachment.originalName || attachment.filename}
+                </span>
+
+                <div className="flex items-center gap-2">
+                  <a
+                    href={attachment.downloadUrl || attachment.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-muted-foreground hover:text-foreground"
+                    title="Download"
+                  >
+                    <Download className="h-4 w-4" />
+                  </a>
+
+                  <button
+                    type="button"
+                    onClick={() => toggleRemoveAttachment(attachment._id)}
+                    className={
+                      markedForRemoval
+                        ? "text-red-600 hover:text-red-700"
+                        : "text-muted-foreground hover:text-red-600"
+                    }
+                    title={
+                      markedForRemoval ? "Undo remove" : "Remove on update"
+                    }
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {removeAttachmentIds.length > 0 ? (
+          <p className="mt-2 text-xs text-amber-600">
+            {removeAttachmentIds.length} attachment(s) marked for removal on
+            update.
+          </p>
+        ) : null}
+      </div>
+    );
+  };
+
   const handleSubmit = async (data: EditSpotCheckForm) => {
+    const attachmentFiles = data.attachments
+      ? Array.from(data.attachments as FileList)
+      : undefined;
+
     const payload: UpdateSpotCheckInput = {
       vehicleId: data.vehicleId,
       issueDetails: data.issueDetails,
@@ -143,6 +246,8 @@ export default function EditSpotCheckModal({
       ...(data.completedBy && { completedBy: data.completedBy }),
       ...(data.followUpNeeded && { followUpNeeded: data.followUpNeeded }),
       ...(data.notes && { notes: data.notes }),
+      ...(attachmentFiles?.length && { attachments: attachmentFiles }),
+      ...(removeAttachmentIds.length && { removeAttachmentIds }),
     };
     await onSubmit(payload);
   };
@@ -151,9 +256,9 @@ export default function EditSpotCheckModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showCloseButton={false}
-        className="sm:max-w-2xl max-h-[90vh] overflow-y-auto"
+        className="max-h-[90vh] overflow-y-auto sm:max-w-2xl"
       >
-        <DialogTitle className="text-primary text-xl font-bold mb-4">
+        <DialogTitle className="text-primary mb-4 text-xl font-bold">
           Edit Spot Check
         </DialogTitle>
 
@@ -177,10 +282,16 @@ export default function EditSpotCheckModal({
               completedBy: spotCheck.completedBy || "",
               followUpNeeded: spotCheck.followUpNeeded || "",
               notes: spotCheck.notes || "",
+              attachments: undefined,
             }}
             onSubmit={handleSubmit}
             submitText="Update Spot Check"
             setOpen={onOpenChange}
+            renderAfterField={(fieldName) =>
+              fieldName === "attachments"
+                ? renderAttachmentRemoveSection()
+                : null
+            }
           />
         ) : (
           <div className="flex h-40 items-center justify-center">

@@ -128,49 +128,40 @@ export function AppSidebar() {
 
               <CollapsibleContent>
                 {activeModule ? (
-                  activeModule.slug === "transport-manager" ? (
-                    <div className="text-muted-foreground px-6 py-4 text-sm">
-                      No client list for this module
-                    </div>
-                  ) : (
-                    <SidebarMenuSub className="mt-3 -ml-5">
-                      {clients.map((client, index) => (
-                        <SidebarMenuSubItem
-                          key={client.id}
-                          className="relative"
+                  <SidebarMenuSub className="mt-3 -ml-5">
+                    {clients.map((client, index) => (
+                      <SidebarMenuSubItem key={client.id} className="relative">
+                        {/* Vertical line */}
+                        {index < clients.length - 1 && (
+                          <div className="bg-muted-foreground absolute -top-1 bottom-0 left-6 w-0.5" />
+                        )}
+
+                        {/* Horizontal branch line */}
+                        <div className="bg-muted-foreground absolute top-1/2 left-6 h-0.5 w-5" />
+
+                        {/* Corner for last item */}
+                        {index === clients.length - 1 && (
+                          <div className="bg-muted-foreground absolute -top-1 left-6 h-7 w-0.5" />
+                        )}
+                        <SidebarMenuSubButton
+                          asChild
+                          isActive={activeClientId === client.id}
+                          className={`hover:text-primary py-6 pl-14 font-normal text-(--body-text) hover:text-base ${
+                            activeClientId === client.id
+                              ? "!bg-white! !text-primary! data-[active=true]:text-primary! ml-12 rounded-none pl-3 shadow-sm! data-[active=true]:bg-white!"
+                              : ""
+                          } `}
                         >
-                          {/* Vertical line */}
-                          {index < clients.length - 1 && (
-                            <div className="bg-muted-foreground absolute -top-1 bottom-0 left-6 w-0.5" />
-                          )}
-
-                          {/* Horizontal branch line */}
-                          <div className="bg-muted-foreground absolute top-1/2 left-6 h-0.5 w-5" />
-
-                          {/* Corner for last item */}
-                          {index === clients.length - 1 && (
-                            <div className="bg-muted-foreground absolute -top-1 left-6 h-7 w-0.5" />
-                          )}
-                          <SidebarMenuSubButton
-                            asChild
-                            isActive={activeClientId === client.id}
-                            className={`hover:text-primary py-6 pl-14 font-normal text-(--body-text) hover:text-base ${
-                              activeClientId === client.id
-                                ? "!bg-white! !text-primary! data-[active=true]:text-primary! ml-12 rounded-none pl-3 shadow-sm! data-[active=true]:bg-white!"
-                                : ""
-                            } `}
+                          <Link
+                            href={`/dashboard/${activeModule.slug}/${client.id}`}
+                            className="block"
                           >
-                            <Link
-                              href={`/dashboard/${activeModule.slug}/${client.id}`}
-                              className="block"
-                            >
-                              {client.name}
-                            </Link>
-                          </SidebarMenuSubButton>
-                        </SidebarMenuSubItem>
-                      ))}
-                    </SidebarMenuSub>
-                  )
+                            {client.name}
+                          </Link>
+                        </SidebarMenuSubButton>
+                      </SidebarMenuSubItem>
+                    ))}
+                  </SidebarMenuSub>
                 ) : (
                   <div className="text-muted-foreground px-6 py-4 text-sm">
                     Please select a module from the footer to view clients.

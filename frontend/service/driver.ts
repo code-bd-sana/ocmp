@@ -1,7 +1,6 @@
 import { base_url } from "@/lib/utils";
 import { IApiResponse } from "./auth";
 import { AuthAction } from "./auth";
-import { UserAction } from "./user";
 import {
   CreateDriverInput,
   DriverListResponse,
@@ -9,6 +8,12 @@ import {
   UpdateDriverInput,
 } from "@/lib/drivers/driver.types";
 import axios from "axios";
+import {
+  buildRoleScopedQuery,
+  getCurrentUserRole,
+  isStandaloneRole,
+  requireScopedClientId,
+} from "./shared/role-scope";
 
 /**
  * Extract the most useful error message from a backend error response.
@@ -35,21 +40,6 @@ function extractApiError(data: IApiResponse | undefined): string {
 }
 
 /**
- * Get the current user's role (cached or fresh fetch)
- */
-let cachedUserRole: string | null = null;
-const getUserRole = async (): Promise<string | null> => {
-  if (cachedUserRole) return cachedUserRole;
-  try {
-    const profileResp = await UserAction.getProfile();
-    cachedUserRole = profileResp.data?.role || null;
-    return cachedUserRole;
-  } catch {
-    return null;
-  }
-};
-
-/**
  * GET /api/v1/driver/get-drivers
  *
  * For STANDALONE_USER: No standAloneId parameter (gets their own drivers)
@@ -67,22 +57,13 @@ const getDrivers = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
-    const userRole = await getUserRole();
+    const userRole = await getCurrentUserRole();
 
-    // For standalone users, don't include standAloneId in query params
-    const queryParams =
-      userRole === "STANDALONE_USER"
-        ? {
-            searchKey: params?.searchKey || undefined,
-            showPerPage: params?.showPerPage || 10,
-            pageNo: params?.pageNo || 1,
-          }
-        : {
-            standAloneId,
-            searchKey: params?.searchKey || undefined,
-            showPerPage: params?.showPerPage || 10,
-            pageNo: params?.pageNo || 1,
-          };
+    const queryParams = buildRoleScopedQuery(userRole, standAloneId, {
+      searchKey: params?.searchKey || undefined,
+      showPerPage: params?.showPerPage || 10,
+      pageNo: params?.pageNo || 1,
+    });
 
     const response = await axios.get<IApiResponse<DriverListResponse>>(
       `${base_url}/driver/get-drivers`,
@@ -114,11 +95,12 @@ const getDriver = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
-    const userRole = await getUserRole();
+    const userRole = await getCurrentUserRole();
+    requireScopedClientId(userRole, standAloneId);
 
     // For standalone users, only use driverId; for transport managers, use both
     const url =
-      userRole === "STANDALONE_USER"
+      isStandaloneRole(userRole)
         ? `${base_url}/driver/get-driver/${driverId}`
         : `${base_url}/driver/get-driver/${driverId}/${standAloneId}`;
 
@@ -145,10 +127,11 @@ const createDriver = async (data: CreateDriverInput): Promise<IApiResponse> => {
   if (!token) throw new Error("No authentication token found");
 
   try {
-    const userRole = await getUserRole();
+    const userRole = await getCurrentUserRole();
+    requireScopedClientId(userRole, data.standAloneId);
 
     const endpoint =
-      userRole === "STANDALONE_USER"
+      isStandaloneRole(userRole)
         ? `${base_url}/driver/create-stand-alone-driver`
         : `${base_url}/driver/create-driver`;
 
@@ -164,7 +147,7 @@ const createDriver = async (data: CreateDriverInput): Promise<IApiResponse> => {
     formData.append("employed", String(data.employed));
 
     // Only add standAloneId for transport managers
-    if (userRole === "TRANSPORT_MANAGER" && data.standAloneId) {
+    if (!isStandaloneRole(userRole) && data.standAloneId) {
       formData.append("standAloneId", data.standAloneId);
     }
 
@@ -215,14 +198,53 @@ const updateDriver = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
-    const userRole = await getUserRole();
+    const formData = new FormData();
+
+    if (data.fullName) formData.append("fullName", data.fullName);
+    if (data.licenseNumber) formData.append("licenseNumber", data.licenseNumber);
+    if (data.postCode) formData.append("postCode", data.postCode);
+    if (data.niNumber) formData.append("niNumber", data.niNumber);
+    if (data.nextCheckDueDate) formData.append("nextCheckDueDate", data.nextCheckDueDate);
+    if (typeof data.points !== "undefined") formData.append("points", String(data.points));
+    if (typeof data.checkFrequencyDays !== "undefined") {
+      formData.append("checkFrequencyDays", String(data.checkFrequencyDays));
+    }
+    if (typeof data.employed !== "undefined") {
+      formData.append("employed", String(data.employed));
+    }
+    if (data.licenseExpiry) formData.append("licenseExpiry", data.licenseExpiry);
+    if (data.licenseExpiryDTC) formData.append("licenseExpiryDTC", data.licenseExpiryDTC);
+    if (data.cpcExpiry) formData.append("cpcExpiry", data.cpcExpiry);
+    if (data.lastChecked) formData.append("lastChecked", data.lastChecked);
+    if (data.checkStatus) formData.append("checkStatus", data.checkStatus);
+
+    if (data.endorsementCodes?.length) {
+      data.endorsementCodes.forEach((code) => {
+        formData.append("endorsementCodes", code);
+      });
+    }
+
+    if (data.removeAttachmentIds?.length) {
+      data.removeAttachmentIds.forEach((id) => {
+        formData.append("removeAttachmentIds", id);
+      });
+    }
+
+    if (data.attachments?.length) {
+      data.attachments.forEach((file) => {
+        formData.append("attachments", file);
+      });
+    }
+
+    const userRole = await getCurrentUserRole();
+    requireScopedClientId(userRole, standAloneId);
 
     const url =
-      userRole === "STANDALONE_USER"
+      isStandaloneRole(userRole)
         ? `${base_url}/driver/update-driver/${driverId}`
         : `${base_url}/driver/update-driver-by-manager/${driverId}/${standAloneId}`;
 
-    const response = await axios.patch<IApiResponse>(url, data, {
+    const response = await axios.patch<IApiResponse>(url, formData, {
       headers: { Authorization: `Bearer ${token}` },
     });
     return response.data;
@@ -248,10 +270,11 @@ const deleteDriver = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
-    const userRole = await getUserRole();
+    const userRole = await getCurrentUserRole();
+    requireScopedClientId(userRole, standAloneId);
 
     const url =
-      userRole === "STANDALONE_USER"
+      isStandaloneRole(userRole)
         ? `${base_url}/driver/delete-driver/${driverId}`
         : `${base_url}/driver/delete-driver-by-manager/${driverId}/${standAloneId}`;
 

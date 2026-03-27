@@ -23,7 +23,7 @@ export interface CreateContactLogInput {
   date: string;
   person: string;
   subject: string;
-  standAloneId: string;
+  standAloneId?: string;
   contactMethod?: string;
   outcome?: string;
   followUpRequired?: boolean;

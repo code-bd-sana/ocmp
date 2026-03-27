@@ -4,7 +4,10 @@ import { Column, TableAction } from "@/components/universal-table/table.types";
 import UniversalTable, {
   HeaderActionGroup,
 } from "@/components/universal-table/UniversalTable";
-import { trafficCommissionerRow } from "@/lib/traffic-commissioner/traffic-commissioner.type";
+import {
+  trafficCommissionerRow,
+  TrafficCommissionerAttachment,
+} from "@/lib/traffic-commissioner/traffic-commissioner.type";
 import { Eye, Pencil, Trash2, MessageSquare } from "lucide-react";
 
 export interface TrafficCommissionerTableRow {
@@ -13,7 +16,7 @@ export interface TrafficCommissionerTableRow {
   contactedPerson: string;
   reason: string;
   communicationDate: string;
-  attachments?: string[];
+  attachments?: TrafficCommissionerAttachment[];
   comments?: string;
   standAloneId?: string;
   createdBy?: string;

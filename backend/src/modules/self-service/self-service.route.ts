@@ -97,6 +97,7 @@ router.patch(
   '/update-self-service/:id',
   authorizedRoles([UserRole.STANDALONE_USER]),
   // checkSubscriptionValidity,
+  validateSelfServiceIdParam,
   validateUpdateSelfService,
   updateSelfService
 );

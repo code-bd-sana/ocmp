@@ -32,7 +32,7 @@ const addTrafficCommissioner = z.object({
     message: "Please enter a valid date",
   }),
   comments: z.string().optional(),
-  attachments: z.array(z.instanceof(File)).optional(),
+  attachments: z.any().optional(),
 });
 
 type AddTrafficCommissionerForm = z.infer<typeof addTrafficCommissioner>;
@@ -97,11 +97,18 @@ export default function AddCommissionerModal({
   ];
 
   const handleSubmit = async (data: AddTrafficCommissionerForm) => {
-    const attachmentNames = data.attachments?.map((file) => file.name);
+    const attachmentFiles = data.attachments
+      ? Array.from(data.attachments as FileList)
+      : undefined;
+
     const payload: CreateTrafficCommissionerInput = {
-      ...data,
+      type: data.type,
+      contactedPerson: data.contactedPerson,
+      reason: data.reason,
+      communicationDate: data.communicationDate,
+      comments: data.comments,
       standAloneId,
-      attachments: attachmentNames,
+      ...(attachmentFiles?.length && { attachments: attachmentFiles }),
     };
     await onSubmit(payload);
   };

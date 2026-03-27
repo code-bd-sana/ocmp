@@ -6,6 +6,11 @@ import ServerResponse from '../../helpers/responses/custom-response';
 import catchAsync from '../../utils/catch-async/catch-async';
 import { AuthenticatedRequest } from '../../middlewares/is-authorized';
 import { UserRole } from '../../models';
+import {
+  extractUploadedFiles,
+  rollbackUploadedDocuments,
+  uploadFilesAndCreateDocuments,
+} from '../../utils/aws/document-upload';
 
 /**
  * Controller function to handle the creation of a single training-toolbox.
@@ -17,31 +22,69 @@ import { UserRole } from '../../models';
  */
 export const createTrainingToolboxAsManager = catchAsync(
   async (req: AuthenticatedRequest, res: Response) => {
-    if (req.user?._id) {
-      req.body.createdBy = new mongoose.Types.ObjectId(req.user._id);
-      req.body.deliveredBy = new mongoose.Types.ObjectId(req.user._id);
-    }
+    const userId = req.user!._id;
+    req.body.createdBy = new mongoose.Types.ObjectId(userId);
+    req.body.deliveredBy = new mongoose.Types.ObjectId(userId);
     if (req.body.standAloneId) {
       req.body.standAloneId = new mongoose.Types.ObjectId(req.body.standAloneId);
     }
 
-    const result = await trainingToolboxServices.createTrainingToolbox(req.body);
-    if (!result) throw new Error('Failed to create training-toolbox');
-    ServerResponse(res, true, 201, 'Training-toolbox created successfully', result);
+    const files = extractUploadedFiles((req as any).files, ['attachments', 'files']);
+    let uploadedDocuments: Awaited<ReturnType<typeof uploadFilesAndCreateDocuments>>['documents'] = [];
+
+    try {
+      if (files.length) {
+        const uploadResult = await uploadFilesAndCreateDocuments(files, userId, 'training-toolbox');
+        uploadedDocuments = uploadResult.documents;
+
+        const uploadedIds = uploadedDocuments.map((doc) => String(doc._id));
+        req.body.attachments = Array.isArray(req.body.attachments)
+          ? [...req.body.attachments, ...uploadedIds]
+          : uploadedIds;
+      }
+
+      const result = await trainingToolboxServices.createTrainingToolbox(req.body);
+      if (!result) throw new Error('Failed to create training-toolbox');
+      ServerResponse(res, true, 201, 'Training-toolbox created successfully', result);
+    } catch (error) {
+      if (uploadedDocuments.length) {
+        await rollbackUploadedDocuments(uploadedDocuments);
+      }
+      throw error;
+    }
   }
 );
 
 export const createTrainingToolboxAsStandAlone = catchAsync(
   async (req: AuthenticatedRequest, res: Response) => {
-    if (req.user?._id) {
-      req.body.createdBy = new mongoose.Types.ObjectId(req.user._id);
-      req.body.standAloneId = new mongoose.Types.ObjectId(req.user._id);
-      req.body.deliveredBy = new mongoose.Types.ObjectId(req.user._id);
-    }
+    const userId = req.user!._id;
+    req.body.createdBy = new mongoose.Types.ObjectId(userId);
+    req.body.standAloneId = new mongoose.Types.ObjectId(userId);
+    req.body.deliveredBy = new mongoose.Types.ObjectId(userId);
 
-    const result = await trainingToolboxServices.createTrainingToolbox(req.body);
-    if (!result) throw new Error('Failed to create training-toolbox');
-    ServerResponse(res, true, 201, 'Training-toolbox created successfully', result);
+    const files = extractUploadedFiles((req as any).files, ['attachments', 'files']);
+    let uploadedDocuments: Awaited<ReturnType<typeof uploadFilesAndCreateDocuments>>['documents'] = [];
+
+    try {
+      if (files.length) {
+        const uploadResult = await uploadFilesAndCreateDocuments(files, userId, 'training-toolbox');
+        uploadedDocuments = uploadResult.documents;
+
+        const uploadedIds = uploadedDocuments.map((doc) => String(doc._id));
+        req.body.attachments = Array.isArray(req.body.attachments)
+          ? [...req.body.attachments, ...uploadedIds]
+          : uploadedIds;
+      }
+
+      const result = await trainingToolboxServices.createTrainingToolbox(req.body);
+      if (!result) throw new Error('Failed to create training-toolbox');
+      ServerResponse(res, true, 201, 'Training-toolbox created successfully', result);
+    } catch (error) {
+      if (uploadedDocuments.length) {
+        await rollbackUploadedDocuments(uploadedDocuments);
+      }
+      throw error;
+    }
   }
 );
 
@@ -56,18 +99,33 @@ export const createTrainingToolboxAsStandAlone = catchAsync(
 export const updateTrainingToolbox = catchAsync(
   async (req: AuthenticatedRequest, res: Response) => {
     const paramToString = (p?: string | string[]) => (Array.isArray(p) ? p[0] : p);
+    const paramToStringArray = (p?: string | string[]) => {
+      if (!p) return [] as string[];
+      return Array.isArray(p) ? p : [p];
+    };
     const id = paramToString(req.params.id);
     const standAloneId = paramToString((req.params as any).standAloneId);
+    const files = extractUploadedFiles((req as any).files, ['attachments', 'files']);
+    const removeAttachmentIds = paramToStringArray((req.body as any).removeAttachmentIds);
 
     if (req.user?._id) {
       req.body.deliveredBy = req.user._id;
+    }
+
+    if ('removeAttachmentIds' in req.body) {
+      delete (req.body as any).removeAttachmentIds;
+    }
+    if ('attachments' in req.body) {
+      delete (req.body as any).attachments;
     }
 
     const result = await trainingToolboxServices.updateTrainingToolbox(
       id as string,
       req.body,
       req.user!._id,
-      standAloneId as string | undefined
+      standAloneId as string | undefined,
+      files,
+      removeAttachmentIds
     );
     if (!result) {
       return ServerResponse(res, false, 404, 'Training-toolbox not found or access denied');

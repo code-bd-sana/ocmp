@@ -6,7 +6,12 @@ import {
 import { AuthAction, IApiResponse } from "./auth";
 import axios from "axios";
 import { base_url } from "@/lib/utils";
-import { UserAction } from "./user";
+import {
+  buildRoleScopedQuery,
+  getCurrentUserRole,
+  isStandaloneRole,
+  requireScopedClientId,
+} from "./shared/role-scope";
 
 interface Pg9AndPg13PlanListResponse {
   pg9AndPg13Plans: Pg9AndPg13PlanRow[];
@@ -42,21 +47,6 @@ function extractApiError(data: IApiResponse | undefined): string {
   return "Something went wrong";
 }
 
-/**
- * Get the current user's role (cached or fresh fetch)
- */
-let cachedUserRole: string | null = null;
-const getUserRole = async (): Promise<string | null> => {
-  if (cachedUserRole) return cachedUserRole;
-  try {
-    const profileResp = await UserAction.getProfile();
-    cachedUserRole = profileResp.data?.role || null;
-    return cachedUserRole;
-  } catch {
-    return null;
-  }
-};
-
 export const Pg9AndPg13PlanAction = {
   /**
    * GET /api/v1/pg9AndPg13Plan/get-pg9-and-pg13-plans
@@ -69,29 +59,20 @@ export const Pg9AndPg13PlanAction = {
     if (!token) throw new Error("No authentication token found");
 
     try {
-      const userRole = await getUserRole();
+      const userRole = await getCurrentUserRole();
 
-      const queryParams =
-        userRole === "STANDALONE_USER"
-          ? {
-              searchKey: params?.searchKey || undefined,
-              showPerPage: params?.showPerPage || 10,
-              pageNo: params?.pageNo || 1,
-            }
-          : {
-              standAloneId,
-              searchKey: params?.searchKey || undefined,
-              showPerPage: params?.showPerPage || 10,
-              pageNo: params?.pageNo || 1,
-            };
+      const queryParams = buildRoleScopedQuery(userRole, standAloneId, {
+        searchKey: params?.searchKey || undefined,
+        showPerPage: params?.showPerPage || 10,
+        pageNo: params?.pageNo || 1,
+      });
 
-      const response = await axios.get<IApiResponse<Pg9AndPg13PlanListResponse>>(
-        `${base_url}/pg9AndPg13Plan/get-pg9-and-pg13-plans`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-          params: queryParams,
-        },
-      );
+      const response = await axios.get<
+        IApiResponse<Pg9AndPg13PlanListResponse>
+      >(`${base_url}/pg9AndPg13Plan/get-pg9-and-pg13-plans`, {
+        headers: { Authorization: `Bearer ${token}` },
+        params: queryParams,
+      });
       return response.data;
     } catch (error: unknown) {
       if (axios.isAxiosError<IApiResponse>(error)) {
@@ -112,12 +93,12 @@ export const Pg9AndPg13PlanAction = {
     if (!token) throw new Error("No authentication token found");
 
     try {
-      const userRole = await getUserRole();
+      const userRole = await getCurrentUserRole();
+      requireScopedClientId(userRole, standAloneId);
 
-      const url =
-        userRole === "STANDALONE_USER"
-          ? `${base_url}/pg9AndPg13Plan/get-pg9-and-pg13-plan/${planId}`
-          : `${base_url}/pg9AndPg13Plan/get-pg9-and-pg13-plan/${planId}/${standAloneId}`;
+      const url = isStandaloneRole(userRole)
+        ? `${base_url}/pg9AndPg13Plan/get-pg9-and-pg13-plan/${planId}`
+        : `${base_url}/pg9AndPg13Plan/get-pg9-and-pg13-plan/${planId}/${standAloneId}`;
 
       const response = await axios.get<IApiResponse<Pg9AndPg13PlanRow>>(url, {
         headers: { Authorization: `Bearer ${token}` },
@@ -126,7 +107,7 @@ export const Pg9AndPg13PlanAction = {
     } catch (error: unknown) {
       if (axios.isAxiosError<IApiResponse>(error)) {
         throw new Error(extractApiError(error.response?.data));
-    }
+      }
       throw new Error("Something went wrong");
     }
   },
@@ -141,9 +122,10 @@ export const Pg9AndPg13PlanAction = {
     if (!token) throw new Error("No authentication token found");
 
     try {
-      const userRole = await getUserRole();
+      const userRole = await getCurrentUserRole();
+      requireScopedClientId(userRole, data.standAloneId);
 
-      const isStandalone = userRole === "STANDALONE_USER";
+      const isStandalone = isStandaloneRole(userRole);
       const endpoint = isStandalone
         ? `${base_url}/pg9AndPg13Plan/create-stand-alone-pg9-and-pg13-plan`
         : `${base_url}/pg9AndPg13Plan/create-pg9-and-pg13-plan`;
@@ -182,12 +164,12 @@ export const Pg9AndPg13PlanAction = {
     if (!token) throw new Error("No authentication token found");
 
     try {
-      const userRole = await getUserRole();
+      const userRole = await getCurrentUserRole();
+      requireScopedClientId(userRole, standAloneId);
 
-      const url =
-        userRole === "STANDALONE_USER"
-          ? `${base_url}/pg9AndPg13Plan/update-pg9-and-pg13-plan/${planId}`
-          : `${base_url}/pg9AndPg13Plan/update-pg9-and-pg13-plan-by-manager/${planId}/${standAloneId}`;
+      const url = isStandaloneRole(userRole)
+        ? `${base_url}/pg9AndPg13Plan/update-pg9-and-pg13-plan/${planId}`
+        : `${base_url}/pg9AndPg13Plan/update-pg9-and-pg13-plan-by-manager/${planId}/${standAloneId}`;
 
       const response = await axios.patch<IApiResponse<Pg9AndPg13PlanRow>>(
         url,
@@ -216,12 +198,12 @@ export const Pg9AndPg13PlanAction = {
     if (!token) throw new Error("No authentication token found");
 
     try {
-      const userRole = await getUserRole();
+      const userRole = await getCurrentUserRole();
+      requireScopedClientId(userRole, standAloneId);
 
-      const url =
-        userRole === "STANDALONE_USER"
-          ? `${base_url}/pg9AndPg13Plan/delete-pg9-and-pg13-plan/${planId}`
-          : `${base_url}/pg9AndPg13Plan/delete-pg9-and-pg13-plan-by-manager/${planId}/${standAloneId}`;
+      const url = isStandaloneRole(userRole)
+        ? `${base_url}/pg9AndPg13Plan/delete-pg9-and-pg13-plan/${planId}`
+        : `${base_url}/pg9AndPg13Plan/delete-pg9-and-pg13-plan-by-manager/${planId}/${standAloneId}`;
 
       const response = await axios.delete<IApiResponse>(url, {
         headers: { Authorization: `Bearer ${token}` },

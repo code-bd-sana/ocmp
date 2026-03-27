@@ -9,7 +9,8 @@ import {
   TransportManagerTrainingRow,
   UpdateTransportManagerTrainingInput,
 } from "@/lib/transport-manager-training/transport-manager-training.types";
-import { Loader2 } from "lucide-react";
+import { Download, Loader2, Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
 
 const editTrainingSchema = z.object({
   trainingCourse: z
@@ -23,7 +24,7 @@ const editTrainingSchema = z.object({
   completionDate: z.string().min(1, "Completion date is required"),
   renewalTracker: z.nativeEnum(TransportManagerTrainingRenewalTracker),
   nextDueDate: z.string().optional(),
-  attachments: z.string().optional(),
+  attachments: z.any().optional(),
 });
 
 type EditTrainingForm = z.infer<typeof editTrainingSchema>;
@@ -45,15 +46,6 @@ function toDateInput(value?: string | Date): string {
   }
 }
 
-function parseAttachmentIds(raw?: string): string[] {
-  if (!raw?.trim()) return [];
-
-  return raw
-    .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean);
-}
-
 export default function EditTransportManagerTrainingModal({
   open,
   onOpenChange,
@@ -61,6 +53,14 @@ export default function EditTransportManagerTrainingModal({
   training,
   loading,
 }: EditTransportManagerTrainingModalProps) {
+  const [removeAttachmentIds, setRemoveAttachmentIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (open) {
+      setRemoveAttachmentIds([]);
+    }
+  }, [open, training?._id]);
+
   const fields: FieldConfig<EditTrainingForm>[] = [
     {
       name: "trainingCourse",
@@ -100,20 +100,109 @@ export default function EditTransportManagerTrainingModal({
     },
     {
       name: "attachments",
-      label: "Attachment IDs (optional)",
-      type: "textarea",
-      placeholder: "Comma-separated document IDs",
+      label: "Add New Attachments",
+      type: "file",
+      multiple: true,
     },
   ];
 
+  const toggleRemoveAttachment = (attachmentId: string) => {
+    setRemoveAttachmentIds((prev) => {
+      if (prev.includes(attachmentId)) {
+        return prev.filter((id) => id !== attachmentId);
+      }
+      return [...prev, attachmentId];
+    });
+  };
+
+  const renderAttachmentRemoveSection = () => {
+    if (!training) return null;
+
+    if (!training.attachments?.length) {
+      return (
+        <div className="mt-4 rounded-md border p-3">
+          <p className="text-sm font-semibold">Remove Existing Attachments</p>
+          <p className="text-muted-foreground mt-2 text-sm">
+            No attachments found.
+          </p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="mt-4 rounded-md border p-3">
+        <p className="text-sm font-semibold">Remove Existing Attachments</p>
+        <div className="mt-2 space-y-2">
+          {training.attachments.map((attachment) => {
+            const markedForRemoval = removeAttachmentIds.includes(
+              attachment._id,
+            );
+
+            return (
+              <div
+                key={attachment._id}
+                className="flex items-center justify-between gap-3 rounded-md border p-2"
+              >
+                <span
+                  className={`min-w-0 truncate text-sm ${markedForRemoval ? "text-red-600 line-through" : ""}`}
+                >
+                  {attachment.originalName || attachment.filename}
+                </span>
+
+                <div className="flex items-center gap-2">
+                  <a
+                    href={attachment.downloadUrl || attachment.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-muted-foreground hover:text-foreground"
+                    title="Download"
+                  >
+                    <Download className="h-4 w-4" />
+                  </a>
+
+                  <button
+                    type="button"
+                    onClick={() => toggleRemoveAttachment(attachment._id)}
+                    className={
+                      markedForRemoval
+                        ? "text-red-600 hover:text-red-700"
+                        : "text-muted-foreground hover:text-red-600"
+                    }
+                    title={
+                      markedForRemoval ? "Undo remove" : "Remove on update"
+                    }
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {removeAttachmentIds.length > 0 ? (
+          <p className="mt-2 text-xs text-amber-600">
+            {removeAttachmentIds.length} attachment(s) marked for removal on
+            update.
+          </p>
+        ) : null}
+      </div>
+    );
+  };
+
   const handleFormSubmit = async (data: EditTrainingForm) => {
+    const attachmentFiles = data.attachments
+      ? Array.from(data.attachments as FileList)
+      : undefined;
+
     await onSubmit({
       trainingCourse: data.trainingCourse,
       unitTitle: data.unitTitle,
       completionDate: data.completionDate,
       renewalTracker: data.renewalTracker,
       ...(data.nextDueDate && { nextDueDate: data.nextDueDate }),
-      attachments: parseAttachmentIds(data.attachments),
+      ...(attachmentFiles?.length && { attachments: attachmentFiles }),
+      ...(removeAttachmentIds.length && { removeAttachmentIds }),
     });
   };
 
@@ -130,6 +219,7 @@ export default function EditTransportManagerTrainingModal({
           </div>
         ) : training ? (
           <UniversalForm<EditTrainingForm>
+            key={training._id}
             title="Training Details"
             schema={editTrainingSchema}
             fields={fields}
@@ -141,11 +231,16 @@ export default function EditTransportManagerTrainingModal({
                 training.renewalTracker ||
                 TransportManagerTrainingRenewalTracker.NO,
               nextDueDate: toDateInput(training.nextDueDate),
-              attachments: training.attachments?.join(", ") || "",
+              attachments: undefined,
             }}
             onSubmit={handleFormSubmit}
             submitText="Update Training"
             setOpen={onOpenChange}
+            renderAfterField={(fieldName) =>
+              fieldName === "attachments"
+                ? renderAttachmentRemoveSection()
+                : null
+            }
           />
         ) : (
           <div className="flex h-40 items-center justify-center">

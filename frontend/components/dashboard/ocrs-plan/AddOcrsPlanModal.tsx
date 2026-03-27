@@ -11,6 +11,7 @@ const addOcrsPlanSchema = z.object({
   roadWorthinessScore: z.string().optional(),
   overallTrafficScore: z.string().optional(),
   actionRequired: z.string().optional(),
+  attachments: z.any().optional(),
 });
 
 type AddOcrsPlanForm = z.infer<typeof addOcrsPlanSchema>;
@@ -47,11 +48,24 @@ export default function AddOcrsPlanModal({
       type: "textarea",
       placeholder: "Enter action required details",
     },
+    {
+      name: "attachments",
+      label: "Attachments",
+      type: "file",
+      multiple: true,
+    },
   ];
 
   const handleFormSubmit = async (data: AddOcrsPlanForm) => {
+    const attachmentFiles = data.attachments
+      ? Array.from(data.attachments as FileList)
+      : undefined;
+
     await onSubmit({
-      ...data,
+      roadWorthinessScore: data.roadWorthinessScore,
+      overallTrafficScore: data.overallTrafficScore,
+      actionRequired: data.actionRequired,
+      ...(attachmentFiles?.length && { attachments: attachmentFiles }),
       standAloneId,
     });
   };

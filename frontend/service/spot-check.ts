@@ -7,7 +7,12 @@ import {
   SpotCheckListResponse,
   SpotCheckRow,
 } from "@/lib/spot-checks/spot-check.types";
-import { UserAction } from "./user";
+import {
+  buildRoleScopedQuery,
+  getCurrentUserRole,
+  isStandaloneRole,
+  requireScopedClientId,
+} from "./shared/role-scope";
 
 /**
  * Extract the most useful error message from a backend error response.
@@ -34,21 +39,6 @@ function extractApiError(data: IApiResponse | undefined): string {
 }
 
 /**
- * Get the current user's role (cached or fresh fetch)
- */
-let cachedUserRole: string | null = null;
-const getUserRole = async (): Promise<string | null> => {
-  if (cachedUserRole) return cachedUserRole;
-  try {
-    const profileResp = await UserAction.getProfile();
-    cachedUserRole = profileResp.data?.role || null;
-    return cachedUserRole;
-  } catch {
-    return null;
-  }
-};
-
-/**
  * GET /api/v1/spot-check/get-spot-check/many?standAloneId=...
  */
 const getSpotChecks = async (
@@ -63,22 +53,13 @@ const getSpotChecks = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
-    const userRole = await getUserRole();
+    const userRole = await getCurrentUserRole();
 
-    // For standalone users, don't include standAloneId in query params
-    const queryParams =
-      userRole === "STANDALONE_USER"
-        ? {
-            searchKey: params?.searchKey || undefined,
-            showPerPage: params?.showPerPage || 10,
-            pageNo: params?.pageNo || 1,
-          }
-        : {
-            standAloneId,
-            searchKey: params?.searchKey || undefined,
-            showPerPage: params?.showPerPage || 10,
-            pageNo: params?.pageNo || 1,
-          };
+    const queryParams = buildRoleScopedQuery(userRole, standAloneId, {
+      searchKey: params?.searchKey || undefined,
+      showPerPage: params?.showPerPage || 10,
+      pageNo: params?.pageNo || 1,
+    });
 
     const response = await axios.get<IApiResponse<SpotCheckListResponse>>(
       `${base_url}/spot-check/get-spot-check/many`,
@@ -107,16 +88,16 @@ const getSpotCheck = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
-    const userRole = await getUserRole();
+    const userRole = await getCurrentUserRole();
+    requireScopedClientId(userRole, standAloneId);
 
     // Backend route: /get-spot-check/:id with optional standAloneId query param for TM
     // SA users: no standAloneId in any form
     // TM users: standAloneId must be in query params (not URL path)
     const url = `${base_url}/spot-check/get-spot-check/${spotCheckId}`;
-    const params =
-      userRole === "STANDALONE_USER"
-        ? {} // SA users should not send standAloneId
-        : { standAloneId }; // TM users must send standAloneId in query
+    const params = isStandaloneRole(userRole)
+      ? {} // SA users should not send standAloneId
+      : { standAloneId }; // TM users must send standAloneId in query
 
     const response = await axios.get<IApiResponse<SpotCheckRow>>(url, {
       headers: { Authorization: `Bearer ${token}` },
@@ -141,21 +122,42 @@ const createSpotCheck = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
-    const userRole = await getUserRole();
+    const userRole = await getCurrentUserRole();
+    requireScopedClientId(userRole, data.standAloneId);
+
     const endpoint =
-      userRole === "STANDALONE_USER"
+      isStandaloneRole(userRole)
         ? `${base_url}/spot-check/create-stand-alone-spot-check`
         : `${base_url}/spot-check/create-spot-check`;
 
-    // SA endpoint uses .strict() — must not include standAloneId in body
-    const body =
-      userRole === "STANDALONE_USER"
-        ? Object.fromEntries(
-            Object.entries(data).filter(([key]) => key !== "standAloneId"),
-          )
-        : data;
+    const formData = new FormData();
 
-    const response = await axios.post<IApiResponse>(endpoint, body, {
+    formData.append("vehicleId", data.vehicleId);
+    formData.append("issueDetails", data.issueDetails);
+
+    if (!isStandaloneRole(userRole) && data.standAloneId) {
+      formData.append("standAloneId", data.standAloneId);
+    }
+
+    if (data.reportedBy) formData.append("reportedBy", data.reportedBy);
+    if (data.rectificationRequired) {
+      formData.append("rectificationRequired", data.rectificationRequired);
+    }
+    if (data.actionTaken) formData.append("actionTaken", data.actionTaken);
+    if (data.dateCompleted) formData.append("dateCompleted", data.dateCompleted);
+    if (data.completedBy) formData.append("completedBy", data.completedBy);
+    if (data.followUpNeeded) {
+      formData.append("followUpNeeded", data.followUpNeeded);
+    }
+    if (data.notes) formData.append("notes", data.notes);
+
+    if (data.attachments?.length) {
+      data.attachments.forEach((file) => {
+        formData.append("attachments", file);
+      });
+    }
+
+    const response = await axios.post<IApiResponse>(endpoint, formData, {
       headers: { Authorization: `Bearer ${token}` },
     });
     return response.data;
@@ -179,14 +181,42 @@ const updateSpotCheck = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
-    const userRole = await getUserRole();
+    const userRole = await getCurrentUserRole();
+    requireScopedClientId(userRole, standAloneId);
+
+    const formData = new FormData();
+
+    if (data.vehicleId) formData.append("vehicleId", data.vehicleId);
+    if (data.issueDetails) formData.append("issueDetails", data.issueDetails);
+    if (data.rectificationRequired) {
+      formData.append("rectificationRequired", data.rectificationRequired);
+    }
+    if (data.actionTaken) formData.append("actionTaken", data.actionTaken);
+    if (data.dateCompleted) formData.append("dateCompleted", data.dateCompleted);
+    if (data.completedBy) formData.append("completedBy", data.completedBy);
+    if (data.followUpNeeded) {
+      formData.append("followUpNeeded", data.followUpNeeded);
+    }
+    if (data.notes) formData.append("notes", data.notes);
+
+    if (data.removeAttachmentIds?.length) {
+      data.removeAttachmentIds.forEach((id) => {
+        formData.append("removeAttachmentIds", id);
+      });
+    }
+
+    if (data.attachments?.length) {
+      data.attachments.forEach((file) => {
+        formData.append("attachments", file);
+      });
+    }
 
     const url =
-      userRole === "STANDALONE_USER"
+      isStandaloneRole(userRole)
         ? `${base_url}/spot-check/update-spot-check/${spotCheckId}`
         : `${base_url}/spot-check/update-spot-check/${spotCheckId}/${standAloneId}`;
 
-    const response = await axios.patch<IApiResponse>(url, data, {
+    const response = await axios.patch<IApiResponse>(url, formData, {
       headers: { Authorization: `Bearer ${token}` },
     });
     return response.data;
@@ -209,10 +239,11 @@ const deleteSpotCheck = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
-    const userRole = await getUserRole();
+    const userRole = await getCurrentUserRole();
+    requireScopedClientId(userRole, standAloneId);
 
     const url =
-      userRole === "STANDALONE_USER"
+      isStandaloneRole(userRole)
         ? `${base_url}/spot-check/delete-spot-check/${spotCheckId}`
         : `${base_url}/spot-check/delete-spot-check/${spotCheckId}/${standAloneId}`;
 

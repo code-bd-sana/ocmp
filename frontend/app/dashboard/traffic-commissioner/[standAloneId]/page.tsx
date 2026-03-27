@@ -15,7 +15,10 @@ import {
   UpdateTrafficCommissionerInput,
   trafficCommissionerRow,
 } from "@/lib/traffic-commissioner/traffic-commissioner.type";
+import { resolveRoleScopedRoute } from "@/lib/utils/role-route";
 import { TrafficCommissionerAction } from "@/service/traffic-commissioner";
+import { UserAction } from "@/service/user";
+import { useRouter } from "next/navigation";
 import { use, useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -25,7 +28,10 @@ interface PageProps {
 
 export default function TrafficCommissionerPage({ params }: PageProps) {
   const { standAloneId } = use(params);
-  const [rows, setRows] = useState<trafficCommissionerRow[]>([]);
+  const router = useRouter();
+
+  const [roleReady, setRoleReady] = useState(false);
+  const [rows, setRows] = useState<TrafficCommissionerTableRow[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -36,7 +42,7 @@ export default function TrafficCommissionerPage({ params }: PageProps) {
   // View modal
   const [viewOpen, setViewOpen] = useState(false);
   const [viewTrafficCommissioner, setViewTrafficCommissioner] =
-    useState<TrafficCommissionerTableRow | null>(null);
+    useState<trafficCommissionerRow | null>(null);
   const [viewLoading, setViewLoading] = useState(false);
 
   // Edit modal
@@ -86,8 +92,50 @@ export default function TrafficCommissionerPage({ params }: PageProps) {
   );
 
   useEffect(() => {
-    fetchTrafficCommissioner();
-  }, [fetchTrafficCommissioner]);
+    let isActive = true;
+
+    const ensureRoleScopedRoute = async () => {
+      try {
+        const profileRes = await UserAction.getProfile();
+        if (!isActive) return;
+
+        const routeResult = resolveRoleScopedRoute({
+          role: profileRes.data?.role,
+          userId: profileRes.data?._id,
+          standAloneId,
+          basePath: "/dashboard/traffic-commissioner",
+        });
+
+        if (routeResult.error) {
+          setError(routeResult.error);
+          setRoleReady(false);
+          return;
+        }
+
+        if (routeResult.redirectTo) {
+          router.replace(routeResult.redirectTo);
+          return;
+        }
+
+        setRoleReady(true);
+      } catch {
+        if (!isActive) return;
+        setError("Failed to validate access. Please try again.");
+        setRoleReady(false);
+      }
+    };
+
+    ensureRoleScopedRoute();
+    return () => {
+      isActive = false;
+    };
+  }, [standAloneId, router]);
+
+  useEffect(() => {
+    if (roleReady) {
+      fetchTrafficCommissioner();
+    }
+  }, [fetchTrafficCommissioner, roleReady]);
 
   // Debounced search
   const handleSearchChange = (value: string) => {
@@ -127,7 +175,7 @@ export default function TrafficCommissionerPage({ params }: PageProps) {
   };
 
   // ---------- View traffic commissioner communication ----------
-  const handleView = async (row: trafficCommissionerRow) => {
+  const handleView = async (row: TrafficCommissionerTableRow) => {
     setViewOpen(true);
     setViewLoading(true);
     try {
@@ -136,9 +184,7 @@ export default function TrafficCommissionerPage({ params }: PageProps) {
         standAloneId,
       );
       if (res.status && res.data) {
-        setViewTrafficCommissioner(
-          toTrafficCommissionerTableRows([res.data])[0],
-        );
+        setViewTrafficCommissioner(res.data);
       } else {
         toast.error(
           res.message ||
@@ -159,7 +205,7 @@ export default function TrafficCommissionerPage({ params }: PageProps) {
   };
 
   // ---------- Edit traffic commissioner communication ----------
-  const handleEditOpen = async (row: trafficCommissionerRow) => {
+  const handleEditOpen = async (row: TrafficCommissionerTableRow) => {
     setEditOpen(true);
     setEditLoading(true);
     try {
@@ -168,9 +214,7 @@ export default function TrafficCommissionerPage({ params }: PageProps) {
         standAloneId,
       );
       if (res.status && res.data) {
-        setEditTrafficCommissioner(
-          toTrafficCommissionerTableRows([res.data])[0],
-        );
+        setEditTrafficCommissioner(res.data);
       } else {
         toast.error(
           res.message ||
@@ -198,7 +242,7 @@ export default function TrafficCommissionerPage({ params }: PageProps) {
       const res = await TrafficCommissionerAction.updateTrafficCommissioner(
         editTrafficCommissioner._id,
         standAloneId,
-        data as CreateTrafficCommissionerInput,
+        data,
       );
       if (res.status) {
         toast.success(
@@ -223,7 +267,7 @@ export default function TrafficCommissionerPage({ params }: PageProps) {
   };
 
   // ---------- Delete traffic commissioner communication ----------
-  const handleDeleteOpen = (row: trafficCommissionerRow) => {
+  const handleDeleteOpen = (row: TrafficCommissionerTableRow) => {
     setDeleteTarget(row);
     setDeleteOpen(true);
   };
@@ -266,6 +310,16 @@ export default function TrafficCommissionerPage({ params }: PageProps) {
       <div className="container mx-auto max-w-6xl py-10">
         <div className="flex h-64 items-center justify-center">
           <p className="text-destructive">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!roleReady) {
+    return (
+      <div className="container mx-auto max-w-6xl py-10">
+        <div className="flex h-64 items-center justify-center">
+          <p className="text-muted-foreground">Validating access...</p>
         </div>
       </div>
     );

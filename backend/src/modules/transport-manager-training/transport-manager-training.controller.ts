@@ -1,9 +1,15 @@
 import { Response } from 'express';
 import { transportManagerTrainingServices } from './transport-manager-training.service';
-import { SearchQueryInput } from '../../handlers/common-zod-validator';
 import ServerResponse from '../../helpers/responses/custom-response';
 import catchAsync from '../../utils/catch-async/catch-async';
 import { AuthenticatedRequest } from '../../middlewares/is-authorized';
+import { UserRole } from '../../models';
+import { SearchTransportManagerTrainingQueriesInput } from './transport-manager-training.validation';
+import {
+  extractUploadedFiles,
+  rollbackUploadedDocuments,
+  uploadFilesAndCreateDocuments,
+} from '../../utils/aws/document-upload';
 
 /**
  * Controller function to handle the creation of a single transport-manager-training.
@@ -13,16 +19,77 @@ import { AuthenticatedRequest } from '../../middlewares/is-authorized';
  * @returns {Promise<Partial<ITransportManagerTraining>>} - The created transport-manager-training.
  * @throws {Error} - Throws an error if the transport-manager-training creation fails.
  */
-export const createTransportManagerTraining = catchAsync(
+export const createTransportManagerTrainingAsManager = catchAsync(
   async (req: AuthenticatedRequest, res: Response) => {
-    // Call the service method to create a new transport-manager-training and get the result
-    const result = await transportManagerTrainingServices.createTransportManagerTraining(
-      req.body,
-      req.user!._id
-    );
-    if (!result) throw new Error('Failed to create transport-manager-training');
-    // Send a success response with the created transport-manager-training data
-    ServerResponse(res, true, 201, 'Transport-manager-training created successfully', result);
+    const userId = req.user!._id;
+    const standAloneId = req.body?.standAloneId as string;
+    const files = extractUploadedFiles((req as any).files, ['attachments', 'files']);
+    let uploadedDocuments: Awaited<ReturnType<typeof uploadFilesAndCreateDocuments>>['documents'] = [];
+
+    try {
+      if (files.length) {
+        const uploadResult = await uploadFilesAndCreateDocuments(
+          files,
+          userId,
+          'transport-manager-training'
+        );
+        uploadedDocuments = uploadResult.documents;
+
+        const uploadedIds = uploadedDocuments.map((doc) => String(doc._id));
+        req.body.attachments = Array.isArray(req.body.attachments)
+          ? [...req.body.attachments, ...uploadedIds]
+          : uploadedIds;
+      }
+
+      const result = await transportManagerTrainingServices.createTransportManagerTrainingAsManager(
+        req.body,
+        userId,
+        standAloneId
+      );
+      if (!result) throw new Error('Failed to create transport-manager-training');
+      ServerResponse(res, true, 201, 'Transport-manager-training created successfully', result);
+    } catch (error) {
+      if (uploadedDocuments.length) {
+        await rollbackUploadedDocuments(uploadedDocuments);
+      }
+      throw error;
+    }
+  }
+);
+
+export const createTransportManagerTrainingAsStandAlone = catchAsync(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user!._id;
+    const files = extractUploadedFiles((req as any).files, ['attachments', 'files']);
+    let uploadedDocuments: Awaited<ReturnType<typeof uploadFilesAndCreateDocuments>>['documents'] = [];
+
+    try {
+      if (files.length) {
+        const uploadResult = await uploadFilesAndCreateDocuments(
+          files,
+          userId,
+          'transport-manager-training'
+        );
+        uploadedDocuments = uploadResult.documents;
+
+        const uploadedIds = uploadedDocuments.map((doc) => String(doc._id));
+        req.body.attachments = Array.isArray(req.body.attachments)
+          ? [...req.body.attachments, ...uploadedIds]
+          : uploadedIds;
+      }
+
+      const result = await transportManagerTrainingServices.createTransportManagerTrainingAsStandAlone(
+        req.body,
+        userId
+      );
+      if (!result) throw new Error('Failed to create transport-manager-training');
+      ServerResponse(res, true, 201, 'Transport-manager-training created successfully', result);
+    } catch (error) {
+      if (uploadedDocuments.length) {
+        await rollbackUploadedDocuments(uploadedDocuments);
+      }
+      throw error;
+    }
   }
 );
 
@@ -37,11 +104,34 @@ export const createTransportManagerTraining = catchAsync(
 export const updateTransportManagerTraining = catchAsync(
   async (req: AuthenticatedRequest, res: Response) => {
     const { id } = req.params;
-    // Call the service method to update the transport-manager-training by ID and get the result
+    const standAloneId = req.params?.standAloneId;
+    const paramToString = (p?: string | string[]) => (Array.isArray(p) ? p[0] : p);
+    const paramToStringArray = (p?: string | string[]) => {
+      if (!p) return [] as string[];
+      return Array.isArray(p) ? p : [p];
+    };
+
+    const files = extractUploadedFiles((req as any).files, ['attachments', 'files']);
+    const removeAttachmentIds = paramToStringArray((req.body as any).removeAttachmentIds);
+
+    if ('removeAttachmentIds' in req.body) {
+      delete (req.body as any).removeAttachmentIds;
+    }
+    if ('attachments' in req.body) {
+      delete (req.body as any).attachments;
+    }
+
+    const accessId =
+      req.user!.role === UserRole.TRANSPORT_MANAGER
+        ? paramToString(standAloneId) || ''
+        : req.user!._id;
+
     const result = await transportManagerTrainingServices.updateTransportManagerTraining(
       id as string,
       req.body,
-      req.user!._id
+      accessId,
+      files,
+      removeAttachmentIds
     );
     if (!result) throw new Error('Failed to update transport-manager-training');
     // Send a success response with the updated transport-manager-training data
@@ -60,10 +150,16 @@ export const updateTransportManagerTraining = catchAsync(
 export const deleteTransportManagerTraining = catchAsync(
   async (req: AuthenticatedRequest, res: Response) => {
     const { id } = req.params;
+    const standAloneId = req.params?.standAloneId;
+    const paramToString = (p?: string | string[]) => (Array.isArray(p) ? p[0] : p);
+    const accessId =
+      req.user!.role === UserRole.TRANSPORT_MANAGER
+        ? paramToString(standAloneId) || ''
+        : req.user!._id;
     // Call the service method to delete the transport-manager-training by ID
     const result = await transportManagerTrainingServices.deleteTransportManagerTraining(
       id as string,
-      req.user!._id
+      accessId
     );
     if (!result) throw new Error('Failed to delete transport-manager-training');
     // Send a success response confirming the deletion
@@ -82,10 +178,16 @@ export const deleteTransportManagerTraining = catchAsync(
 export const getTransportManagerTrainingById = catchAsync(
   async (req: AuthenticatedRequest, res: Response) => {
     const { id } = req.params;
+    const standAloneId = req.params?.standAloneId;
+    const paramToString = (p?: string | string[]) => (Array.isArray(p) ? p[0] : p);
+    const accessId =
+      req.user!.role === UserRole.TRANSPORT_MANAGER
+        ? paramToString(standAloneId) || ''
+        : req.user!._id;
     // Call the service method to get the transport-manager-training by ID and get the result
     const result = await transportManagerTrainingServices.getTransportManagerTrainingById(
       id as string,
-      req.user!._id
+      accessId
     );
     if (!result) throw new Error('Transport-manager-training not found');
     // Send a success response with the retrieved resource data
@@ -104,10 +206,15 @@ export const getTransportManagerTrainingById = catchAsync(
 export const getManyTransportManagerTraining = catchAsync(
   async (req: AuthenticatedRequest, res: Response) => {
     // Use the validated and transformed query from Zod middleware
-    const query = (req as any).validatedQuery as SearchQueryInput;
+    const query = (req as any).validatedQuery as SearchTransportManagerTrainingQueriesInput;
+    const effectiveQuery = { ...query };
+
+    if (req.user?.role === UserRole.STANDALONE_USER) {
+      effectiveQuery.standAloneId = req.user._id;
+    }
     // Call the service method to get multiple transport-manager-trainings based on query parameters and get the result
     const { transportManagerTrainings, totalData, totalPages } =
-      await transportManagerTrainingServices.getManyTransportManagerTraining(query, req.user!._id);
+      await transportManagerTrainingServices.getManyTransportManagerTraining(effectiveQuery);
     if (!transportManagerTrainings)
       throw new Error('Failed to retrieve transport-manager-trainings');
     // Send a success response with the retrieved transport-manager-trainings data
@@ -118,4 +225,3 @@ export const getManyTransportManagerTraining = catchAsync(
     });
   }
 );
-

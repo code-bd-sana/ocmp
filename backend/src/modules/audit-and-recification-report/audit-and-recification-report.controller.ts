@@ -6,6 +6,11 @@ import { AuthenticatedRequest } from '../../middlewares/is-authorized';
 import { SearchAuditAndRecificationReportsQueryInput } from './audit-and-recification-report.validation';
 import { UserRole } from '../../models';
 import mongoose from 'mongoose';
+import {
+  extractUploadedFiles,
+  rollbackUploadedDocuments,
+  uploadFilesAndCreateDocuments,
+} from '../../utils/aws/document-upload';
 
 /**
  * Controller: Get all audit and recification reports (paginated + searchable).
@@ -67,9 +72,30 @@ export const createAuditAndRecificationReportAsManager = catchAsync(async (req: 
   const userId = req.user!._id;
   req.body.createdBy = new mongoose.Types.ObjectId(userId);
   req.body.standAloneId = new mongoose.Types.ObjectId(req.body.standAloneId);
-  const result = await auditAndRecificationReportServices.createAuditAndRecificationReportAsManager(req.body);
-  if (!result) throw new Error('Failed to create audit and recification report');
-  ServerResponse(res, true, 201, 'Audit and recification report created successfully', result);
+  const files = extractUploadedFiles((req as any).files, ['attachments', 'files']);
+
+  let uploadedDocuments: Awaited<ReturnType<typeof uploadFilesAndCreateDocuments>>['documents'] = [];
+
+  try {
+    if (files.length) {
+      const uploadResult = await uploadFilesAndCreateDocuments(files, userId, 'audit-and-recification-report');
+      uploadedDocuments = uploadResult.documents;
+
+      const uploadedIds = uploadedDocuments.map((doc) => String(doc._id));
+      req.body.attachments = Array.isArray(req.body.attachments)
+        ? [...req.body.attachments, ...uploadedIds]
+        : uploadedIds;
+    }
+
+    const result = await auditAndRecificationReportServices.createAuditAndRecificationReportAsManager(req.body);
+    if (!result) throw new Error('Failed to create audit and recification report');
+    ServerResponse(res, true, 201, 'Audit and recification report created successfully', result);
+  } catch (error) {
+    if (uploadedDocuments.length) {
+      await rollbackUploadedDocuments(uploadedDocuments);
+    }
+    throw error;
+  }
 });
 
 /**
@@ -82,9 +108,30 @@ export const createAuditAndRecificationReportAsManager = catchAsync(async (req: 
 export const createAuditAndRecificationReportAsStandAlone = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
   const userId = req.user!._id;
   req.body.createdBy = new mongoose.Types.ObjectId(userId);
-  const result = await auditAndRecificationReportServices.createAuditAndRecificationReportAsStandAlone(req.body);
-  if (!result) throw new Error('Failed to create audit and recification report');
-  ServerResponse(res, true, 201, 'Audit and recification report created successfully', result);
+  const files = extractUploadedFiles((req as any).files, ['attachments', 'files']);
+
+  let uploadedDocuments: Awaited<ReturnType<typeof uploadFilesAndCreateDocuments>>['documents'] = [];
+
+  try {
+    if (files.length) {
+      const uploadResult = await uploadFilesAndCreateDocuments(files, userId, 'audit-and-recification-report');
+      uploadedDocuments = uploadResult.documents;
+
+      const uploadedIds = uploadedDocuments.map((doc) => String(doc._id));
+      req.body.attachments = Array.isArray(req.body.attachments)
+        ? [...req.body.attachments, ...uploadedIds]
+        : uploadedIds;
+    }
+
+    const result = await auditAndRecificationReportServices.createAuditAndRecificationReportAsStandAlone(req.body);
+    if (!result) throw new Error('Failed to create audit and recification report');
+    ServerResponse(res, true, 201, 'Audit and recification report created successfully', result);
+  } catch (error) {
+    if (uploadedDocuments.length) {
+      await rollbackUploadedDocuments(uploadedDocuments);
+    }
+    throw error;
+  }
 });
 
 /**
@@ -97,11 +144,33 @@ export const createAuditAndRecificationReportAsStandAlone = catchAsync(async (re
  */
 export const updateAuditAndRecificationReport = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
   const paramToString = (p?: string | string[]) => (Array.isArray(p) ? p[0] : p);
+  const paramToStringArray = (p?: string | string[]) => {
+    if (!p) return [] as string[];
+    return Array.isArray(p) ? p : [p];
+  };
+
   const id = paramToString(req.params.id);
   const accessId = req.user!.role === UserRole.TRANSPORT_MANAGER
     ? paramToString(req.params.standAloneId) as string
     : req.user!._id;
-  const result = await auditAndRecificationReportServices.updateAuditAndRecificationReport(id as string, req.body, accessId);
+  const files = extractUploadedFiles((req as any).files, ['attachments', 'files']);
+  const removeAttachmentIds = paramToStringArray((req.body as any).removeAttachmentIds);
+
+  if ('removeAttachmentIds' in req.body) {
+    delete (req.body as any).removeAttachmentIds;
+  }
+  if ('attachments' in req.body) {
+    delete (req.body as any).attachments;
+  }
+
+  const result = await auditAndRecificationReportServices.updateAuditAndRecificationReport(
+    id as string,
+    req.body,
+    accessId,
+    req.user!._id,
+    files,
+    removeAttachmentIds
+  );
 
   if (!result) throw new Error('Failed to update audit-and-recification-report');
   ServerResponse(res, true, 200, 'Audit-and-recification-report updated successfully', result);

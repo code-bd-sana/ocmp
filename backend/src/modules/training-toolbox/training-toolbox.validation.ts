@@ -40,10 +40,10 @@ const baseTrainingToolboxFields = {
       .optional()
   ),
   notes: z.string().trim().optional(),
-  signed: z.boolean().optional(),
-  followUpNeeded: z.boolean().optional(),
+  signed: z.coerce.boolean().optional(),
+  followUpNeeded: z.coerce.boolean().optional(),
   followUpDate: z.coerce.date().optional(),
-  signOff: z.boolean().optional(),
+  signOff: z.coerce.boolean().optional(),
   attachments: z
     .array(z.string().refine(isMongoId, { message: 'attachments must be valid ObjectIds' }))
     .optional(),
@@ -97,12 +97,24 @@ const zodUpdateTrainingToolboxSchema = z
       .refine(isMongoId, { message: 'deliveredBy must be a valid MongoDB ObjectId' })
       .optional(),
     notes: z.string().trim().optional(),
-    signed: z.boolean().optional(),
-    followUpNeeded: z.boolean().optional(),
+    signed: z.coerce.boolean().optional(),
+    followUpNeeded: z.coerce.boolean().optional(),
     followUpDate: z.coerce.date().optional(),
-    signOff: z.boolean().optional(),
+    signOff: z.coerce.boolean().optional(),
     attachments: z
       .array(z.string().refine(isMongoId, { message: 'attachments must be valid ObjectIds' }))
+      .optional(),
+    removeAttachmentIds: z
+      .union([
+        z.string().refine(isMongoId, {
+          message: 'Please provide a valid MongoDB ObjectId',
+        }),
+        z.array(
+          z.string().refine(isMongoId, {
+            message: 'Please provide a valid MongoDB ObjectId',
+          })
+        ),
+      ])
       .optional(),
   })
   .strict()

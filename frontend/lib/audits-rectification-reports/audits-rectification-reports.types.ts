@@ -1,5 +1,15 @@
 export type AuditStatus = "In Progress" | "Completed" | "Pending";
 
+export interface AuditRectificationAttachment {
+  _id: string;
+  filename: string;
+  originalName: string;
+  mimeType: string;
+  size: number;
+  url: string;
+  downloadUrl: string;
+}
+
 export interface AuditRectificationReportRow {
   _id: string;
   auditDate?: string;
@@ -9,7 +19,7 @@ export interface AuditRectificationReportRow {
   status?: AuditStatus;
   responsiblePerson?: string;
   finalizeDate?: string;
-  attachments?: string[];
+  attachments?: AuditRectificationAttachment[];
   standAloneId?: string;
   createdBy: string;
   createdAt?: string;
@@ -31,7 +41,7 @@ export interface CreateAuditRectificationReportInput {
   status?: AuditStatus;
   responsiblePerson?: string;
   finalizeDate?: string;
-  attachments?: string[];
+  attachments?: File[];
 }
 
 export interface UpdateAuditRectificationReportInput {
@@ -42,5 +52,6 @@ export interface UpdateAuditRectificationReportInput {
   status?: AuditStatus;
   responsiblePerson?: string;
   finalizeDate?: string;
-  attachments?: string[];
+  attachments?: File[];
+  removeAttachmentIds?: string[];
 }

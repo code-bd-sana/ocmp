@@ -18,6 +18,9 @@ import { RenewalTrackerAction } from "@/service/renewal-tracker";
 import { PolicyProcedureAction } from "@/service/policy-procedure";
 import { use, useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+import { UserAction } from "@/service/user";
+import { resolveRoleScopedRoute } from "@/lib/utils/role-route";
 
 interface PolicyProcedureOption {
   value: string;
@@ -31,6 +34,8 @@ interface PageProps {
 
 export default function RenewalTrackerListPage({ params }: PageProps) {
   const { standAloneId } = use(params);
+  const router = useRouter();
+  const [roleReady, setRoleReady] = useState(false);
 
   const [rows, setRows] = useState<RenewalTrackerTableRow[]>([]);
   const [policyProcedureOptions, setPolicyProcedureOptions] = useState<
@@ -62,6 +67,49 @@ export default function RenewalTrackerListPage({ params }: PageProps) {
   const [deleteLoading, setDeleteLoading] = useState(false);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    let isActive = true;
+
+    const ensureRoleScopedRoute = async () => {
+      try {
+        const profileResp = await UserAction.getProfile();
+        const userRole = profileResp.data?.role;
+        const userId = profileResp.data?._id;
+
+        if (!isActive) return;
+
+        const routeResult = resolveRoleScopedRoute({
+          role: userRole,
+          userId,
+          standAloneId,
+          basePath: "/dashboard/renewal-tracker",
+        });
+
+        if (routeResult.error) {
+          setError(routeResult.error);
+          return;
+        }
+
+        if (routeResult.redirectTo) {
+          router.replace(routeResult.redirectTo);
+          return;
+        }
+
+        setRoleReady(true);
+      } catch {
+        if (!isActive) return;
+        setError("Failed to load your profile. Please sign in again.");
+      }
+    };
+
+    setRoleReady(false);
+    ensureRoleScopedRoute();
+
+    return () => {
+      isActive = false;
+    };
+  }, [standAloneId, router]);
 
   // ---------- Fetch renewal trackers ----------
   const fetchRenewalTrackers = useCallback(
@@ -138,15 +186,17 @@ export default function RenewalTrackerListPage({ params }: PageProps) {
   }, [standAloneId]);
 
   useEffect(() => {
+    if (!roleReady) return;
     fetchRenewalTrackers();
     fetchPolicyProcedureOptions();
-  }, [fetchRenewalTrackers, fetchPolicyProcedureOptions]);
+  }, [roleReady, fetchRenewalTrackers, fetchPolicyProcedureOptions]);
 
   useEffect(() => {
+    if (!roleReady) return;
     if (addOpen || editOpen) {
       fetchPolicyProcedureOptions();
     }
-  }, [addOpen, editOpen, fetchPolicyProcedureOptions]);
+  }, [roleReady, addOpen, editOpen, fetchPolicyProcedureOptions]);
 
   // Debounced search
   const handleSearchChange = (value: string) => {
@@ -293,6 +343,16 @@ export default function RenewalTrackerListPage({ params }: PageProps) {
       <div className="container mx-auto max-w-6xl py-10">
         <div className="flex h-64 items-center justify-center">
           <p className="text-destructive">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!roleReady) {
+    return (
+      <div className="container mx-auto max-w-6xl py-10">
+        <div className="flex h-64 items-center justify-center">
+          <p className="text-muted-foreground">Validating access...</p>
         </div>
       </div>
     );

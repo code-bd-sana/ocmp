@@ -37,7 +37,7 @@ const addTrainingToolbox = z.object({
     })
     .optional(),
   signOff: z.boolean().optional(),
-  attachments: z.array(z.instanceof(File)).optional(),
+  attachments: z.any().optional(),
 });
 
 type AddTrainingToolboxForm = z.infer<typeof addTrainingToolbox>;
@@ -157,10 +157,14 @@ export default function AddToolboxModal({
   ];
 
   const handleSubmit = async (data: AddTrainingToolboxForm) => {
+    const attachmentFiles = data.attachments
+      ? Array.from(data.attachments as FileList)
+      : undefined;
+
     const payload: CreateTrainingToolboxInput = {
       ...data,
       standAloneId,
-      attachments: data.attachments?.map((file) => file.name),
+      ...(attachmentFiles?.length && { attachments: attachmentFiles }),
     };
     await onSubmit(payload);
   };

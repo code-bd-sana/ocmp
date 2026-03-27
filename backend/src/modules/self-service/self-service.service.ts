@@ -122,9 +122,16 @@ const deleteSelfService = async (
  * @returns {Promise<Partial<ISelfService>>} - The retrieved self-service.
  */
 const getSelfServiceById = async (
-  id: IdOrIdsInput['id']
+  id: IdOrIdsInput['id'],
+  accessOwnerId?: string
 ): Promise<Partial<ISelfService | null>> => {
   const selfService = await SelfService.findById(id);
+  if (!selfService) return null;
+
+  if (accessOwnerId && !hasOwnerAccess(selfService, accessOwnerId)) {
+    return null;
+  }
+
   return selfService;
 };
 

@@ -21,7 +21,7 @@ const addTrainingSchema = z.object({
   completionDate: z.string().min(1, "Completion date is required"),
   renewalTracker: z.nativeEnum(TransportManagerTrainingRenewalTracker),
   nextDueDate: z.string().optional(),
-  attachments: z.string().optional(),
+  attachments: z.any().optional(),
 });
 
 type AddTrainingForm = z.infer<typeof addTrainingSchema>;
@@ -30,15 +30,6 @@ interface AddTransportManagerTrainingModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit: (data: CreateTransportManagerTrainingInput) => Promise<void> | void;
-}
-
-function parseAttachmentIds(raw?: string): string[] {
-  if (!raw?.trim()) return [];
-
-  return raw
-    .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean);
 }
 
 export default function AddTransportManagerTrainingModal({
@@ -90,20 +81,24 @@ export default function AddTransportManagerTrainingModal({
     },
     {
       name: "attachments",
-      label: "Attachment IDs (optional)",
-      type: "textarea",
-      placeholder: "Comma-separated document IDs",
+      label: "Attachments",
+      type: "file",
+      multiple: true,
     },
   ];
 
   const handleFormSubmit = async (data: AddTrainingForm) => {
+    const attachmentFiles = data.attachments
+      ? Array.from(data.attachments as FileList)
+      : undefined;
+
     await onSubmit({
       trainingCourse: data.trainingCourse,
       unitTitle: data.unitTitle,
       completionDate: data.completionDate,
       renewalTracker: data.renewalTracker,
       ...(data.nextDueDate && { nextDueDate: data.nextDueDate }),
-      attachments: parseAttachmentIds(data.attachments),
+      ...(attachmentFiles?.length && { attachments: attachmentFiles }),
     });
   };
 
@@ -123,7 +118,7 @@ export default function AddTransportManagerTrainingModal({
             completionDate: "",
             renewalTracker: TransportManagerTrainingRenewalTracker.NO,
             nextDueDate: "",
-            attachments: "",
+            attachments: undefined,
           }}
           onSubmit={handleFormSubmit}
           submitText="Create Training"

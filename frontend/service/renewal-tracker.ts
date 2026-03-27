@@ -1,7 +1,12 @@
 import { AuthAction, IApiResponse } from "./auth";
 import axios from "axios";
 import { base_url } from "@/lib/utils";
-import { UserAction } from "./user";
+import {
+  buildRoleScopedQuery,
+  getCurrentUserRole,
+  isStandaloneRole,
+  requireScopedClientId,
+} from "./shared/role-scope";
 import {
   CreateRenewalTrackerInput,
   RenewalTrackerRow,
@@ -42,20 +47,7 @@ function extractApiError(data: IApiResponse | undefined): string {
   return "Something went wrong";
 }
 
-/**
- * Get the current user's role (cached or fresh fetch)
- */
-let cachedUserRole: string | null = null;
-const getUserRole = async (): Promise<string | null> => {
-  if (cachedUserRole) return cachedUserRole;
-  try {
-    const profileResp = await UserAction.getProfile();
-    cachedUserRole = profileResp.data?.role || null;
-    return cachedUserRole;
-  } catch {
-    return null;
-  }
-};
+
 
 export const RenewalTrackerAction = {
   /**
@@ -69,21 +61,13 @@ export const RenewalTrackerAction = {
     if (!token) throw new Error("No authentication token found");
 
     try {
-      const userRole = await getUserRole();
+      const userRole = await getCurrentUserRole();
 
-      const queryParams =
-        userRole === "STANDALONE_USER"
-          ? {
-              searchKey: params?.searchKey || undefined,
-              showPerPage: params?.showPerPage || 10,
-              pageNo: params?.pageNo || 1,
-            }
-          : {
-              standAloneId,
-              searchKey: params?.searchKey || undefined,
-              showPerPage: params?.showPerPage || 10,
-              pageNo: params?.pageNo || 1,
-            };
+      const queryParams = buildRoleScopedQuery(userRole, standAloneId, {
+        searchKey: params?.searchKey || undefined,
+        showPerPage: params?.showPerPage || 10,
+        pageNo: params?.pageNo || 1,
+      });
 
       const response = await axios.get<IApiResponse<RenewalTrackersListResponse>>(
         `${base_url}/renewal-tracker/get-renewal-tracker/many`,
@@ -112,10 +96,11 @@ export const RenewalTrackerAction = {
     if (!token) throw new Error("No authentication token found");
 
     try {
-      const userRole = await getUserRole();
+      const userRole = await getCurrentUserRole();
+      requireScopedClientId(userRole, standAloneId);
 
       const url =
-        userRole === "STANDALONE_USER"
+        isStandaloneRole(userRole)
           ? `${base_url}/renewal-tracker/get-renewal-tracker/${id}`
           : `${base_url}/renewal-tracker/get-renewal-tracker/${id}/${standAloneId}`;
 
@@ -141,18 +126,18 @@ export const RenewalTrackerAction = {
     if (!token) throw new Error("No authentication token found");
 
     try {
-      const userRole = await getUserRole();
+      const userRole = await getCurrentUserRole();
+      requireScopedClientId(userRole, data.standAloneId);
 
-      const isStandalone = userRole === "STANDALONE_USER";
+      const isStandalone = isStandaloneRole(userRole);
       const endpoint = isStandalone
         ? `${base_url}/renewal-tracker/create-stand-alone-renewal-tracker`
         : `${base_url}/renewal-tracker/create-renewal-tracker`;
 
       // If standalone, remove standAloneId from body to satisfy .strict() Zod schema
-      const body = { ...data };
-      if (isStandalone) {
-        delete (body as any).standAloneId;
-      }
+      const standAloneBody = { ...data };
+      delete (standAloneBody as { standAloneId?: string }).standAloneId;
+      const body = isStandalone ? standAloneBody : data;
 
       const response = await axios.post<IApiResponse<RenewalTrackerRow>>(
         endpoint,
@@ -182,10 +167,11 @@ export const RenewalTrackerAction = {
     if (!token) throw new Error("No authentication token found");
 
     try {
-      const userRole = await getUserRole();
+      const userRole = await getCurrentUserRole();
+      requireScopedClientId(userRole, standAloneId);
 
       const url =
-        userRole === "STANDALONE_USER"
+        isStandaloneRole(userRole)
           ? `${base_url}/renewal-tracker/update-renewal-tracker/${id}`
           : `${base_url}/renewal-tracker/update-renewal-tracker/${id}/${standAloneId}`;
 
@@ -216,10 +202,11 @@ export const RenewalTrackerAction = {
     if (!token) throw new Error("No authentication token found");
 
     try {
-      const userRole = await getUserRole();
+      const userRole = await getCurrentUserRole();
+      requireScopedClientId(userRole, standAloneId);
 
       const url =
-        userRole === "STANDALONE_USER"
+        isStandaloneRole(userRole)
           ? `${base_url}/renewal-tracker/delete-renewal-tracker/${id}`
           : `${base_url}/renewal-tracker/delete-renewal-tracker/${id}/${standAloneId}`;
 

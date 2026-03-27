@@ -1,6 +1,6 @@
 import { TrainingToolboxRow } from "@/lib/training-toolbox/training-toolbox.type";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { Loader2 } from "lucide-react";
+import { Download, FileText, Loader2 } from "lucide-react";
 
 interface ViewToolboxModalProps {
   open: boolean;
@@ -20,6 +20,22 @@ function formatDate(value?: string | Date): string {
   } catch {
     return "—";
   }
+}
+
+function formatFileSize(bytes: number): string {
+  if (!Number.isFinite(bytes) || bytes < 0) return "—";
+  if (bytes < 1024) return `${bytes} B`;
+
+  const units = ["KB", "MB", "GB", "TB"];
+  let value = bytes / 1024;
+  let unitIndex = 0;
+
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value /= 1024;
+    unitIndex += 1;
+  }
+
+  return `${value.toFixed(value >= 10 ? 0 : 1)} ${units[unitIndex]}`;
 }
 
 interface DetailItemProps {
@@ -79,14 +95,43 @@ export default function ViewToolboxModal({
                 label="Sign Off"
                 value={toolbox.signOff ? "Yes" : "No"}
               />
-              <DetailItem
-                label="Attachments"
-                value={
-                  toolbox.attachments && toolbox.attachments.length > 0
-                    ? toolbox.attachments.join(", ")
-                    : "—"
-                }
-              />
+            </div>
+
+            <div className="space-y-2">
+              <span className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+                Attachments
+              </span>
+
+              {toolbox.attachments?.length ? (
+                <div className="space-y-2">
+                  {toolbox.attachments.map((attachment) => (
+                    <a
+                      key={attachment._id}
+                      href={attachment.downloadUrl || attachment.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:border-primary/40 flex w-full items-center justify-between gap-3 rounded-md border p-3 transition"
+                    >
+                      <div className="flex min-w-0 items-center gap-2">
+                        <FileText className="text-muted-foreground h-4 w-4 shrink-0" />
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium">
+                            {attachment.originalName || attachment.filename}
+                          </p>
+                          <p className="text-muted-foreground text-xs">
+                            {attachment.mimeType || "Unknown type"} •{" "}
+                            {formatFileSize(attachment.size)}
+                          </p>
+                        </div>
+                      </div>
+
+                      <Download className="text-muted-foreground h-4 w-4 shrink-0" />
+                    </a>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm">—</p>
+              )}
             </div>
           </div>
         ) : (

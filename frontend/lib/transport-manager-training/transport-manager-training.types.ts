@@ -7,6 +7,16 @@ export enum TransportManagerTrainingRenewalTracker {
   RECOMMENDED = "RECOMMENDED",
 }
 
+export interface TransportManagerTrainingAttachment {
+  _id: string;
+  filename: string;
+  originalName: string;
+  mimeType: string;
+  size: number;
+  url: string;
+  downloadUrl: string;
+}
+
 /** Shape of a single transport-manager-training returned by backend */
 export interface TransportManagerTrainingRow {
   _id: string;
@@ -16,7 +26,7 @@ export interface TransportManagerTrainingRow {
   completionDate: string;
   renewalTracker: TransportManagerTrainingRenewalTracker;
   nextDueDate?: string;
-  attachments: string[];
+  attachments?: TransportManagerTrainingAttachment[];
   createdBy: string;
   createdAt?: string;
   updatedAt?: string;
@@ -31,12 +41,13 @@ export interface TransportManagerTrainingListResponse {
 
 /** Body for POST /transport-manager-training/create-transport-manager-training */
 export interface CreateTransportManagerTrainingInput {
+  standAloneId?: string;
   trainingCourse: string;
   unitTitle: string;
   completionDate: string;
   renewalTracker: TransportManagerTrainingRenewalTracker;
   nextDueDate?: string;
-  attachments: string[];
+  attachments?: File[];
 }
 
 /** Body for PATCH /transport-manager-training/update-transport-manager-training/:id */
@@ -46,5 +57,6 @@ export interface UpdateTransportManagerTrainingInput {
   completionDate?: string;
   renewalTracker?: TransportManagerTrainingRenewalTracker;
   nextDueDate?: string;
-  attachments?: string[];
+  attachments?: File[];
+  removeAttachmentIds?: string[];
 }
