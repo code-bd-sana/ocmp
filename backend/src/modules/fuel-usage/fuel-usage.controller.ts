@@ -102,8 +102,17 @@ export const deleteFuelUsage = catchAsync(async (req: AuthenticatedRequest, res:
  */
 export const getFuelUsageById = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
   const { id } = req.params;
+  let accessId: string | undefined;
+
+  if (req.user?.role === UserRole.STANDALONE_USER) {
+    accessId = req.user._id;
+  }
+  if (req.user?.role === UserRole.TRANSPORT_MANAGER) {
+    accessId = req.params?.standAloneId as string;
+  }
+
   // Call the service method to get the fuel-usage by ID and get the result
-  const result = await fuelUsageServices.getFuelUsageById(id as string);
+  const result = await fuelUsageServices.getFuelUsageById(id as string, accessId);
   if (!result) throw new Error('Fuel-usage not found');
   // Send a success response with the retrieved resource data
   ServerResponse(res, true, 200, 'Fuel-usage retrieved successfully', result);
@@ -160,4 +169,3 @@ export const getDriversWithVehicles = catchAsync(
     ServerResponse(res, true, 200, 'Drivers with vehicles retrieved successfully', result);
   }
 );
-

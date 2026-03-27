@@ -21,11 +21,12 @@ import {
   validateFuelUsageIdParam,
   validateFuelUsageAndManagerIdParam,
 } from './fuel-usage.validation';
-import { validateId } from '../../handlers/common-zod-validator';
+import { validateSearchQueries } from '../../handlers/common-zod-validator';
 import isAuthorized, { AuthenticatedRequest } from '../../middlewares/is-authorized';
 import { validateClientForManagerMiddleware } from '../../middlewares/validate-client-for-manager';
 import authorizedRoles from '../../middlewares/authorized-roles';
 import { UserRole } from '../../models';
+import ServerResponse from '../../helpers/responses/custom-response';
 
 // Initialize router
 const router = Router();
@@ -132,17 +133,22 @@ router.get(
   '/get-fuel-usages',
   authorizedRoles([UserRole.TRANSPORT_MANAGER, UserRole.STANDALONE_USER]),
   (req: AuthenticatedRequest, res, next) => {
+    if (req.user!.role === UserRole.STANDALONE_USER && req.query?.standAloneId) {
+      return ServerResponse(res, false, 400, 'standAloneId is not needed for standalone users');
+    }
     if (req.user!.role === UserRole.TRANSPORT_MANAGER) {
+      if (!req.query?.standAloneId) {
+        return ServerResponse(res, false, 400, 'standAloneId is required for transport managers');
+      }
       return validateClientForManagerMiddleware(req, res, next);
     }
     next();
   },
   (req: AuthenticatedRequest, res, next) => {
-    // Use module-specific search validator that accepts `standAloneId`
     if (req.user!.role === UserRole.TRANSPORT_MANAGER) {
       return validateSearchFuelUsage(req, res, next);
     }
-    return validateSearchFuelUsage(req, res, next);
+    return validateSearchQueries(req, res, next);
   },
   getManyFuelUsage
 );
@@ -182,7 +188,13 @@ router.get(
   '/get-drivers-with-vehicles',
   authorizedRoles([UserRole.STANDALONE_USER, UserRole.TRANSPORT_MANAGER]),
   (req: AuthenticatedRequest, res, next) => {
+    if (req.user!.role === UserRole.STANDALONE_USER && req.query?.standAloneId) {
+      return ServerResponse(res, false, 400, 'standAloneId is not needed for standalone users');
+    }
     if (req.user!.role === UserRole.TRANSPORT_MANAGER) {
+      if (!req.query?.standAloneId) {
+        return ServerResponse(res, false, 400, 'standAloneId is required for transport managers');
+      }
       return validateClientForManagerMiddleware(req, res, next);
     }
     next();
@@ -192,4 +204,3 @@ router.get(
 
 // Export the router
 module.exports = router;
-
