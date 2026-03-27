@@ -13,7 +13,7 @@ import {
   ComplianceStatus,
   CreateComplianceTimetableInput,
 } from "@/lib/compliance-timetable/compliance-timetable.types";
-import { getUserRole } from "@/service/compliance-timetable";
+import { getCurrentUserRole } from "@/service/shared/role-scope";
 
 const addComplianceTimetableSchema = z.object({
   task: z
@@ -78,7 +78,7 @@ export default function AddComplianceTimetableModal({
   ];
 
   const handleSubmit = async (data: AddComplianceTimetableForm) => {
-    const userRole = await getUserRole();
+    const userRole = await getCurrentUserRole();
 
     const payload: CreateComplianceTimetableInput = {
       task: data.task,

@@ -19,6 +19,9 @@ import {
   CreateComplianceTimetableInput,
   UpdateComplianceTimetableInput,
 } from "@/lib/compliance-timetable/compliance-timetable.types";
+import { useRouter } from "next/navigation";
+import { UserAction } from "@/service/user";
+import { resolveRoleScopedRoute } from "@/lib/utils/role-route";
 
 interface PageProps {
   params: Promise<{ standAloneId: string }>;
@@ -26,6 +29,9 @@ interface PageProps {
 
 export default function ComplianceTimetablePage({ params }: PageProps) {
   const { standAloneId } = use(params);
+  const router = useRouter();
+
+  const [roleReady, setRoleReady] = useState(false);
 
   const [rows, setRows] = useState<ComplianceTimetableTableRow[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -50,6 +56,49 @@ export default function ComplianceTimetablePage({ params }: PageProps) {
   const [deleteLoading, setDeleteLoading] = useState(false);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    let isActive = true;
+
+    const ensureRoleScopedRoute = async () => {
+      try {
+        const profileResp = await UserAction.getProfile();
+        const userRole = profileResp.data?.role;
+        const userId = profileResp.data?._id;
+
+        if (!isActive) return;
+
+        const routeResult = resolveRoleScopedRoute({
+          role: userRole,
+          userId,
+          standAloneId,
+          basePath: "/dashboard/compliance-timetable",
+        });
+
+        if (routeResult.error) {
+          setError(routeResult.error);
+          return;
+        }
+
+        if (routeResult.redirectTo) {
+          router.replace(routeResult.redirectTo);
+          return;
+        }
+
+        setRoleReady(true);
+      } catch {
+        if (!isActive) return;
+        setError("Failed to load your profile. Please sign in again.");
+      }
+    };
+
+    setRoleReady(false);
+    ensureRoleScopedRoute();
+
+    return () => {
+      isActive = false;
+    };
+  }, [standAloneId, router]);
 
   const fetchComplianceTimetables = useCallback(
     async (search?: string) => {
@@ -84,8 +133,9 @@ export default function ComplianceTimetablePage({ params }: PageProps) {
   );
 
   useEffect(() => {
+    if (!roleReady) return;
     fetchComplianceTimetables();
-  }, [fetchComplianceTimetables]);
+  }, [fetchComplianceTimetables, roleReady]);
 
   const handleSearchChange = (value: string) => {
     setSearchQuery(value);
@@ -241,6 +291,16 @@ export default function ComplianceTimetablePage({ params }: PageProps) {
           <p className="text-muted-foreground">
             Loading compliance timetable...
           </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!roleReady) {
+    return (
+      <div className="container mx-auto max-w-6xl py-10">
+        <div className="flex h-64 items-center justify-center">
+          <p className="text-muted-foreground">Validating access...</p>
         </div>
       </div>
     );
