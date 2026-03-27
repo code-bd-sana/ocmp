@@ -28,6 +28,7 @@ const DEFAULT_SETTINGS = {
   workingTimeDirective: false,
   policyProcedureReviewTracker: false,
   subcontractorDetails: false,
+  trainingRecords: false,
 };
 
 /**
@@ -38,9 +39,7 @@ const DEFAULT_SETTINGS = {
  * @param {string} userId - The user's ID.
  * @returns {Promise<IRepositorySettings>} - The created settings document.
  */
-const createDefaultSettings = async (
-  userId: string
-): Promise<IRepositorySettings> => {
+const createDefaultSettings = async (userId: string): Promise<IRepositorySettings> => {
   const existing = await RepositorySettings.findOne({
     userId: new mongoose.Types.ObjectId(userId),
   }).lean();
@@ -60,9 +59,7 @@ const createDefaultSettings = async (
  * @param {string} userId - The user's ID (from req.user._id).
  * @returns {Promise<IRepositorySettings>} - The settings document.
  */
-const getRepositorySettings = async (
-  userId: string
-): Promise<IRepositorySettings> => {
+const getRepositorySettings = async (userId: string): Promise<IRepositorySettings> => {
   const userObjId = new mongoose.Types.ObjectId(userId);
 
   let settings = await RepositorySettings.findOne({ userId: userObjId }).lean();
