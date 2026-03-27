@@ -1,26 +1,18 @@
 import axios from "axios";
 import { base_url } from "@/lib/utils";
 import { IApiResponse, AuthAction } from "./auth";
-import { UserAction } from "./user";
 import {
   AuditRectificationReportListResponse,
   AuditRectificationReportRow,
   CreateAuditRectificationReportInput,
   UpdateAuditRectificationReportInput,
 } from "@/lib/audits-rectification-reports/audits-rectification-reports.types";
-
-let cachedUserRole: string | null = null;
-const getUserRole = async (): Promise<string | null> => {
-  if (cachedUserRole) return cachedUserRole;
-
-  try {
-    const profileResp = await UserAction.getProfile();
-    cachedUserRole = profileResp.data?.role || null;
-    return cachedUserRole;
-  } catch {
-    return null;
-  }
-};
+import {
+  buildRoleScopedQuery,
+  getCurrentUserRole,
+  isStandaloneRole,
+  requireScopedClientId,
+} from "./shared/role-scope";
 
 function extractApiError(data: IApiResponse | undefined): string {
   if (!data) return "Something went wrong";
@@ -56,21 +48,13 @@ const getReports = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
-    const userRole = await getUserRole();
+    const userRole = await getCurrentUserRole();
 
-    const queryParams =
-      userRole === "STANDALONE_USER"
-        ? {
-            searchKey: params?.searchKey || undefined,
-            showPerPage: params?.showPerPage || 10,
-            pageNo: params?.pageNo || 1,
-          }
-        : {
-            standAloneId,
-            searchKey: params?.searchKey || undefined,
-            showPerPage: params?.showPerPage || 10,
-            pageNo: params?.pageNo || 1,
-          };
+    const queryParams = buildRoleScopedQuery(userRole, standAloneId, {
+      searchKey: params?.searchKey || undefined,
+      showPerPage: params?.showPerPage || 10,
+      pageNo: params?.pageNo || 1,
+    });
 
     const response = await axios.get<
       IApiResponse<AuditRectificationReportListResponse>
@@ -96,16 +80,14 @@ const getReport = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
-    const userRole = await getUserRole();
+    const userRole = await getCurrentUserRole();
+    requireScopedClientId(userRole, standAloneId);
 
     const response = await axios.get<IApiResponse<AuditRectificationReportRow>>(
       `${base_url}/audit-and-recification-report/get-by-id/${reportId}`,
       {
         headers: { Authorization: `Bearer ${token}` },
-        params:
-          userRole === "STANDALONE_USER"
-            ? undefined
-            : { standAloneId },
+        params: isStandaloneRole(userRole) ? undefined : { standAloneId },
       },
     );
 
@@ -125,18 +107,19 @@ const createReport = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
-    const userRole = await getUserRole();
-    const endpoint =
-      userRole === "STANDALONE_USER"
-        ? `${base_url}/audit-and-recification-report/create-stand-alone`
-        : `${base_url}/audit-and-recification-report/create-as-tm`;
+    const userRole = await getCurrentUserRole();
+    requireScopedClientId(userRole, data.standAloneId);
+
+    const endpoint = isStandaloneRole(userRole)
+      ? `${base_url}/audit-and-recification-report/create-stand-alone`
+      : `${base_url}/audit-and-recification-report/create-as-tm`;
 
     const formData = new FormData();
 
     formData.append("title", data.title);
     formData.append("type", data.type);
 
-    if (userRole !== "STANDALONE_USER") {
+    if (!isStandaloneRole(userRole)) {
       formData.append("standAloneId", data.standAloneId);
     }
 
@@ -154,11 +137,9 @@ const createReport = async (
       });
     }
 
-    const response = await axios.post<IApiResponse>(
-      endpoint,
-      formData,
-      { headers: { Authorization: `Bearer ${token}` } },
-    );
+    const response = await axios.post<IApiResponse>(endpoint, formData, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
 
     return response.data;
   } catch (error: unknown) {
@@ -178,7 +159,8 @@ const updateReport = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
-    const userRole = await getUserRole();
+    const userRole = await getCurrentUserRole();
+    requireScopedClientId(userRole, standAloneId);
 
     const formData = new FormData();
 
@@ -204,16 +186,13 @@ const updateReport = async (
       });
     }
 
-    const endpoint =
-      userRole === "STANDALONE_USER"
-        ? `${base_url}/audit-and-recification-report/update-by-standalone/${reportId}`
-        : `${base_url}/audit-and-recification-report/update-by-manager/${reportId}/${standAloneId}`;
+    const endpoint = isStandaloneRole(userRole)
+      ? `${base_url}/audit-and-recification-report/update-by-standalone/${reportId}`
+      : `${base_url}/audit-and-recification-report/update-by-manager/${reportId}/${standAloneId}`;
 
-    const response = await axios.patch<IApiResponse>(
-      endpoint,
-      formData,
-      { headers: { Authorization: `Bearer ${token}` } },
-    );
+    const response = await axios.patch<IApiResponse>(endpoint, formData, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
 
     return response.data;
   } catch (error: unknown) {
@@ -232,16 +211,16 @@ const deleteReport = async (
   if (!token) throw new Error("No authentication token found");
 
   try {
-    const userRole = await getUserRole();
-    const endpoint =
-      userRole === "STANDALONE_USER"
-        ? `${base_url}/audit-and-recification-report/delete-by-standalone/${reportId}`
-        : `${base_url}/audit-and-recification-report/delete-by-manager/${reportId}/${standAloneId}`;
+    const userRole = await getCurrentUserRole();
+    requireScopedClientId(userRole, standAloneId);
 
-    const response = await axios.delete<IApiResponse>(
-      endpoint,
-      { headers: { Authorization: `Bearer ${token}` } },
-    );
+    const endpoint = isStandaloneRole(userRole)
+      ? `${base_url}/audit-and-recification-report/delete-by-standalone/${reportId}`
+      : `${base_url}/audit-and-recification-report/delete-by-manager/${reportId}/${standAloneId}`;
+
+    const response = await axios.delete<IApiResponse>(endpoint, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
 
     return response.data;
   } catch (error: unknown) {
