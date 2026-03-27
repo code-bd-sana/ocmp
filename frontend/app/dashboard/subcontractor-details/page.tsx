@@ -3,28 +3,50 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ClientAction } from "@/service/client";
+import { UserAction } from "@/service/user";
 
 /**
  * Landing page for /dashboard/subcontractor-details (no standAloneId).
- * Fetches the client list and redirects to the first client's subcontractor page.
+ *
+ * For STANDALONE_USER: Uses their own user ID as standAloneId
+ * For TRANSPORT_MANAGER: Fetches the client list and redirects to the first client's page
  */
 export default function SubContractorRedirectPage() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    ClientAction.getClients({ showPerPage: 1, pageNo: 1 })
-      .then((res) => {
-        if (res.status && res.data?.data?.length) {
-          const firstClientId = res.data.data[0].client._id;
-          router.replace(`/dashboard/subcontractor-details/${firstClientId}`);
+    const redirectBasedOnRole = async () => {
+      try {
+        const profileResp = await UserAction.getProfile();
+        const userRole = profileResp.data?.role;
+        const userId = profileResp.data?._id;
+
+        if (userRole === "STANDALONE_USER") {
+          if (userId) {
+            router.replace(`/dashboard/subcontractor-details/${userId}`);
+          } else {
+            setError("Unable to load your profile. Please try again.");
+          }
         } else {
-          setError("No clients found. Please add a client first.");
+          const clientRes = await ClientAction.getClients({
+            showPerPage: 1,
+            pageNo: 1,
+          });
+          if (clientRes.status && clientRes.data?.data?.length) {
+            const firstClientId = clientRes.data.data[0].client._id;
+            router.replace(`/dashboard/subcontractor-details/${firstClientId}`);
+          } else {
+            setError("No clients found. Please add a client first.");
+          }
         }
-      })
-      .catch(() => {
-        setError("Failed to load clients. Please try again.");
-      });
+      } catch (err) {
+        setError("Failed to load data. Please try again.");
+        console.error(err);
+      }
+    };
+
+    redirectBasedOnRole();
   }, [router]);
 
   if (error) {
