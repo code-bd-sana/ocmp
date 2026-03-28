@@ -28,9 +28,9 @@ export default function DashboardFooter() {
     try {
       const res = await RepositorySettingsAction.getSettings();
       if (res.status && res.data) {
-        const enabled = SETTINGS_META
-          .filter((meta) => res.data![meta.key])
-          .map(({ label, href }) => ({ label, href }));
+        const enabled = SETTINGS_META.filter((meta) => res.data![meta.key]).map(
+          ({ label, href }) => ({ label, href }),
+        );
         setFooterItems(enabled);
       }
     } catch {
@@ -44,7 +44,8 @@ export default function DashboardFooter() {
 
     const handler = () => fetchLinks();
     window.addEventListener(REPOSITORY_SETTINGS_UPDATED, handler);
-    return () => window.removeEventListener(REPOSITORY_SETTINGS_UPDATED, handler);
+    return () =>
+      window.removeEventListener(REPOSITORY_SETTINGS_UPDATED, handler);
   }, [fetchLinks]);
 
   // Update maxScroll when items change
@@ -84,44 +85,51 @@ export default function DashboardFooter() {
 
   return (
     <footer
-      className='bg-muted px-4 py-3 transition-all duration-200 flex'
-      style={{ marginLeft: sidebarWidth }}>
-      <div className='flex items-center gap-2 w-full'>
+      className="bg-muted flex px-4 py-3 transition-all duration-200"
+      style={{ marginLeft: sidebarWidth }}
+    >
+      <div className="flex w-full items-center gap-2">
         {/* Left arrow */}
-        <button
-          onClick={() => scroll("left")}
-          className={cn(
-            "p-1 rounded-md border bg-white hover:bg-gray-50 transition-all hidden md:block",
-            isAtStart && "opacity-30 cursor-not-allowed",
-          )}
-          disabled={isAtStart}>
-          <ChevronLeft className='h-4 w-4' />
-        </button>
+        <div className="hidden w-9 shrink-0 justify-center md:flex">
+          <button
+            onClick={() => scroll("left")}
+            className={cn(
+              "rounded-md border bg-white p-1 transition-all hover:bg-gray-50",
+              isAtStart && "cursor-not-allowed opacity-30",
+            )}
+            disabled={isAtStart}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+        </div>
 
         {/* Scrollable tabs */}
         <div
           ref={scrollContainerRef}
-          className='flex-1 flex gap-x-2 overflow-x-auto md:overflow-x-hidden scrollbar-hide'
+          className="scrollbar-hide flex min-w-0 flex-1 gap-x-2 overflow-x-auto md:overflow-x-hidden"
           onScroll={(e) => {
             const container = e.currentTarget;
             setScrollPosition(container.scrollLeft);
             setMaxScroll(container.scrollWidth - container.clientWidth);
-          }}>
+          }}
+        >
           {footerItems.map((item, index) => {
-            const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+            const isActive =
+              pathname === item.href || pathname.startsWith(item.href + "/");
             return (
               <Link
                 key={index}
                 href={item.href}
                 className={cn(
-                  "inline-flex items-center justify-center h-10 px-3 transition-all duration-200 border",
-                  "whitespace-nowrap overflow-hidden shrink-0",
+                  "inline-flex h-10 items-center justify-center border px-3 transition-all duration-200",
+                  "shrink-0 overflow-hidden whitespace-nowrap",
                   isActive
                     ? "bg-primary text-primary-foreground border-primary min-w-max"
-                    : "text-primary border-primary bg-(--primary-light) max-w-23 truncate",
+                    : "text-primary border-primary max-w-23 truncate bg-(--primary-light)",
                 )}
-                title={item.label}>
-                <span className={cn("text-sm font-medium truncate")}>
+                title={item.label}
+              >
+                <span className={cn("truncate text-sm font-medium")}>
                   {item.label}
                 </span>
               </Link>
@@ -130,15 +138,18 @@ export default function DashboardFooter() {
         </div>
 
         {/* Right arrow */}
-        <button
-          onClick={() => scroll("right")}
-          className={cn(
-            "p-1 rounded-md border bg-white hover:bg-gray-50 transition-all hidden md:block",
-            isAtEnd && "opacity-30 cursor-not-allowed",
-          )}
-          disabled={isAtEnd}>
-          <ChevronRight className='h-4 w-4' />
-        </button>
+        <div className="hidden w-9 shrink-0 justify-center md:flex">
+          <button
+            onClick={() => scroll("right")}
+            className={cn(
+              "rounded-md border bg-white p-1 transition-all hover:bg-gray-50",
+              isAtEnd && "cursor-not-allowed opacity-30",
+            )}
+            disabled={isAtEnd}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
       </div>
     </footer>
   );
