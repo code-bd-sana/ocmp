@@ -1,7 +1,6 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { AuthAction } from "@/service/auth";
 import {
   Calendar,
   FolderOpen,
@@ -13,7 +12,6 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
 
 // সব navigation items
 const items = [
@@ -35,7 +33,9 @@ export function DashboardNav({ userRole }: DashboardNavProps) {
   const filteredItems =
     userRole === "STANDALONE_USER"
       ? items.filter((item) => item.name !== "All Users")
-      : items;
+      : userRole === "TRANSPORT_MANAGER"
+        ? items.filter((item) => item.name !== "All Transport Manager")
+        : items;
   const navItems = filteredItems;
 
   return (
