@@ -86,7 +86,9 @@ export default function EditParticipantModal({
             <label className="text-sm font-medium">First Name</label>
             <Input className="rounded-none" {...register("firstName")} />
             {errors.firstName ? (
-              <p className="text-destructive text-xs">{errors.firstName.message}</p>
+              <p className="text-destructive text-xs">
+                {errors.firstName.message}
+              </p>
             ) : null}
           </div>
 
@@ -94,7 +96,9 @@ export default function EditParticipantModal({
             <label className="text-sm font-medium">Sur Name</label>
             <Input className="rounded-none" {...register("surName")} />
             {errors.surName ? (
-              <p className="text-destructive text-xs">{errors.surName.message}</p>
+              <p className="text-destructive text-xs">
+                {errors.surName.message}
+              </p>
             ) : null}
           </div>
 
@@ -104,7 +108,9 @@ export default function EditParticipantModal({
               value={selectedRoleId}
               selectedRoleName={participant.role?.roleName}
               standAloneId={standAloneId}
-              onChange={(roleId) => setValue("role", roleId, { shouldValidate: true })}
+              onChange={(roleId) =>
+                setValue("role", roleId, { shouldValidate: true })
+              }
             />
             {errors.role ? (
               <p className="text-destructive text-xs">{errors.role.message}</p>
@@ -130,7 +136,11 @@ export default function EditParticipantModal({
             >
               Cancel
             </Button>
-            <Button type="submit" className="rounded-none" disabled={isSubmitting}>
+            <Button
+              type="submit"
+              className="rounded-none"
+              disabled={isSubmitting}
+            >
               Update Participant
             </Button>
           </div>

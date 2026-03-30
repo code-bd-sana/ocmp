@@ -14,7 +14,11 @@ import {
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { ParticipantAction } from "@/service/participants";
 import { ParticipantRoleItem } from "@/lib/participants/participants.types";
 
@@ -86,7 +90,9 @@ export default function ParticipantRoleDropdown({
         setRoles(nextRoles);
         setTotalPages(Math.max(1, res.data.totalPages || 1));
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Failed to load roles");
+        toast.error(
+          err instanceof Error ? err.message : "Failed to load roles",
+        );
       } finally {
         setLoading(false);
       }
@@ -293,7 +299,9 @@ export default function ParticipantRoleDropdown({
                         className="flex flex-1 items-center justify-between text-left"
                       >
                         <span className="text-sm">{role.roleName}</span>
-                        {isSelected ? <Check className="text-primary h-4 w-4" /> : null}
+                        {isSelected ? (
+                          <Check className="text-primary h-4 w-4" />
+                        ) : null}
                       </button>
 
                       <Button

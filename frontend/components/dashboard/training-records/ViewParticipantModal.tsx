@@ -36,14 +36,18 @@ export default function ViewParticipantModal({
               <label className="text-sm font-medium text-gray-700">
                 First Name
               </label>
-              <p className="mt-1 text-sm text-gray-900">{participant.firstName}</p>
+              <p className="mt-1 text-sm text-gray-900">
+                {participant.firstName}
+              </p>
             </div>
 
             <div>
               <label className="text-sm font-medium text-gray-700">
                 Sur Name
               </label>
-              <p className="mt-1 text-sm text-gray-900">{participant.lastName}</p>
+              <p className="mt-1 text-sm text-gray-900">
+                {participant.lastName}
+              </p>
             </div>
 
             <div>

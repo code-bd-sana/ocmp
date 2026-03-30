@@ -48,18 +48,18 @@ export default function ParticipantSection({
 
   const [viewOpen, setViewOpen] = useState(false);
   const [viewLoading, setViewLoading] = useState(false);
-  const [viewParticipant, setViewParticipant] = useState<ParticipantDetail | null>(
-    null,
-  );
+  const [viewParticipant, setViewParticipant] =
+    useState<ParticipantDetail | null>(null);
 
   const [editOpen, setEditOpen] = useState(false);
-  const [editParticipant, setEditParticipant] = useState<ParticipantDetail | null>(
-    null,
-  );
+  const [editParticipant, setEditParticipant] =
+    useState<ParticipantDetail | null>(null);
 
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<ParticipantTableRow | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<ParticipantTableRow | null>(
+    null,
+  );
 
   useEffect(() => {
     setStandAloneId(scopedStandAloneId);
@@ -85,7 +85,9 @@ export default function ParticipantSection({
     return firstClientId;
   }, []);
 
-  const mapRows = (participants: ParticipantListItem[]): ParticipantTableRow[] => {
+  const mapRows = (
+    participants: ParticipantListItem[],
+  ): ParticipantTableRow[] => {
     return participants.map((row) => {
       const firstName = row.firstName || "";
       const surName = row.lastName || "";
@@ -246,7 +248,11 @@ export default function ParticipantSection({
         setStandAloneId(scopedId);
       }
 
-      const res = await ParticipantAction.updateParticipant(id, scopedId, payload);
+      const res = await ParticipantAction.updateParticipant(
+        id,
+        scopedId,
+        payload,
+      );
       if (!res.status) {
         throw new Error(res.message || "Failed to update participant");
       }
