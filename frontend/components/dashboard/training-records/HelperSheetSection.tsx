@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { TrainingAction } from "@/service/training";
@@ -28,6 +29,8 @@ interface HelperRow extends HelperSheetTableRow {
   intervalDays: string;
 }
 
+const ITEMS_PER_PAGE = 10;
+
 interface HelperSheetSectionProps {
   standAloneId?: string;
 }
@@ -42,6 +45,9 @@ export default function HelperSheetSection({
     scopedStandAloneId,
   );
   const [search, setSearch] = useState("");
+  const [pageNo, setPageNo] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalData, setTotalData] = useState(0);
 
   const [addOpen, setAddOpen] = useState(false);
 
@@ -97,7 +103,7 @@ export default function HelperSheetSection({
   };
 
   const fetchRows = useCallback(
-    async (searchKey?: string) => {
+    async ({ searchKey, page }: { searchKey?: string; page: number }) => {
       try {
         setLoading(true);
         setError(null);
@@ -110,8 +116,8 @@ export default function HelperSheetSection({
 
         const res = await TrainingAction.getTrainings(scopedId, {
           searchKey: searchKey || undefined,
-          showPerPage: 100,
-          pageNo: 1,
+          showPerPage: ITEMS_PER_PAGE,
+          pageNo: page,
         });
 
         if (!res.status || !res.data) {
@@ -119,6 +125,16 @@ export default function HelperSheetSection({
         }
 
         setRows(mapRows(res.data.trainings || []));
+        setTotalPages(Math.max(1, res.data.totalPages || 1));
+        setTotalData(res.data.totalData || 0);
+
+        if (
+          (res.data.trainings?.length || 0) === 0 &&
+          page > 1 &&
+          (res.data.totalData || 0) > 0
+        ) {
+          setPageNo((prev) => Math.max(1, prev - 1));
+        }
       } catch (err) {
         setError(
           err instanceof Error ? err.message : "Failed to load training rows",
@@ -131,14 +147,14 @@ export default function HelperSheetSection({
   );
 
   useEffect(() => {
-    fetchRows();
-  }, [fetchRows]);
+    const timeout = setTimeout(() => {
+      fetchRows({ searchKey: search, page: pageNo });
+    }, 400);
 
-  const filteredRows = useMemo(() => {
-    if (!search.trim()) return rows;
-    const key = search.toLowerCase();
-    return rows.filter((r) => r.training.toLowerCase().includes(key));
-  }, [rows, search]);
+    return () => clearTimeout(timeout);
+  }, [fetchRows, search, pageNo]);
+
+  const filteredRows = useMemo(() => rows, [rows]);
 
   const handleCreate = async (payload: {
     trainingName: string;
@@ -164,7 +180,8 @@ export default function HelperSheetSection({
 
       toast.success(res.message || "Training created successfully");
       setAddOpen(false);
-      fetchRows(search);
+      setPageNo(1);
+      fetchRows({ searchKey: search, page: 1 });
     } catch (err) {
       toast.error(
         err instanceof Error ? err.message : "Failed to create training",
@@ -238,7 +255,7 @@ export default function HelperSheetSection({
       toast.success(res.message || "Training updated successfully");
       setEditOpen(false);
       setEditTraining(null);
-      fetchRows(search);
+      fetchRows({ searchKey: search, page: pageNo });
     } catch (err) {
       toast.error(
         err instanceof Error ? err.message : "Failed to update training",
@@ -274,7 +291,7 @@ export default function HelperSheetSection({
       toast.success(res.message || "Training deleted successfully");
       setDeleteOpen(false);
       setDeleteTarget(null);
-      fetchRows(search);
+      fetchRows({ searchKey: search, page: pageNo });
     } catch (err) {
       toast.error(
         err instanceof Error ? err.message : "Failed to delete training",
@@ -297,7 +314,10 @@ export default function HelperSheetSection({
       <Input
         type="text"
         value={search}
-        onChange={(e) => setSearch(e.target.value)}
+        onChange={(e) => {
+          setSearch(e.target.value);
+          setPageNo(1);
+        }}
         placeholder="Search by training name"
         className="max-w-md rounded-none bg-white"
       />
@@ -309,6 +329,36 @@ export default function HelperSheetSection({
         onEdit={handleEditOpen}
         onDelete={handleDeleteOpen}
       />
+
+      <div className="flex items-center justify-between px-1">
+        <p className="text-muted-foreground text-sm">
+          Showing {rows.length} of {totalData}
+        </p>
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setPageNo((prev) => Math.max(1, prev - 1))}
+            disabled={pageNo <= 1 || loading}
+            className="rounded border px-2 py-1 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+            aria-label="Previous page"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <span className="text-sm font-medium">
+            Page {pageNo} of {totalPages}
+          </span>
+          <button
+            type="button"
+            onClick={() => setPageNo((prev) => Math.min(totalPages, prev + 1))}
+            disabled={pageNo >= totalPages || loading}
+            className="rounded border px-2 py-1 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+            aria-label="Next page"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
 
       <AddHelperTrainingModal
         open={addOpen}
