@@ -50,7 +50,7 @@ export default function TrainingRecordsContent({
       return <TrainingRecordSection />;
     }
     if (label === "Training Register") {
-      return <TrainingRegisterSection />;
+      return <TrainingRegisterSection standAloneId={standAloneId} />;
     }
     if (label === "Participant") {
       return <ParticipantSection standAloneId={standAloneId} />;
