@@ -47,7 +47,7 @@ export default function TrainingRecordsContent({
 
   const renderSectionContent = (label: SectionLabel) => {
     if (label === "Training Record") {
-      return <TrainingRecordSection />;
+      return <TrainingRecordSection standAloneId={standAloneId} />;
     }
     if (label === "Training Register") {
       return <TrainingRegisterSection standAloneId={standAloneId} />;
