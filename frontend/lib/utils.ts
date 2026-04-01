@@ -5,4 +5,5 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 // Ensure no trailing slash to prevent double slashes in URL construction
-export const base_url = `http://localhost:5000/api/v1`.replace(/\/+$/, "");
+export const base_url =
+  process.env.NEXT_PUBLIC_APP_URL?.replace(/\/+$/, "") || "";
