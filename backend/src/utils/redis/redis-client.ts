@@ -2,17 +2,24 @@ import { createClient, RedisClientType } from 'redis';
 import config from '../../config/config';
 import { logMessage } from '../logger/logger';
 
-// ✅ Only use REDIS_URL (no localhost fallback)
-const redisUrl = config.REDIS_URL as string;
+// Construct Redis URL from environment variables or use default
+const redisUrl =
+  config.REDIS_URL || `redis://${config.REDIS_HOST || '127.0.0.1'}:${config.REDIS_PORT || '6379'}`;
 
-if (!redisUrl) {
-  throw new Error('REDIS_URL is not defined in environment variables');
+const redisOptions: { url: string; username?: string; password?: string } = {
+  url: redisUrl,
+};
+
+if (config.REDIS_USERNAME) {
+  redisOptions.username = config.REDIS_USERNAME;
+}
+
+if (config.REDIS_PASSWORD) {
+  redisOptions.password = config.REDIS_PASSWORD;
 }
 
 // Create Redis client
-export const client: RedisClientType = createClient({
-  url: redisUrl,
-});
+export const client: RedisClientType = createClient(redisOptions);
 
 // Handle Redis client errors
 client.on('error', (err: Error) => {
@@ -38,6 +45,7 @@ export const disconnectRedis = async (): Promise<void> => {
     logMessage('Redis disconnected');
   } catch (err: any) {
     logMessage(`Failed to disconnect Redis: ${err.message}`);
+    // swallow error
   }
 };
 
