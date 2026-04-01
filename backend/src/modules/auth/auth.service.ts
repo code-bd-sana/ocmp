@@ -1,5 +1,5 @@
+import { randomUUID } from 'crypto';
 import mongoose from 'mongoose';
-import { v4 } from 'uuid';
 import config from '../../config/config';
 import { AuthenticatedRequest } from '../../middlewares/is-authorized';
 import { IUser, LoginActivity, User, UserRole } from '../../models';
@@ -12,11 +12,11 @@ import { delUserData, getUserData, setUserData } from '../../utils/redis/user/us
 import { repositorySettingsServices } from '../repository-settings/repository-settings.service';
 import { IChangePassword, ILogin, ILoginResponse, IRegisterResponse } from './auth.interface';
 import {
-  ForgotPasswordInput,
-  RegisterInput,
-  ResendVerificationEmailInput,
-  ResetPasswordInput,
-  VerifyEmailInput,
+    ForgotPasswordInput,
+    RegisterInput,
+    ResendVerificationEmailInput,
+    ResetPasswordInput,
+    VerifyEmailInput,
 } from './auth.validation';
 
 /**
@@ -48,8 +48,8 @@ const login = async (data: ILogin): Promise<ILoginResponse | void> => {
   }
 
   // generate unique user ID and login hash
-  const userId = v4();
-  const loginHash = v4();
+  const userId = randomUUID();
+  const loginHash = randomUUID();
 
   const loginAt = new Date();
 
@@ -144,7 +144,7 @@ const register = async (data: RegisterInput): Promise<IRegisterResponse> => {
   const hashedPassword = await HashInfo(data.password);
 
   // Generate email verification token
-  const emailVerificationToken = v4();
+  const emailVerificationToken = randomUUID();
   const emailVerificationExpiry = new Date(Date.now() + 12 * 60 * 60 * 1000); // 12 hours
 
   // 5. Save user in MongoDB – link to Keycloak ID
@@ -211,7 +211,7 @@ const resendVerificationEmail = async (data: ResendVerificationEmailInput): Prom
   }
 
   // Generate new email verification token
-  const emailVerificationToken = v4();
+  const emailVerificationToken = randomUUID();
   const emailVerificationExpiry = new Date(Date.now() + 12 * 60 * 60 * 1000); // 12 hours
 
   // Update user with new token and expiry
@@ -280,7 +280,7 @@ const forgetPassword = async (data: ForgotPasswordInput): Promise<void> => {
   }
 
   // Generate reset password token
-  const resetPasswordToken = v4();
+  const resetPasswordToken = randomUUID();
   const resetPasswordExpiry = new Date(Date.now() + 1 * 60 * 60 * 1000); // 1 hour
 
   // Set the user's password reset token and expiry

@@ -1,14 +1,14 @@
 import {
-  DeleteObjectCommand,
-  DeleteObjectsCommand,
-  GetObjectCommand,
-  S3Client,
+    DeleteObjectCommand,
+    DeleteObjectsCommand,
+    GetObjectCommand,
+    S3Client,
 } from '@aws-sdk/client-s3';
 import { Upload } from '@aws-sdk/lib-storage';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { randomUUID } from 'crypto';
 import path from 'path';
 import type { Readable } from 'stream';
-import { v4 as uuidv4 } from 'uuid';
 
 // ────────────────────────────────────────────────
 // S3 CLIENT SETUP
@@ -51,7 +51,7 @@ export function sanitizeKey(key: string): string {
  */
 function generateKey(originalName: string = '', folderPrefix: string = ''): string {
   const ext = path.extname(originalName || '') || '';
-  const uniquePart = `${uuidv4()}${ext}`;
+  const uniquePart = `${randomUUID()}${ext}`;
   if (folderPrefix) {
     const cleanPrefix = sanitizeKey(folderPrefix);
     return cleanPrefix ? `${cleanPrefix}/${uniquePart}` : uniquePart;
