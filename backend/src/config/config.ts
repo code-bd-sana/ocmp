@@ -29,6 +29,8 @@ interface Config {
   REDIS_URL: string;
   REDIS_HOST: string;
   REDIS_PORT: string;
+  REDIS_USERNAME: string;
+  REDIS_PASSWORD: string;
   STRIPE_PUBLISHER_KEY: string;
   STRIPE_SECRET_KEY: string;
   STRIPE_WEBHOOK_SECRET: string;
@@ -67,6 +69,8 @@ const config: Config = {
   REDIS_URL: process.env.REDIS_URL as string,
   REDIS_HOST: process.env.REDIS_HOST as string,
   REDIS_PORT: process.env.REDIS_PORT as string,
+  REDIS_USERNAME: process.env.REDIS_USERNAME || '',
+  REDIS_PASSWORD: process.env.REDIS_PASSWORD || '',
   STRIPE_PUBLISHER_KEY: process.env.STRIPE_PUBLISHER_KEY as string,
   STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY as string,
   STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET as string,
