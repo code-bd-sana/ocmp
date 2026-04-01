@@ -3,20 +3,25 @@ import config from '../../config/config';
 import { logMessage } from '../logger/logger';
 
 // Construct Redis URL from environment variables or use default
-const redisUrl =
-  config.REDIS_URL || `redis://${config.REDIS_HOST || '127.0.0.1'}:${config.REDIS_PORT || '6379'}`;
+let redisUrl = config.REDIS_URL;
 
-const redisOptions: { url: string; username?: string; password?: string } = {
+if (!redisUrl) {
+  const host = config.REDIS_HOST || '127.0.0.1';
+  const port = config.REDIS_PORT || '6379';
+  const username = config.REDIS_USERNAME ? `${config.REDIS_USERNAME}` : 'default';
+  const password = config.REDIS_PASSWORD ? `:${config.REDIS_PASSWORD}` : '';
+
+  // Include auth credentials in URL if password is provided
+  if (config.REDIS_PASSWORD) {
+    redisUrl = `redis://${username}${password}@${host}:${port}`;
+  } else {
+    redisUrl = `redis://${host}:${port}`;
+  }
+}
+
+const redisOptions: { url: string } = {
   url: redisUrl,
 };
-
-if (config.REDIS_USERNAME) {
-  redisOptions.username = config.REDIS_USERNAME;
-}
-
-if (config.REDIS_PASSWORD) {
-  redisOptions.password = config.REDIS_PASSWORD;
-}
 
 // Create Redis client
 export const client: RedisClientType = createClient(redisOptions);

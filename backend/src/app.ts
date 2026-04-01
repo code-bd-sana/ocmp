@@ -28,6 +28,9 @@ const RESET = '\x1b[0m';
 // Express app initialization
 const app: Application = express();
 
+// Trust proxy for rate limiting and headers (important for Coolify/reverse proxy setups)
+app.set('trust proxy', 1);
+
 // Define the path to the public directory
 const publicDirPath = path.join(__dirname, '..', 'public');
 
