@@ -3,29 +3,62 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ClientAction } from "@/service/client";
+import { UserAction } from "@/service/user";
 
 /**
- * Landing page for /dashboard/renewal-tracker (no standAloneId).
- * Fetches the client list and redirects to the first client's renewal tracker page
- * so that the sidebar auto-selects the first client.
+ * Landing page for /dashboard/planner (no standAloneId).
+ *
+ * For STANDALONE_USER: redirects to /dashboard/planner/:userId
+ * For TRANSPORT_MANAGER: redirects to first approved client's planner
  */
 export default function PlannerPage() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    ClientAction.getClients({ showPerPage: 1, pageNo: 1 })
-      .then((res) => {
-        if (res.status && res.data?.data?.length) {
-          const firstClientId = res.data.data[0].client._id;
-          router.replace(`/dashboard/planner/${firstClientId}`);
-        } else {
-          setError("No clients found. Please add a client first.");
+    const redirectBasedOnRole = async () => {
+      try {
+        const profileResp = await UserAction.getProfile();
+        const userRole = profileResp.data?.role;
+        const userId = profileResp.data?._id;
+
+        if (userRole === "STANDALONE_USER") {
+          if (!userId) {
+            setError("Unable to load your profile. Please try again.");
+            return;
+          }
+          router.replace(`/dashboard/planner/${userId}`);
+          return;
         }
-      })
-      .catch(() => {
+
+        const clientRes = await ClientAction.getClients({
+          showPerPage: 25,
+          pageNo: 1,
+        });
+        if (clientRes.status && clientRes.data?.data?.length) {
+          const approvedClients = clientRes.data.data.filter(
+            (row) => (row.status || "").toUpperCase() === "APPROVED",
+          );
+
+          if (approvedClients.length) {
+            router.replace(
+              `/dashboard/planner/${approvedClients[0].client._id}`,
+            );
+            return;
+          }
+
+          const firstClientId = clientRes.data.data[0].client._id;
+          router.replace(`/dashboard/planner/${firstClientId}`);
+          return;
+        }
+
+        setError("No clients found. Please add a client first.");
+      } catch {
         setError("Failed to load clients. Please try again.");
-      });
+      }
+    };
+
+    redirectBasedOnRole();
   }, [router]);
 
   if (error) {

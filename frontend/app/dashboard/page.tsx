@@ -299,14 +299,14 @@ export default function Page() {
       <DashboardHome />
 
       {/* Vehicle Overview Table */}
-      <UniversalTable<Vehicle>
+      {/* <UniversalTable<Vehicle>
         data={data}
         columns={columns}
         actions={actions}
         rowKey={(row) => row.id}
         headerActionGroups={headerActionGroups}
         innerActionGroup={innerActionGroup}
-      />
+      /> */}
     </div>
   );
 }
