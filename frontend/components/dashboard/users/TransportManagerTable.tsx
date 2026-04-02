@@ -13,7 +13,9 @@ export interface TransportManagerTableRow {
 }
 
 /** Map API response → flat rows */
-export function toTableRows(rows: TransportManagerType[]): TransportManagerTableRow[] {
+export function toTableRows(
+  rows: TransportManagerType[] = [],
+): TransportManagerTableRow[] {
   return rows.map((r) => ({
     _id: r._id,
     fullName: r.fullName,
@@ -21,18 +23,20 @@ export function toTableRows(rows: TransportManagerType[]): TransportManagerTable
 }
 
 const columns: Column<TransportManagerTableRow>[] = [
-  { 
-    key: "fullName", 
+  {
+    key: "fullName",
     title: "Full Name",
     render: (row) => (
       <span className="font-medium text-gray-900">{row.fullName}</span>
     ),
   },
-  { 
-    key: "_id", 
+  {
+    key: "_id",
     title: "Manager ID",
     render: (row) => (
-      <span className="text-sm text-gray-500 font-mono">{row._id.slice(-8)}</span>
+      <span className="font-mono text-sm text-gray-500">
+        {row._id.slice(-8)}
+      </span>
     ),
   },
 ];
@@ -42,11 +46,10 @@ interface TransportManagerTableProps {
   onRequestJoinTeam: (managerId: string) => void;
 }
 
-export default function TransportManagerTable({ 
-  data, 
+export default function TransportManagerTable({
+  data,
   onRequestJoinTeam,
 }: TransportManagerTableProps) {
-  
   // Row actions for each manager
   const rowActions: TableAction<TransportManagerTableRow>[] = [
     {
@@ -54,10 +57,7 @@ export default function TransportManagerTable({
       onClick: (row) => onRequestJoinTeam(row._id),
       icon: <LogIn className="h-4 w-4" />,
       variant: "default",
-   
-
     },
-
   ];
 
   const headerActionGroups: HeaderActionGroup[] = [

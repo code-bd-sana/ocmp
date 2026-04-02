@@ -42,6 +42,7 @@ export default function Header({ showSidebarToggle = true }: HeaderProps) {
             src="/logo.png"
             alt="OCMP"
             fill
+            sizes="(max-width: 768px) 140px, 150px"
             className="object-contain"
             priority
           />
