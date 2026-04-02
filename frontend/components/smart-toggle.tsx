@@ -17,16 +17,17 @@ export function MobileSidebarToggle({ className, ...props }: SmartToggleProps) {
 
   return (
     <Button
-      variant='ghost'
-      size='icon'
+      variant="ghost"
+      size="icon"
       className={cn(
-        "h-10 w-10 text-white hover:bg-primary/80 text-center",
+        "hover:bg-primary/80 h-10 w-10 text-center text-white",
         className,
       )}
       onClick={() => setOpenMobile(true)}
-      {...props}>
-      <Menu className='h-10 w-10' />
-      <span className='sr-only'>Open sidebar</span>
+      {...props}
+    >
+      <Menu className="h-10 w-10" />
+      <span className="sr-only">Open sidebar</span>
     </Button>
   );
 }
@@ -42,22 +43,23 @@ export function DesktopSidebarToggle({
 
   return (
     <Button
-      variant='outline'
-      size='icon'
+      variant="outline"
+      size="icon"
       className={cn(
-        "h-6 w-6 bg-background border shadow-sm",
-        "absolute -right-3.25 top-12 -translate-y-1/2 z-50",
-        "hover:bg-background hover:scale-105 transition-transform",
+        "bg-background h-6 w-6 border shadow-sm",
+        "absolute top-12 -right-4 z-50 -translate-y-1/2",
+        "hover:bg-background transition-transform hover:scale-105",
         className,
       )}
       onClick={toggleSidebar}
-      {...props}>
+      {...props}
+    >
       {state === "expanded" ? (
-        <ChevronLeft className='h-4 w-4 text-primary' />
+        <ChevronLeft className="text-primary h-4 w-4" />
       ) : (
-        <ChevronRight className='h-4 w-4 text-primary' />
+        <ChevronRight className="text-primary h-4 w-4" />
       )}
-      <span className='sr-only'>Toggle sidebar</span>
+      <span className="sr-only">Toggle sidebar</span>
     </Button>
   );
 }

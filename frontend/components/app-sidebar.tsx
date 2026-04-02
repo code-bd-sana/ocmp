@@ -9,6 +9,7 @@ import {
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
+  useSidebar,
 } from "@/components/ui/sidebar";
 
 import {
@@ -66,6 +67,7 @@ const CLIENT_MODULES: { slug: string; label: string }[] = [
 export function AppSidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const { state } = useSidebar();
   const [clients, setClients] = useState<SidebarClient[]>([]);
 
   const handleLogout = async () => {
@@ -103,6 +105,9 @@ export function AppSidebar() {
   const activeModule = CLIENT_MODULES.find((m) => m.slug === moduleSlug);
   const activeClientId = activeModule ? (segments[3] ?? "") : "";
 
+  const getClientInitial = (name: string) =>
+    name.trim().charAt(0).toUpperCase();
+
   return (
     <Sidebar collapsible="icon" className="bg-sidebar border-r">
       {/* Toggle */}
@@ -129,41 +134,68 @@ export function AppSidebar() {
 
               <CollapsibleContent>
                 {activeModule ? (
-                  <SidebarMenuSub className="mt-3 -ml-5">
-                    {clients.map((client, index) => (
-                      <SidebarMenuSubItem key={client.id} className="relative">
-                        {/* Vertical line */}
-                        {index < clients.length - 1 && (
-                          <div className="bg-muted-foreground absolute -top-1 bottom-0 left-6 w-0.5" />
-                        )}
+                  state === "collapsed" ? (
+                    <div className="mt-3 flex flex-col gap-2">
+                      {clients.map((client) => {
+                        const initial = getClientInitial(client.name);
 
-                        {/* Horizontal branch line */}
-                        <div className="bg-muted-foreground absolute top-1/2 left-6 h-0.5 w-5" />
-
-                        {/* Corner for last item */}
-                        {index === clients.length - 1 && (
-                          <div className="bg-muted-foreground absolute -top-1 left-6 h-7 w-0.5" />
-                        )}
-                        <SidebarMenuSubButton
-                          asChild
-                          isActive={activeClientId === client.id}
-                          className={`hover:text-primary py-6 pl-14 font-normal text-(--body-text) hover:text-base ${
-                            activeClientId === client.id
-                              ? "!bg-white! !text-primary! data-[active=true]:text-primary! ml-12 rounded-none pl-3 shadow-sm! data-[active=true]:bg-white!"
-                              : ""
-                          } `}
-                        >
+                        return (
                           <Link
+                            key={client.id}
                             href={`/dashboard/${activeModule.slug}/${client.id}`}
-                            className="block"
+                            title={client.name}
+                            aria-label={client.name}
+                            className={`flex h-9 w-9 items-center justify-center rounded-md text-sm font-semibold transition-colors ${
+                              activeClientId === client.id
+                                ? "text-primary bg-white shadow-sm"
+                                : "bg-sidebar-accent/60 hover:bg-sidebar-accent hover:text-primary text-(--body-text)"
+                            }`}
                           >
-                            {client.name}
+                            {initial}
                           </Link>
-                        </SidebarMenuSubButton>
-                      </SidebarMenuSubItem>
-                    ))}
-                  </SidebarMenuSub>
-                ) : (
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <SidebarMenuSub className="mt-3 -ml-5">
+                      {clients.map((client, index) => (
+                        <SidebarMenuSubItem
+                          key={client.id}
+                          className="relative"
+                        >
+                          {/* Vertical line */}
+                          {index < clients.length - 1 && (
+                            <div className="bg-muted-foreground absolute -top-1 bottom-0 left-6 w-0.5" />
+                          )}
+
+                          {/* Horizontal branch line */}
+                          <div className="bg-muted-foreground absolute top-1/2 left-6 h-0.5 w-5" />
+
+                          {/* Corner for last item */}
+                          {index === clients.length - 1 && (
+                            <div className="bg-muted-foreground absolute -top-1 left-6 h-7 w-0.5" />
+                          )}
+                          <SidebarMenuSubButton
+                            asChild
+                            isActive={activeClientId === client.id}
+                            className={`hover:text-primary py-6 pl-14 font-normal text-(--body-text) hover:text-base ${
+                              activeClientId === client.id
+                                ? "!bg-white! !text-primary! data-[active=true]:text-primary! ml-12 rounded-none pl-3 shadow-sm! data-[active=true]:bg-white!"
+                                : ""
+                            } `}
+                          >
+                            <Link
+                              href={`/dashboard/${activeModule.slug}/${client.id}`}
+                              className="block"
+                            >
+                              {client.name}
+                            </Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                      ))}
+                    </SidebarMenuSub>
+                  )
+                ) : state === "collapsed" ? null : (
                   <div className="text-muted-foreground px-6 py-4 text-sm">
                     Please select a module from the footer to view clients.
                   </div>
