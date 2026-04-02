@@ -4,7 +4,13 @@ import { useRouter } from "next/navigation";
 import { resolveRoleScopedRoute } from "@/lib/utils/role-route";
 import { use, useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { UserAction } from "@/service/user";
 
+// Import components for different views
+import ManagersList from "@/components/dashboard/transport-manager/ManagersList";
+import PendingRequestsTab from "@/components/dashboard/transport-manager/PendingRequestsTab";
+
+// Import TM training components
 import TransportManagerTrainingHeader from "@/components/dashboard/transport-manager/TransportManagerHeader";
 import TransportManagerTrainingTable, {
   toTransportManagerTrainingTableRows,
@@ -21,7 +27,6 @@ import {
   UpdateTransportManagerTrainingInput,
 } from "@/lib/transport-manager-training/transport-manager-training.types";
 import { TransportManagerTrainingAction } from "@/service/transport-manager-training";
-import { UserAction } from "@/service/user";
 
 interface PageProps {
   params: Promise<{ standAloneId: string }>;
@@ -73,17 +78,18 @@ function resolveTrainingPayload(
   return null;
 }
 
-export default function TransportManagerTrainingPage({ params }: PageProps) {
+export default function TransportManagerPage({ params }: PageProps) {
   const { standAloneId } = use(params);
   const router = useRouter();
+  const [userRole, setUserRole] = useState<string | null>(null);
   const [roleReady, setRoleReady] = useState(false);
-  const [rows, setRows] = useState<TransportManagerTrainingTableRow[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [addOpen, setAddOpen] = useState(false);
+  // Training-specific state (for TM viewing client training)
+  const [rows, setRows] = useState<TransportManagerTrainingTableRow[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
 
+  const [addOpen, setAddOpen] = useState(false);
   const [viewOpen, setViewOpen] = useState(false);
   const [viewTraining, setViewTraining] =
     useState<TransportManagerTrainingRow | null>(null);
@@ -101,40 +107,7 @@ export default function TransportManagerTrainingPage({ params }: PageProps) {
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const fetchTrainings = useCallback(
-    async (search?: string) => {
-      try {
-        setLoading(true);
-        const res = await TransportManagerTrainingAction.getTrainings(
-          standAloneId,
-          {
-            searchKey: search || undefined,
-            showPerPage: 100,
-          },
-        );
-
-        if (res.status && res.data) {
-          setRows(
-            toTransportManagerTrainingTableRows(
-              res.data.transportManagerTrainings,
-            ),
-          );
-        } else {
-          setError(res.message || "Failed to load transport manager training");
-        }
-      } catch (err) {
-        setError(
-          err instanceof Error
-            ? err.message
-            : "Failed to load transport manager training",
-        );
-      } finally {
-        setLoading(false);
-      }
-    },
-    [standAloneId],
-  );
-
+  // Determine which view to show based on user role
   useEffect(() => {
     let isActive = true;
 
@@ -142,6 +115,9 @@ export default function TransportManagerTrainingPage({ params }: PageProps) {
       try {
         const profileRes = await UserAction.getProfile();
         if (!isActive) return;
+
+        const userRole = profileRes.data?.role || null;
+        setUserRole(userRole);
 
         const routeResult = resolveRoleScopedRoute({
           role: profileRes.data?.role,
@@ -175,11 +151,45 @@ export default function TransportManagerTrainingPage({ params }: PageProps) {
     };
   }, [standAloneId, router]);
 
+  // Load trainings only if user is TM (not standalone)
+  const fetchTrainings = useCallback(
+    async (search?: string) => {
+      if (userRole !== "TRANSPORT_MANAGER") return;
+
+      try {
+        const res = await TransportManagerTrainingAction.getTrainings(
+          standAloneId,
+          {
+            searchKey: search || undefined,
+            showPerPage: 100,
+          },
+        );
+
+        if (res.status && res.data) {
+          setRows(
+            toTransportManagerTrainingTableRows(
+              res.data.transportManagerTrainings,
+            ),
+          );
+        } else {
+          setError(res.message || "Failed to load transport manager training");
+        }
+      } catch (err) {
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Failed to load transport manager training",
+        );
+      }
+    },
+    [standAloneId, userRole],
+  );
+
   useEffect(() => {
-    if (roleReady) {
+    if (roleReady && userRole === "TRANSPORT_MANAGER") {
       fetchTrainings();
     }
-  }, [fetchTrainings, roleReady]);
+  }, [roleReady, userRole, fetchTrainings]);
 
   const handleSearchChange = (value: string) => {
     setSearchQuery(value);
@@ -375,70 +385,83 @@ export default function TransportManagerTrainingPage({ params }: PageProps) {
     );
   }
 
-  if (loading && rows.length === 0) {
+  // STANDALONE_USER view: Show managers list and join request UI
+  if (userRole === "STANDALONE_USER") {
+    return <ManagersList userId={standAloneId} />;
+  }
+
+  // TRANSPORT_MANAGER view: Show pending requests and training
+  if (userRole === "TRANSPORT_MANAGER") {
     return (
-      <div className="container mx-auto max-w-6xl py-10">
-        <div className="flex h-64 items-center justify-center">
-          <p className="text-muted-foreground">
-            Loading transport manager training...
-          </p>
-        </div>
+      <div className="mx-auto space-y-8 py-4 lg:mr-10">
+        {/* Pending Requests Section */}
+        <section>
+          <PendingRequestsTab />
+        </section>
+
+        {/* Training Section */}
+        <section className="border-t pt-8">
+          <h2 className="mb-4 text-2xl font-bold">Training Records</h2>
+          <TransportManagerTrainingHeader
+            searchQuery={searchQuery}
+            onSearchChange={handleSearchChange}
+          />
+
+          <TransportManagerTrainingTable
+            data={rows}
+            onAddTraining={() => setAddOpen(true)}
+            onView={handleView}
+            onEdit={handleEditOpen}
+            onDelete={handleDeleteOpen}
+          />
+
+          <AddTransportManagerTrainingModal
+            open={addOpen}
+            onOpenChange={setAddOpen}
+            onSubmit={handleCreateTraining}
+          />
+
+          <ViewTransportManagerTrainingModal
+            open={viewOpen}
+            onOpenChange={(open) => {
+              setViewOpen(open);
+              if (!open) setViewTraining(null);
+            }}
+            training={viewTraining}
+            loading={viewLoading}
+          />
+
+          <EditTransportManagerTrainingModal
+            open={editOpen}
+            onOpenChange={(open) => {
+              setEditOpen(open);
+              if (!open) setEditTraining(null);
+            }}
+            onSubmit={handleUpdateTraining}
+            training={editTraining}
+            loading={editLoading}
+          />
+
+          <DeleteTransportManagerTrainingDialog
+            open={deleteOpen}
+            onOpenChange={(open) => {
+              setDeleteOpen(open);
+              if (!open) setDeleteTarget(null);
+            }}
+            trainingCourse={deleteTarget?.trainingCourse || ""}
+            onConfirm={handleDeleteConfirm}
+            loading={deleteLoading}
+          />
+        </section>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto py-4 lg:mr-10">
-      <TransportManagerTrainingHeader
-        searchQuery={searchQuery}
-        onSearchChange={handleSearchChange}
-      />
-
-      <TransportManagerTrainingTable
-        data={rows}
-        onAddTraining={() => setAddOpen(true)}
-        onView={handleView}
-        onEdit={handleEditOpen}
-        onDelete={handleDeleteOpen}
-      />
-
-      <AddTransportManagerTrainingModal
-        open={addOpen}
-        onOpenChange={setAddOpen}
-        onSubmit={handleCreateTraining}
-      />
-
-      <ViewTransportManagerTrainingModal
-        open={viewOpen}
-        onOpenChange={(open) => {
-          setViewOpen(open);
-          if (!open) setViewTraining(null);
-        }}
-        training={viewTraining}
-        loading={viewLoading}
-      />
-
-      <EditTransportManagerTrainingModal
-        open={editOpen}
-        onOpenChange={(open) => {
-          setEditOpen(open);
-          if (!open) setEditTraining(null);
-        }}
-        onSubmit={handleUpdateTraining}
-        training={editTraining}
-        loading={editLoading}
-      />
-
-      <DeleteTransportManagerTrainingDialog
-        open={deleteOpen}
-        onOpenChange={(open) => {
-          setDeleteOpen(open);
-          if (!open) setDeleteTarget(null);
-        }}
-        trainingCourse={deleteTarget?.trainingCourse || ""}
-        onConfirm={handleDeleteConfirm}
-        loading={deleteLoading}
-      />
+    <div className="container mx-auto max-w-6xl py-10">
+      <div className="flex h-64 items-center justify-center">
+        <p className="text-muted-foreground">Access denied.</p>
+      </div>
     </div>
   );
 }

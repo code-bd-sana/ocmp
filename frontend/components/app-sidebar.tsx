@@ -88,8 +88,12 @@ export function AppSidebar() {
     ClientAction.getClients({ showPerPage: 10, pageNo: 1 })
       .then((res) => {
         if (res.status && res.data?.data) {
+          const approvedClients = res.data.data.filter(
+            (row) => (row.status || "").toUpperCase() === "APPROVED",
+          );
+
           setClients(
-            res.data.data.map((row) => ({
+            approvedClients.map((row) => ({
               id: row.client._id,
               name: row.client.fullName,
             })),

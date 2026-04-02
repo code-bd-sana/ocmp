@@ -5,6 +5,7 @@ import { Column } from "@/components/universal-table/table.types";
 import { ClientRow } from "@/lib/clients/client.types";
 import { UserPlus } from "lucide-react";
 import type { HeaderActionGroup } from "@/components/universal-table/UniversalTable";
+import { Button } from "@/components/ui/button";
 
 /** Flat row type used by the table */
 export interface ClientTableRow {
@@ -45,9 +46,9 @@ const columns: Column<ClientTableRow>[] = [
       <span
         className={
           row.status === "approved"
-            ? "text-green-600 font-medium capitalize"
+            ? "font-medium text-green-600 capitalize"
             : row.status === "pending"
-              ? "text-yellow-600 font-medium capitalize"
+              ? "font-medium text-yellow-600 capitalize"
               : "text-muted-foreground font-medium capitalize"
         }
       >
@@ -61,9 +62,35 @@ const columns: Column<ClientTableRow>[] = [
 interface ClientsTableProps {
   data: ClientTableRow[];
   onAddClient: () => void;
+  onRequestRemove: (row: ClientTableRow) => void;
+  removingClientId?: string | null;
 }
 
-export default function ClientsTable({ data, onAddClient }: ClientsTableProps) {
+export default function ClientsTable({
+  data,
+  onAddClient,
+  onRequestRemove,
+  removingClientId,
+}: ClientsTableProps) {
+  const tableColumns: Column<ClientTableRow>[] = [
+    ...columns,
+    {
+      key: "_id",
+      title: "Actions",
+      render: (row) => (
+        <Button
+          size="sm"
+          variant="outline"
+          className="text-red-600 hover:bg-red-50"
+          onClick={() => onRequestRemove(row)}
+          disabled={removingClientId === row._id}
+        >
+          {removingClientId === row._id ? "Submitting..." : "Remove"}
+        </Button>
+      ),
+    },
+  ];
+
   const headerActionGroups: HeaderActionGroup[] = [
     {
       title: "",
@@ -84,7 +111,7 @@ export default function ClientsTable({ data, onAddClient }: ClientsTableProps) {
   return (
     <UniversalTable<ClientTableRow>
       data={data}
-      columns={columns}
+      columns={tableColumns}
       rowKey={(row) => row._id}
       headerActionGroups={headerActionGroups}
     />

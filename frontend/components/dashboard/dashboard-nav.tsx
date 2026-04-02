@@ -16,10 +16,18 @@ import { usePathname } from "next/navigation";
 // সব navigation items
 const items = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { name: "Repository", href: "/dashboard/repository-settings", icon: FolderOpen },
+  {
+    name: "Repository",
+    href: "/dashboard/repository-settings",
+    icon: FolderOpen,
+  },
   { name: "Vehicles", href: "/dashboard/vehicles", icon: Truck },
-  { name: "All Users", href: "/dashboard/users", icon: Users }, 
-  { name: "All Transport Manager", href: "/dashboard/transport-managers", icon: UserCog }, // 
+  { name: "All Users", href: "/dashboard/users", icon: Users },
+  {
+    name: "All Transport Manager",
+    href: "/dashboard/transport-managers",
+    icon: UserCog,
+  }, //
   { name: "Planner", href: "/dashboard/planner", icon: Calendar },
   { name: "Settings", href: "/dashboard/settings", icon: Settings },
 ];

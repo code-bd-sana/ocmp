@@ -281,6 +281,6 @@ export const getMyManager = catchAsync(async (req: AuthenticatedRequest, res: Re
   const clientId = req.user!._id;
 
   const result = await clientManagementServices.getMyManager(clientId as string);
-  if (!result) return ServerResponse(res, false, 404, 'No Transport Manager assigned');
+  if (!result) return ServerResponse(res, true, 200, 'No Transport Manager assigned', null);
   ServerResponse(res, true, 200, 'Transport Manager retrieved successfully', result);
 });
