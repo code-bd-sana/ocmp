@@ -202,6 +202,8 @@
 //   logRoutesByModule();
 // });
 
+// ! Production ->
+
 import express, { Application } from 'express';
 import fs from 'fs';
 import path from 'path';
@@ -397,3 +399,4 @@ PORT: ${config.PORT}
 startServer();
 
 export default app;
+
