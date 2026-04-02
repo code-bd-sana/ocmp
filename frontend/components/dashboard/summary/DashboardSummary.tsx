@@ -39,7 +39,7 @@ export default function DashboardSummary() {
                     strokeWidth={1.5}
                   />
                 </div>
-                <p className="mb-2 text-base font-semibold text-(--body-text) md:text-[20px]">
+                <p className="text-start mb-2 text-base font-semibold text-(--body-text) md:text-[20px]">
                   {item.title}
                 </p>
                 <p className="text-2xl font-bold text-blue-900 md:text-3xl">
