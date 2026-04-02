@@ -6,16 +6,17 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
-import RepositoryHeader from "@/components/dashboard/repository/RepositoryHeader";
 import RepositoryCheckboxGrid from "@/components/dashboard/repository/RepositoryCheckboxGrid";
 import RepositoryConfirmDialog from "@/components/dashboard/repository/RepositoryConfirmDialog";
+import RepositoryHeader from "@/components/dashboard/repository/RepositoryHeader";
 
-import { RepositorySettingsAction } from "@/service/repository-settings";
 import { notifyRepositorySettingsUpdated } from "@/lib/repository/repository.cookies";
 import {
-  RepositorySettingsFlags,
-  SETTINGS_META,
+    RepositorySettingsFlags,
+    SETTINGS_META,
 } from "@/lib/repository/repository.types";
+import { AuthAction } from "@/service/auth";
+import { RepositorySettingsAction } from "@/service/repository-settings";
 
 export default function RepositorySettings() {
   const [flags, setFlags] = useState<RepositorySettingsFlags | null>(null);
@@ -25,6 +26,13 @@ export default function RepositorySettings() {
   const [showAlert, setShowAlert] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [changePasswordLoading, setChangePasswordLoading] = useState(false);
+  const [changePasswordMessage, setChangePasswordMessage] = useState<string | null>(null);
+
 
   // Fetch settings on mount
   useEffect(() => {
@@ -99,6 +107,46 @@ export default function RepositorySettings() {
     setShowAlert(false);
   };
 
+  const handleChangePassword = async () => {
+    if (newPassword !== confirmNewPassword) {
+      toast.error("New passwords do not match");
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      toast.error("New password must be at least 8 characters");
+      return;
+    }
+
+    setChangePasswordLoading(true);
+    setChangePasswordMessage(null);
+
+    try {
+      const res = await AuthAction.ChangePassword({
+        currentPassword,
+        newPassword,
+        confirmNewPassword,
+      });
+
+      if (res.status) {
+        setChangePasswordMessage("Password changed successfully.");
+        setCurrentPassword("");
+        setNewPassword("");
+        setConfirmNewPassword("");
+        toast.success(res.message || "Password changed successfully");
+      } else {
+        setChangePasswordMessage(res.message || "Failed to change password");
+        toast.error(res.message || "Failed to change password");
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to change password";
+      setChangePasswordMessage(message);
+      toast.error(message);
+    } finally {
+      setChangePasswordLoading(false);
+    }
+  };
+
   // Filter metadata by search query
   const displayedMeta =
     searchQuery.trim() === ""
@@ -151,6 +199,8 @@ export default function RepositorySettings() {
           </div>
         </CardContent>
       </Card>
+
+  
 
       <RepositoryConfirmDialog
         open={showAlert}
