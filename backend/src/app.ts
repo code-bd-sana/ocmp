@@ -263,6 +263,9 @@ app.use(
     origin: (origin, callback) => {
       // Allow non-browser requests like curl/postman (no origin)
       if (!origin) return callback(null, true);
+      // Allow localhost origins for local development
+      if (origin.startsWith('http://localhost')) return callback(null, true);
+      // Allow specified origins
       if (allowedOrigins.includes(origin)) return callback(null, true);
       return callback(new Error('Not allowed by CORS'));
     },

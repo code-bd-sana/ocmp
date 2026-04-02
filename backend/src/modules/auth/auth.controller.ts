@@ -6,11 +6,11 @@ import catchAsync from '../../utils/catch-async/catch-async';
 import { IChangePassword, ILogin } from './auth.interface';
 import { authServices } from './auth.service';
 import {
-  ForgotPasswordInput,
-  LoginInput,
-  RegisterInput,
-  ResendVerificationEmailInput,
-  VerifyEmailInput,
+    ForgotPasswordInput,
+    LoginInput,
+    RegisterInput,
+    ResendVerificationEmailInput,
+    VerifyEmailInput,
 } from './auth.validation';
 
 /**
