@@ -115,11 +115,11 @@ export default function SignUpPage() {
     try {
       const resp = await AuthAction.RegisterUser(formData);
       if (resp.status) {
-toast.success(
-  (resp.message ? resp.message + " " : "") +
-  "Please check your email and verify your account."
-);
-        // router.push("/signin");
+        toast.success(
+          (resp.message ? resp.message + " " : "") +
+            "Please check your email and verify your account.",
+        );
+        router.replace("/signin");
         return;
       }
       toast.error(resp.message || "Registration failed");

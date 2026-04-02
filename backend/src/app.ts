@@ -249,7 +249,26 @@ app.use(cookieParser());
 app.use(fileUpload(config.EXPRESS_FILE_UPLOAD_CONFIG));
 
 // Security
-app.use(cors());
+// Configure CORS to allow the frontend client and localhost during development
+const allowedOrigins = Array.from(
+  new Set([
+    config.CLIENT_URL || 'http://localhost:3000',
+    'http://localhost:3000',
+    'https://ocmp.co.uk',
+  ])
+);
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow non-browser requests like curl/postman (no origin)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      return callback(new Error('Not allowed by CORS'));
+    },
+    credentials: true,
+  })
+);
 app.use(helmet());
 
 app.use((req: any, res: any, next: any) => {
