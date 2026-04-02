@@ -48,6 +48,12 @@ export interface IResetForgetPassword {
   confirmPassword: string;
 }
 
+export interface IChangePassword {
+  currentPassword: string;
+  newPassword: string;
+  confirmNewPassword: string;
+}
+
 const RegisterUser = async (data: IRegister): Promise<IApiResponse> => {
   console.log(data, "user data");
 
@@ -146,6 +152,30 @@ const ResetForgetPassword = async (data: IResetForgetPassword) => {
     const response = await axios.post<IApiResponse>(
       `${base_url}/auth/reset-password`,
       data,
+    );
+    return response.data;
+  } catch (error: unknown) {
+    if (axios.isAxiosError<IApiResponse>(error)) {
+      const apiError = error.response?.data?.error;
+      throw new Error(
+        typeof apiError === "string" ? apiError : "Something went wrong",
+      );
+    }
+    throw new Error("Something went wrong");
+  }
+};
+
+const ChangePassword = async (data: IChangePassword) => {
+  const token = GetAuthToken();
+  if (!token) throw new Error('No authentication token found');
+
+  try {
+    const response = await axios.patch<IApiResponse>(
+      `${base_url}/auth/change-password`,
+      data,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      },
     );
     return response.data;
   } catch (error: unknown) {
@@ -264,6 +294,7 @@ export const AuthAction = {
   ResendVerificationEmail,
   ForgotPassword,
   ResetForgetPassword,
+  ChangePassword,
   GetAuthToken,
   SetAuthToken,
   RemoveAuthToken,
