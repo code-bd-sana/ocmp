@@ -99,9 +99,9 @@ export default function FleetUtilizationChart({
 }: FleetUtilizationChartProps) {
   return (
     <div
-      className='w-full h-full md:-mt-4 flex flex-col md:flex-col lg:flex-row justify-between items-center'
+      className='flex h-full w-full flex-col items-center gap-6 md:gap-8'
       suppressHydrationWarning>
-      <div className='h-42 sm:h-56 md:h-48 lg:h-52 flex justify-center'>
+      <div className='flex w-full justify-center'>
         <PieChart
           width={220}
           height={220}
@@ -123,20 +123,24 @@ export default function FleetUtilizationChart({
         </PieChart>
       </div>
 
-      {/* below chart */}
-      <div className='flex flex-col justify-start gap-4 mt-10 md:mt-6 px-4'>
+      {/* Compact one-line legend cards */}
+      <div className='flex flex-col items-start gap-2 px-1 pb-1'>
         {data.map((item) => (
-          <div key={item.name} className='flex items-center gap-x-2'>
-            <div
-              className='w-3 h-3 rounded-full'
-              style={{ backgroundColor: item.color }}
-            />
-            <span className='text-sm md:text-lg text-gray-700'>
-              {item.name}
-            </span>
-            <span className='text-lg md:text-xl font-bold text-primary ml-1'>
+          <div
+            key={item.name}
+            className='flex min-w-[105px] flex-shrink-0 flex-col items-center justify-center rounded-md bg-white/60 px-3 py-1'>
+            <div className='flex items-center gap-1'>
+              <span
+                className='h-2.5 w-2.5 rounded-full'
+                style={{ backgroundColor: item.color }}
+              />
+              <span className='truncate text-base font-medium text-gray-700'>
+                {item.name}
+              </span>
+              <span className='text-sm font-bold leading-tight text-primary'>
               {item.value}%
             </span>
+            </div>
           </div>
         ))}
       </div>
