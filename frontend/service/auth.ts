@@ -49,7 +49,7 @@ export interface IResetForgetPassword {
 }
 
 const RegisterUser = async (data: IRegister): Promise<IApiResponse> => {
-  console.log(data, 'user data');
+  console.log(data, "user data");
 
   try {
     const response = await axios.post<IApiResponse>(
@@ -162,8 +162,19 @@ const ResetForgetPassword = async (data: IResetForgetPassword) => {
 const GetAuthToken = (): string | null => {
   return Cookies.get("token") || null;
 };
+const SetAuthToken = (token: string): void => {
+  const isSecureContext =
+    typeof window !== "undefined" && window.location.protocol === "https:";
+
+  Cookies.set("token", token, {
+    path: "/",
+    sameSite: "lax",
+    secure: isSecureContext,
+    expires: 7,
+  });
+};
 const RemoveAuthToken = (): void => {
-  Cookies.remove("token");
+  Cookies.remove("token", { path: "/", sameSite: "lax" });
 };
 const LogOut = async (): Promise<IApiResponse> => {
   const token = GetAuthToken();
@@ -198,17 +209,16 @@ const LogOut = async (): Promise<IApiResponse> => {
   }
 };
 // get user Profile
-const myProfile = async() =>{
-
-    const token =await GetAuthToken();
+const myProfile = async () => {
+  const token = await GetAuthToken();
 
   if (!token) {
     throw new Error("No authentication token found");
   }
   try {
-const response = await axios.get(
+    const response = await axios.get(
       `${base_url}/user/me`,
-  
+
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -216,8 +226,6 @@ const response = await axios.get(
       },
     );
     return response.data;
-
-    
   } catch (error: unknown) {
     if (axios.isAxiosError<IApiResponse>(error)) {
       const apiError = error.response?.data?.error;
@@ -227,18 +235,17 @@ const response = await axios.get(
     }
     throw new Error("Something went wrong");
   }
-}
-const myRole = async() =>{
-  console.log(base_url, 'this is base url!');
-    const token =await GetAuthToken();
+};
+const myRole = async () => {
+  console.log(base_url, "this is base url!");
+  const token = await GetAuthToken();
 
   if (!token) {
     throw new Error("No authentication token found");
   }
   try {
-const response = await myProfile();
-return response.data.role;
-    
+    const response = await myProfile();
+    return response.data.role;
   } catch (error: unknown) {
     if (axios.isAxiosError<IApiResponse>(error)) {
       const apiError = error.response?.data?.error;
@@ -248,10 +255,9 @@ return response.data.role;
     }
     throw new Error("Something went wrong");
   }
-}
+};
 
-
-export const AuthAction = { 
+export const AuthAction = {
   RegisterUser,
   LoginUser,
   VerifyEmail,
@@ -259,8 +265,9 @@ export const AuthAction = {
   ForgotPassword,
   ResetForgetPassword,
   GetAuthToken,
+  SetAuthToken,
   RemoveAuthToken,
   LogOut,
   myProfile,
-  myRole
+  myRole,
 };

@@ -84,15 +84,12 @@ export default function SignInPage() {
       if (resp.status) {
         const token = resp.data?.token;
         if (token) {
-          const secure =
-            window.location.protocol === "https:" ? "; secure" : "";
-          document.cookie = `token=${encodeURIComponent(
-            token,
-          )}; path=/; max-age=604800; samesite=lax${secure}`;
+          AuthAction.SetAuthToken(token);
         }
 
         toast.success(resp.message || "Successfully signed in!");
-        router.push("/dashboard");
+        router.replace("/dashboard");
+        router.refresh();
       } else {
         // Show error message from API
         toast.error(
