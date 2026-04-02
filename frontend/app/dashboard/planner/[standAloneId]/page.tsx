@@ -1,4 +1,3 @@
-
 "use client";
 
 import { use, useCallback, useEffect, useMemo, useState } from "react";
@@ -81,6 +80,31 @@ const EVENT_COLORS = {
     text: "text-pink-700",
     icon: AlertCircle,
   },
+};
+
+const PLANNER_TYPE_COLORS: Record<
+  PlannerType,
+  { dayBg: string; accent: string }
+> = {
+  [PlannerType.INSPECTIONS]: {
+    dayBg: "bg-blue-100",
+    accent: "border-blue-300",
+  },
+  [PlannerType.SERVICE]: {
+    dayBg: "bg-orange-100",
+    accent: "border-orange-300",
+  },
+  [PlannerType.MOT]: { dayBg: "bg-green-100", accent: "border-green-300" },
+  [PlannerType.BRAKE_TEST]: {
+    dayBg: "bg-purple-100",
+    accent: "border-purple-300",
+  },
+  [PlannerType.REPAIR]: { dayBg: "bg-red-100", accent: "border-red-300" },
+  [PlannerType.TACHO_RECALIBRATION]: {
+    dayBg: "bg-cyan-100",
+    accent: "border-cyan-300",
+  },
+  [PlannerType.VED]: { dayBg: "bg-amber-100", accent: "border-amber-300" },
 };
 
 function getVehicleId(vehicleId: PlannerRow["vehicleId"]): string {
@@ -222,9 +246,6 @@ export default function PlannerDetailPage({ params }: PageProps) {
 
       if (loadedVehicles.length) {
         setNewVehicleId((prev) => prev || loadedVehicles[0]._id);
-        setSelectedVehicleId((prev) =>
-          prev === "ALL" ? loadedVehicles[0]._id : prev,
-        );
       }
 
       if (!isStandaloneUser) {
@@ -647,7 +668,7 @@ export default function PlannerDetailPage({ params }: PageProps) {
 
   return (
     <>
-      <div className="min-h-screen bg-linear-to-br from-slate-50 to-slate-100 font-sans">
+      <div className="min-h-screen font-sans">
         <div className="px-6 py-8">
           {/* Header */}
           <div className="mb-8">
@@ -688,55 +709,68 @@ export default function PlannerDetailPage({ params }: PageProps) {
                 label: "Inspections",
                 value: stats.inspections,
                 color: "blue",
-                icon: Search,
+                text: "#FFFFFF",
+                subTitle: "#FFFFFF",
+                background: "#5B8BF1",
               },
               {
                 label: "Services",
                 value: stats.services,
                 color: "orange",
-                icon: Wrench,
+                text: "#FF9900",
+                subTitle: "#044192",
+                background: "#F6E2E1",
               },
               {
                 label: "MOTs",
                 value: stats.mots,
                 color: "green",
-                icon: Shield,
+                text: "#055117",
+                subTitle: "#044192",
+                background: "#D8E6E9",
               },
               {
                 label: "Brake Tests",
                 value: stats.brakeTests,
                 color: "purple",
-                icon: Activity,
+                text: "#B90012",
+                subTitle: "#044192",
+                background: "#E5D4FE",
               },
               {
                 label: "Total Events",
                 value: stats.all,
                 color: "slate",
-                icon: Calendar,
+                text: "#5D0999",
+                subTitle: "#044192",
+                background: "#F5D7F3",
               },
             ].map((stat) => (
               <div
                 key={stat.label}
-                className={`group overflow-hidden rounded-xl bg-white shadow-sm transition-all hover:shadow-md`}
+                className={`group overflow-hidden bg-white shadow-sm transition-all hover:shadow-md`}
               >
-                <div className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-slate-500">
-                        {stat.label}
-                      </p>
-                      <p className="mt-2 text-3xl font-bold text-slate-900">
+                <div
+                  className={`p-6`}
+                  style={{ backgroundColor: stat.background }}
+                >
+                  <div className="flex items-center justify-center">
+                    <div className="flex flex-col items-center justify-center text-center">
+                      <p
+                        className="mt-2 text-[42px] font-bold text-white"
+                        style={{ color: stat.text }}
+                      >
                         {stat.value}
                       </p>
-                    </div>
-                    <div className={`rounded-lg bg-${stat.color}-50 p-3`}>
-                      <stat.icon className={`h-6 w-6 text-${stat.color}-600`} />
+                      <p
+                        className="text-lg font-medium"
+                        style={{ color: stat.subTitle }}
+                      >
+                        {stat.label}
+                      </p>
                     </div>
                   </div>
                 </div>
-                <div
-                  className={`h-1 bg-${stat.color}-500 transition-all group-hover:h-1.5`}
-                />
               </div>
             ))}
           </div>
@@ -744,8 +778,8 @@ export default function PlannerDetailPage({ params }: PageProps) {
           {/* Main 3-Column Layout */}
           <div className="grid grid-cols-[280px_1fr_320px] gap-6">
             {/* LEFT SIDEBAR - Vehicle Selection */}
-            <div className="overflow-hidden rounded-2xl bg-white shadow-xl">
-              <div className="bg-linear-to-r from-slate-800 to-slate-900 px-5 py-4">
+            <div className="overflow-hidden bg-white shadow-xl">
+              <div className="bg-primary px-5 py-4">
                 <div className="flex items-center gap-2 text-white">
                   <Truck size={18} />
                   <h2 className="font-semibold">Vehicles</h2>
@@ -766,7 +800,7 @@ export default function PlannerDetailPage({ params }: PageProps) {
                   onClick={() => setSelectedVehicleId("ALL")}
                   className={`w-full border-l-4 px-5 py-3 text-left transition-all ${
                     selectedVehicleId === "ALL"
-                      ? "border-blue-500 bg-blue-50 text-blue-700"
+                      ? "border-primary text-primary bg-[#ECEAFF]"
                       : "border-transparent text-slate-600 hover:bg-slate-50"
                   }`}
                 >
@@ -782,7 +816,7 @@ export default function PlannerDetailPage({ params }: PageProps) {
                     onClick={() => setSelectedVehicleId(v._id)}
                     className={`w-full border-l-4 px-5 py-3 text-left transition-all ${
                       selectedVehicleId === v._id
-                        ? "border-blue-500 bg-blue-50 text-blue-700"
+                        ? "border-primary text-primary bg-[#ECEAFF]"
                         : "border-transparent text-slate-600 hover:bg-slate-50"
                     }`}
                   >
@@ -802,7 +836,7 @@ export default function PlannerDetailPage({ params }: PageProps) {
             </div>
 
             {/* MIDDLE - Calendar */}
-            <div className="overflow-hidden rounded-2xl bg-white shadow-xl">
+            <div className="overflow-hidden bg-white shadow-xl">
               {/* Calendar Header */}
               <div className="border-b border-slate-200 bg-slate-50 px-6 py-4">
                 <div className="flex items-center justify-between">
@@ -888,22 +922,30 @@ export default function PlannerDetailPage({ params }: PageProps) {
                     currentMonth.getMonth() === new Date().getMonth() &&
                     currentMonth.getFullYear() === new Date().getFullYear();
 
+                  const primaryEventType = hasEvents
+                    ? events[0].plannerType
+                    : null;
+                  const dayColorClass =
+                    primaryEventType && PLANNER_TYPE_COLORS[primaryEventType]
+                      ? PLANNER_TYPE_COLORS[primaryEventType].dayBg
+                      : "";
+
                   return (
                     <button
                       key={idx}
                       onClick={() =>
                         day.type === "current" && setSelectedDay(day.day)
                       }
-                      className={`relative min-h-25 border-r border-b border-slate-100 p-2 transition-all hover:bg-slate-50 ${
+                      className={`relative min-h-25 border-r border-b border-slate-100 p-2 transition-all hover:opacity-75 ${
                         day.type !== "current"
                           ? "bg-slate-50/50 text-slate-400"
-                          : ""
-                      } ${isSelected ? "ring-2 ring-blue-500 ring-inset" : ""}`}
+                          : dayColorClass
+                      } ${isSelected ? "ring-primary ring-2 ring-inset" : ""}`}
                     >
                       <div className="flex items-center justify-between">
                         <span
                           className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-sm font-medium ${
-                            isToday ? "bg-blue-600 text-white" : ""
+                            isToday ? "bg-primary text-white" : ""
                           }`}
                         >
                           {day.day}
@@ -964,8 +1006,8 @@ export default function PlannerDetailPage({ params }: PageProps) {
             </div>
 
             {/* RIGHT SIDEBAR - Selected Day Events */}
-            <div className="overflow-hidden rounded-2xl bg-white shadow-xl">
-              <div className="bg-linear-to-r from-slate-800 to-slate-900 px-5 py-4">
+            <div className="overflow-hidden bg-white shadow-xl">
+              <div className="bg-primary px-5 py-4">
                 <div className="flex items-center justify-between text-white">
                   <div className="flex items-center gap-2">
                     <Calendar size={18} />
