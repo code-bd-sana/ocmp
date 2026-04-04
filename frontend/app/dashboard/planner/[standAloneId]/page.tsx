@@ -3,15 +3,24 @@
 import { use, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  CalendarClock,
-  CircleAlert,
-  CircleCheck,
-  Clock3,
   ChevronLeft,
   ChevronRight,
-  Plus,
-  RefreshCw,
+  Search,
+  Settings2,
+  Truck,
+  Calendar,
+  AlertCircle,
+  CheckCircle,
+  XCircle,
+  Edit,
   Trash2,
+  Send,
+  Filter,
+  RefreshCw,
+  Car,
+  Wrench,
+  Shield,
+  Activity,
 } from "lucide-react";
 import { toast } from "sonner";
 import { resolveRoleScopedRoute } from "@/lib/utils/role-route";
@@ -23,27 +32,84 @@ import {
 import { PlannerAction } from "@/service/planner";
 import { UserAction } from "@/service/user";
 import { VehicleAction } from "@/service/vehicle";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 type VehicleOption = {
   _id: string;
   vehicleRegId?: string;
   licensePlate?: string;
+  make?: string;
+  model?: string;
 };
 
 interface PageProps {
   params: Promise<{ standAloneId: string }>;
 }
 
+type EventType = "completed" | "in-progress" | "booked" | "overdue";
+
+const EVENT_COLORS = {
+  completed: {
+    bg: "bg-gradient-to-br from-green-500 to-green-600",
+    light: "bg-green-50 border-green-200",
+    text: "text-green-700",
+    icon: CheckCircle,
+  },
+  "in-progress": {
+    bg: "bg-gradient-to-br from-orange-500 to-orange-600",
+    light: "bg-orange-50 border-orange-200",
+    text: "text-orange-700",
+    icon: Activity,
+  },
+  booked: {
+    bg: "bg-gradient-to-br from-blue-500 to-blue-600",
+    light: "bg-blue-50 border-blue-200",
+    text: "text-blue-700",
+    icon: Calendar,
+  },
+  overdue: {
+    bg: "bg-gradient-to-br from-pink-500 to-pink-600",
+    light: "bg-pink-50 border-pink-200",
+    text: "text-pink-700",
+    icon: AlertCircle,
+  },
+};
+
+const PLANNER_TYPE_COLORS: Record<
+  PlannerType,
+  { dayBg: string; accent: string }
+> = {
+  [PlannerType.INSPECTIONS]: {
+    dayBg: "bg-blue-100",
+    accent: "border-blue-300",
+  },
+  [PlannerType.SERVICE]: {
+    dayBg: "bg-orange-100",
+    accent: "border-orange-300",
+  },
+  [PlannerType.MOT]: { dayBg: "bg-green-100", accent: "border-green-300" },
+  [PlannerType.BRAKE_TEST]: {
+    dayBg: "bg-purple-100",
+    accent: "border-purple-300",
+  },
+  [PlannerType.REPAIR]: { dayBg: "bg-red-100", accent: "border-red-300" },
+  [PlannerType.TACHO_RECALIBRATION]: {
+    dayBg: "bg-cyan-100",
+    accent: "border-cyan-300",
+  },
+  [PlannerType.VED]: { dayBg: "bg-amber-100", accent: "border-amber-300" },
+};
+
 function getVehicleId(vehicleId: PlannerRow["vehicleId"]): string {
   if (typeof vehicleId === "string") return vehicleId;
   return vehicleId?._id || "";
-}
-
-function labelForPlannerType(type: PlannerType | string): string {
-  return String(type)
-    .toLowerCase()
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (ch) => ch.toUpperCase());
 }
 
 function asInputDate(dateLike: string | Date): string {
@@ -54,6 +120,27 @@ function asInputDate(dateLike: string | Date): string {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+function mergeDateWithOriginalTime(
+  dateInput: string,
+  originalDateLike: string,
+): Date | null {
+  const dateOnly = new Date(dateInput);
+  const original = new Date(originalDateLike);
+
+  if (Number.isNaN(dateOnly.getTime()) || Number.isNaN(original.getTime())) {
+    return null;
+  }
+
+  dateOnly.setHours(
+    original.getHours(),
+    original.getMinutes(),
+    original.getSeconds(),
+    original.getMilliseconds(),
+  );
+
+  return dateOnly;
 }
 
 function asDisplayDate(dateLike?: string): string {
@@ -67,21 +154,39 @@ function asDisplayDate(dateLike?: string): string {
   });
 }
 
-const plannerTypeOptions: PlannerType[] = [
-  PlannerType.INSPECTIONS,
-  PlannerType.MOT,
-  PlannerType.BRAKE_TEST,
-  PlannerType.SERVICE,
-  PlannerType.REPAIR,
-  PlannerType.TACHO_RECALIBRATION,
-  PlannerType.VED,
-];
+function labelForPlannerType(type: PlannerType | string): string {
+  return String(type)
+    .toLowerCase()
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (ch) => ch.toUpperCase());
+}
+
+function plannerEventType(row: PlannerRow): EventType {
+  if (row.PlannerStatus === "DUE") return "overdue";
+  if (row.requestStatus === RequestStatus.PENDING) return "in-progress";
+  if (row.requestStatus === RequestStatus.APPROVED) return "completed";
+  return "booked";
+}
+
+function getPlannerTypeIcon(type: PlannerType) {
+  switch (type) {
+    case PlannerType.INSPECTIONS:
+      return <Search size={14} />;
+    case PlannerType.SERVICE:
+      return <Wrench size={14} />;
+    case PlannerType.MOT:
+      return <Shield size={14} />;
+    case PlannerType.BRAKE_TEST:
+      return <Activity size={14} />;
+    default:
+      return <Settings2 size={14} />;
+  }
+}
 
 export default function PlannerDetailPage({ params }: PageProps) {
   const { standAloneId } = use(params);
   const router = useRouter();
 
-  const [roleReady, setRoleReady] = useState(false);
   const [isStandaloneUser, setIsStandaloneUser] = useState(false);
 
   const [loading, setLoading] = useState(true);
@@ -93,50 +198,61 @@ export default function PlannerDetailPage({ params }: PageProps) {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedVehicleId, setSelectedVehicleId] = useState("ALL");
-  const [selectedPlannerType, setSelectedPlannerType] = useState("ALL");
   const [currentMonth, setCurrentMonth] = useState<Date>(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [selectedDay, setSelectedDay] = useState<number | null>(null);
+  const [filterType, setFilterType] = useState<PlannerType | "ALL">("ALL");
 
-  const [creating, setCreating] = useState(false);
   const [newVehicleId, setNewVehicleId] = useState("");
   const [newPlannerType, setNewPlannerType] = useState<PlannerType>(
     PlannerType.INSPECTIONS,
   );
   const [newPlannerDate, setNewPlannerDate] = useState(asInputDate(new Date()));
 
+  const [addOpen, setAddOpen] = useState(false);
+  const [addSubmitting, setAddSubmitting] = useState(false);
+
+  const [eventOpen, setEventOpen] = useState(false);
+  const [activeEvent, setActiveEvent] = useState<PlannerRow | null>(null);
+  const [editDate, setEditDate] = useState("");
+  const [reqDate, setReqDate] = useState("");
+  const [reqReason, setReqReason] = useState("");
+  const [eventSubmitting, setEventSubmitting] = useState(false);
+  const [activeTab, setActiveTab] = useState<"edit" | "request">("edit");
+
   const loadPageData = useCallback(async () => {
     setLoading(true);
     setError(null);
 
     try {
-      const plannerResp = await PlannerAction.getPlanners(standAloneId, {
-        showPerPage: 500,
-        pageNo: 1,
-      });
-
-      const vehicleResp = await VehicleAction.getVehicles(standAloneId, {
-        showPerPage: 500,
-        pageNo: 1,
-      });
+      const [plannerResp, vehicleResp] = await Promise.all([
+        PlannerAction.getPlanners(standAloneId, {
+          showPerPage: 500,
+          pageNo: 1,
+        }),
+        VehicleAction.getVehicles(standAloneId, {
+          showPerPage: 500,
+          pageNo: 1,
+        }),
+      ]);
 
       const planners = plannerResp.data?.planners || [];
-      setPlannerRows(planners);
-
       const loadedVehicles = vehicleResp.data?.vehicles || [];
+
+      setPlannerRows(planners);
       setVehicles(loadedVehicles);
 
-      if (!newVehicleId && loadedVehicles.length > 0) {
-        setNewVehicleId(loadedVehicles[0]._id);
+      if (loadedVehicles.length) {
+        setNewVehicleId((prev) => prev || loadedVehicles[0]._id);
       }
 
       if (!isStandaloneUser) {
         try {
-          const requestedResp =
+          const reqResp =
             await PlannerAction.getRequestedPlanners(standAloneId);
-          setRequestedRows(requestedResp.data || []);
+          setRequestedRows(reqResp.data || []);
         } catch {
           setRequestedRows([]);
         }
@@ -150,7 +266,7 @@ export default function PlannerDetailPage({ params }: PageProps) {
     } finally {
       setLoading(false);
     }
-  }, [isStandaloneUser, newVehicleId, standAloneId]);
+  }, [isStandaloneUser, standAloneId]);
 
   useEffect(() => {
     let isActive = true;
@@ -181,7 +297,6 @@ export default function PlannerDetailPage({ params }: PageProps) {
         }
 
         setIsStandaloneUser(userRole === "STANDALONE_USER");
-        setRoleReady(true);
       } catch {
         if (!isActive) return;
         setError("Failed to load your profile. Please sign in again.");
@@ -196,33 +311,130 @@ export default function PlannerDetailPage({ params }: PageProps) {
   }, [router, standAloneId]);
 
   useEffect(() => {
-    if (!roleReady) return;
     loadPageData();
-  }, [roleReady, loadPageData]);
+  }, [loadPageData]);
+
+  useEffect(() => {
+    if (selectedVehicleId !== "ALL") {
+      setNewVehicleId(selectedVehicleId);
+    }
+  }, [selectedVehicleId]);
+
+  const openAddEventModal = (date?: Date) => {
+    if (selectedVehicleId !== "ALL") {
+      setNewVehicleId(selectedVehicleId);
+    } else if (!newVehicleId && vehicles.length) {
+      setNewVehicleId(vehicles[0]._id);
+    }
+
+    if (date) {
+      setNewPlannerDate(asInputDate(date));
+    }
+
+    setAddOpen(true);
+  };
 
   const vehicleMap = useMemo(() => {
     return new Map(
       vehicles.map((vehicle) => [
         vehicle._id,
-        vehicle.licensePlate || vehicle.vehicleRegId || vehicle._id,
+        {
+          label: vehicle.licensePlate || vehicle.vehicleRegId || vehicle._id,
+          make: vehicle.make,
+          model: vehicle.model,
+        },
       ]),
     );
   }, [vehicles]);
 
-  const filteredRows = useMemo(() => {
+  const daysInMonth = useMemo(() => {
+    return new Date(
+      currentMonth.getFullYear(),
+      currentMonth.getMonth() + 1,
+      0,
+    ).getDate();
+  }, [currentMonth]);
+
+  const firstDayOfMonth = useMemo(() => {
+    return new Date(
+      currentMonth.getFullYear(),
+      currentMonth.getMonth(),
+      1,
+    ).getDay();
+  }, [currentMonth]);
+
+  const calendarDays = useMemo(() => {
+    const days: Array<{
+      type: "prev" | "current" | "next";
+      day: number;
+      date: Date;
+    }> = [];
+    const totalDays = firstDayOfMonth + daysInMonth;
+    const prevMonthDays = new Date(
+      currentMonth.getFullYear(),
+      currentMonth.getMonth(),
+      0,
+    ).getDate();
+
+    for (let i = 0; i < totalDays; i++) {
+      if (i < firstDayOfMonth) {
+        days.push({
+          type: "prev",
+          day: prevMonthDays - (firstDayOfMonth - i) + 1,
+          date: new Date(
+            currentMonth.getFullYear(),
+            currentMonth.getMonth() - 1,
+            prevMonthDays - (firstDayOfMonth - i) + 1,
+          ),
+        });
+      } else {
+        const dayNum = i - firstDayOfMonth + 1;
+        days.push({
+          type: "current",
+          day: dayNum,
+          date: new Date(
+            currentMonth.getFullYear(),
+            currentMonth.getMonth(),
+            dayNum,
+          ),
+        });
+      }
+    }
+
+    while (days.length % 7 !== 0) {
+      const nextDay: number = days.length - totalDays + 1;
+      days.push({
+        type: "next",
+        day: nextDay,
+        date: new Date(
+          currentMonth.getFullYear(),
+          currentMonth.getMonth() + 1,
+          nextDay,
+        ),
+      });
+    }
+
+    return days;
+  }, [firstDayOfMonth, daysInMonth, currentMonth]);
+
+  const monthFilteredRows = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
 
     return plannerRows.filter((row) => {
+      const rowDate = new Date(row.plannerDate);
+      const sameMonth =
+        rowDate.getFullYear() === currentMonth.getFullYear() &&
+        rowDate.getMonth() === currentMonth.getMonth();
+      if (!sameMonth) return false;
+
       const rowVehicleId = getVehicleId(row.vehicleId);
-      const vehicleLabel = (vehicleMap.get(rowVehicleId) || "").toLowerCase();
+      const vehicleLabel = (
+        vehicleMap.get(rowVehicleId)?.label || ""
+      ).toLowerCase();
 
       const matchVehicle =
         selectedVehicleId === "ALL" || rowVehicleId === selectedVehicleId;
-
-      const matchType =
-        selectedPlannerType === "ALL" ||
-        row.plannerType === selectedPlannerType;
-
+      const matchType = filterType === "ALL" || row.plannerType === filterType;
       const matchSearch =
         !q ||
         vehicleLabel.includes(q) ||
@@ -231,334 +443,767 @@ export default function PlannerDetailPage({ params }: PageProps) {
           .toLowerCase()
           .includes(q);
 
-      const matchDate =
-        !selectedDate || asInputDate(row.plannerDate) === selectedDate;
-
-      return matchVehicle && matchType && matchSearch && matchDate;
+      return matchVehicle && matchType && matchSearch;
     });
   }, [
+    currentMonth,
     plannerRows,
     searchQuery,
     selectedVehicleId,
-    selectedPlannerType,
-    selectedDate,
     vehicleMap,
+    filterType,
   ]);
 
-  const calendarCells = useMemo(() => {
-    const year = currentMonth.getFullYear();
-    const month = currentMonth.getMonth();
-
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-
-    // Monday-first index
-    const leading = (firstDay.getDay() + 6) % 7;
-    const totalDays = lastDay.getDate();
-    const trailing = (7 - ((leading + totalDays) % 7 || 7)) % 7;
-
-    const cells: Array<{ date: Date; inCurrentMonth: boolean }> = [];
-
-    for (let i = leading; i > 0; i--) {
-      cells.push({ date: new Date(year, month, 1 - i), inCurrentMonth: false });
+  const dayRowsMap = useMemo(() => {
+    const map = new Map<number, PlannerRow[]>();
+    for (const row of monthFilteredRows) {
+      const day = new Date(row.plannerDate).getDate();
+      const existing = map.get(day);
+      if (existing) existing.push(row);
+      else map.set(day, [row]);
     }
-
-    for (let day = 1; day <= totalDays; day++) {
-      cells.push({ date: new Date(year, month, day), inCurrentMonth: true });
-    }
-
-    for (let i = 1; i <= trailing; i++) {
-      cells.push({
-        date: new Date(year, month, totalDays + i),
-        inCurrentMonth: false,
-      });
-    }
-
-    return cells;
-  }, [currentMonth]);
-
-  const eventsByDate = useMemo(() => {
-    const map = new Map<string, PlannerRow[]>();
-
-    for (const row of plannerRows) {
-      const key = asInputDate(row.plannerDate);
-      const existing = map.get(key);
-      if (existing) {
-        existing.push(row);
-      } else {
-        map.set(key, [row]);
-      }
-    }
-
     return map;
-  }, [plannerRows]);
+  }, [monthFilteredRows]);
 
-  const selectedDateEvents = useMemo(() => {
-    if (!selectedDate) return [];
-    return eventsByDate.get(selectedDate) || [];
-  }, [eventsByDate, selectedDate]);
+  const selectedDayRows = useMemo(() => {
+    if (!selectedDay) return [];
+    return dayRowsMap.get(selectedDay) || [];
+  }, [dayRowsMap, selectedDay]);
 
   const stats = useMemo(() => {
-    const byType = plannerTypeOptions.reduce(
-      (acc, type) => {
-        acc[type] = plannerRows.filter(
-          (row) => row.plannerType === type,
-        ).length;
-        return acc;
-      },
-      {} as Record<PlannerType, number>,
-    );
-
-    const dueCount = plannerRows.filter(
-      (row) => row.PlannerStatus === "DUE",
-    ).length;
-
     return {
-      total: plannerRows.length,
-      dueCount,
-      byType,
+      inspections: monthFilteredRows.filter(
+        (r) => r.plannerType === PlannerType.INSPECTIONS,
+      ).length,
+      services: monthFilteredRows.filter(
+        (r) => r.plannerType === PlannerType.SERVICE,
+      ).length,
+      mots: monthFilteredRows.filter((r) => r.plannerType === PlannerType.MOT)
+        .length,
+      brakeTests: monthFilteredRows.filter(
+        (r) => r.plannerType === PlannerType.BRAKE_TEST,
+      ).length,
+      all: monthFilteredRows.length,
     };
-  }, [plannerRows]);
+  }, [monthFilteredRows]);
 
-  const handleCreatePlanner = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const openEventModal = (row: PlannerRow, day: number) => {
+    setSelectedDay(day);
+    setActiveEvent(row);
+    setEditDate(asInputDate(row.plannerDate));
+    setReqDate(asInputDate(row.plannerDate));
+    setReqReason(row.requestedReason || "");
+    setActiveTab("edit");
+    setEventOpen(true);
+  };
 
-    if (!newVehicleId) {
+  const handleCreate = async () => {
+    const vehicleId = newVehicleId || selectedVehicleId;
+    if (!vehicleId || vehicleId === "ALL") {
       toast.error("Select a vehicle first");
       return;
     }
 
     if (!newPlannerDate) {
-      toast.error("Select planner date");
+      toast.error("Planner date is required");
       return;
     }
 
-    try {
-      setCreating(true);
-      await PlannerAction.createPlanner({
-        vehicleId: newVehicleId,
-        plannerType: newPlannerType,
-        plannerDate: new Date(newPlannerDate).toISOString(),
-        standAloneId,
-      });
-
-      toast.success("Planner event created");
-      await loadPageData();
-    } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "Failed to create planner",
-      );
-    } finally {
-      setCreating(false);
-    }
-  };
-
-  const handleQuickReschedule = async (row: PlannerRow) => {
-    const currentValue = asInputDate(row.plannerDate);
-    const selected = window.prompt(
-      "Enter new planner date (YYYY-MM-DD)",
-      currentValue,
-    );
-    if (!selected) return;
-
-    const normalized = new Date(selected);
-    if (Number.isNaN(normalized.getTime())) {
-      toast.error("Invalid date format");
-      return;
-    }
-
-    try {
-      await PlannerAction.updatePlanner(row._id, standAloneId, {
-        plannerDate: normalized.toISOString(),
-      });
-      toast.success("Planner updated");
-      await loadPageData();
-    } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "Failed to update planner",
-      );
-    }
-  };
-
-  const handleRequestChange = async (row: PlannerRow) => {
-    const selectedDate = window.prompt(
-      "Requested new date (YYYY-MM-DD)",
-      asInputDate(row.plannerDate),
-    );
-    if (!selectedDate) return;
-
-    const reason = window.prompt("Why are you requesting this date change?");
-    if (!reason) {
-      toast.error("Reason is required");
-      return;
-    }
-
-    const parsed = new Date(selectedDate);
+    const parsed = new Date(newPlannerDate);
     if (Number.isNaN(parsed.getTime())) {
       toast.error("Invalid date format");
       return;
     }
 
     try {
-      await PlannerAction.requestChangePlannerDate(row._id, {
-        requestedDate: parsed.toISOString(),
-        requestedReason: reason,
+      setAddSubmitting(true);
+      await PlannerAction.createPlanner({
+        vehicleId,
+        plannerType: newPlannerType,
+        plannerDate: parsed.toISOString(),
+        standAloneId,
       });
-      toast.success("Change request submitted");
+      toast.success("Planner event created successfully");
+      setAddOpen(false);
       await loadPageData();
     } catch (err) {
       toast.error(
-        err instanceof Error ? err.message : "Failed to send request",
+        err instanceof Error ? err.message : "Failed to create planner event",
       );
+    } finally {
+      setAddSubmitting(false);
+    }
+  };
+
+  const handleUpdate = async () => {
+    if (!activeEvent) return;
+    const parsed = mergeDateWithOriginalTime(editDate, activeEvent.plannerDate);
+    if (!parsed) {
+      toast.error("Invalid date format");
+      return;
+    }
+
+    if (Number.isNaN(parsed.getTime())) {
+      toast.error("Invalid date format");
+      return;
+    }
+
+    try {
+      setEventSubmitting(true);
+      await PlannerAction.updatePlanner(activeEvent._id, standAloneId, {
+        plannerDate: parsed.toISOString(),
+      });
+      toast.success("Planner updated successfully");
+      setEventOpen(false);
+      await loadPageData();
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Failed to update planner",
+      );
+    } finally {
+      setEventSubmitting(false);
+    }
+  };
+
+  const handleRequestChange = async () => {
+    if (!activeEvent) return;
+    if (!reqReason.trim()) {
+      toast.error("Reason is required");
+      return;
+    }
+
+    const parsed = new Date(reqDate);
+    if (Number.isNaN(parsed.getTime())) {
+      toast.error("Invalid requested date");
+      return;
+    }
+
+    try {
+      setEventSubmitting(true);
+      await PlannerAction.requestChangePlannerDate(activeEvent._id, {
+        requestedDate: parsed.toISOString(),
+        requestedReason: reqReason.trim(),
+      });
+      toast.success("Change request submitted successfully");
+      setEventOpen(false);
+      await loadPageData();
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Failed to submit request",
+      );
+    } finally {
+      setEventSubmitting(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!activeEvent) return;
+    const ok = window.confirm(
+      "Are you sure you want to delete this planner item?",
+    );
+    if (!ok) return;
+
+    try {
+      setEventSubmitting(true);
+      await PlannerAction.deletePlanner(activeEvent._id, standAloneId);
+      toast.success("Planner item deleted successfully");
+      setEventOpen(false);
+      await loadPageData();
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Failed to delete planner",
+      );
+    } finally {
+      setEventSubmitting(false);
     }
   };
 
   const handleApprove = async (id: string) => {
     try {
       await PlannerAction.approvePlannerRequest(id);
-      toast.success("Request approved");
+      toast.success("Request approved successfully");
       await loadPageData();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to approve");
+      toast.error(
+        err instanceof Error ? err.message : "Failed to approve request",
+      );
     }
   };
 
   const handleReject = async (id: string) => {
     try {
       await PlannerAction.rejectPlannerRequest(id);
-      toast.success("Request rejected");
-      await loadPageData();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to reject");
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    const confirmed = window.confirm(
-      "Delete this planner item? This action cannot be undone.",
-    );
-    if (!confirmed) return;
-
-    try {
-      await PlannerAction.deletePlanner(id, standAloneId);
-      toast.success("Planner item deleted");
+      toast.success("Request rejected successfully");
       await loadPageData();
     } catch (err) {
       toast.error(
-        err instanceof Error ? err.message : "Failed to delete planner",
+        err instanceof Error ? err.message : "Failed to reject request",
       );
     }
   };
 
   if (error) {
     return (
-      <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-        <div className="text-destructive border-destructive/30 bg-destructive/10 rounded-2xl border px-6 py-8">
-          {error}
+      <div className="container mx-auto max-w-6xl py-10">
+        <div className="flex h-64 items-center justify-center">
+          <div className="text-center">
+            <AlertCircle className="mx-auto h-12 w-12 text-red-500" />
+            <p className="text-destructive mt-4">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="mt-4 rounded-lg bg-slate-900 px-4 py-2 text-sm text-white"
+            >
+              Retry
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
+  const monthLabel = currentMonth.toLocaleDateString("en-GB", {
+    month: "long",
+    year: "numeric",
+  });
+
   return (
-    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-      <div className="bg-card border-border relative overflow-hidden rounded-3xl border p-6 shadow-sm">
-        <div className="bg-primary/10 absolute -top-12 -right-10 h-44 w-44 rounded-full blur-2xl" />
-        <div className="bg-secondary/20 absolute -bottom-16 left-12 h-36 w-36 rounded-full blur-2xl" />
-
-        <div className="relative flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h1 className="text-primary text-2xl font-bold sm:text-3xl">
-              Planner Command Center
-            </h1>
-            <p className="text-muted-foreground mt-1 text-sm sm:text-base">
-              Track inspections, MOT, services, repairs, and due work in one
-              place.
-            </p>
+    <>
+      <div className="min-h-screen font-sans">
+        <div className="px-6 py-8">
+          {/* Header */}
+          <div className="mb-8">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-4xl font-bold tracking-tight text-slate-900">
+                  Vehicle Maintenance Planner
+                </h1>
+                <p className="mt-2 text-slate-600">
+                  Schedule and manage inspections, services, MOTs, and brake
+                  tests
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <input
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search events..."
+                    className="w-80 rounded-lg border border-slate-200 bg-white py-2.5 pr-4 pl-10 text-sm text-slate-600 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                  />
+                </div>
+                <button
+                  onClick={loadPageData}
+                  className="rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-600 transition-all hover:bg-slate-50"
+                >
+                  <RefreshCw size={16} />
+                </button>
+              </div>
+            </div>
           </div>
 
-          <button
-            onClick={loadPageData}
-            className="bg-background text-foreground border-input hover:bg-muted inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-medium transition"
-          >
-            <RefreshCw className="h-4 w-4" />
-            Refresh
-          </button>
+          {/* Stats Cards */}
+          <div className="mb-8 grid grid-cols-5 gap-4">
+            {[
+              {
+                label: "Inspections",
+                value: stats.inspections,
+                color: "blue",
+                text: "#FFFFFF",
+                subTitle: "#FFFFFF",
+                background: "#5B8BF1",
+              },
+              {
+                label: "Services",
+                value: stats.services,
+                color: "orange",
+                text: "#FF9900",
+                subTitle: "#044192",
+                background: "#F6E2E1",
+              },
+              {
+                label: "MOTs",
+                value: stats.mots,
+                color: "green",
+                text: "#055117",
+                subTitle: "#044192",
+                background: "#D8E6E9",
+              },
+              {
+                label: "Brake Tests",
+                value: stats.brakeTests,
+                color: "purple",
+                text: "#B90012",
+                subTitle: "#044192",
+                background: "#E5D4FE",
+              },
+              {
+                label: "Total Events",
+                value: stats.all,
+                color: "slate",
+                text: "#5D0999",
+                subTitle: "#044192",
+                background: "#F5D7F3",
+              },
+            ].map((stat) => (
+              <div
+                key={stat.label}
+                className={`group overflow-hidden bg-white shadow-sm transition-all hover:shadow-md`}
+              >
+                <div
+                  className={`p-6`}
+                  style={{ backgroundColor: stat.background }}
+                >
+                  <div className="flex items-center justify-center">
+                    <div className="flex flex-col items-center justify-center text-center">
+                      <p
+                        className="mt-2 text-[42px] font-bold text-white"
+                        style={{ color: stat.text }}
+                      >
+                        {stat.value}
+                      </p>
+                      <p
+                        className="text-lg font-medium"
+                        style={{ color: stat.subTitle }}
+                      >
+                        {stat.label}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Main 3-Column Layout */}
+          <div className="grid grid-cols-[280px_1fr_320px] gap-6">
+            {/* LEFT SIDEBAR - Vehicle Selection */}
+            <div className="overflow-hidden bg-white shadow-xl">
+              <div className="bg-primary px-5 py-4">
+                <div className="flex items-center gap-2 text-white">
+                  <Truck size={18} />
+                  <h2 className="font-semibold">Vehicles</h2>
+                  <span className="ml-auto rounded-full bg-white/20 px-2 py-0.5 text-xs">
+                    {vehicles.length}
+                  </span>
+                </div>
+              </div>
+
+              <div className="max-h-150 overflow-y-auto">
+                {loading && vehicles.length === 0 ? (
+                  <div className="px-5 py-4 text-sm text-slate-500">
+                    Loading vehicles...
+                  </div>
+                ) : null}
+
+                <button
+                  onClick={() => setSelectedVehicleId("ALL")}
+                  className={`w-full border-l-4 px-5 py-3 text-left transition-all ${
+                    selectedVehicleId === "ALL"
+                      ? "border-primary text-primary bg-[#ECEAFF]"
+                      : "border-transparent text-slate-600 hover:bg-slate-50"
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <Car size={16} />
+                    <span className="font-medium">All Vehicles</span>
+                  </div>
+                </button>
+
+                {vehicles.map((v) => (
+                  <button
+                    key={v._id}
+                    onClick={() => setSelectedVehicleId(v._id)}
+                    className={`w-full border-l-4 px-5 py-3 text-left transition-all ${
+                      selectedVehicleId === v._id
+                        ? "border-primary text-primary bg-[#ECEAFF]"
+                        : "border-transparent text-slate-600 hover:bg-slate-50"
+                    }`}
+                  >
+                    <div>
+                      <p className="text-sm font-medium">
+                        {v.licensePlate || v.vehicleRegId || v._id}
+                      </p>
+                      {v.make && v.model && (
+                        <p className="mt-0.5 text-xs text-slate-400">
+                          {v.make} {v.model}
+                        </p>
+                      )}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* MIDDLE - Calendar */}
+            <div className="overflow-hidden bg-white shadow-xl">
+              {/* Calendar Header */}
+              <div className="border-b border-slate-200 bg-slate-50 px-6 py-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() =>
+                        setCurrentMonth(
+                          new Date(
+                            currentMonth.getFullYear(),
+                            currentMonth.getMonth() - 1,
+                            1,
+                          ),
+                        )
+                      }
+                      className="rounded-md p-1 hover:bg-slate-200"
+                    >
+                      <ChevronLeft size={18} />
+                    </button>
+                    <span className="text-lg font-semibold text-slate-700">
+                      {monthLabel}
+                    </span>
+                    <button
+                      onClick={() =>
+                        setCurrentMonth(
+                          new Date(
+                            currentMonth.getFullYear(),
+                            currentMonth.getMonth() + 1,
+                            1,
+                          ),
+                        )
+                      }
+                      className="rounded-md p-1 hover:bg-slate-200"
+                    >
+                      <ChevronRight size={18} />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Filter size={14} className="text-slate-400" />
+                    <select
+                      className="border-none bg-transparent text-sm text-slate-600 outline-none"
+                      value={filterType}
+                      onChange={(e) =>
+                        setFilterType(e.target.value as PlannerType | "ALL")
+                      }
+                    >
+                      <option value="ALL">All Types</option>
+                      {Object.values(PlannerType).map((type) => (
+                        <option key={type} value={type}>
+                          {labelForPlannerType(type)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Weekday Headers */}
+              <div className="grid grid-cols-7 border-b border-slate-200">
+                {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(
+                  (day) => (
+                    <div
+                      key={day}
+                      className="py-3 text-center text-xs font-semibold text-slate-500 uppercase"
+                    >
+                      {day}
+                    </div>
+                  ),
+                )}
+              </div>
+
+              {/* Calendar Days */}
+              <div className="grid grid-cols-7">
+                {calendarDays.map((day, idx) => {
+                  const events =
+                    day.type === "current" ? dayRowsMap.get(day.day) || [] : [];
+                  const hasEvents = events.length > 0;
+                  const isSelected =
+                    day.type === "current" && selectedDay === day.day;
+                  const isToday =
+                    day.type === "current" &&
+                    day.day === new Date().getDate() &&
+                    currentMonth.getMonth() === new Date().getMonth() &&
+                    currentMonth.getFullYear() === new Date().getFullYear();
+
+                  const primaryEventType = hasEvents
+                    ? events[0].plannerType
+                    : null;
+                  const dayColorClass =
+                    primaryEventType && PLANNER_TYPE_COLORS[primaryEventType]
+                      ? PLANNER_TYPE_COLORS[primaryEventType].dayBg
+                      : "";
+
+                  return (
+                    <button
+                      key={idx}
+                      onClick={() =>
+                        day.type === "current" && setSelectedDay(day.day)
+                      }
+                      className={`relative min-h-25 border-r border-b border-slate-100 p-2 transition-all hover:opacity-75 ${
+                        day.type !== "current"
+                          ? "bg-slate-50/50 text-slate-400"
+                          : dayColorClass
+                      } ${isSelected ? "ring-primary ring-2 ring-inset" : ""}`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span
+                          className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-sm font-medium ${
+                            isToday ? "bg-primary text-white" : ""
+                          }`}
+                        >
+                          {day.day}
+                        </span>
+                        {hasEvents && (
+                          <span className="rounded-full bg-blue-100 px-1.5 py-0.5 text-xs font-semibold text-blue-700">
+                            {events.length}
+                          </span>
+                        )}
+                      </div>
+
+                      {hasEvents && (
+                        <div className="mt-1 space-y-1">
+                          {events.slice(0, 2).map((event) => {
+                            const eventType = plannerEventType(event);
+                            const Icon = EVENT_COLORS[eventType].icon;
+                            return (
+                              <div
+                                key={event._id}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openEventModal(event, day.day);
+                                }}
+                                className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-xs ${EVENT_COLORS[eventType].light} ${EVENT_COLORS[eventType].text} cursor-pointer transition-all hover:scale-105`}
+                              >
+                                <Icon size={8} />
+                                <span className="truncate text-[10px]">
+                                  {labelForPlannerType(
+                                    event.plannerType,
+                                  ).substring(0, 8)}
+                                </span>
+                              </div>
+                            );
+                          })}
+                          {events.length > 2 && (
+                            <div className="text-center text-[10px] text-slate-400">
+                              +{events.length - 2}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Legend */}
+              <div className="flex flex-wrap gap-4 border-t border-slate-200 bg-slate-50 px-4 py-3">
+                {Object.entries(EVENT_COLORS).map(([key, value]) => (
+                  <div key={key} className="flex items-center gap-1.5">
+                    <div className={`h-2.5 w-2.5 rounded-full ${value.bg}`} />
+                    <span className="text-xs text-slate-600 capitalize">
+                      {key.replace("-", " ")}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* RIGHT SIDEBAR - Selected Day Events */}
+            <div className="overflow-hidden bg-white shadow-xl">
+              <div className="bg-primary px-5 py-4">
+                <div className="flex items-center justify-between text-white">
+                  <div className="flex items-center gap-2">
+                    <Calendar size={18} />
+                    <h2 className="font-semibold">
+                      {selectedDay
+                        ? `${selectedDay} ${monthLabel}`
+                        : "Select a Day"}
+                    </h2>
+                  </div>
+                  {selectedDay && (
+                    <button
+                      onClick={() => setSelectedDay(null)}
+                      className="rounded p-1 hover:bg-white/10"
+                    >
+                      <XCircle size={16} />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div className="max-h-150 overflow-y-auto p-4">
+                {!selectedDay ? (
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <Calendar size={48} className="text-slate-300" />
+                    <p className="mt-3 text-sm text-slate-500">
+                      Click on any day to view events
+                    </p>
+                  </div>
+                ) : loading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="text-slate-400">Loading events...</div>
+                  </div>
+                ) : selectedDayRows.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <Calendar size={48} className="text-slate-300" />
+                    <p className="mt-3 text-sm text-slate-500">
+                      No events scheduled
+                    </p>
+                    <button
+                      onClick={() => {
+                        openAddEventModal(
+                          new Date(
+                            currentMonth.getFullYear(),
+                            currentMonth.getMonth(),
+                            selectedDay,
+                          ),
+                        );
+                      }}
+                      className="mt-3 rounded-lg bg-blue-600 px-3 py-1.5 text-xs text-white hover:bg-blue-700"
+                    >
+                      + Add Event
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {selectedDayRows.map((row) => {
+                      const vId = getVehicleId(row.vehicleId);
+                      const vehicleInfo = vehicleMap.get(vId);
+                      const eventType = plannerEventType(row);
+                      const Icon = EVENT_COLORS[eventType].icon;
+
+                      return (
+                        <button
+                          key={row._id}
+                          onClick={() => openEventModal(row, selectedDay)}
+                          className={`w-full rounded-xl border p-3 text-left transition-all hover:shadow-md ${EVENT_COLORS[eventType].light}`}
+                        >
+                          <div className="flex items-start gap-2">
+                            <div
+                              className={`rounded-lg p-1.5 ${EVENT_COLORS[eventType].bg}`}
+                            >
+                              <Icon size={12} className="text-white" />
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-sm font-semibold text-slate-900">
+                                {labelForPlannerType(row.plannerType)}
+                              </p>
+                              <p className="mt-0.5 text-xs text-slate-600">
+                                {vehicleInfo?.label}
+                              </p>
+                              <p className="mt-1 text-xs text-slate-500">
+                                {asDisplayDate(row.plannerDate)}
+                              </p>
+                              {row.requestStatus === RequestStatus.PENDING && (
+                                <span className="mt-1 inline-block rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700">
+                                  Pending Request
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Pending Requests Section for Admins */}
+                {!isStandaloneUser &&
+                  requestedRows.some(
+                    (r) => r.requestStatus === RequestStatus.PENDING,
+                  ) && (
+                    <div className="mt-6 border-t border-slate-200 pt-4">
+                      <h3 className="mb-3 text-sm font-semibold text-slate-900">
+                        Pending Requests
+                      </h3>
+                      <div className="space-y-2">
+                        {requestedRows
+                          .filter(
+                            (r) => r.requestStatus === RequestStatus.PENDING,
+                          )
+                          .slice(0, 3)
+                          .map((row) => {
+                            const vId = getVehicleId(row.vehicleId);
+                            const vehicleInfo = vehicleMap.get(vId);
+                            return (
+                              <div
+                                key={row._id}
+                                className="rounded-lg bg-amber-50 p-3"
+                              >
+                                <p className="text-xs font-semibold text-slate-800">
+                                  {labelForPlannerType(row.plannerType)}
+                                </p>
+                                <p className="mt-0.5 text-xs text-slate-600">
+                                  {vehicleInfo?.label}
+                                </p>
+                                <p className="mt-1 text-xs text-slate-500">
+                                  {asDisplayDate(row.plannerDate)} →{" "}
+                                  {asDisplayDate(row.requestedDate)}
+                                </p>
+                                <div className="mt-2 flex gap-2">
+                                  <button
+                                    onClick={() => handleApprove(row._id)}
+                                    className="rounded bg-green-600 px-2 py-1 text-xs text-white hover:bg-green-700"
+                                  >
+                                    Approve
+                                  </button>
+                                  <button
+                                    onClick={() => handleReject(row._id)}
+                                    className="rounded bg-red-600 px-2 py-1 text-xs text-white hover:bg-red-700"
+                                  >
+                                    Reject
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                      </div>
+                    </div>
+                  )}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-        <div className="bg-primary text-primary-foreground rounded-2xl px-4 py-4">
-          <p className="text-xs tracking-wider uppercase opacity-80">Total</p>
-          <p className="mt-1 text-2xl font-semibold">{stats.total}</p>
-        </div>
-        <div className="bg-destructive rounded-2xl px-4 py-4 text-white">
-          <p className="text-xs tracking-wider uppercase opacity-80">Due</p>
-          <p className="mt-1 text-2xl font-semibold">{stats.dueCount}</p>
-        </div>
-        {plannerTypeOptions.slice(0, 4).map((type) => (
-          <div
-            key={type}
-            className="bg-card border-border rounded-2xl border px-4 py-4"
-          >
-            <p className="text-muted-foreground text-xs tracking-wider uppercase">
-              {labelForPlannerType(type)}
-            </p>
-            <p className="text-primary mt-1 text-2xl font-semibold">
-              {stats.byType[type] || 0}
-            </p>
-          </div>
-        ))}
-      </div>
+      {/* Add Event Dialog */}
+      <Dialog open={addOpen} onOpenChange={setAddOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-2xl">Create New Event</DialogTitle>
+            <DialogDescription>
+              Add a planner event by selecting a vehicle, type, and date.
+            </DialogDescription>
+          </DialogHeader>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-3">
-        <form
-          onSubmit={handleCreatePlanner}
-          className="bg-card border-border rounded-2xl border p-5 shadow-sm lg:col-span-1"
-        >
-          <div className="mb-4 flex items-center gap-2">
-            <Plus className="text-primary h-4 w-4" />
-            <h2 className="text-primary text-lg font-semibold">
-              Add Planner Event
-            </h2>
-          </div>
-
-          <div className="space-y-3">
+          <div className="space-y-4">
             <div>
-              <label className="text-muted-foreground mb-1 block text-xs font-medium tracking-wider uppercase">
+              <label className="mb-2 block text-sm font-medium text-slate-700">
                 Vehicle
               </label>
               <select
-                className="bg-background text-foreground focus:ring-primary/30 border-input w-full rounded-xl border px-3 py-2 text-sm outline-none focus:ring"
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
                 value={newVehicleId}
                 onChange={(e) => setNewVehicleId(e.target.value)}
-                required
               >
-                {vehicles.length === 0 && (
-                  <option value="">No vehicle found</option>
-                )}
-                {vehicles.map((vehicle) => (
-                  <option key={vehicle._id} value={vehicle._id}>
-                    {vehicle.licensePlate ||
-                      vehicle.vehicleRegId ||
-                      vehicle._id}
+                {vehicles.map((v) => (
+                  <option key={v._id} value={v._id}>
+                    {v.licensePlate || v.vehicleRegId || v._id}
+                    {v.make && v.model && ` - ${v.make} ${v.model}`}
                   </option>
                 ))}
               </select>
             </div>
 
             <div>
-              <label className="text-muted-foreground mb-1 block text-xs font-medium tracking-wider uppercase">
-                Planner Type
+              <label className="mb-2 block text-sm font-medium text-slate-700">
+                Event Type
               </label>
               <select
-                className="bg-background text-foreground focus:ring-primary/30 border-input w-full rounded-xl border px-3 py-2 text-sm outline-none focus:ring"
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
                 value={newPlannerType}
                 onChange={(e) =>
                   setNewPlannerType(e.target.value as PlannerType)
                 }
               >
-                {plannerTypeOptions.map((type) => (
+                {Object.values(PlannerType).map((type) => (
                   <option key={type} value={type}>
                     {labelForPlannerType(type)}
                   </option>
@@ -567,395 +1212,180 @@ export default function PlannerDetailPage({ params }: PageProps) {
             </div>
 
             <div>
-              <label className="text-muted-foreground mb-1 block text-xs font-medium tracking-wider uppercase">
-                Planner Date
+              <label className="mb-2 block text-sm font-medium text-slate-700">
+                Date
               </label>
               <input
                 type="date"
-                className="bg-background text-foreground focus:ring-primary/30 border-input w-full rounded-xl border px-3 py-2 text-sm outline-none focus:ring"
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
                 value={newPlannerDate}
                 onChange={(e) => setNewPlannerDate(e.target.value)}
-                required
               />
             </div>
+          </div>
 
+          <DialogFooter>
             <button
-              type="submit"
-              disabled={creating || vehicles.length === 0}
-              className="bg-primary text-primary-foreground inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+              onClick={() => setAddOpen(false)}
+              className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
             >
-              <Plus className="h-4 w-4" />
-              {creating ? "Saving..." : "Create Planner Event"}
+              Cancel
             </button>
-          </div>
-        </form>
+            <button
+              onClick={handleCreate}
+              disabled={addSubmitting}
+              className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white transition-all hover:bg-slate-800 disabled:opacity-60"
+            >
+              {addSubmitting ? "Creating..." : "Create Event"}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-        <div className="bg-card border-border rounded-2xl border p-5 shadow-sm lg:col-span-2">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <CalendarClock className="text-primary h-4 w-4" />
-              <h2 className="text-primary text-lg font-semibold">
-                Planner Calendar
-              </h2>
-            </div>
+      {/* Manage Event Dialog */}
+      <Dialog open={eventOpen} onOpenChange={setEventOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-2xl">Manage Event</DialogTitle>
+            <DialogDescription>
+              Update the planner date, delete the event, or request a date
+              change.
+            </DialogDescription>
+          </DialogHeader>
 
-            <div className="flex flex-wrap gap-2">
-              <input
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search by vehicle, type, request status"
-                className="bg-background text-foreground focus:ring-primary/30 border-input w-60 rounded-xl border px-3 py-2 text-sm outline-none focus:ring"
-              />
-              <select
-                value={selectedVehicleId}
-                onChange={(e) => setSelectedVehicleId(e.target.value)}
-                className="bg-background text-foreground focus:ring-primary/30 border-input rounded-xl border px-3 py-2 text-sm outline-none focus:ring"
-              >
-                <option value="ALL">All Vehicles</option>
-                {vehicles.map((vehicle) => (
-                  <option key={vehicle._id} value={vehicle._id}>
-                    {vehicle.licensePlate ||
-                      vehicle.vehicleRegId ||
-                      vehicle._id}
-                  </option>
-                ))}
-              </select>
-
-              <select
-                value={selectedPlannerType}
-                onChange={(e) => setSelectedPlannerType(e.target.value)}
-                className="bg-background text-foreground focus:ring-primary/30 border-input rounded-xl border px-3 py-2 text-sm outline-none focus:ring"
-              >
-                <option value="ALL">All Types</option>
-                {plannerTypeOptions.map((type) => (
-                  <option key={type} value={type}>
-                    {labelForPlannerType(type)}
-                  </option>
-                ))}
-              </select>
-
-              <button
-                onClick={() => setSelectedDate(null)}
-                className="text-foreground border-input hover:bg-muted rounded-xl border px-3 py-2 text-sm transition"
-              >
-                Clear Day
-              </button>
-            </div>
-          </div>
-
-          <div className="border-border rounded-xl border">
-            <div className="border-border flex items-center justify-between border-b px-4 py-3">
-              <button
-                onClick={() =>
-                  setCurrentMonth(
-                    (prev) =>
-                      new Date(prev.getFullYear(), prev.getMonth() - 1, 1),
-                  )
-                }
-                className="text-primary border-input hover:bg-muted rounded-lg border p-1.5 transition"
-                aria-label="Previous month"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </button>
-
-              <h3 className="text-primary text-base font-semibold">
-                {currentMonth.toLocaleDateString("en-GB", {
-                  month: "long",
-                  year: "numeric",
-                })}
-              </h3>
-
-              <button
-                onClick={() =>
-                  setCurrentMonth(
-                    (prev) =>
-                      new Date(prev.getFullYear(), prev.getMonth() + 1, 1),
-                  )
-                }
-                className="text-primary border-input hover:bg-muted rounded-lg border p-1.5 transition"
-                aria-label="Next month"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </button>
-            </div>
-
-            <div className="bg-muted text-muted-foreground border-border grid grid-cols-7 border-b text-center text-[11px] font-semibold tracking-wide uppercase">
-              {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
-                <div key={day} className="px-2 py-2">
-                  {day}
-                </div>
-              ))}
-            </div>
-
-            <div className="grid grid-cols-7">
-              {calendarCells.map(({ date, inCurrentMonth }) => {
-                const key = asInputDate(date);
-                const dayEvents = eventsByDate.get(key) || [];
-                const isSelected = selectedDate === key;
-                const isToday = asInputDate(new Date()) === key;
-
-                return (
+          {activeEvent && (
+            <div>
+              {/* Tabs */}
+              <div className="mb-4 flex gap-2 border-b border-slate-200">
+                <button
+                  onClick={() => setActiveTab("edit")}
+                  className={`px-4 py-2 text-sm font-medium transition-all ${
+                    activeTab === "edit"
+                      ? "border-b-2 border-blue-600 text-blue-600"
+                      : "text-slate-500 hover:text-slate-700"
+                  }`}
+                >
+                  <Edit size={14} className="mr-1 inline" />
+                  Edit Event
+                </button>
+                {isStandaloneUser && (
                   <button
-                    key={key}
-                    onClick={() => setSelectedDate(key)}
-                    className={`border-border/70 min-h-24 border-r border-b px-2 py-2 text-left transition ${
-                      isSelected
-                        ? "bg-primary/10"
-                        : inCurrentMonth
-                          ? "bg-background hover:bg-muted/60"
-                          : "bg-muted/40 text-muted-foreground"
+                    onClick={() => setActiveTab("request")}
+                    className={`px-4 py-2 text-sm font-medium transition-all ${
+                      activeTab === "request"
+                        ? "border-b-2 border-amber-600 text-amber-600"
+                        : "text-slate-500 hover:text-slate-700"
                     }`}
                   >
-                    <div className="flex items-center justify-between">
-                      <span
-                        className={`text-xs font-semibold ${
-                          isToday
-                            ? "bg-primary text-primary-foreground rounded-full px-2 py-0.5"
-                            : "text-foreground"
-                        }`}
-                      >
-                        {date.getDate()}
-                      </span>
-
-                      {dayEvents.length > 0 && (
-                        <span className="bg-secondary text-secondary-foreground rounded-full px-1.5 py-0.5 text-[10px]">
-                          {dayEvents.length}
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="mt-2 space-y-1">
-                      {dayEvents.slice(0, 3).map((evt) => (
-                        <div
-                          key={evt._id}
-                          className={`truncate rounded px-1.5 py-0.5 text-[10px] font-medium ${
-                            evt.PlannerStatus === "DUE"
-                              ? "bg-destructive text-white"
-                              : "bg-success text-white"
-                          }`}
-                        >
-                          {labelForPlannerType(evt.plannerType)}
-                        </div>
-                      ))}
-                      {dayEvents.length > 3 && (
-                        <div className="text-muted-foreground text-[10px]">
-                          +{dayEvents.length - 3} more
-                        </div>
-                      )}
-                    </div>
+                    <Send size={14} className="mr-1 inline" />
+                    Request Change
                   </button>
-                );
-              })}
-            </div>
-          </div>
+                )}
+              </div>
 
-          {selectedDate && (
-            <div className="bg-muted/30 border-border mt-4 rounded-xl border p-4">
-              <h4 className="text-primary mb-3 text-sm font-semibold">
-                Events on {asDisplayDate(selectedDate)}
-              </h4>
-
-              {selectedDateEvents.length === 0 ? (
-                <p className="text-muted-foreground text-sm">
-                  No events for this day.
+              {/* Event Info Card */}
+              <div className="mb-4 rounded-lg bg-slate-50 p-4">
+                <div className="flex items-center gap-2">
+                  {getPlannerTypeIcon(activeEvent.plannerType)}
+                  <p className="font-semibold text-slate-900">
+                    {labelForPlannerType(activeEvent.plannerType)}
+                  </p>
+                </div>
+                <p className="mt-1 text-sm text-slate-600">
+                  Vehicle:{" "}
+                  {vehicleMap.get(getVehicleId(activeEvent.vehicleId))?.label ||
+                    "Unknown"}
                 </p>
-              ) : (
-                <div className="space-y-2">
-                  {selectedDateEvents.map((row) => {
-                    const vehicleId = getVehicleId(row.vehicleId);
-                    const vehicleLabel =
-                      vehicleMap.get(vehicleId) || "Unknown vehicle";
+                <p className="text-sm text-slate-600">
+                  Current Date: {asDisplayDate(activeEvent.plannerDate)}
+                </p>
+              </div>
 
-                    return (
-                      <div
-                        key={row._id}
-                        className="bg-background border-border flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2"
-                      >
-                        <div>
-                          <p className="text-foreground text-sm font-medium">
-                            {vehicleLabel} -{" "}
-                            {labelForPlannerType(row.plannerType)}
-                          </p>
-                          <p className="text-muted-foreground text-xs">
-                            Status: {row.PlannerStatus || "SCHEDULED"}
-                            {row.requestStatus
-                              ? ` | Request: ${row.requestStatus}`
-                              : ""}
-                          </p>
-                        </div>
+              {activeTab === "edit" && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-slate-700">
+                      New Date
+                    </label>
+                    <input
+                      type="date"
+                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                      value={editDate}
+                      onChange={(e) => setEditDate(e.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
 
-                        <div className="flex flex-wrap gap-2">
-                          <button
-                            onClick={() => handleQuickReschedule(row)}
-                            className="text-foreground border-input hover:bg-muted rounded-lg border px-2.5 py-1 text-xs font-medium transition"
-                          >
-                            Reschedule
-                          </button>
-
-                          {isStandaloneUser && (
-                            <button
-                              onClick={() => handleRequestChange(row)}
-                              className="bg-warning rounded-lg px-2.5 py-1 text-xs font-medium text-white transition hover:opacity-90"
-                            >
-                              Request Change
-                            </button>
-                          )}
-
-                          <button
-                            onClick={() => handleDelete(row._id)}
-                            className="bg-destructive inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium text-white transition hover:opacity-90"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                            Delete
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
+              {activeTab === "request" && isStandaloneUser && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-slate-700">
+                      Requested Date
+                    </label>
+                    <input
+                      type="date"
+                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                      value={reqDate}
+                      onChange={(e) => setReqDate(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-slate-700">
+                      Reason for Change
+                    </label>
+                    <textarea
+                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                      rows={3}
+                      value={reqReason}
+                      onChange={(e) => setReqReason(e.target.value)}
+                      placeholder="Please provide a reason for this change request..."
+                    />
+                  </div>
                 </div>
               )}
             </div>
           )}
 
-          <div className="mt-5 overflow-x-auto">
-            <table className="min-w-full text-left text-sm">
-              <thead className="text-muted-foreground text-xs tracking-wider uppercase">
-                <tr>
-                  <th className="border-border border-b px-3 py-2">Vehicle</th>
-                  <th className="border-border border-b px-3 py-2">Type</th>
-                  <th className="border-border border-b px-3 py-2">
-                    Planner Date
-                  </th>
-                  <th className="border-border border-b px-3 py-2">Status</th>
-                  <th className="border-border border-b px-3 py-2">
-                    Requested Date
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  <tr>
-                    <td
-                      colSpan={5}
-                      className="text-muted-foreground px-3 py-8 text-center"
-                    >
-                      Loading planner items...
-                    </td>
-                  </tr>
-                ) : filteredRows.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={5}
-                      className="text-muted-foreground px-3 py-8 text-center"
-                    >
-                      No planner items found.
-                    </td>
-                  </tr>
-                ) : (
-                  filteredRows.map((row) => {
-                    const vehicleId = getVehicleId(row.vehicleId);
-                    const vehicleLabel =
-                      vehicleMap.get(vehicleId) || "Unknown vehicle";
+          <DialogFooter className="justify-between">
+            <button
+              onClick={handleDelete}
+              disabled={eventSubmitting}
+              className="flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition-all hover:bg-red-700 disabled:opacity-60"
+            >
+              <Trash2 size={14} />
+              Delete
+            </button>
 
-                    return (
-                      <tr key={row._id} className="hover:bg-muted/50">
-                        <td className="text-foreground border-border border-b px-3 py-3 font-medium">
-                          {vehicleLabel}
-                        </td>
-                        <td className="text-foreground border-border border-b px-3 py-3">
-                          {labelForPlannerType(row.plannerType)}
-                        </td>
-                        <td className="text-foreground border-border border-b px-3 py-3">
-                          {asDisplayDate(row.plannerDate)}
-                        </td>
-                        <td className="border-border border-b px-3 py-3">
-                          <span className="bg-muted text-foreground inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium">
-                            <Clock3 className="h-3.5 w-3.5" />
-                            {row.PlannerStatus || "SCHEDULED"}
-                          </span>
-                          {row.requestStatus && (
-                            <span className="bg-warning/20 text-foreground ml-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium">
-                              {row.requestStatus}
-                            </span>
-                          )}
-                        </td>
-                        <td className="text-foreground border-border border-b px-3 py-3">
-                          {asDisplayDate(row.requestedDate)}
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      {!isStandaloneUser && requestedRows.length > 0 && (
-        <div className="bg-card border-border mt-6 rounded-2xl border p-5 shadow-sm">
-          <div className="mb-4 flex items-center gap-2">
-            <CircleAlert className="text-warning h-4 w-4" />
-            <h2 className="text-primary text-lg font-semibold">
-              Pending Change Requests
-            </h2>
-          </div>
-
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {requestedRows
-              .filter((row) => row.requestStatus === RequestStatus.PENDING)
-              .map((row) => {
-                const vehicleId = getVehicleId(row.vehicleId);
-                const vehicleLabel =
-                  vehicleMap.get(vehicleId) || "Unknown vehicle";
-
-                return (
-                  <div
-                    key={row._id}
-                    className="bg-warning/10 border-warning/40 rounded-xl border p-4"
-                  >
-                    <p className="text-foreground text-sm font-semibold">
-                      {vehicleLabel}
-                    </p>
-                    <p className="text-muted-foreground mt-1 text-xs">
-                      {labelForPlannerType(row.plannerType)}
-                    </p>
-
-                    <div className="text-foreground mt-3 space-y-1 text-xs">
-                      <p>
-                        Current Date:{" "}
-                        <strong>{asDisplayDate(row.plannerDate)}</strong>
-                      </p>
-                      <p>
-                        Requested Date:{" "}
-                        <strong>{asDisplayDate(row.requestedDate)}</strong>
-                      </p>
-                      <p className="text-muted-foreground line-clamp-2">
-                        Reason: {row.requestedReason || "No reason provided"}
-                      </p>
-                    </div>
-
-                    <div className="mt-3 flex gap-2">
-                      <button
-                        onClick={() => handleApprove(row._id)}
-                        className="bg-success inline-flex flex-1 items-center justify-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium text-white transition hover:opacity-90"
-                      >
-                        <CircleCheck className="h-3.5 w-3.5" />
-                        Approve
-                      </button>
-                      <button
-                        onClick={() => handleReject(row._id)}
-                        className="bg-destructive flex-1 rounded-lg px-3 py-1.5 text-xs font-medium text-white transition hover:opacity-90"
-                      >
-                        Reject
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-          </div>
-        </div>
-      )}
-    </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setEventOpen(false)}
+                className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+              {activeTab === "edit" && (
+                <button
+                  onClick={handleUpdate}
+                  disabled={eventSubmitting}
+                  className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white transition-all hover:bg-slate-800 disabled:opacity-60"
+                >
+                  {eventSubmitting ? "Saving..." : "Save Changes"}
+                </button>
+              )}
+              {activeTab === "request" && isStandaloneUser && (
+                <button
+                  onClick={handleRequestChange}
+                  disabled={eventSubmitting}
+                  className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white transition-all hover:bg-amber-700 disabled:opacity-60"
+                >
+                  {eventSubmitting ? "Submitting..." : "Submit Request"}
+                </button>
+              )}
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
