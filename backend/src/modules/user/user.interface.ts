@@ -9,3 +9,10 @@ export interface IUserResponse {
   role: string;
   isEmailVerified: boolean;
 }
+
+export interface GetAllUsersQueryInput {
+  role?: 'all' |'transport-manager' | 'standalone';  
+  searchKey?: string;
+  showPerPage?: number;
+  pageNo?: number;
+}

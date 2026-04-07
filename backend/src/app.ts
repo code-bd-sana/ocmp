@@ -224,6 +224,7 @@ import PathNotFound from './helpers/responses/path-not-found';
 import { startCronJob } from './utils/cron-job/cron-job';
 import { loggerStream } from './utils/logger/logger';
 import { connectRedis } from './utils/redis/redis-client';
+import { seedSuperAdmin } from './seeds/userSeeder';
 
 // Terminal colors
 const GREEN = '\x1b[32m';
@@ -370,6 +371,8 @@ const startServer = async () => {
     // ✅ MongoDB (blocking is OK)
     await mongoose.connect(config.DB_CONNECTION_URI);
     console.log('✅ MongoDB connected');
+
+    await seedSuperAdmin();
 
     // 🚀 Start server immediately
     app.listen(config.PORT, () => {

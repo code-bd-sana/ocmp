@@ -2,7 +2,7 @@
 import { Router } from 'express';
 
 // Import controller from corresponding module
-import { getUserById, getUserProfile, updateUser } from './user.controller';
+import { getAllUsers, getUserById, getUserProfile, updateUser } from './user.controller';
 
 //Import validation from corresponding module
 import authorizedRoles from '../../middlewares/authorized-roles';
@@ -14,6 +14,16 @@ import { validateUpdateUser } from './user.validation';
 const router = Router();
 
 // Define route handlers
+/**
+ * @route GET /api/v1/user/get-all
+ * @description Get all users with optional filters and pagination
+ * @access Private
+ * @param {middleware} isAuthorized - ['isAuthorized']
+ * @param {function} controller - ['getAllUsers']
+ */
+router.get('/get-all', isAuthorized(), authorizedRoles([UserRole.SUPER_ADMIN]), getAllUsers);
+
+
 /**
  * @route PATCH /api/v1/user/me
  * @description Update logged in user
@@ -32,6 +42,15 @@ router.patch('/me', isAuthorized(), validateUpdateUser, updateUser);
  * @param {function} controller - ['getUserProfile']
  */
 router.get('/me', isAuthorized(), getUserProfile);
+
+/**
+ * @route GET /api/v1/user/me
+ * @description Get logged in user profile
+ * @access Private
+ * @param {middleware} isAuthorized - ['isAuthorized']
+ * @param {function} controller - ['getUserProfile']
+ */
+router.get('/get-all', isAuthorized(), authorizedRoles([UserRole.SUPER_ADMIN]), getAllUsers);
 
 /**
  * @route GET /api/v1/user/:id
