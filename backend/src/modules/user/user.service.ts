@@ -120,26 +120,6 @@ const getAllUsers = async (query: GetAllUsersQueryInput) => {
   // const isTransportManagerOnly = role === 'transport-manager';
   const isAllRole = isAllUsers;
 
-  // let vehicleCountMap = new Map<string, number>();
-
-  // if (isTransportManagerOnly || isAllRole) {
-  //   // collect TM users id
-  //   const tmUserIds = users.filter((u) => u.role === UserRole.TRANSPORT_MANAGER).map((u) => u._id);
-
-  //   if (tmUserIds.length > 0) {
-  //     //count by standAloneId from VehicleModel
-  //     const vehicleCounts = await VehicleModel.aggregate([
-  //       { $match: { standAloneId: { $in: tmUserIds } } },
-  //       { $group: { _id: '$standAloneId', count: { $sum: 1 } } },
-  //     ]);
-
-  //     // O(1) lookup for Map — key: userId string, value: count
-  //     for (const vc of vehicleCounts) {
-  //       vehicleCountMap.set(vc._id.toString(), vc.count);
-  //     }
-  //   }
-  // }
-
   // --- Assigned vehicle count for each Transport Manager ---
   const vehicleCountMap = new Map<string, number>();
 
