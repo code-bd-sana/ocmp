@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { AuthAction } from "@/service/auth";
+import { UserAction } from "@/service/user";
 import { Eye, EyeOff, Loader2, Lock, Mail } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -83,13 +84,31 @@ export default function SignInPage() {
 
       if (resp.status) {
         const token = resp.data?.token;
+        let role =
+          resp.data?.user?.role ||
+          (typeof resp.data?.role === "string" ? resp.data.role : undefined);
+
         if (token) {
           AuthAction.SetAuthToken(token);
+
+          // Some login responses do not include role reliably.
+          // Resolve role from profile after token is stored.
+          try {
+            const profileResp = await UserAction.getProfile();
+            if (profileResp?.data?.role) {
+              role = profileResp.data.role;
+            }
+          } catch {
+            // Fallback to role from login payload.
+          }
+
+          if (role) {
+            AuthAction.SetUserRole(role);
+          }
         }
 
         toast.success(resp.message || "Successfully signed in!");
-        router.replace("/dashboard");
-        router.refresh();
+        router.replace(role === "SUPER_ADMIN" ? "/admin" : "/dashboard");
       } else {
         // Show error message from API
         toast.error(

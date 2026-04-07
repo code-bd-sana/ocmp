@@ -19,7 +19,16 @@ import {
 } from "@/components/ui/collapsible";
 import { usePathname, useRouter } from "next/navigation";
 
-import { ChevronDown, LogOut, UserRoundCog } from "lucide-react";
+import {
+  Building2,
+  ChevronDown,
+  CreditCard,
+  LayoutDashboard,
+  LogOut,
+  UserCog,
+  UserRoundCog,
+  Users,
+} from "lucide-react";
 import Link from "next/link";
 import { DesktopSidebarToggle } from "./smart-toggle";
 import { AuthAction } from "@/service/auth";
@@ -31,6 +40,24 @@ interface SidebarClient {
   id: string;
   name: string;
 }
+
+interface SuperAdminNavItem {
+  label: string;
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+}
+
+const SUPER_ADMIN_NAV_ITEMS: SuperAdminNavItem[] = [
+  { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
+  { label: "All Users", href: "/admin/all-users", icon: Users },
+  {
+    label: "Transport Manager",
+    href: "/admin/transport-manager",
+    icon: UserCog,
+  },
+  { label: "All Clients", href: "/admin/all-clients", icon: Building2 },
+  { label: "Subscriptions", href: "/admin/subscriptions", icon: CreditCard },
+];
 
 /**
  * Modules that use /dashboard/[slug]/[standAloneId] pattern.
@@ -64,18 +91,22 @@ const CLIENT_MODULES: { slug: string; label: string }[] = [
   { slug: "subcontractor-details", label: "Subcontractor Details" },
 ];
 
-export function AppSidebar() {
+export function AppSidebar({
+  mode = "default",
+}: {
+  mode?: "default" | "super-admin";
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const { state } = useSidebar();
   const [clients, setClients] = useState<SidebarClient[]>([]);
+  const isSuperAdminMode = mode === "super-admin";
 
   const handleLogout = async () => {
     try {
       await AuthAction.LogOut();
       toast.success("Logged out successfully");
     } catch {
-      // Fallback: ensure local auth state is cleared even if API fails.
       AuthAction.RemoveAuthToken();
       toast.success("Logged out successfully");
     } finally {
@@ -83,8 +114,11 @@ export function AppSidebar() {
     }
   };
 
-  // Fetch real clients on mount
   useEffect(() => {
+    if (isSuperAdminMode) {
+      return;
+    }
+
     ClientAction.getClients({ showPerPage: 10, pageNo: 1 })
       .then((res) => {
         if (res.status && res.data?.data) {
@@ -101,9 +135,8 @@ export function AppSidebar() {
         }
       })
       .catch(() => {});
-  }, []);
+  }, [isSuperAdminMode]);
 
-  // Detect active module from URL: /dashboard/[slug]/[standAloneId]
   const segments = pathname.split("/");
   const moduleSlug = segments[2] || "";
   const activeModule = CLIENT_MODULES.find((m) => m.slug === moduleSlug);
@@ -112,102 +145,148 @@ export function AppSidebar() {
   const getClientInitial = (name: string) =>
     name.trim().charAt(0).toUpperCase();
 
+  const isSuperAdminItemActive = (href: string) => {
+    if (href === "/admin") {
+      return pathname === "/admin";
+    }
+
+    return pathname === href || pathname.startsWith(`${href}/`);
+  };
+
   return (
     <Sidebar collapsible="icon" className="bg-sidebar border-r">
-      {/* Toggle */}
       <DesktopSidebarToggle />
 
       <SidebarContent className="bg-muted flex-1">
-        <SidebarGroup>
-          <SidebarMenu>
-            <Collapsible defaultOpen className="group/collapsible">
+        {isSuperAdminMode ? (
+          <SidebarGroup>
+            <SidebarMenu>
               <SidebarMenuItem>
-                <CollapsibleTrigger asChild>
-                  <SidebarMenuButton
-                    tooltip={activeModule?.label || "Company Management"}
-                    className="bg-primary hover:bg-primary/90 h-14 rounded-none px-4 font-medium text-white hover:text-white"
-                  >
-                    <UserRoundCog className="h-5 w-5" />
-                    <span className="text-[16px]">
-                      {activeModule?.label || "Company Management"}
-                    </span>
-                    <ChevronDown className="ml-auto h-5 w-5 transition-transform group-data-[state=open]/collapsible:rotate-180" />
-                  </SidebarMenuButton>
-                </CollapsibleTrigger>
+                <SidebarMenuButton
+                  tooltip="Super Admin"
+                  className="bg-primary hover:bg-primary/90 h-14 rounded-none px-4 font-medium text-white hover:text-white"
+                >
+                  <UserRoundCog className="h-5 w-5" />
+                  <span className="text-[16px]">Super Admin</span>
+                </SidebarMenuButton>
               </SidebarMenuItem>
 
-              <CollapsibleContent>
-                {activeModule ? (
-                  state === "collapsed" ? (
-                    <div className="mt-3 flex flex-col gap-2">
-                      {clients.map((client) => {
-                        const initial = getClientInitial(client.name);
+              <div className="mt-3 space-y-1 px-2">
+                {SUPER_ADMIN_NAV_ITEMS.map((item) => {
+                  const isActive = isSuperAdminItemActive(item.href);
 
-                        return (
-                          <Link
-                            key={client.id}
-                            href={`/dashboard/${activeModule.slug}/${client.id}`}
-                            title={client.name}
-                            aria-label={client.name}
-                            className={`flex h-9 w-9 items-center justify-center rounded-md text-sm font-semibold transition-colors ${
-                              activeClientId === client.id
-                                ? "text-primary bg-white shadow-sm"
-                                : "bg-sidebar-accent/60 hover:bg-sidebar-accent hover:text-primary text-(--body-text)"
-                            }`}
-                          >
-                            {initial}
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <SidebarMenuSub className="mt-3 -ml-5">
-                      {clients.map((client, index) => (
-                        <SidebarMenuSubItem
-                          key={client.id}
-                          className="relative"
-                        >
-                          {/* Vertical line */}
-                          {index < clients.length - 1 && (
-                            <div className="bg-muted-foreground absolute -top-1 bottom-0 left-6 w-0.5" />
-                          )}
+                  return (
+                    <SidebarMenuItem key={item.href}>
+                      <SidebarMenuButton
+                        asChild
+                        tooltip={item.label}
+                        isActive={isActive}
+                        className={`hover:text-primary h-11 transition-all ${
+                          isActive
+                            ? "bg-primary/10 text-primary border-primary/30 border font-semibold"
+                            : "text-(--body-text)"
+                        }`}
+                      >
+                        <Link href={item.href}>
+                          <item.icon className="h-4 w-4" />
+                          <span>{item.label}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </div>
+            </SidebarMenu>
+          </SidebarGroup>
+        ) : (
+          <SidebarGroup>
+            <SidebarMenu>
+              <Collapsible defaultOpen className="group/collapsible">
+                <SidebarMenuItem>
+                  <CollapsibleTrigger asChild>
+                    <SidebarMenuButton
+                      tooltip={activeModule?.label || "Company Management"}
+                      className="bg-primary hover:bg-primary/90 h-14 rounded-none px-4 font-medium text-white hover:text-white"
+                    >
+                      <UserRoundCog className="h-5 w-5" />
+                      <span className="text-[16px]">
+                        {activeModule?.label || "Company Management"}
+                      </span>
+                      <ChevronDown className="ml-auto h-5 w-5 transition-transform group-data-[state=open]/collapsible:rotate-180" />
+                    </SidebarMenuButton>
+                  </CollapsibleTrigger>
+                </SidebarMenuItem>
 
-                          {/* Horizontal branch line */}
-                          <div className="bg-muted-foreground absolute top-1/2 left-6 h-0.5 w-5" />
+                <CollapsibleContent>
+                  {activeModule ? (
+                    state === "collapsed" ? (
+                      <div className="mt-3 flex flex-col gap-2">
+                        {clients.map((client) => {
+                          const initial = getClientInitial(client.name);
 
-                          {/* Corner for last item */}
-                          {index === clients.length - 1 && (
-                            <div className="bg-muted-foreground absolute -top-1 left-6 h-7 w-0.5" />
-                          )}
-                          <SidebarMenuSubButton
-                            asChild
-                            isActive={activeClientId === client.id}
-                            className={`hover:text-primary py-6 pl-14 font-normal text-(--body-text) hover:text-base ${
-                              activeClientId === client.id
-                                ? "!bg-white! !text-primary! data-[active=true]:text-primary! ml-12 rounded-none pl-3 shadow-sm! data-[active=true]:bg-white!"
-                                : ""
-                            } `}
-                          >
+                          return (
                             <Link
+                              key={client.id}
                               href={`/dashboard/${activeModule.slug}/${client.id}`}
-                              className="block"
+                              title={client.name}
+                              aria-label={client.name}
+                              className={`flex h-9 w-9 items-center justify-center rounded-md text-sm font-semibold transition-colors ${
+                                activeClientId === client.id
+                                  ? "text-primary bg-white shadow-sm"
+                                  : "bg-sidebar-accent/60 hover:bg-sidebar-accent hover:text-primary text-(--body-text)"
+                              }`}
                             >
-                              {client.name}
+                              {initial}
                             </Link>
-                          </SidebarMenuSubButton>
-                        </SidebarMenuSubItem>
-                      ))}
-                    </SidebarMenuSub>
-                  )
-                ) : state === "collapsed" ? null : (
-                  <div className="text-muted-foreground px-6 py-4 text-sm">
-                    Please select a module from the footer to view clients.
-                  </div>
-                )}
-              </CollapsibleContent>
-            </Collapsible>
-          </SidebarMenu>
-        </SidebarGroup>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <SidebarMenuSub className="mt-3 -ml-5">
+                        {clients.map((client, index) => (
+                          <SidebarMenuSubItem
+                            key={client.id}
+                            className="relative"
+                          >
+                            {index < clients.length - 1 && (
+                              <div className="bg-muted-foreground absolute -top-1 bottom-0 left-6 w-0.5" />
+                            )}
+
+                            <div className="bg-muted-foreground absolute top-1/2 left-6 h-0.5 w-5" />
+
+                            {index === clients.length - 1 && (
+                              <div className="bg-muted-foreground absolute -top-1 left-6 h-7 w-0.5" />
+                            )}
+                            <SidebarMenuSubButton
+                              asChild
+                              isActive={activeClientId === client.id}
+                              className={`hover:text-primary py-6 pl-14 font-normal text-(--body-text) hover:text-base ${
+                                activeClientId === client.id
+                                  ? "!bg-white! !text-primary! data-[active=true]:text-primary! ml-12 rounded-none pl-3 shadow-sm! data-[active=true]:bg-white!"
+                                  : ""
+                              } `}
+                            >
+                              <Link
+                                href={`/dashboard/${activeModule.slug}/${client.id}`}
+                                className="block"
+                              >
+                                {client.name}
+                              </Link>
+                            </SidebarMenuSubButton>
+                          </SidebarMenuSubItem>
+                        ))}
+                      </SidebarMenuSub>
+                    )
+                  ) : state === "collapsed" ? null : (
+                    <div className="text-muted-foreground px-6 py-4 text-sm">
+                      Please select a module from the footer to view clients.
+                    </div>
+                  )}
+                </CollapsibleContent>
+              </Collapsible>
+            </SidebarMenu>
+          </SidebarGroup>
+        )}
       </SidebarContent>
 
       <SidebarFooter className="bg-muted p-3">

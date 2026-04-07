@@ -12,7 +12,6 @@ import { validateUpdateUser } from './user.validation';
 
 // Initialize router
 const router = Router();
-
 // Define route handlers
 /**
  * @route GET /api/v1/user/get-all

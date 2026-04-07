@@ -2,6 +2,8 @@ import { base_url } from "@/lib/utils";
 import axios from "axios";
 import Cookies from "js-cookie";
 
+const ROLE_COOKIE_NAME = "role";
+
 export interface IRegister {
   fullName: string;
   email: string;
@@ -167,7 +169,7 @@ const ResetForgetPassword = async (data: IResetForgetPassword) => {
 
 const ChangePassword = async (data: IChangePassword) => {
   const token = GetAuthToken();
-  if (!token) throw new Error('No authentication token found');
+  if (!token) throw new Error("No authentication token found");
 
   try {
     const response = await axios.patch<IApiResponse>(
@@ -205,6 +207,27 @@ const SetAuthToken = (token: string): void => {
 };
 const RemoveAuthToken = (): void => {
   Cookies.remove("token", { path: "/", sameSite: "lax" });
+  Cookies.remove(ROLE_COOKIE_NAME, { path: "/", sameSite: "lax" });
+};
+
+const GetUserRole = (): string | null => {
+  return Cookies.get(ROLE_COOKIE_NAME) || null;
+};
+
+const SetUserRole = (role: string): void => {
+  const isSecureContext =
+    typeof window !== "undefined" && window.location.protocol === "https:";
+
+  Cookies.set(ROLE_COOKIE_NAME, role, {
+    path: "/",
+    sameSite: "lax",
+    secure: isSecureContext,
+    expires: 7,
+  });
+};
+
+const RemoveUserRole = (): void => {
+  Cookies.remove(ROLE_COOKIE_NAME, { path: "/", sameSite: "lax" });
 };
 const LogOut = async (): Promise<IApiResponse> => {
   const token = GetAuthToken();
@@ -226,6 +249,7 @@ const LogOut = async (): Promise<IApiResponse> => {
 
     //  Remove token after successful logout
     Cookies.remove("token", { path: "/" });
+    Cookies.remove(ROLE_COOKIE_NAME, { path: "/" });
 
     return response.data;
   } catch (error: unknown) {
@@ -298,6 +322,9 @@ export const AuthAction = {
   GetAuthToken,
   SetAuthToken,
   RemoveAuthToken,
+  GetUserRole,
+  SetUserRole,
+  RemoveUserRole,
   LogOut,
   myProfile,
   myRole,
