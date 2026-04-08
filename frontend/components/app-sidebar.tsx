@@ -201,6 +201,23 @@ export function AppSidebar({
         ) : (
           <SidebarGroup>
             <SidebarMenu>
+              <SidebarMenuItem className="px-2 pt-2">
+                <SidebarMenuButton
+                  asChild
+                  tooltip="Subscriptions"
+                  isActive={
+                    pathname === "/dashboard/subscriptions" ||
+                    pathname.startsWith("/dashboard/subscriptions/")
+                  }
+                  className="hover:text-primary h-11 text-(--body-text)"
+                >
+                  <Link href="/dashboard/subscriptions">
+                    <CreditCard className="h-4 w-4" />
+                    <span>Subscriptions</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+
               <Collapsible defaultOpen className="group/collapsible">
                 <SidebarMenuItem>
                   <CollapsibleTrigger asChild>

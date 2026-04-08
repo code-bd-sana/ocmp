@@ -3,6 +3,7 @@
 import { cn } from "@/lib/utils";
 import {
   Calendar,
+  CreditCard,
   FolderOpen,
   LayoutDashboard,
   Settings,
@@ -28,6 +29,7 @@ const items = [
     href: "/dashboard/transport-managers",
     icon: UserCog,
   }, //
+  { name: "Subscriptions", href: "/dashboard/subscriptions", icon: CreditCard },
   { name: "Planner", href: "/dashboard/planner", icon: Calendar },
   { name: "Settings", href: "/dashboard/settings", icon: Settings },
 ];
