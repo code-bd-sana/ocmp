@@ -111,17 +111,20 @@ const updateSubscriptionPlan = async (
 const deleteSubscriptionPlan = async (
   id: IdOrIdsInput['id']
 ): Promise<Partial<ISubscriptionPlan | null>> => {
-  // Check if the subscription-plan exists
-  const [durationInPricing, durationInUserSubscription, subscriptionHistory] = await Promise.all([
-    await SubscriptionPricing.exists({ subscriptionPlanId: new mongoose.Types.ObjectId(id) }),
-    await UserSubscription.exists({ subscriptionPlanId: new mongoose.Types.ObjectId(id) }),
-    await SubscriptionHistory.exists({ subscriptionPlanId: new mongoose.Types.ObjectId(id) }),
+  const planObjectId = new mongoose.Types.ObjectId(id);
+
+  // Allow deleting plans if no user has ever used them.
+  // Related pricing rows are removed, but duration entities are not deleted.
+  const [durationInUserSubscription, subscriptionHistory] = await Promise.all([
+    await UserSubscription.exists({ subscriptionPlanId: planObjectId }),
+    await SubscriptionHistory.exists({ subscriptionPlanId: planObjectId }),
   ]);
 
-  // If this subscription-plan is currently in use in any subscription or subscription history, do not allow deleting this plan. Throw an error message about the impact of deleting this plan.
-  if (durationInPricing || durationInUserSubscription || subscriptionHistory) {
+  if (durationInUserSubscription || subscriptionHistory) {
     throw new Error('This subscription plan is currently in use. You cannot delete this plan. ');
   }
+
+  await SubscriptionPricing.deleteMany({ subscriptionPlanId: planObjectId });
 
   const deletedSubscriptionPlan = await SubscriptionPlan.findByIdAndDelete(id);
   return deletedSubscriptionPlan;
@@ -139,24 +142,27 @@ const deleteManySubscriptionPlan = async (
   const subscriptionPlanToDelete = await SubscriptionPlan.find({ _id: { $in: ids } });
   if (!subscriptionPlanToDelete.length) throw new Error('No subscription-plan found to delete');
 
-  const [durationInPricing, durationInUserSubscription, subscriptionHistory] = await Promise.all([
-    await SubscriptionPricing.exists({
-      subscriptionPlanId: { $in: ids?.map((id) => new mongoose.Types.ObjectId(id)) },
-    }),
+  const planObjectIds = ids?.map((id) => new mongoose.Types.ObjectId(id));
+
+  const [durationInUserSubscription, subscriptionHistory] = await Promise.all([
     await UserSubscription.exists({
-      subscriptionPlanId: { $in: ids?.map((id) => new mongoose.Types.ObjectId(id)) },
+      subscriptionPlanId: { $in: planObjectIds },
     }),
     await SubscriptionHistory.exists({
-      subscriptionPlanId: { $in: ids?.map((id) => new mongoose.Types.ObjectId(id)) },
+      subscriptionPlanId: { $in: planObjectIds },
     }),
   ]);
 
-  // If any of these subscription-plans are currently in use in any subscription or subscription history, do not allow deleting these plans. Throw an error message about the impact of deleting these plans.
-  if (durationInPricing || durationInUserSubscription || subscriptionHistory) {
+  // If any of these plans are used by subscriptions/history, do not allow deletion.
+  if (durationInUserSubscription || subscriptionHistory) {
     throw new Error(
       'Some of these subscription plans are currently in use. You cannot delete these plans. '
     );
   }
+
+  await SubscriptionPricing.deleteMany({
+    subscriptionPlanId: { $in: planObjectIds },
+  });
 
   await SubscriptionPlan.deleteMany({ _id: { $in: ids } });
   return subscriptionPlanToDelete;
