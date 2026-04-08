@@ -143,7 +143,7 @@ export default function SignInPage() {
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="space-y-1">
           <CardTitle className="text-center text-2xl font-bold">
-            Welcome Back To Tim Tim!
+            Welcome Back To OCMP!
           </CardTitle>
           <CardDescription className="text-center">
             Enter your credentials to access your account

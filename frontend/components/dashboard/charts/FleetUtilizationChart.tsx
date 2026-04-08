@@ -128,7 +128,7 @@ export default function FleetUtilizationChart({
         {data.map((item) => (
           <div
             key={item.name}
-            className='flex min-w-[105px] flex-shrink-0 flex-col items-center justify-center rounded-md bg-white/60 px-3 py-1'>
+            className='flex min-w-26.5 shrink-0 flex-col items-center justify-center rounded-md bg-white/60 px-3 py-1'>
             <div className='flex items-center gap-1'>
               <span
                 className='h-2.5 w-2.5 rounded-full'

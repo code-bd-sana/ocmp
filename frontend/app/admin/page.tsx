@@ -1,88 +1,102 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Building2, FileCheck2, ShieldCheck, Users } from "lucide-react";
-import Link from "next/link";
-
-const adminStats = [
-  {
-    title: "Total Users",
-    value: "--",
-    description: "All registered accounts",
-    icon: Users,
-  },
-  {
-    title: "Approved Clients",
-    value: "--",
-    description: "Client profiles approved",
-    icon: Building2,
-  },
-  {
-    title: "Open Compliance Items",
-    value: "--",
-    description: "Pending compliance actions",
-    icon: FileCheck2,
-  },
-  {
-    title: "System Health",
-    value: "Healthy",
-    description: "Core services status",
-    icon: ShieldCheck,
-  },
-];
+import { Card, CardContent } from "@/components/ui/card";
+import { DashboardAction, ISuperAdminDashboardSummary } from "@/service/dashboard";
+import { Truck, UserCheck, UserCog, Users } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 
 export default function AdminPage() {
+  const [summary, setSummary] = useState<ISuperAdminDashboardSummary | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadDashboard = async () => {
+      try {
+        const response = await DashboardAction.getSuperAdminDashboard();
+
+        if (!isMounted) return;
+
+        if (response.success && response.data?.summary) {
+          setSummary(response.data.summary);
+          return;
+        }
+
+        toast.error(response.message || "Failed to load dashboard summary");
+      } catch (error) {
+        if (!isMounted) return;
+        const message =
+          error instanceof Error ? error.message : "Failed to load dashboard summary";
+        toast.error(message);
+      }
+    };
+
+    loadDashboard();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const adminStats = useMemo(
+    () => [
+      {
+        title: "Total Users",
+        value: summary?.totalUsers ?? "--",
+        icon: Users,
+        bg: "bg-[#FFE2E5]",
+      },
+      {
+        title: "Transport Managers",
+        value: summary?.totalManagers ?? "--",
+        icon: UserCheck,
+        bg: "bg-[#FFF4DE]",
+      },
+      {
+        title: "Total Clients",
+        value: summary?.totalClients ?? "--",
+        icon: UserCog,
+        bg: "bg-[#DCFCE7]",
+      },
+      {
+        title: "Total Vehicles",
+        value: summary?.totalVehicles ?? "--",
+        icon: Truck,
+        bg: "bg-[#F3E8FF]",
+      },
+    ],
+    [summary],
+  );
+
   return (
-    <div className="space-y-6">
-      <div className="space-y-2">
-        <h1 className="text-2xl font-bold md:text-3xl">Admin Dashboard</h1>
-        <p className="text-muted-foreground text-sm md:text-base">
-          Super admin overview for users, clients, and compliance activity.
-        </p>
-      </div>
+    <div className="bg-white">
+      <h1 className="text-5xl leading-tight font-medium text-[#0d4b9f] mb-8 md:mb-15">
+        Main Dashboard
+      </h1>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {adminStats.map((item) => (
-          <Card key={item.title}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                {item.title}
-              </CardTitle>
-              <item.icon className="text-muted-foreground h-4 w-4" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{item.value}</div>
-              <p className="text-muted-foreground text-xs">
-                {item.description}
-              </p>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      <Card className="rounded-sm border-none bg-[#f8f9fc] shadow-[0_6px_18px_rgba(13,75,159,0.08)]">
+        <CardContent className="">
+          <h2 className="text-4xl leading-tight font-medium text-[#0d4b9f] pb-5 md:pb-10">
+            Summary
+          </h2>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-wrap gap-3 text-sm">
-          <Link
-            href="/dashboard/users"
-            className="text-primary hover:underline"
-          >
-            Manage users
-          </Link>
-          <Link
-            href="/dashboard/repository-settings"
-            className="text-primary hover:underline"
-          >
-            Repository settings
-          </Link>
-          <Link
-            href="/dashboard/vehicles"
-            className="text-primary hover:underline"
-          >
-            Vehicle management
-          </Link>
+          <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
+            {adminStats.map((item) => (
+              <div
+                key={item.title}
+                className={`${item.bg} md:min-h-56 flex flex-col justify-center rounded-none px-4 py-5 md:px-5 md:py-6`}
+              >
+                <item.icon className="mb-5 h-8 w-8 text-[#0d4b9f]" strokeWidth={1.8} />
+                <p className="mb-2 text-[18px] font-medium text-[#0d4b9f]">
+                  {item.title}
+                </p>
+                <p className="text-[34px] leading-none font-bold text-[#0d4b9f]">
+                  {item.value}
+                </p>
+              </div>
+            ))}
+          </div>
         </CardContent>
       </Card>
     </div>
