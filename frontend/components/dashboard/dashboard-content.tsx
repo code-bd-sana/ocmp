@@ -7,9 +7,11 @@ import { DashboardNav } from "./dashboard-nav";
 export default function DashboardContent({
   children,
   userRole,
+  showTopNav = true,
 }: {
   children: React.ReactNode;
   userRole?: string | null;
+  showTopNav?: boolean;
 }) {
   const { state, isMobile } = useSidebar();
 
@@ -27,16 +29,21 @@ export default function DashboardContent({
 
   return (
     <>
-      {/* Dashboard Nav */}
-      <div
-        className="bg-muted fixed top-14 right-0 z-1 border-b shadow-sm transition-all duration-200 md:top-16"
-        style={{ left: sidebarWidth }}
-      >
-        <DashboardNav userRole={userRole} />
-      </div>
+      {showTopNav && (
+        <div
+          className="bg-muted fixed top-14 right-0 z-1 border-b shadow-sm transition-all duration-200 md:top-16"
+          style={{ left: sidebarWidth }}
+        >
+          <DashboardNav userRole={userRole} />
+        </div>
+      )}
 
       {/* Main Content */}
-      <div className="mt-4 mb-12 flex-1 overflow-y-auto pt-14 md:pt-16">
+      <div
+        className={`mt-4 mb-12 flex-1 overflow-y-auto ${
+          showTopNav ? "pt-14 md:pt-16" : "pt-2"
+        }`}
+      >
         <div className="p-4 md:p-6 lg:px-8 lg:py-10">{children}</div>
       </div>
       <div

@@ -108,10 +108,20 @@ export default function UniversalTable<T>({
 
   // Handle filter change
   const handleHeaderFilterChange = (value: string) => {
+    if (value.toLowerCase() === "all") {
+      setActiveHeaderFilter(null);
+      return;
+    }
+
     setActiveHeaderFilter(value);
   };
 
   const handleInlineFilterChange = (value: string) => {
+    if (value.toLowerCase() === "all") {
+      setActiveInlineFilter(null);
+      return;
+    }
+
     setActiveInlineFilter(value);
   };
 
@@ -165,14 +175,17 @@ export default function UniversalTable<T>({
   return (
     <div>
       {/* Header */}
-      <div className="mx-auto p-5">
+      <div className="mx-auto p-3 sm:p-5">
         {headerActionGroups.map((group, idx) => (
-          <div key={idx} className="mb-4 flex items-center justify-between">
+          <div
+            key={idx}
+            className="mb-4 flex flex-wrap items-center justify-between gap-3"
+          >
             {group.title && (
-              <h2 className="text-2xl font-semibold">{group.title}</h2>
+              <h2 className="text-xl font-semibold sm:text-2xl">{group.title}</h2>
             )}
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               {/* Starting Action Group */}
               {group.startingActionGroup
                 .filter((btn) => btn.visibility)
@@ -185,17 +198,25 @@ export default function UniversalTable<T>({
                         key={idx}
                         placeholder={btn.label || "Search..."}
                         className={btn.inputClassName}
-                        onChange={handleHeaderSearch}
+                        value={headerSearchValue}
+                        onChange={(e) => {
+                          handleHeaderSearch(e);
+                          btn.onClick(e.target.value);
+                        }}
                       />
                     );
                   }
 
                   // Handle filter button
                   if (btn.filter) {
-                    console.log(btn);
                     return (
                       <div key={idx}>
-                        <Select onValueChange={handleHeaderFilterChange}>
+                        <Select
+                          onValueChange={(value) => {
+                            handleHeaderFilterChange(value);
+                            btn.onClick(value);
+                          }}
+                        >
                           <SelectTrigger className={btn.selectTriggerCalssName}>
                             <SelectValue placeholder={btn.label || "Filter"} />
                           </SelectTrigger>
@@ -233,7 +254,7 @@ export default function UniversalTable<T>({
                 })}
             </div>
             {/* End Action Group */}
-            <div className="flex items-center gap-2">
+            <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
               {group.endActionGroup
                 .filter((btn) => btn.visibility)
                 .sort((a, b) => (a.positionIndex ?? 0) - (b.positionIndex ?? 0))
@@ -244,7 +265,11 @@ export default function UniversalTable<T>({
                         key={idx}
                         placeholder={btn.label || "Search..."}
                         className={btn.inputClassName}
-                        onChange={handleHeaderSearch}
+                        value={headerSearchValue}
+                        onChange={(e) => {
+                          handleHeaderSearch(e);
+                          btn.onClick(e.target.value);
+                        }}
                       />
                     );
                   }
@@ -253,7 +278,10 @@ export default function UniversalTable<T>({
                     return (
                       <Select
                         key={idx}
-                        onValueChange={handleHeaderFilterChange}
+                        onValueChange={(value) => {
+                          handleHeaderFilterChange(value);
+                          btn.onClick(value);
+                        }}
                       >
                         <SelectTrigger className={btn.selectTriggerCalssName}>
                           <SelectValue placeholder={btn.label || "Filter"} />
@@ -297,12 +325,15 @@ export default function UniversalTable<T>({
         <div className="mx-auto">
           {/* Inner Action Groups */}
           {innerActionGroup.map((group, idx) => (
-            <div key={idx} className="mb-4 flex items-center justify-between">
+            <div
+              key={idx}
+              className="mb-4 flex flex-wrap items-center justify-between gap-3"
+            >
               {group.title && (
-                <h2 className="text-2xl font-semibold">{group.title}</h2>
+                <h2 className="text-xl font-semibold sm:text-2xl">{group.title}</h2>
               )}
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 {/* Starting Action Group for Inner Actions */}
                 {group.startingActionGroup
                   .filter((btn) => btn.visibility)
@@ -316,7 +347,11 @@ export default function UniversalTable<T>({
                           key={idx}
                           placeholder={btn.label || "Search..."}
                           className={btn.inputClassName}
-                          onChange={handleInlineSearch} // Pass value on input change
+                          value={inlineSearchValue}
+                          onChange={(e) => {
+                            handleInlineSearch(e);
+                            btn.onClick(e.target.value);
+                          }}
                         />
                       );
                     }
@@ -327,7 +362,12 @@ export default function UniversalTable<T>({
                           key={idx}
                           className={btn.className || "w-40 bg-white"}
                         >
-                          <Select onValueChange={handleInlineFilterChange}>
+                          <Select
+                            onValueChange={(value) => {
+                              handleInlineFilterChange(value);
+                              btn.onClick(value);
+                            }}
+                          >
                             <SelectTrigger
                               className={btn.selectTriggerCalssName}
                             >
@@ -368,7 +408,7 @@ export default function UniversalTable<T>({
                   })}
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
                 {/* End Action Group for Inner Actions */}
                 {group.endActionGroup
                   .filter((btn) => btn.visibility)
@@ -382,7 +422,11 @@ export default function UniversalTable<T>({
                           key={idx}
                           placeholder={btn.label || "Search..."}
                           className={btn.inputClassName}
-                          onChange={handleInlineSearch}
+                          value={inlineSearchValue}
+                          onChange={(e) => {
+                            handleInlineSearch(e);
+                            btn.onClick(e.target.value);
+                          }}
                         />
                       );
                     }
@@ -391,7 +435,10 @@ export default function UniversalTable<T>({
                       return (
                         <Select
                           key={idx}
-                          onValueChange={handleInlineFilterChange}
+                          onValueChange={(value) => {
+                            handleInlineFilterChange(value);
+                            btn.onClick(value);
+                          }}
                         >
                           <SelectTrigger className={btn.selectTriggerCalssName}>
                             <SelectValue placeholder={btn.label || "Filter"} />
@@ -431,7 +478,7 @@ export default function UniversalTable<T>({
         </div>
 
         {/* Table */}
-        <div className="p-5">
+        <div className="p-3 sm:p-5">
           <Table className="w-full table-auto">
             <TableHeader>
               <TableRow>
