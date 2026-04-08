@@ -3,6 +3,7 @@ import ServerResponse from '../../helpers/responses/custom-response';
 import { AuthenticatedRequest } from '../../middlewares/is-authorized';
 import catchAsync from '../../utils/catch-async/catch-async';
 import { userServices } from './user.service';
+import { GetAllUsersQueryInput } from './user.interface';
 
 /**
  * Controller function to handle the update operation for a single user.
@@ -53,4 +54,16 @@ export const getUserById = catchAsync(async (req: Request, res: Response) => {
   if (!result) throw new Error('Failed to get user');
   // Send a success response with the user data
   ServerResponse(res, true, 200, 'User fetched successfully', result);
+});
+
+export const getAllUsers = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+  const query = req.query as GetAllUsersQueryInput;
+
+  const result = await userServices.getAllUsers(query);
+
+  return res.status(200).json({
+    success: true,
+    message: 'Users fetched successfully',
+    ...result,
+  });
 });
