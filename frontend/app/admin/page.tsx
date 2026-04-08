@@ -79,7 +79,7 @@ const formatRole = (role: string) => {
 
 const StatusBadge = ({ isActive }: { isActive: boolean }) => (
   <span
-    className={`inline-flex items-center justify-center rounded-xs border px-12 py-1 text-2xl font-normal ${
+    className={`inline-flex min-w-22.5 items-center justify-center rounded-xs border px-2 py-1 text-xs font-medium whitespace-nowrap sm:min-w-27.5 sm:px-3 sm:text-sm md:text-base ${
       isActive
         ? "border-[#6FCF97] bg-[#EAF9EF] text-[#27AE60]"
         : "border-[#8D8D8D] bg-[#F2F2F2] text-[#1F1F1F]"
@@ -196,21 +196,41 @@ export default function AdminPage() {
   );
 
   const userOverviewColumns: Column<UserOverviewRow>[] = [
-    { key: "fullName", title: "NAME" },
+    {
+      key: "fullName",
+      title: "NAME",
+      render: (row) => (
+        <span className="block max-w-42.5 truncate text-sm font-medium sm:max-w-55 md:max-w-65 md:text-base">
+          {row.fullName}
+        </span>
+      ),
+    },
     {
       key: "role",
       title: "ROLE",
-      render: (row) => formatRole(row.role),
+      render: (row) => (
+        <span className="text-sm whitespace-nowrap md:text-base">
+          {formatRole(row.role)}
+        </span>
+      ),
     },
     {
       key: "lastLogin",
       title: "LAST LOGIN",
-      render: (row) => formatDateTime(row.lastLogin),
+      render: (row) => (
+        <span className="text-sm whitespace-nowrap md:text-base">
+          {formatDateTime(row.lastLogin)}
+        </span>
+      ),
     },
     {
       key: "createdAt",
       title: "REGISTERED DATE",
-      render: (row) => formatDateTime(row.createdAt),
+      render: (row) => (
+        <span className="text-sm whitespace-nowrap md:text-base">
+          {formatDateTime(row.createdAt)}
+        </span>
+      ),
     },
     {
       key: "isActive",
@@ -220,17 +240,41 @@ export default function AdminPage() {
   ];
 
   const transportManagerOverviewColumns: Column<TransportManagerOverviewRow>[] = [
-    { key: "fullName", title: "NAME" },
-    { key: "email", title: "EMAIL" },
+    {
+      key: "fullName",
+      title: "NAME",
+      render: (row) => (
+        <span className="block max-w-42.5 truncate text-sm font-medium sm:max-w-55 md:max-w-65 md:text-base">
+          {row.fullName}
+        </span>
+      ),
+    },
+    {
+      key: "email",
+      title: "EMAIL",
+      render: (row) => (
+        <span className="block max-w-45 truncate text-sm sm:max-w-55 md:max-w-70 md:text-base">
+          {row.email}
+        </span>
+      ),
+    },
     {
       key: "assignedVehicle",
       title: "ASSIGNED VEHICLES",
-      render: (row) => String(row.assignedVehicle),
+      render: (row) => (
+        <span className="text-sm whitespace-nowrap md:text-base">
+          {String(row.assignedVehicle)}
+        </span>
+      ),
     },
     {
       key: "createdAt",
       title: "REGISTERED DATE",
-      render: (row) => formatDateTime(row.createdAt),
+      render: (row) => (
+        <span className="text-sm whitespace-nowrap md:text-base">
+          {formatDateTime(row.createdAt)}
+        </span>
+      ),
     },
     {
       key: "isActive",
@@ -240,17 +284,41 @@ export default function AdminPage() {
   ];
 
   const clientOverviewColumns: Column<ClientOverviewRow>[] = [
-    { key: "fullName", title: "NAME" },
-    { key: "email", title: "EMAIL" },
+    {
+      key: "fullName",
+      title: "NAME",
+      render: (row) => (
+        <span className="block max-w-42.5 truncate text-sm font-medium sm:max-w-55 md:max-w-65 md:text-base">
+          {row.fullName}
+        </span>
+      ),
+    },
+    {
+      key: "email",
+      title: "EMAIL",
+      render: (row) => (
+        <span className="block max-w-45 truncate text-sm sm:max-w-55 md:max-w-70 md:text-base">
+          {row.email}
+        </span>
+      ),
+    },
     {
       key: "lastLogin",
       title: "LAST LOGIN",
-      render: (row) => formatDateTime(row.lastLogin),
+      render: (row) => (
+        <span className="text-sm whitespace-nowrap md:text-base">
+          {formatDateTime(row.lastLogin)}
+        </span>
+      ),
     },
     {
       key: "createdAt",
       title: "REGISTERED DATE",
-      render: (row) => formatDateTime(row.createdAt),
+      render: (row) => (
+        <span className="text-sm whitespace-nowrap md:text-base">
+          {formatDateTime(row.createdAt)}
+        </span>
+      ),
     },
     {
       key: "isActive",
@@ -269,7 +337,7 @@ export default function AdminPage() {
           onClick: () => router.push("/admin/all-users"),
           visibility: true,
           className:
-            "rounded-none bg-[#0d4b9f] px-6 text-white hover:bg-[#0a3e85]",
+            "rounded-none bg-[#0d4b9f] px-4 py-2 text-sm text-white hover:bg-[#0a3e85] sm:px-6",
           positionIndex: 1,
         },
       ],
@@ -286,7 +354,7 @@ export default function AdminPage() {
           onClick: () => router.push("/admin/transport-manager"),
           visibility: true,
           className:
-            "rounded-none bg-[#0d4b9f] px-6 text-white hover:bg-[#0a3e85]",
+            "rounded-none bg-[#0d4b9f] px-4 py-2 text-sm text-white hover:bg-[#0a3e85] sm:px-6",
           positionIndex: 1,
         },
       ],
@@ -303,7 +371,7 @@ export default function AdminPage() {
           onClick: () => router.push("/admin/all-clients"),
           visibility: true,
           className:
-            "rounded-none bg-[#0d4b9f] px-6 text-white hover:bg-[#0a3e85]",
+            "rounded-none bg-[#0d4b9f] px-4 py-2 text-sm text-white hover:bg-[#0a3e85] sm:px-6",
           positionIndex: 1,
         },
       ],
@@ -312,27 +380,27 @@ export default function AdminPage() {
 
   return (
     <div className="bg-white">
-      <h1 className="text-5xl leading-tight font-medium text-[#0d4b9f] mb-8 md:mb-15">
+      <h1 className="mb-6 text-3xl leading-tight font-medium text-[#0d4b9f] sm:text-4xl md:mb-10 md:text-5xl">
         Main Dashboard
       </h1>
 
       <Card className="rounded-sm border-none bg-[#f8f9fc] shadow-[0_6px_18px_rgba(13,75,159,0.08)]">
-        <CardContent className="">
-          <h2 className="text-4xl leading-tight font-medium text-[#0d4b9f] pb-5 md:pb-10">
+        <CardContent className="p-4 sm:p-5 md:p-6">
+          <h2 className="pb-4 text-2xl leading-tight font-medium text-[#0d4b9f] sm:text-3xl md:pb-8 md:text-4xl">
             Summary
           </h2>
 
-          <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-4 sm:gap-5 lg:grid-cols-4 lg:gap-8">
             {adminStats.map((item) => (
               <div
                 key={item.title}
-                className={`${item.bg} md:min-h-56 flex flex-col justify-center rounded-none px-4 py-5 md:px-5 md:py-6`}
+                className={`${item.bg} flex min-h-40 flex-col justify-center rounded-none px-4 py-4 sm:min-h-44 sm:px-5 sm:py-5 md:min-h-56 md:py-6`}
               >
-                <item.icon className="mb-5 h-8 w-8 text-[#0d4b9f]" strokeWidth={1.8} />
-                <p className="mb-2 text-[18px] font-medium text-[#0d4b9f]">
+                <item.icon className="mb-4 h-7 w-7 text-[#0d4b9f] sm:h-8 sm:w-8 md:mb-5" strokeWidth={1.8} />
+                <p className="mb-2 text-base font-medium text-[#0d4b9f] sm:text-[18px]">
                   {item.title}
                 </p>
-                <p className="text-[34px] leading-none font-bold text-[#0d4b9f]">
+                <p className="text-3xl leading-none font-bold text-[#0d4b9f] sm:text-[34px]">
                   {item.value}
                 </p>
               </div>
@@ -341,7 +409,7 @@ export default function AdminPage() {
         </CardContent>
       </Card>
 
-      <section className="mt-8 space-y-6">
+      <section className="mt-6 space-y-4 sm:mt-8 sm:space-y-6">
         <UniversalTable<UserOverviewRow>
           data={userOverviewRows}
           columns={userOverviewColumns}
