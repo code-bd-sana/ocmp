@@ -9,11 +9,39 @@ export interface ISuperAdminDashboardSummary {
   totalVehicles: number;
 }
 
+export interface IUserOverviewItem {
+  _id: string;
+  fullName: string;
+  email: string;
+  role: string;
+  isActive: boolean;
+  createdAt: string;
+  lastLogin: string | null;
+}
+
+export interface ITransportManagerOverviewItem {
+  _id: string;
+  fullName: string;
+  email: string;
+  isActive: boolean;
+  createdAt: string;
+  assignedVehicle: number;
+}
+
+export interface IClientOverviewItem {
+  _id: string;
+  fullName: string;
+  email: string;
+  isActive: boolean;
+  createdAt: string;
+  lastLogin: string | null;
+}
+
 export interface ISuperAdminDashboardData {
   summary: ISuperAdminDashboardSummary;
-  userOverview: unknown[];
-  transportManagerOverview: unknown[];
-  clientOverview: unknown[];
+  userOverview: IUserOverviewItem[];
+  transportManagerOverview: ITransportManagerOverviewItem[];
+  clientOverview: IClientOverviewItem[];
 }
 
 export interface ISuperAdminDashboardResponse {
