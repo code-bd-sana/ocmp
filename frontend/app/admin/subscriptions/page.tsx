@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ApplicableAccountType,
   SubscriptionAction,
+  SubscriptionCoupon,
   SubscriptionDuration,
   SubscriptionPlan,
   SubscriptionPlanType,
@@ -32,6 +33,8 @@ import { Ban, Plus, RefreshCcw, Search, Trash2 } from "lucide-react";
 
 type PricingRow = {
   _id: string;
+  subscriptionPlanId?: string;
+  subscriptionDurationId?: string;
   subscriptionPlanName: string;
   subscriptionPlanType: SubscriptionPlanType;
   applicableAccountType: ApplicableAccountType;
@@ -45,39 +48,53 @@ type PricingRow = {
 };
 
 type CreateFormState = {
-  planSource: "existing" | "new";
-  selectedPlanId: string;
   planName: string;
   planType: SubscriptionPlanType;
   accountType: ApplicableAccountType;
   description: string;
   planStatus: boolean;
-  durationSource: "existing" | "new";
+  durationMode: "existing" | "new";
   selectedDurationId: string;
   durationName: string;
   durationDays: string;
-  durationStatus: boolean;
-  price: string;
-  currency: string;
+  priceMode: "existing" | "new";
+  selectedPriceTemplateKey: string;
+  newPrice: string;
+  newCurrency: string;
   pricingStatus: boolean;
 };
 
+type CouponFormState = {
+  code: string;
+  discountType: "percentage" | "fixed";
+  discountValue: string;
+  selectedPricingId: string;
+  isActive: boolean;
+};
+
 const defaultCreateForm: CreateFormState = {
-  planSource: "existing",
-  selectedPlanId: "",
   planName: "",
   planType: "PAID",
   accountType: "BOTH",
   description: "",
   planStatus: true,
-  durationSource: "existing",
+  durationMode: "existing",
   selectedDurationId: "",
   durationName: "MONTHLY",
   durationDays: "30",
-  durationStatus: true,
-  price: "0",
-  currency: "GBP",
+  priceMode: "existing",
+  selectedPriceTemplateKey: "",
+  newPrice: "0",
+  newCurrency: "GBP",
   pricingStatus: true,
+};
+
+const defaultCouponForm: CouponFormState = {
+  code: "",
+  discountType: "percentage",
+  discountValue: "0",
+  selectedPricingId: "",
+  isActive: true,
 };
 
 const demoExemptions = [
@@ -108,6 +125,7 @@ export default function AdminSubscriptionsPage() {
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [durations, setDurations] = useState<SubscriptionDuration[]>([]);
   const [pricingRows, setPricingRows] = useState<PricingRow[]>([]);
+  const [coupons, setCoupons] = useState<SubscriptionCoupon[]>([]);
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
   const [searchValue, setSearchValue] = useState("");
 
@@ -116,14 +134,18 @@ export default function AdminSubscriptionsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isCouponDialogOpen, setIsCouponDialogOpen] = useState(false);
+  const [isCouponSaving, setIsCouponSaving] = useState(false);
   const [formState, setFormState] =
     useState<CreateFormState>(defaultCreateForm);
+  const [couponForm, setCouponForm] =
+    useState<CouponFormState>(defaultCouponForm);
 
   const loadData = useCallback(async () => {
     try {
       setIsLoading(true);
 
-      const [plansResponse, durationResponse, pricingResponse] =
+      const [plansResponse, durationResponse, pricingResponse, couponResponse] =
         await Promise.all([
           SubscriptionAction.getSubscriptionPlans({
             searchKey: searchValue,
@@ -132,6 +154,10 @@ export default function AdminSubscriptionsPage() {
           }),
           SubscriptionAction.getSubscriptionDurations(),
           SubscriptionAction.getSubscriptionPricings(),
+          SubscriptionAction.getSubscriptionCoupons({
+            showPerPage: 100,
+            pageNo: 1,
+          }),
         ]);
 
       const plansPayload = plansResponse.data;
@@ -143,6 +169,7 @@ export default function AdminSubscriptionsPage() {
       setPricingRows(
         (pricingResponse.data?.subscriptionPricings || []) as PricingRow[],
       );
+      setCoupons(couponResponse.data?.subscriptionCoupons || []);
       setPlanCount(plansPayload.totalData || 0);
       setTotalPages(plansPayload.totalPages || 1);
     } catch (error: unknown) {
@@ -172,19 +199,26 @@ export default function AdminSubscriptionsPage() {
   }, [plans, selectedPlanId]);
 
   useEffect(() => {
-    if (plans.length && !formState.selectedPlanId) {
-      setFormState((prev) => ({ ...prev, selectedPlanId: plans[0]._id }));
-    }
-  }, [plans, formState.selectedPlanId]);
-
-  useEffect(() => {
-    if (durations.length && !formState.selectedDurationId) {
+    if (
+      formState.durationMode === "existing" &&
+      durations.length &&
+      !formState.selectedDurationId
+    ) {
       setFormState((prev) => ({
         ...prev,
         selectedDurationId: durations[0]._id,
       }));
     }
-  }, [durations, formState.selectedDurationId]);
+  }, [durations, formState.durationMode, formState.selectedDurationId]);
+
+  useEffect(() => {
+    if (pricingRows.length && !couponForm.selectedPricingId) {
+      setCouponForm((prev) => ({
+        ...prev,
+        selectedPricingId: pricingRows[0]._id,
+      }));
+    }
+  }, [pricingRows, couponForm.selectedPricingId]);
 
   const selectedPlan = useMemo(
     () => plans.find((plan) => plan._id === selectedPlanId) || null,
@@ -206,27 +240,126 @@ export default function AdminSubscriptionsPage() {
     [plans],
   );
 
+  const selectedDurationLabel = useMemo(() => {
+    if (formState.durationMode === "new") {
+      return `${formState.durationName.trim() || "NEW"} (${formState.durationDays || "0"} days)`;
+    }
+
+    const duration = durations.find(
+      (item) => item._id === formState.selectedDurationId,
+    );
+
+    return duration
+      ? `${duration.name} (${duration.durationInDays} days)`
+      : "Not selected";
+  }, [
+    durations,
+    formState.durationDays,
+    formState.durationMode,
+    formState.durationName,
+    formState.selectedDurationId,
+  ]);
+
+  const existingDurationPricingOptions = useMemo(() => {
+    if (formState.durationMode !== "existing") return [];
+
+    const durationId = formState.selectedDurationId;
+    if (!durationId) return [];
+
+    const seen = new Set<string>();
+
+    return pricingRows
+      .filter((item) => item.subscriptionDurationId === durationId)
+      .sort((a, b) => a.price - b.price)
+      .filter((item) => {
+        const key = `${item.currency.toUpperCase()}-${item.price}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+  }, [formState.durationMode, formState.selectedDurationId, pricingRows]);
+
+  const selectedPriceTemplate = useMemo(
+    () =>
+      existingDurationPricingOptions.find(
+        (item) =>
+          `${item.currency.toUpperCase()}-${item.price}` ===
+          formState.selectedPriceTemplateKey,
+      ) || null,
+    [existingDurationPricingOptions, formState.selectedPriceTemplateKey],
+  );
+
+  useEffect(() => {
+    if (
+      formState.durationMode === "new" &&
+      formState.priceMode === "existing"
+    ) {
+      setFormState((prev) => ({
+        ...prev,
+        priceMode: "new",
+        selectedPriceTemplateKey: "",
+      }));
+      return;
+    }
+
+    if (formState.priceMode !== "existing") return;
+
+    const hasCurrentSelection = existingDurationPricingOptions.some(
+      (item) =>
+        `${item.currency.toUpperCase()}-${item.price}` ===
+        formState.selectedPriceTemplateKey,
+    );
+
+    if (!existingDurationPricingOptions.length) {
+      setFormState((prev) => ({
+        ...prev,
+        priceMode: "new",
+        selectedPriceTemplateKey: "",
+      }));
+      return;
+    }
+
+    if (!hasCurrentSelection) {
+      const first = existingDurationPricingOptions[0];
+      setFormState((prev) => ({
+        ...prev,
+        selectedPriceTemplateKey: `${first.currency.toUpperCase()}-${first.price}`,
+      }));
+    }
+  }, [
+    existingDurationPricingOptions,
+    formState.durationMode,
+    formState.priceMode,
+    formState.selectedPriceTemplateKey,
+  ]);
+
   const requirements = useMemo(
     () => [
       {
-        label: "Plan selected or new plan info provided",
-        ok:
-          formState.planSource === "existing"
-            ? Boolean(formState.selectedPlanId)
-            : formState.planName.trim().length >= 2,
+        label: "Plan name is provided",
+        ok: formState.planName.trim().length >= 2,
       },
       {
-        label: "Duration selected or new duration info provided",
+        label:
+          formState.durationMode === "existing"
+            ? "Existing duration selected"
+            : "New duration details provided",
         ok:
-          formState.durationSource === "existing"
+          formState.durationMode === "existing"
             ? Boolean(formState.selectedDurationId)
-            : Number(formState.durationDays) > 0,
+            : formState.durationName.trim().length >= 2 &&
+              Number(formState.durationDays) > 0,
       },
       {
-        label: "Price is valid",
+        label:
+          formState.priceMode === "existing"
+            ? "Existing price selected"
+            : "New price is valid",
         ok:
-          !Number.isNaN(Number(formState.price)) &&
-          Number(formState.price) >= 0,
+          formState.priceMode === "existing"
+            ? Boolean(formState.selectedPriceTemplateKey)
+            : !Number.isNaN(Number(formState.newPrice)) &&
+              Number(formState.newPrice) >= 0,
       },
       {
         label: "Review all settings before creating",
@@ -235,12 +368,13 @@ export default function AdminSubscriptionsPage() {
     ],
     [
       formState.durationDays,
-      formState.durationSource,
+      formState.durationMode,
+      formState.durationName,
+      formState.newPrice,
       formState.planName,
-      formState.planSource,
-      formState.price,
+      formState.priceMode,
+      formState.selectedPriceTemplateKey,
       formState.selectedDurationId,
-      formState.selectedPlanId,
     ],
   );
 
@@ -262,42 +396,63 @@ export default function AdminSubscriptionsPage() {
   };
 
   const handleCreatePricing = async () => {
-    if (Number.isNaN(Number(formState.price)) || Number(formState.price) < 0) {
-      toast.error("Price must be a valid non-negative number");
+    if (formState.planName.trim().length < 2) {
+      toast.error("Plan name must be at least 2 characters");
+      return;
+    }
+
+    if (
+      formState.durationMode === "existing" &&
+      !formState.selectedDurationId
+    ) {
+      toast.error("Please select an existing duration");
+      return;
+    }
+
+    if (
+      formState.durationMode === "new" &&
+      (formState.durationName.trim().length < 2 ||
+        Number.isNaN(Number(formState.durationDays)) ||
+        Number(formState.durationDays) <= 0)
+    ) {
+      toast.error("Please provide a valid new duration name and days");
+      return;
+    }
+
+    if (formState.priceMode === "existing" && !selectedPriceTemplate) {
+      toast.error("Please select an existing price");
+      return;
+    }
+
+    if (
+      formState.priceMode === "new" &&
+      (Number.isNaN(Number(formState.newPrice)) ||
+        Number(formState.newPrice) < 0)
+    ) {
+      toast.error("Please provide a valid new price");
       return;
     }
 
     try {
       setIsSaving(true);
 
-      let planId = formState.selectedPlanId;
-      if (formState.planSource === "new") {
-        if (formState.planName.trim().length < 2) {
-          throw new Error("Plan name must be at least 2 characters");
-        }
+      const createdPlan = await SubscriptionAction.createSubscriptionPlan({
+        name: formState.planName.trim(),
+        planType: formState.planType,
+        applicableAccountType: formState.accountType,
+        description: formState.description.trim() || undefined,
+        isActive: formState.planStatus,
+      });
 
-        const createdPlan = await SubscriptionAction.createSubscriptionPlan({
-          name: formState.planName.trim(),
-          planType: formState.planType,
-          applicableAccountType: formState.accountType,
-          description: formState.description.trim() || undefined,
-          isActive: formState.planStatus,
-        });
-
-        planId = createdPlan.data?._id || "";
-      }
+      const planId = createdPlan.data?._id || "";
 
       let durationId = formState.selectedDurationId;
-      if (formState.durationSource === "new") {
-        if (Number(formState.durationDays) <= 0) {
-          throw new Error("Duration must be greater than 0 days");
-        }
-
+      if (formState.durationMode === "new") {
         const createdDuration =
           await SubscriptionAction.createSubscriptionDuration({
             name: formState.durationName.trim().toUpperCase(),
             durationInDays: Number(formState.durationDays),
-            isActive: formState.durationStatus,
+            isActive: true,
           });
 
         durationId = createdDuration.data?._id || "";
@@ -306,11 +461,21 @@ export default function AdminSubscriptionsPage() {
       if (!planId) throw new Error("Plan is required");
       if (!durationId) throw new Error("Duration is required");
 
+      const resolvedPrice =
+        formState.priceMode === "existing"
+          ? selectedPriceTemplate!.price
+          : Number(formState.newPrice);
+
+      const resolvedCurrency =
+        formState.priceMode === "existing"
+          ? selectedPriceTemplate!.currency.toUpperCase()
+          : formState.newCurrency.trim().toUpperCase() || "GBP";
+
       await SubscriptionAction.createSubscriptionPricing({
         subscriptionPlanId: planId,
         subscriptionDurationId: durationId,
-        price: Number(formState.price),
-        currency: formState.currency.trim().toUpperCase() || "GBP",
+        price: resolvedPrice,
+        currency: resolvedCurrency,
         isActive: formState.pricingStatus,
       });
 
@@ -424,6 +589,73 @@ export default function AdminSubscriptionsPage() {
     }
   };
 
+  const handleCreateCoupon = async () => {
+    if (!couponForm.code.trim()) {
+      toast.error("Coupon code is required");
+      return;
+    }
+
+    if (Number(couponForm.discountValue) <= 0) {
+      toast.error("Discount value must be greater than 0");
+      return;
+    }
+
+    try {
+      setIsCouponSaving(true);
+
+      await SubscriptionAction.createSubscriptionCoupon({
+        code: couponForm.code.trim().toUpperCase(),
+        discountType: couponForm.discountType,
+        discountValue: Number(couponForm.discountValue),
+        isActive: couponForm.isActive,
+        subscriptionPricings: couponForm.selectedPricingId
+          ? [couponForm.selectedPricingId]
+          : [],
+      });
+
+      toast.success("Coupon created successfully");
+      setCouponForm(defaultCouponForm);
+      setIsCouponDialogOpen(false);
+      await loadData();
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : "Failed to create coupon";
+      toast.error(message);
+    } finally {
+      setIsCouponSaving(false);
+    }
+  };
+
+  const handleToggleCouponStatus = async (coupon: SubscriptionCoupon) => {
+    try {
+      await SubscriptionAction.updateSubscriptionCoupon(coupon._id, {
+        isActive: !coupon.isActive,
+      });
+      toast.success(
+        `Coupon ${coupon.isActive ? "disabled" : "enabled"} successfully.`,
+      );
+      await loadData();
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : "Failed to update coupon";
+      toast.error(message);
+    }
+  };
+
+  const handleDeleteCoupon = async (coupon: SubscriptionCoupon) => {
+    if (!window.confirm(`Delete coupon ${coupon.code}?`)) return;
+
+    try {
+      await SubscriptionAction.deleteSubscriptionCoupon(coupon._id);
+      toast.success("Coupon deleted successfully");
+      await loadData();
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : "Failed to delete coupon";
+      toast.error(message);
+    }
+  };
+
   return (
     <div className="space-y-6 bg-white p-4 md:p-6">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -451,7 +683,7 @@ export default function AdminSubscriptionsPage() {
             <DialogTrigger asChild>
               <Button className="bg-[#0d4b9f] text-white hover:bg-[#0b3e84]">
                 <Plus className="mr-2 h-4 w-4" />
-                Add Pricing (Plan + Duration)
+                Add New Subscription Plan
               </Button>
             </DialogTrigger>
 
@@ -461,8 +693,8 @@ export default function AdminSubscriptionsPage() {
                   Create Subscription Pricing
                 </DialogTitle>
                 <DialogDescription>
-                  Choose existing plan and duration from dropdown, or create new
-                  once and reuse from DB later.
+                  Create a new plan, then choose existing or new duration and
+                  existing or new price.
                 </DialogDescription>
               </DialogHeader>
 
@@ -476,143 +708,88 @@ export default function AdminSubscriptionsPage() {
                     <div className="grid gap-4 md:grid-cols-2">
                       <div className="space-y-1.5 md:col-span-2">
                         <label className="text-xs font-medium text-[#3F3F3F]">
-                          Plan Source
+                          Plan Name
+                        </label>
+                        <Input
+                          value={formState.planName}
+                          onChange={(event) =>
+                            setFormState((prev) => ({
+                              ...prev,
+                              planName: event.target.value,
+                            }))
+                          }
+                          placeholder="e.g. Basic"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-[#3F3F3F]">
+                          Plan Type
                         </label>
                         <Select
-                          value={formState.planSource}
+                          value={formState.planType}
                           onValueChange={(value) =>
                             setFormState((prev) => ({
                               ...prev,
-                              planSource: value as "existing" | "new",
+                              planType: value as SubscriptionPlanType,
                             }))
                           }
                         >
                           <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Select source" />
+                            <SelectValue placeholder="Plan type" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="existing">
-                              Use Existing Plan
-                            </SelectItem>
-                            <SelectItem value="new">Create New Plan</SelectItem>
+                            <SelectItem value="FREE">FREE</SelectItem>
+                            <SelectItem value="PAID">PAID</SelectItem>
+                            <SelectItem value="CUSTOM">CUSTOM</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
 
-                      {formState.planSource === "existing" ? (
-                        <div className="space-y-1.5 md:col-span-2">
-                          <label className="text-xs font-medium text-[#3F3F3F]">
-                            Existing Plan
-                          </label>
-                          <Select
-                            value={formState.selectedPlanId}
-                            onValueChange={(value) =>
-                              setFormState((prev) => ({
-                                ...prev,
-                                selectedPlanId: value,
-                              }))
-                            }
-                          >
-                            <SelectTrigger className="w-full">
-                              <SelectValue placeholder="Select a plan" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {plans.map((plan) => (
-                                <SelectItem key={plan._id} value={plan._id}>
-                                  {plan.name} ({plan.planType})
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      ) : (
-                        <>
-                          <div className="space-y-1.5 md:col-span-2">
-                            <label className="text-xs font-medium text-[#3F3F3F]">
-                              Plan Name
-                            </label>
-                            <Input
-                              value={formState.planName}
-                              onChange={(event) =>
-                                setFormState((prev) => ({
-                                  ...prev,
-                                  planName: event.target.value,
-                                }))
-                              }
-                              placeholder="e.g. Basic"
-                            />
-                          </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-[#3F3F3F]">
+                          Visibility
+                        </label>
+                        <Select
+                          value={formState.accountType}
+                          onValueChange={(value) =>
+                            setFormState((prev) => ({
+                              ...prev,
+                              accountType: value as ApplicableAccountType,
+                            }))
+                          }
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Visibility" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="BOTH">BOTH</SelectItem>
+                            <SelectItem value="STANDALONE">
+                              STANDALONE
+                            </SelectItem>
+                            <SelectItem value="TRANSPORT_MANAGER">
+                              TRANSPORT_MANAGER
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
 
-                          <div className="space-y-1.5">
-                            <label className="text-xs font-medium text-[#3F3F3F]">
-                              Plan Type
-                            </label>
-                            <Select
-                              value={formState.planType}
-                              onValueChange={(value) =>
-                                setFormState((prev) => ({
-                                  ...prev,
-                                  planType: value as SubscriptionPlanType,
-                                }))
-                              }
-                            >
-                              <SelectTrigger className="w-full">
-                                <SelectValue placeholder="Plan type" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="FREE">FREE</SelectItem>
-                                <SelectItem value="PAID">PAID</SelectItem>
-                                <SelectItem value="CUSTOM">CUSTOM</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-
-                          <div className="space-y-1.5">
-                            <label className="text-xs font-medium text-[#3F3F3F]">
-                              Visibility
-                            </label>
-                            <Select
-                              value={formState.accountType}
-                              onValueChange={(value) =>
-                                setFormState((prev) => ({
-                                  ...prev,
-                                  accountType: value as ApplicableAccountType,
-                                }))
-                              }
-                            >
-                              <SelectTrigger className="w-full">
-                                <SelectValue placeholder="Visibility" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="BOTH">BOTH</SelectItem>
-                                <SelectItem value="STANDALONE">
-                                  STANDALONE
-                                </SelectItem>
-                                <SelectItem value="TRANSPORT_MANAGER">
-                                  TRANSPORT_MANAGER
-                                </SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-
-                          <div className="space-y-1.5 md:col-span-2">
-                            <label className="text-xs font-medium text-[#3F3F3F]">
-                              Description
-                            </label>
-                            <Textarea
-                              value={formState.description}
-                              onChange={(event) =>
-                                setFormState((prev) => ({
-                                  ...prev,
-                                  description: event.target.value,
-                                }))
-                              }
-                              placeholder="Optional plan description"
-                              rows={3}
-                            />
-                          </div>
-                        </>
-                      )}
+                      <div className="space-y-1.5 md:col-span-2">
+                        <label className="text-xs font-medium text-[#3F3F3F]">
+                          Description
+                        </label>
+                        <Textarea
+                          value={formState.description}
+                          onChange={(event) =>
+                            setFormState((prev) => ({
+                              ...prev,
+                              description: event.target.value,
+                            }))
+                          }
+                          placeholder="Optional plan description"
+                          rows={3}
+                        />
+                      </div>
                     </div>
                   </section>
 
@@ -627,16 +804,16 @@ export default function AdminSubscriptionsPage() {
                           Duration Source
                         </label>
                         <Select
-                          value={formState.durationSource}
+                          value={formState.durationMode}
                           onValueChange={(value) =>
                             setFormState((prev) => ({
                               ...prev,
-                              durationSource: value as "existing" | "new",
+                              durationMode: value as "existing" | "new",
                             }))
                           }
                         >
                           <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Select source" />
+                            <SelectValue placeholder="Select duration source" />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="existing">
@@ -649,7 +826,7 @@ export default function AdminSubscriptionsPage() {
                         </Select>
                       </div>
 
-                      {formState.durationSource === "existing" ? (
+                      {formState.durationMode === "existing" ? (
                         <div className="space-y-1.5 md:col-span-2">
                           <label className="text-xs font-medium text-[#3F3F3F]">
                             Existing Duration
@@ -725,39 +902,128 @@ export default function AdminSubscriptionsPage() {
                     </h3>
 
                     <div className="grid gap-4 md:grid-cols-2">
-                      <div className="space-y-1.5">
+                      <div className="space-y-1.5 md:col-span-2">
                         <label className="text-xs font-medium text-[#3F3F3F]">
-                          Price
+                          Price Source
                         </label>
-                        <Input
-                          type="number"
-                          min={0}
-                          value={formState.price}
-                          onChange={(event) =>
+                        <Select
+                          value={formState.priceMode}
+                          onValueChange={(value) =>
                             setFormState((prev) => ({
                               ...prev,
-                              price: event.target.value,
+                              priceMode: value as "existing" | "new",
                             }))
                           }
-                          placeholder="0"
-                        />
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select price source" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem
+                              value="existing"
+                              disabled={!existingDurationPricingOptions.length}
+                            >
+                              Use Existing Price
+                            </SelectItem>
+                            <SelectItem value="new">
+                              Create New Price
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
 
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-medium text-[#3F3F3F]">
-                          Currency
-                        </label>
-                        <Input
-                          value={formState.currency}
-                          onChange={(event) =>
-                            setFormState((prev) => ({
-                              ...prev,
-                              currency: event.target.value,
-                            }))
-                          }
-                          placeholder="GBP"
-                        />
-                      </div>
+                      {formState.priceMode === "existing" ? (
+                        <>
+                          <div className="space-y-2 md:col-span-2">
+                            <p className="text-xs font-medium text-[#3F3F3F]">
+                              Existing prices for selected duration
+                            </p>
+
+                            {existingDurationPricingOptions.length ? (
+                              <div className="flex flex-wrap gap-2">
+                                {existingDurationPricingOptions.map((item) => (
+                                  <Badge
+                                    key={`${item.subscriptionDurationId}-${item.currency}-${item.price}`}
+                                    className="bg-[#EEF4FF] text-[#1F4E95]"
+                                  >
+                                    {item.currency.toUpperCase()} {item.price}
+                                  </Badge>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-xs text-[#7A8499]">
+                                No existing price found for this duration yet.
+                              </p>
+                            )}
+                          </div>
+
+                          <div className="space-y-1.5 md:col-span-2">
+                            <label className="text-xs font-medium text-[#3F3F3F]">
+                              Existing Price
+                            </label>
+                            <Select
+                              value={formState.selectedPriceTemplateKey}
+                              onValueChange={(value) =>
+                                setFormState((prev) => ({
+                                  ...prev,
+                                  selectedPriceTemplateKey: value,
+                                }))
+                              }
+                              disabled={!existingDurationPricingOptions.length}
+                            >
+                              <SelectTrigger className="w-full">
+                                <SelectValue placeholder="Select existing price" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {existingDurationPricingOptions.map((item) => {
+                                  const key = `${item.currency.toUpperCase()}-${item.price}`;
+                                  return (
+                                    <SelectItem key={key} value={key}>
+                                      {item.currency.toUpperCase()} {item.price}
+                                    </SelectItem>
+                                  );
+                                })}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="space-y-1.5">
+                            <label className="text-xs font-medium text-[#3F3F3F]">
+                              Price
+                            </label>
+                            <Input
+                              type="number"
+                              min={0}
+                              value={formState.newPrice}
+                              onChange={(event) =>
+                                setFormState((prev) => ({
+                                  ...prev,
+                                  newPrice: event.target.value,
+                                }))
+                              }
+                              placeholder="0"
+                            />
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <label className="text-xs font-medium text-[#3F3F3F]">
+                              Currency
+                            </label>
+                            <Input
+                              value={formState.newCurrency}
+                              onChange={(event) =>
+                                setFormState((prev) => ({
+                                  ...prev,
+                                  newCurrency: event.target.value,
+                                }))
+                              }
+                              placeholder="GBP"
+                            />
+                          </div>
+                        </>
+                      )}
                     </div>
                   </section>
 
@@ -787,22 +1053,29 @@ export default function AdminSubscriptionsPage() {
 
                   <div className="space-y-2 text-sm text-[#2F2F2F]">
                     <div className="flex items-center justify-between gap-2 border-b border-[#E8ECF8] pb-2">
-                      <span>Plan Source</span>
+                      <span>Plan Name</span>
                       <span className="font-medium">
-                        {formState.planSource}
+                        {formState.planName.trim() || "Not set"}
                       </span>
                     </div>
                     <div className="flex items-center justify-between gap-2 border-b border-[#E8ECF8] pb-2">
-                      <span>Duration Source</span>
+                      <span>Plan Type</span>
+                      <span className="font-medium">{formState.planType}</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-2 border-b border-[#E8ECF8] pb-2">
+                      <span>Duration</span>
                       <span className="font-medium">
-                        {formState.durationSource}
+                        {selectedDurationLabel}
                       </span>
                     </div>
                     <div className="flex items-center justify-between gap-2 border-b border-[#E8ECF8] pb-2">
                       <span>Price</span>
                       <span className="font-medium">
-                        {formState.currency.toUpperCase()}{" "}
-                        {formState.price || "0"}
+                        {formState.priceMode === "existing"
+                          ? selectedPriceTemplate
+                            ? `${selectedPriceTemplate.currency.toUpperCase()} ${selectedPriceTemplate.price}`
+                            : "Not set"
+                          : `${(formState.newCurrency || "GBP").toUpperCase()} ${formState.newPrice || "0"}`}
                       </span>
                     </div>
                   </div>
@@ -827,6 +1100,133 @@ export default function AdminSubscriptionsPage() {
                     </ul>
                   </div>
                 </aside>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog
+            open={isCouponDialogOpen}
+            onOpenChange={setIsCouponDialogOpen}
+          >
+            <DialogTrigger asChild>
+              <Button
+                variant="outline"
+                className="border-[#0d4b9f] text-[#0d4b9f]"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Add Coupon
+              </Button>
+            </DialogTrigger>
+
+            <DialogContent className="sm:max-w-2xl">
+              <DialogHeader>
+                <DialogTitle className="text-2xl text-[#0d4b9f]">
+                  Create Coupon
+                </DialogTitle>
+                <DialogDescription>
+                  Create coupon and link it with subscription pricing so users
+                  can use it during checkout.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-1.5 md:col-span-2">
+                  <label className="text-xs font-medium text-[#3F3F3F]">
+                    Coupon Code
+                  </label>
+                  <Input
+                    value={couponForm.code}
+                    onChange={(event) =>
+                      setCouponForm((prev) => ({
+                        ...prev,
+                        code: event.target.value.toUpperCase(),
+                      }))
+                    }
+                    placeholder="e.g. WELCOME10"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-[#3F3F3F]">
+                    Discount Type
+                  </label>
+                  <Select
+                    value={couponForm.discountType}
+                    onValueChange={(value) =>
+                      setCouponForm((prev) => ({
+                        ...prev,
+                        discountType: value as "percentage" | "fixed",
+                      }))
+                    }
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select discount type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="percentage">Percentage</SelectItem>
+                      <SelectItem value="fixed">Fixed</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-[#3F3F3F]">
+                    Discount Value
+                  </label>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={couponForm.discountValue}
+                    onChange={(event) =>
+                      setCouponForm((prev) => ({
+                        ...prev,
+                        discountValue: event.target.value,
+                      }))
+                    }
+                  />
+                </div>
+
+                <div className="space-y-1.5 md:col-span-2">
+                  <label className="text-xs font-medium text-[#3F3F3F]">
+                    Linked Pricing
+                  </label>
+                  <Select
+                    value={couponForm.selectedPricingId}
+                    onValueChange={(value) =>
+                      setCouponForm((prev) => ({
+                        ...prev,
+                        selectedPricingId: value,
+                      }))
+                    }
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select pricing" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {pricingRows.map((pricing) => (
+                        <SelectItem key={pricing._id} value={pricing._id}>
+                          {pricing.subscriptionPlanName} -{" "}
+                          {pricing.subscriptionName} (
+                          {pricing.subscriptionDuration} days) -{" "}
+                          {pricing.currency} {pricing.price}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsCouponDialogOpen(false)}
+                  disabled={isCouponSaving}
+                >
+                  Cancel
+                </Button>
+                <Button onClick={handleCreateCoupon} disabled={isCouponSaving}>
+                  {isCouponSaving ? "Creating..." : "Create Coupon"}
+                </Button>
               </div>
             </DialogContent>
           </Dialog>
@@ -1111,6 +1511,89 @@ export default function AdminSubscriptionsPage() {
                   </td>
                 </tr>
               ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="rounded-lg border border-[#EBEEF7] bg-white p-4 shadow-sm">
+        <h2 className="mb-3 text-lg font-semibold text-[#0d4b9f]">Coupons</h2>
+
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead>
+              <tr className="border-b border-[#EEF2FA] text-left text-xs text-[#6D7A94] uppercase">
+                <th className="px-2 py-2">Code</th>
+                <th className="px-2 py-2">Discount</th>
+                <th className="px-2 py-2">Linked Pricing</th>
+                <th className="px-2 py-2">Status</th>
+                <th className="px-2 py-2 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {coupons.map((coupon) => (
+                <tr key={coupon._id} className="border-b border-[#F2F5FB]">
+                  <td className="px-2 py-3 font-medium text-[#1E2740]">
+                    {coupon.code}
+                  </td>
+                  <td className="px-2 py-3 text-[#3F4B67]">
+                    {coupon.discountType === "percentage"
+                      ? `${coupon.discountValue}%`
+                      : `${coupon.discountValue} GBP`}
+                  </td>
+                  <td className="px-2 py-3 text-[#3F4B67]">
+                    {coupon.subscriptionPricings?.length
+                      ? coupon.subscriptionPricings
+                          .map(
+                            (pricing) =>
+                              `${pricing.planName || "Plan"} ${pricing.duration ? `(${pricing.duration})` : ""}`,
+                          )
+                          .join(", ")
+                      : "All"}
+                  </td>
+                  <td className="px-2 py-3">
+                    <Badge
+                      className={
+                        coupon.isActive
+                          ? "bg-[#EAF9EF] text-[#249E58]"
+                          : "bg-[#F4F5F7] text-[#636A75]"
+                      }
+                    >
+                      {coupon.isActive ? "Active" : "Disabled"}
+                    </Badge>
+                  </td>
+                  <td className="px-2 py-3">
+                    <div className="flex items-center justify-end gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleToggleCouponStatus(coupon)}
+                      >
+                        <Ban className="mr-1 h-3.5 w-3.5" />
+                        {coupon.isActive ? "Disable" : "Enable"}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => handleDeleteCoupon(coupon)}
+                      >
+                        <Trash2 className="mr-1 h-3.5 w-3.5" />
+                        Delete
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {!coupons.length && (
+                <tr>
+                  <td
+                    colSpan={5}
+                    className="px-2 py-6 text-center text-sm text-[#8F98AB]"
+                  >
+                    No coupons found
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

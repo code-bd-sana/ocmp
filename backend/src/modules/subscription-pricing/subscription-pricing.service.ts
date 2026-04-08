@@ -3,6 +3,7 @@
 import mongoose from 'mongoose';
 import { IdOrIdsInput, SearchQueryInput } from '../../handlers/common-zod-validator';
 import {
+  ApplicableAccountType,
   ISubscriptionPricing,
   SubscriptionDuration,
   SubscriptionHistory,
@@ -18,6 +19,24 @@ import {
   UpdateSubscriptionPricingInput,
 } from './subscription-pricing.validation';
 
+const getPricingByIdOrThrow = async (id: IdOrIdsInput['id']) => {
+  const pricing = await SubscriptionPricing.findById(id).lean();
+  if (!pricing) throw new Error('Subscription-pricing not found');
+  return pricing;
+};
+
+const getRoleBasedApplicableAccountTypes = (userRole?: UserRole): string[] | null => {
+  if (userRole === UserRole.STANDALONE_USER) {
+    return [ApplicableAccountType.STANDALONE, ApplicableAccountType.BOTH];
+  }
+
+  if (userRole === UserRole.TRANSPORT_MANAGER) {
+    return [ApplicableAccountType.TRANSPORT_MANAGER, ApplicableAccountType.BOTH];
+  }
+
+  return null;
+};
+
 /**
  * Service function to create a new subscription-pricing.
  *
@@ -29,6 +48,7 @@ const createSubscriptionPricing = async (
 ): Promise<Partial<TSubscriptionPricing | null>> => {
   // Extract subscription plan and duration IDs from validated data
   const { subscriptionPlanId, subscriptionDurationId } = data;
+  const normalizedCurrency = (data.currency || 'GBP').trim().toUpperCase();
   // Check if the subscription plan exists
   const isSubscriptionPlanAvailable = await SubscriptionPlan.findOne({
     _id: subscriptionPlanId,
@@ -53,7 +73,11 @@ const createSubscriptionPricing = async (
   if (isExistingPricing) {
     throw new Error('Subscription-pricing already exists for the selected plan and duration');
   }
-  const newSubscriptionPricing = new SubscriptionPricing(data);
+
+  const newSubscriptionPricing = new SubscriptionPricing({
+    ...data,
+    currency: normalizedCurrency,
+  });
   const savedSubscriptionPricing = await newSubscriptionPricing.save();
 
   return await getSubscriptionPricingById(
@@ -73,11 +97,23 @@ const updateSubscriptionPricing = async (
   id: IdOrIdsInput['id'],
   data: UpdateSubscriptionPricingInput
 ): Promise<Partial<TSubscriptionPricing | null>> => {
-  // Check for duplicate (filed) combination
+  const existingPricing = await getPricingByIdOrThrow(id);
+
+  const nextSubscriptionPlanId =
+    data.subscriptionPlanId || existingPricing.subscriptionPlanId.toString();
+  const nextSubscriptionDurationId =
+    data.subscriptionDurationId || existingPricing.subscriptionDurationId.toString();
+  if (data.currency !== undefined) {
+    data.currency = data.currency.trim().toUpperCase();
+  }
+
+  // Check for duplicate (field) combination excluding current document
   const existingSubscriptionPricing = await SubscriptionPricing.findOne({
-    subscriptionPlanId: data.subscriptionPlanId,
-    subscriptionDurationId: data.subscriptionDurationId,
+    _id: { $ne: id },
+    subscriptionPlanId: nextSubscriptionPlanId,
+    subscriptionDurationId: nextSubscriptionDurationId,
   });
+
   // Prevent duplicate updates
   if (existingSubscriptionPricing) {
     throw new Error(
@@ -85,10 +121,21 @@ const updateSubscriptionPricing = async (
     );
   }
 
-  // Check if the subscription-plan exists
+  // Check usage by pricing id and by plan-duration pair.
   const [durationInUserSubscription, subscriptionHistory] = await Promise.all([
-    await UserSubscription.exists({ subscriptionDurationId: new mongoose.Types.ObjectId(id) }),
-    await SubscriptionHistory.exists({ subscriptionDurationId: new mongoose.Types.ObjectId(id) }),
+    await UserSubscription.exists({
+      $or: [
+        { subscriptionPricingId: existingPricing._id },
+        {
+          subscriptionPlanId: existingPricing.subscriptionPlanId,
+          subscriptionDurationId: existingPricing.subscriptionDurationId,
+        },
+      ],
+    }),
+    await SubscriptionHistory.exists({
+      subscriptionPlanId: existingPricing.subscriptionPlanId,
+      subscriptionDurationId: existingPricing.subscriptionDurationId,
+    }),
   ]);
 
   if (durationInUserSubscription || subscriptionHistory) {
@@ -134,10 +181,23 @@ const updateSubscriptionPricing = async (
 const deleteSubscriptionPricing = async (
   id: IdOrIdsInput['id']
 ): Promise<Partial<ISubscriptionPricing | null>> => {
-  // Check if the subscription-plan exists
+  const existingPricing = await getPricingByIdOrThrow(id);
+
+  // Check usage by pricing id and by plan-duration pair.
   const [durationInUserSubscription, subscriptionHistory] = await Promise.all([
-    await UserSubscription.exists({ subscriptionDurationId: new mongoose.Types.ObjectId(id) }),
-    await SubscriptionHistory.exists({ subscriptionDurationId: new mongoose.Types.ObjectId(id) }),
+    await UserSubscription.exists({
+      $or: [
+        { subscriptionPricingId: existingPricing._id },
+        {
+          subscriptionPlanId: existingPricing.subscriptionPlanId,
+          subscriptionDurationId: existingPricing.subscriptionDurationId,
+        },
+      ],
+    }),
+    await SubscriptionHistory.exists({
+      subscriptionPlanId: existingPricing.subscriptionPlanId,
+      subscriptionDurationId: existingPricing.subscriptionDurationId,
+    }),
   ]);
 
   // If this subscription-duration is currently in use in any subscription or subscription history, do not allow deleting this subscription pricing. If trying to delete, throw an error message about the impact of deleting this subscription pricing.
@@ -160,17 +220,25 @@ const deleteSubscriptionPricing = async (
 const deleteManySubscriptionPricing = async (
   ids: IdOrIdsInput['ids']
 ): Promise<Partial<ISubscriptionPricing>[]> => {
-  const subscriptionPricingToDelete = await SubscriptionPricing.find({ _id: { $in: ids } });
+  const subscriptionPricingToDelete = await SubscriptionPricing.find({ _id: { $in: ids } }).select(
+    '_id subscriptionPlanId subscriptionDurationId'
+  );
   if (!subscriptionPricingToDelete.length)
     throw new Error('No subscription-pricing found to delete');
 
-  // Check if the subscription-plan exists
+  const pricingIds = subscriptionPricingToDelete.map((item) => item._id);
+  const usedPlanDurationPairs = subscriptionPricingToDelete.map((item) => ({
+    subscriptionPlanId: item.subscriptionPlanId,
+    subscriptionDurationId: item.subscriptionDurationId,
+  }));
+
+  // Check usage by pricing ids and by plan-duration pairs.
   const [durationInUserSubscription, subscriptionHistory] = await Promise.all([
     await UserSubscription.exists({
-      subscriptionDurationId: { $in: ids?.map((id) => new mongoose.Types.ObjectId(id)) },
+      $or: [{ subscriptionPricingId: { $in: pricingIds } }, ...usedPlanDurationPairs],
     }),
     await SubscriptionHistory.exists({
-      subscriptionDurationId: { $in: ids?.map((id) => new mongoose.Types.ObjectId(id)) },
+      $or: usedPlanDurationPairs,
     }),
   ]);
 
@@ -230,6 +298,8 @@ const getSubscriptionPricingById = async (
     {
       $project: {
         _id: 1,
+        subscriptionPlanId: 1,
+        subscriptionDurationId: 1,
         subscriptionPlanName: '$subscriptionPlan.name',
         subscriptionPlanType: '$subscriptionPlan.planType',
         applicableAccountType: '$subscriptionPlan.applicableAccountType',
@@ -275,6 +345,25 @@ const getManySubscriptionPricing = async (
   const skipItems = (pageNo - 1) * showPerPage;
   const numericSearch = !isNaN(Number(searchKey)) ? Number(searchKey) : null;
   const isSuperAdmin = userRole === UserRole.SUPER_ADMIN;
+  const roleBasedApplicableTypes = isSuperAdmin
+    ? null
+    : getRoleBasedApplicableAccountTypes(userRole);
+
+  const effectiveApplicableTypes: string[] | null = (() => {
+    if (applicableAccountType) {
+      if (!roleBasedApplicableTypes) return [applicableAccountType];
+      return roleBasedApplicableTypes.includes(applicableAccountType)
+        ? [applicableAccountType]
+        : [];
+    }
+
+    return roleBasedApplicableTypes;
+  })();
+
+  if (effectiveApplicableTypes && effectiveApplicableTypes.length === 0) {
+    return { subscriptionPricings: [], totalData: 0, totalPages: 0 };
+  }
+
   // Base match: only active if not super admin
   const baseMatch: any = {};
   if (!isSuperAdmin) baseMatch.isActive = true;
@@ -294,11 +383,11 @@ const getManySubscriptionPricing = async (
     },
     { $unwind: { path: '$subscriptionPlan', preserveNullAndEmptyArrays: true } },
     // Apply account type filter AFTER lookup
-    ...(applicableAccountType
+    ...(effectiveApplicableTypes
       ? [
           {
             $match: {
-              'subscriptionPlan.applicableAccountType': applicableAccountType,
+              'subscriptionPlan.applicableAccountType': { $in: effectiveApplicableTypes },
             },
           },
         ]
@@ -349,6 +438,8 @@ const getManySubscriptionPricing = async (
     {
       $project: {
         _id: 1,
+        subscriptionPlanId: 1,
+        subscriptionDurationId: 1,
         subscriptionPlanName: '$subscriptionPlan.name',
         subscriptionPlanType: '$subscriptionPlan.planType',
         applicableAccountType: '$subscriptionPlan.applicableAccountType',
@@ -384,11 +475,11 @@ const getManySubscriptionPricing = async (
     // Unwind subscription plan
     { $unwind: { path: '$subscriptionPlan', preserveNullAndEmptyArrays: true } },
     // Apply account type filter AFTER lookup
-    ...(applicableAccountType
+    ...(effectiveApplicableTypes
       ? [
           {
             $match: {
-              'subscriptionPlan.applicableAccountType': applicableAccountType,
+              'subscriptionPlan.applicableAccountType': { $in: effectiveApplicableTypes },
             },
           },
         ]

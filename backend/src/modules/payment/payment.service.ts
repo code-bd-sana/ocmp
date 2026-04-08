@@ -65,17 +65,27 @@ const createPayment = async (
 
   // Validate the coupon for the pricing and user eligibility if coupon code is provided
   if (couponExist) {
-    const isValidForPricing = couponExist.subscriptionPricings?.some(
-      (pricingId) => pricingId.toString() === data.subscriptionPricingId
-    );
-    if (!isValidForPricing) {
-      throw new Error('This coupon code is not valid for the selected subscription pricing');
+    const hasPricingScope =
+      Array.isArray(couponExist.subscriptionPricings) &&
+      couponExist.subscriptionPricings.length > 0;
+
+    if (hasPricingScope) {
+      const isValidForPricing = couponExist.subscriptionPricings?.some(
+        (pricingId) => pricingId.toString() === data.subscriptionPricingId
+      );
+      if (!isValidForPricing) {
+        throw new Error('This coupon code is not valid for the selected subscription pricing');
+      }
     }
-    const isUserEligible = couponExist.users?.some(
-      (userId) => userId.toString() === req.user!._id.toString()
-    );
-    if (!isUserEligible) {
-      throw new Error('You are not eligible to use this coupon code');
+
+    const hasUserScope = Array.isArray(couponExist.users) && couponExist.users.length > 0;
+    if (hasUserScope) {
+      const isUserEligible = couponExist.users?.some(
+        (userId) => userId.toString() === req.user!._id.toString()
+      );
+      if (!isUserEligible) {
+        throw new Error('You are not eligible to use this coupon code');
+      }
     }
   }
 
@@ -101,6 +111,18 @@ const createPayment = async (
 
   if (!subscriptionExist.isActive) {
     throw new Error('This subscription plan is not active currently');
+  }
+
+  if (subscriptionExist.subscriptionPlanStatus === false) {
+    throw new Error('This subscription plan is currently unavailable');
+  }
+
+  if (subscriptionExist.subscriptionDurationStatus === false) {
+    throw new Error('This subscription duration is currently unavailable');
+  }
+
+  if (!subscriptionExist.subscriptionPlanId || !subscriptionExist.subscriptionDurationId) {
+    throw new Error('Subscription pricing mapping is invalid');
   }
 
   if (subscriptionExist.price === undefined || subscriptionExist.price === null) {
@@ -143,7 +165,9 @@ const createPayment = async (
       userId: req.user!._id,
       userEmail: req.user!.email,
       planDetails: JSON.stringify({
-        subscriptionPlanId: subscriptionExist._id,
+        subscriptionPlanId: `${subscriptionExist.subscriptionPlanId}`,
+        subscriptionDurationId: `${subscriptionExist.subscriptionDurationId}`,
+        subscriptionPricingId: `${subscriptionExist._id}`,
         subscriptionPlanName: subscriptionExist.subscriptionPlanName,
         subscriptionDuration: subscriptionExist.subscriptionDuration,
       }),

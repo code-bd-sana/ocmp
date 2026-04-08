@@ -6,9 +6,11 @@ import {
   SubscriptionPricing,
   RemainingSubscriptionInfo,
 } from "@/service/subscription";
+import { UserAction } from "@/service/user";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -57,9 +59,11 @@ export default function DashboardSubscriptionsPage() {
   const [pricingRows, setPricingRows] = useState<SubscriptionPricing[]>([]);
   const [remainingInfo, setRemainingInfo] =
     useState<RemainingSubscriptionInfo | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
   const [selectedPlanName, setSelectedPlanName] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
   const [isBuyingId, setIsBuyingId] = useState<string | null>(null);
+  const [couponCode, setCouponCode] = useState("");
 
   const loadData = useCallback(async () => {
     try {
@@ -70,9 +74,12 @@ export default function DashboardSubscriptionsPage() {
         SubscriptionAction.getSubscriptionRemainingDays(),
       ]);
 
+      const profileResponse = await UserAction.getProfile();
+
       const rows = pricingResponse.data?.subscriptionPricings || [];
       setPricingRows(rows);
       setRemainingInfo(remainingResponse.data || null);
+      setUserRole(profileResponse.data?.role || null);
     } catch (error: unknown) {
       const message =
         error instanceof Error
@@ -88,23 +95,46 @@ export default function DashboardSubscriptionsPage() {
     loadData();
   }, [loadData]);
 
-  const transportManagerPricings = useMemo(
+  const visiblePricings = useMemo(
     () =>
-      pricingRows.filter(
-        (row) =>
-          (row.applicableAccountType === "TRANSPORT_MANAGER" ||
-            row.applicableAccountType === "BOTH") &&
+      pricingRows.filter((row) => {
+        const normalizedUserRole = (userRole || "").toUpperCase();
+        const normalizedAccountType = (
+          row.applicableAccountType || ""
+        ).toUpperCase();
+
+        const isTransportManagerRole =
+          normalizedUserRole === "TRANSPORT_MANAGER";
+        const isStandaloneRole =
+          normalizedUserRole === "STANDALONE_USER" ||
+          normalizedUserRole === "STANDALONE";
+
+        const isStandalonePlan =
+          normalizedAccountType === "STANDALONE" ||
+          normalizedAccountType === "STANDALONE_USER";
+        const isTransportManagerPlan =
+          normalizedAccountType === "TRANSPORT_MANAGER";
+        const isBothPlan = normalizedAccountType === "BOTH";
+
+        const isPlanVisibleToRole =
+          isBothPlan ||
+          (isTransportManagerRole && isTransportManagerPlan) ||
+          (isStandaloneRole && isStandalonePlan);
+
+        return (
+          isPlanVisibleToRole &&
           row.isActive &&
           row.subscriptionPlanStatus !== false &&
-          row.subscriptionDurationStatus !== false,
-      ),
-    [pricingRows],
+          row.subscriptionDurationStatus !== false
+        );
+      }),
+    [pricingRows, userRole],
   );
 
   const planGroups = useMemo<PlanGroup[]>(() => {
     const map = new Map<string, PlanGroup>();
 
-    transportManagerPricings.forEach((row) => {
+    visiblePricings.forEach((row) => {
       const key = row.subscriptionPlanName.toUpperCase();
       const existing = map.get(key);
 
@@ -124,7 +154,7 @@ export default function DashboardSubscriptionsPage() {
     });
 
     return Array.from(map.values()).sort((a, b) => a.minPrice - b.minPrice);
-  }, [transportManagerPricings]);
+  }, [visiblePricings]);
 
   useEffect(() => {
     if (!planGroups.length) {
@@ -142,10 +172,10 @@ export default function DashboardSubscriptionsPage() {
 
   const selectedPlanRows = useMemo(() => {
     if (!selectedPlanName) return [];
-    return transportManagerPricings
+    return visiblePricings
       .filter((row) => row.subscriptionPlanName === selectedPlanName)
       .sort((a, b) => a.subscriptionDuration - b.subscriptionDuration);
-  }, [selectedPlanName, transportManagerPricings]);
+  }, [selectedPlanName, visiblePricings]);
 
   const currentStatus = useMemo(() => {
     if (!remainingInfo || remainingInfo.expired) {
@@ -155,12 +185,22 @@ export default function DashboardSubscriptionsPage() {
     return { label: "Active subscription", variant: "default" as const };
   }, [remainingInfo]);
 
-  const handleBuy = async (pricingId: string) => {
+  const handleBuy = async (pricingId: string, useTrial = false) => {
     try {
       setIsBuyingId(pricingId);
 
+      if (useTrial) {
+        await SubscriptionAction.createSubscriptionTrial({
+          subscriptionPricingId: pricingId,
+        });
+        toast.success("Trial activated successfully");
+        await loadData();
+        return;
+      }
+
       const response = await SubscriptionAction.createSubscriptionCheckout({
         subscriptionPricingId: pricingId,
+        coupon: couponCode.trim() || undefined,
       });
 
       const checkoutUrl = response.data?.checkoutUrl;
@@ -298,6 +338,18 @@ export default function DashboardSubscriptionsPage() {
               ? `${selectedPlanName} pricing options`
               : "Pricing options"}
           </CardTitle>
+          <div className="flex flex-col gap-2 pt-2 sm:max-w-sm">
+            <label className="text-xs font-medium text-slate-500 uppercase">
+              Coupon code (optional)
+            </label>
+            <Input
+              value={couponCode}
+              onChange={(event) =>
+                setCouponCode(event.target.value.toUpperCase())
+              }
+              placeholder="Enter coupon code"
+            />
+          </div>
         </CardHeader>
         <CardContent>
           {!selectedPlanRows.length ? (
@@ -317,6 +369,7 @@ export default function DashboardSubscriptionsPage() {
               <TableBody>
                 {selectedPlanRows.map((row) => {
                   const isBuying = isBuyingId === row._id;
+                  const isTrialPlan = row.subscriptionPlanType === "FREE";
 
                   return (
                     <TableRow key={row._id}>
@@ -329,7 +382,7 @@ export default function DashboardSubscriptionsPage() {
                       </TableCell>
                       <TableCell className="text-right">
                         <Button
-                          onClick={() => handleBuy(row._id)}
+                          onClick={() => handleBuy(row._id, isTrialPlan)}
                           disabled={isBuying}
                           size="sm"
                         >
@@ -338,6 +391,8 @@ export default function DashboardSubscriptionsPage() {
                               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                               Redirecting
                             </>
+                          ) : isTrialPlan ? (
+                            "Start trial"
                           ) : (
                             "Buy now"
                           )}

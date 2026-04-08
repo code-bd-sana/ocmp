@@ -113,7 +113,8 @@ const deleteSubscriptionPlan = async (
 ): Promise<Partial<ISubscriptionPlan | null>> => {
   const planObjectId = new mongoose.Types.ObjectId(id);
 
-  // Do not allow deleting plans that already have real subscription usage.
+  // Allow deleting plans if no user has ever used them.
+  // Related pricing rows are removed, but duration entities are not deleted.
   const [durationInUserSubscription, subscriptionHistory] = await Promise.all([
     await UserSubscription.exists({ subscriptionPlanId: planObjectId }),
     await SubscriptionHistory.exists({ subscriptionPlanId: planObjectId }),
@@ -123,7 +124,6 @@ const deleteSubscriptionPlan = async (
     throw new Error('This subscription plan is currently in use. You cannot delete this plan. ');
   }
 
-  // Remove linked pricing rows so the plan can be safely deleted when never purchased.
   await SubscriptionPricing.deleteMany({ subscriptionPlanId: planObjectId });
 
   const deletedSubscriptionPlan = await SubscriptionPlan.findByIdAndDelete(id);
