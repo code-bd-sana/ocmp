@@ -93,12 +93,17 @@ export default function AdminPage() {
   const router = useRouter();
   const [dashboardData, setDashboardData] =
     useState<ISuperAdminDashboardData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     let isMounted = true;
 
     const loadDashboard = async () => {
       try {
+        if (isMounted) {
+          setIsLoading(true);
+        }
+
         const response = await DashboardAction.getSuperAdminDashboard();
 
         if (!isMounted) return;
@@ -114,6 +119,10 @@ export default function AdminPage() {
         const message =
           error instanceof Error ? error.message : "Failed to load dashboard summary";
         toast.error(message);
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     };
 
@@ -390,46 +399,66 @@ export default function AdminPage() {
             Summary
           </h2>
 
-          <div className="grid grid-cols-2 gap-4 sm:gap-5 lg:grid-cols-4 lg:gap-8">
-            {adminStats.map((item) => (
-              <div
-                key={item.title}
-                className={`${item.bg} flex min-h-40 flex-col justify-center rounded-none px-4 py-4 sm:min-h-44 sm:px-5 sm:py-5 md:min-h-56 md:py-6`}
-              >
-                <item.icon className="mb-4 h-7 w-7 text-[#0d4b9f] sm:h-8 sm:w-8 md:mb-5" strokeWidth={1.8} />
-                <p className="mb-2 text-base font-medium text-[#0d4b9f] sm:text-[18px]">
-                  {item.title}
-                </p>
-                <p className="text-3xl leading-none font-bold text-[#0d4b9f] sm:text-[34px]">
-                  {item.value}
-                </p>
-              </div>
-            ))}
-          </div>
+          {isLoading && !dashboardData ? (
+            <div className="flex min-h-56 items-center justify-center rounded-sm bg-white text-base text-[#8F8F8F] sm:text-lg">
+              <span
+                className="h-9 w-9 animate-spin rounded-full border-3 border-[#0d4b9f]/25 border-t-[#0d4b9f]"
+                aria-label="Loading"
+              />
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-4 sm:gap-5 lg:grid-cols-4 lg:gap-8">
+              {adminStats.map((item) => (
+                <div
+                  key={item.title}
+                  className={`${item.bg} flex min-h-40 flex-col justify-center rounded-none px-4 py-4 sm:min-h-44 sm:px-5 sm:py-5 md:min-h-56 md:py-6`}
+                >
+                  <item.icon className="mb-4 h-7 w-7 text-[#0d4b9f] sm:h-8 sm:w-8 md:mb-5" strokeWidth={1.8} />
+                  <p className="mb-2 text-base font-medium text-[#0d4b9f] sm:text-[18px]">
+                    {item.title}
+                  </p>
+                  <p className="text-3xl leading-none font-bold text-[#0d4b9f] sm:text-[34px]">
+                    {item.value}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 
       <section className="mt-6 space-y-4 sm:mt-8 sm:space-y-6">
-        <UniversalTable<UserOverviewRow>
-          data={userOverviewRows}
-          columns={userOverviewColumns}
-          rowKey={(row) => row._id}
-          headerActionGroups={userOverviewHeaderActionGroups}
-        />
+        {isLoading && !dashboardData ? (
+          <div className="flex min-h-48 items-center justify-center rounded-sm bg-[#f8f9fc] text-base text-[#8F8F8F] sm:text-lg">
+            <span
+              className="h-9 w-9 animate-spin rounded-full border-3 border-[#0d4b9f]/25 border-t-[#0d4b9f]"
+              aria-label="Loading"
+            />
+          </div>
+        ) : (
+          <>
+            <UniversalTable<UserOverviewRow>
+              data={userOverviewRows}
+              columns={userOverviewColumns}
+              rowKey={(row) => row._id}
+              headerActionGroups={userOverviewHeaderActionGroups}
+            />
 
-        <UniversalTable<TransportManagerOverviewRow>
-          data={transportManagerOverviewRows}
-          columns={transportManagerOverviewColumns}
-          rowKey={(row) => row._id}
-          headerActionGroups={transportManagerHeaderActionGroups}
-        />
+            <UniversalTable<TransportManagerOverviewRow>
+              data={transportManagerOverviewRows}
+              columns={transportManagerOverviewColumns}
+              rowKey={(row) => row._id}
+              headerActionGroups={transportManagerHeaderActionGroups}
+            />
 
-        <UniversalTable<ClientOverviewRow>
-          data={clientOverviewRows}
-          columns={clientOverviewColumns}
-          rowKey={(row) => row._id}
-          headerActionGroups={clientOverviewHeaderActionGroups}
-        />
+            <UniversalTable<ClientOverviewRow>
+              data={clientOverviewRows}
+              columns={clientOverviewColumns}
+              rowKey={(row) => row._id}
+              headerActionGroups={clientOverviewHeaderActionGroups}
+            />
+          </>
+        )}
       </section>
     </div>
   );
