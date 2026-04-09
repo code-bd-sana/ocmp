@@ -1,9 +1,7 @@
 "use client";
 
 import DashboardHome from "@/components/dashboard/dashboard-home";
-import UniversalTable, {
-  HeaderActionGroup,
-} from "@/components/universal-table/UniversalTable";
+import { HeaderActionGroup } from "@/components/universal-table/UniversalTable";
 import { Column, TableAction } from "@/components/universal-table/table.types";
 import { Edit, Trash } from "lucide-react";
 
