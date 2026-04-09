@@ -13,14 +13,9 @@ import mongoSanitize from 'express-mongo-sanitize';
 import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
 import hpp from 'hpp';
-import mongoose from 'mongoose';
 import morgan from 'morgan';
 
-import PathNotFound from './helpers/responses/path-not-found';
-import { startCronJob } from './utils/cron-job/cron-job';
 import { loggerStream } from './utils/logger/logger';
-import { connectRedis } from './utils/redis/redis-client';
-import { seedSuperAdmin } from './seeds/userSeeder';
 
 // Terminal colors
 const GREEN = '\x1b[32m';
@@ -54,6 +49,7 @@ const allowedOrigins = Array.from(
     config.CLIENT_URL || 'http://localhost:3000',
     'http://localhost:3000',
     'https://ocmp.co.uk',
+    'https://ocmp.co.uk/',
   ])
 );
 
