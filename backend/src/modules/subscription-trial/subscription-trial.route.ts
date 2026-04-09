@@ -24,7 +24,7 @@ const router = Router();
 router.post(
   '/',
   isAuthorized(),
-  authorizedRoles([UserRole.TRANSPORT_MANAGER, UserRole.STANDALONE_USER]),
+  authorizedRoles([UserRole.SUPER_ADMIN, UserRole.TRANSPORT_MANAGER, UserRole.STANDALONE_USER]),
   createSubscriptionTrial
 );
 

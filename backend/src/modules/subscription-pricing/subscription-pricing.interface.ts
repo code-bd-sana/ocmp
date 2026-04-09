@@ -8,6 +8,8 @@ import { ObjectId } from 'mongoose';
  */
 export interface TSubscriptionPricing {
   _id: string | ObjectId;
+  subscriptionPlanId: string | ObjectId;
+  subscriptionDurationId: string | ObjectId;
   price: number;
   currency: string;
   isActive: boolean;

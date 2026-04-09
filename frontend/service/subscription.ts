@@ -27,6 +27,8 @@ export type SubscriptionDuration = {
 
 export type SubscriptionPricing = {
   _id: string;
+  subscriptionPlanId?: string;
+  subscriptionDurationId?: string;
   subscriptionPlanName: string;
   subscriptionPlanType: SubscriptionPlanType;
   applicableAccountType: ApplicableAccountType;
@@ -52,12 +54,38 @@ export type RemainingSubscriptionInfo = {
 
 export type CreatePaymentPayload = {
   subscriptionPricingId: string;
-  couponCode?: string;
+  coupon?: string;
 };
 
 export type CreatePaymentResponse = {
   sessionId?: string;
   checkoutUrl?: string;
+};
+
+export type CreateSubscriptionTrialPayload = {
+  userId?: string;
+  subscriptionPricingId?: string;
+  subscriptionPlanId?: string;
+  subscriptionDurationId?: string;
+};
+
+export type SubscriptionCouponPricing = {
+  _id: string;
+  price: number;
+  currency: string;
+  planName?: string;
+  duration?: string;
+};
+
+export type SubscriptionCoupon = {
+  _id: string;
+  code: string;
+  discountType: "percentage" | "fixed";
+  discountValue: number;
+  isActive: boolean;
+  subscriptionPricings?: SubscriptionCouponPricing[];
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 type PlanListPayload = {
@@ -74,6 +102,12 @@ type DurationListPayload = {
 
 type PricingListPayload = {
   subscriptionPricings: SubscriptionPricing[];
+  totalData: number;
+  totalPages: number;
+};
+
+type CouponListPayload = {
+  subscriptionCoupons: SubscriptionCoupon[];
   totalData: number;
   totalPages: number;
 };
@@ -103,6 +137,17 @@ type CreatePricingPayload = {
 };
 
 type UpdatePricingPayload = Partial<CreatePricingPayload>;
+
+type CreateCouponPayload = {
+  code: string;
+  discountType: "percentage" | "fixed";
+  discountValue: number;
+  isActive?: boolean;
+  subscriptionPricings?: string[];
+  users?: string[];
+};
+
+type UpdateCouponPayload = Partial<CreateCouponPayload>;
 
 function extractApiError(data: IApiResponse | undefined): string {
   if (!data) return "Something went wrong";
@@ -439,6 +484,120 @@ const createSubscriptionCheckout = async (
   }
 };
 
+const createSubscriptionTrial = async (
+  payload: CreateSubscriptionTrialPayload,
+): Promise<IApiResponse> => {
+  try {
+    const response = await axios.post<IApiResponse>(
+      `${base_url}/subscription-trial`,
+      payload,
+      {
+        headers: getAuthHeaders(),
+      },
+    );
+
+    return response.data;
+  } catch (error: unknown) {
+    if (axios.isAxiosError<IApiResponse>(error)) {
+      throw new Error(extractApiError(error.response?.data));
+    }
+
+    throw new Error("Something went wrong");
+  }
+};
+
+const getSubscriptionCoupons = async (params?: {
+  searchKey?: string;
+  showPerPage?: number;
+  pageNo?: number;
+}): Promise<IApiResponse<CouponListPayload>> => {
+  try {
+    const response = await axios.get<IApiResponse<CouponListPayload>>(
+      `${base_url}/subscription-coupon/many`,
+      {
+        headers: getAuthHeaders(),
+        params: {
+          searchKey: params?.searchKey || "",
+          showPerPage: params?.showPerPage || 100,
+          pageNo: params?.pageNo || 1,
+        },
+      },
+    );
+
+    return response.data;
+  } catch (error: unknown) {
+    if (axios.isAxiosError<IApiResponse>(error)) {
+      throw new Error(extractApiError(error.response?.data));
+    }
+
+    throw new Error("Something went wrong");
+  }
+};
+
+const createSubscriptionCoupon = async (
+  payload: CreateCouponPayload,
+): Promise<IApiResponse<SubscriptionCoupon>> => {
+  try {
+    const response = await axios.post<IApiResponse<SubscriptionCoupon>>(
+      `${base_url}/subscription-coupon`,
+      payload,
+      {
+        headers: getAuthHeaders(),
+      },
+    );
+
+    return response.data;
+  } catch (error: unknown) {
+    if (axios.isAxiosError<IApiResponse>(error)) {
+      throw new Error(extractApiError(error.response?.data));
+    }
+
+    throw new Error("Something went wrong");
+  }
+};
+
+const updateSubscriptionCoupon = async (
+  id: string,
+  payload: UpdateCouponPayload,
+): Promise<IApiResponse<SubscriptionCoupon>> => {
+  try {
+    const response = await axios.patch<IApiResponse<SubscriptionCoupon>>(
+      `${base_url}/subscription-coupon/${id}`,
+      payload,
+      {
+        headers: getAuthHeaders(),
+      },
+    );
+
+    return response.data;
+  } catch (error: unknown) {
+    if (axios.isAxiosError<IApiResponse>(error)) {
+      throw new Error(extractApiError(error.response?.data));
+    }
+
+    throw new Error("Something went wrong");
+  }
+};
+
+const deleteSubscriptionCoupon = async (id: string): Promise<IApiResponse> => {
+  try {
+    const response = await axios.delete<IApiResponse>(
+      `${base_url}/subscription-coupon/${id}`,
+      {
+        headers: getAuthHeaders(),
+      },
+    );
+
+    return response.data;
+  } catch (error: unknown) {
+    if (axios.isAxiosError<IApiResponse>(error)) {
+      throw new Error(extractApiError(error.response?.data));
+    }
+
+    throw new Error("Something went wrong");
+  }
+};
+
 export const SubscriptionAction = {
   getSubscriptionPlans,
   getSubscriptionDurations,
@@ -454,4 +613,9 @@ export const SubscriptionAction = {
   deleteSubscriptionPricing,
   getSubscriptionRemainingDays,
   createSubscriptionCheckout,
+  createSubscriptionTrial,
+  getSubscriptionCoupons,
+  createSubscriptionCoupon,
+  updateSubscriptionCoupon,
+  deleteSubscriptionCoupon,
 };
