@@ -22,6 +22,7 @@ export default function AdminLayout({
   });
 
   const [isRoleChecking, setIsRoleChecking] = useState(true);
+  const [canAccessAdmin, setCanAccessAdmin] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -29,7 +30,10 @@ export default function AdminLayout({
     const cachedRole = AuthAction.GetUserRole();
     if (cachedRole) {
       if (cachedRole !== "SUPER_ADMIN") {
+        setCanAccessAdmin(false);
         router.replace("/dashboard");
+      } else {
+        setCanAccessAdmin(true);
       }
       setIsRoleChecking(false);
       return () => {
@@ -49,11 +53,15 @@ export default function AdminLayout({
         }
 
         if (role !== "SUPER_ADMIN") {
+          setCanAccessAdmin(false);
           router.replace("/dashboard");
           return;
         }
+
+        setCanAccessAdmin(true);
       } catch {
         if (isMounted) {
+          setCanAccessAdmin(false);
           router.replace("/signin");
         }
         return;
@@ -69,7 +77,7 @@ export default function AdminLayout({
     };
   }, [router]);
 
-  if (isChecking || !canRender || isRoleChecking) {
+  if (isChecking || !canRender || isRoleChecking || !canAccessAdmin) {
     return null;
   }
 
