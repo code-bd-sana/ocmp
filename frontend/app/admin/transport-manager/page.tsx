@@ -195,7 +195,7 @@ export default function AdminTransportManagerPage() {
   const headerActionGroups: HeaderActionGroup[] = useMemo(
     () => [
       {
-        title: "",
+        title: `Total Transport Managers: ${totalData}`,
         startingActionGroup: [],
         endActionGroup: [
           {
@@ -226,7 +226,7 @@ export default function AdminTransportManagerPage() {
         ],
       },
     ],
-    [],
+    [totalData],
   );
 
   const visiblePages = useMemo(() => {
@@ -266,18 +266,6 @@ export default function AdminTransportManagerPage() {
 
       <Card className="rounded-sm border-none bg-[#f8f9fc] shadow-[0_6px_18px_rgba(13,75,159,0.08)]">
         <CardContent className="p-3 sm:p-4 md:p-5">
-          <div className="mb-3 flex flex-col items-start gap-1 text-base text-[#8F8F8F] sm:flex-row sm:items-center sm:justify-between md:text-xl">
-            <span>Total Transport Managers: {totalData}</span>
-            {isLoading ? (
-              <span
-                className="h-5 w-5 animate-spin rounded-full border-2 border-[#0d4b9f]/25 border-t-[#0d4b9f]"
-                aria-label="Loading"
-              />
-            ) : (
-              <span>&nbsp;</span>
-            )}
-          </div>
-
           {isInitialLoading ? (
             <div className="flex min-h-64 items-center justify-center rounded-sm bg-[#F9F9FA] text-sm text-[#8F8F8F] sm:text-base">
               <span
