@@ -15,10 +15,12 @@ import helmet from 'helmet';
 import hpp from 'hpp';
 import mongoose from 'mongoose';
 import morgan from 'morgan';
+
 import PathNotFound from './helpers/responses/path-not-found';
 import { startCronJob } from './utils/cron-job/cron-job';
 import { loggerStream } from './utils/logger/logger';
 import { connectRedis } from './utils/redis/redis-client';
+import { seedSuperAdmin } from './seeds/userSeeder';
 
 // Terminal colors
 const GREEN = '\x1b[32m';
@@ -30,47 +32,72 @@ const RESET = '\x1b[0m';
 // Express app initialization
 const app: Application = express();
 
-// Define the path to the public directory
+// Trust proxy (important for Coolify / reverse proxy)
+app.set('trust proxy', 1);
+
+// Public folder
 const publicDirPath = path.join(__dirname, '..', 'public');
 
-// Middleware setup
+// ================= MIDDLEWARE =================
+
 app.use('/api/v1/payment/webhook', express.raw({ type: 'application/json' }));
 
 app.use(express.json({ limit: config.MAX_JSON_SIZE }));
-
 app.use(express.urlencoded({ extended: config.URL_ENCODED }));
 app.use(cookieParser());
 app.use(fileUpload(config.EXPRESS_FILE_UPLOAD_CONFIG));
 
-// Security middleware initialization
-app.use(cors());
+// Security
+// Configure CORS to allow the frontend client and localhost during development
+const allowedOrigins = Array.from(
+  new Set([
+    config.CLIENT_URL || 'http://localhost:3000',
+    'http://localhost:3000',
+    'https://ocmp.co.uk',
+  ])
+);
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow non-browser requests like curl/postman (no origin)
+      if (!origin) return callback(null, true);
+      // Allow localhost origins for local development
+      if (origin.startsWith('http://localhost')) return callback(null, true);
+      // Allow specified origins
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      return callback(new Error('Not allowed by CORS'));
+    },
+    credentials: true,
+  })
+);
 app.use(helmet());
+
 app.use((req: any, res: any, next: any) => {
   const sanitizer = (mongoSanitize as any).sanitize || ((obj: any) => obj);
+
   ['body', 'params', 'headers', 'query'].forEach((key) => {
     if (req[key]) {
       const target = sanitizer(req[key]);
       try {
         req[key] = target;
-      } catch (err) {
-        if (typeof req[key] === 'object' && req[key] && typeof target === 'object' && target) {
+      } catch {
+        if (typeof req[key] === 'object' && target) {
           Object.keys(req[key]).forEach((k) => delete req[key][k]);
-          Object.keys(target).forEach((k) => {
-            req[key][k] = target[k];
-          });
+          Object.assign(req[key], target);
         }
       }
     }
   });
+
   next();
 });
+
 app.use(hpp());
 app.use(morgan('dev'));
-
-// Use Morgan with the custom logger
 app.use(morgan('combined', { stream: loggerStream }));
 
-// Request Rate Limiting
+// Rate limiting
 app.use(
   rateLimit({
     windowMs: config.REQUEST_LIMIT_TIME,
@@ -80,7 +107,7 @@ app.use(
   })
 );
 
-// Serve static files from the public directory
+// Static files
 app.use(
   express.static(publicDirPath, {
     setHeaders: (res) => {
@@ -89,49 +116,44 @@ app.use(
   })
 );
 
-// Recursive function to load routes from nested folders
-const routes: {
-  module: string;
-  path: string;
-  method: string;
-  time: number;
-}[] = [];
+// ================= ROUTES LOADER =================
+
+const routes: any[] = [];
 
 const loadRoutes = (basePath: string, baseRoute: string) => {
-  if (fs.existsSync(basePath)) {
-    fs.readdirSync(basePath).forEach((item: string) => {
-      const itemPath = path.join(basePath, item);
+  if (!fs.existsSync(basePath)) return;
 
-      const routePrefix = `${baseRoute}/${item.replace('.route', '')}`;
+  fs.readdirSync(basePath).forEach((item: string) => {
+    const itemPath = path.join(basePath, item);
+    const start = performance.now();
 
-      const start = performance.now();
-      if (fs.statSync(itemPath).isDirectory()) {
-        loadRoutes(itemPath, routePrefix);
-      } else if (item.endsWith('.route.ts') || item.endsWith('.route.js')) {
-        const routeModule = require(itemPath);
-        app.use(baseRoute, routeModule);
+    if (fs.statSync(itemPath).isDirectory()) {
+      loadRoutes(itemPath, `${baseRoute}/${item}`);
+    } else if (item.endsWith('.route.ts') || item.endsWith('.route.js')) {
+      const routeModule = require(itemPath);
+      app.use(baseRoute, routeModule);
 
-        if (config.NODE_ENV !== 'production') {
-          const end = performance.now();
-          routeModule.stack.forEach((layer: any) => {
-            if (layer.route) {
-              Object.keys(layer.route.methods).forEach((method) => {
-                routes.push({
-                  module: item.split('.')[0],
-                  path: `${baseRoute}${layer.route.path}`,
-                  method: method.toUpperCase(),
-                  time: end - start,
-                });
+      if (config.NODE_ENV !== 'production') {
+        const end = performance.now();
+
+        routeModule.stack?.forEach((layer: any) => {
+          if (layer.route) {
+            Object.keys(layer.route.methods).forEach((method) => {
+              routes.push({
+                module: item.split('.')[0],
+                path: `${baseRoute}${layer.route.path}`,
+                method: method.toUpperCase(),
+                time: end - start,
               });
-            }
-          });
-        }
+            });
+          }
+        });
       }
-    });
-  }
+    }
+  });
 };
 
-// Load routes starting from the 'modules' directory
+// Load routes
 const routesPath = path.join(__dirname, 'modules');
 loadRoutes(routesPath, '/api/v1');
 

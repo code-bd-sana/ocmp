@@ -167,13 +167,7 @@ const TransportManagerpage = () => {
     ) {
       return;
     }
-
-    const intervalId = window.setInterval(() => {
-      void syncMyManager();
-    }, 15000);
-
-    return () => window.clearInterval(intervalId);
-  }, [normalizedStatus, syncMyManager]);
+  }, [normalizedStatus]);
 
   // Debounced search — calls API with searchKey
   const handleSearchChange = (value: string) => {
