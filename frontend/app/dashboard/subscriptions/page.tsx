@@ -516,7 +516,11 @@ export default function DashboardSubscriptionsPage() {
                 }
                 placeholder="Enter coupon code"
               />
-              <Button type="button" variant="outline" onClick={handleApplyCoupon}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleApplyCoupon}
+              >
                 Apply
               </Button>
               {appliedCoupon ? (
@@ -529,9 +533,7 @@ export default function DashboardSubscriptionsPage() {
                 </Button>
               ) : null}
             </div>
-            <p className="text-xs text-slate-500">
-              {couponHelpText}
-            </p>
+            <p className="text-xs text-slate-500">{couponHelpText}</p>
           </div>
         </CardHeader>
         <CardContent>
