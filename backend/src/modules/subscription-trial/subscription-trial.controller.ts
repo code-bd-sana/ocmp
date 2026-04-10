@@ -27,3 +27,22 @@ export const createSubscriptionTrial = catchAsync(
     ServerResponse(res, true, 201, 'Subscription trial created successfully', result);
   }
 );
+
+/**
+ * Controller to get one-time trial eligibility from DB-backed rules.
+ */
+export const getSubscriptionTrialEligibility = catchAsync(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const isSuperAdmin = req.user?.role === UserRole.SUPER_ADMIN;
+    const targetUserId = isSuperAdmin
+      ? (req.query.userId as string) || req.user!._id
+      : req.user!._id;
+
+    const result = await subscriptionTrialServices.getSubscriptionTrialEligibility(
+      targetUserId,
+      req.user?.role
+    );
+
+    ServerResponse(res, true, 200, 'Subscription trial eligibility retrieved', result);
+  }
+);

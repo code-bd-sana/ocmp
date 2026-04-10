@@ -3,8 +3,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   SubscriptionAction,
+  SubscriptionCoupon,
   SubscriptionPricing,
   RemainingSubscriptionInfo,
+  SubscriptionTrialEligibility,
 } from "@/service/subscription";
 import { UserAction } from "@/service/user";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -60,6 +62,14 @@ export default function DashboardSubscriptionsPage() {
   const [remainingInfo, setRemainingInfo] =
     useState<RemainingSubscriptionInfo | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [trialEligibility, setTrialEligibility] =
+    useState<SubscriptionTrialEligibility | null>(null);
+  const [availableCoupons, setAvailableCoupons] = useState<
+    SubscriptionCoupon[]
+  >([]);
+  const [appliedCoupon, setAppliedCoupon] = useState<SubscriptionCoupon | null>(
+    null,
+  );
   const [selectedPlanName, setSelectedPlanName] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
   const [isBuyingId, setIsBuyingId] = useState<string | null>(null);
@@ -69,9 +79,16 @@ export default function DashboardSubscriptionsPage() {
     try {
       setIsLoading(true);
 
-      const [pricingResponse, remainingResponse] = await Promise.all([
+      const [
+        pricingResponse,
+        remainingResponse,
+        trialEligibilityResponse,
+        couponResponse,
+      ] = await Promise.all([
         SubscriptionAction.getSubscriptionPricings(),
         SubscriptionAction.getSubscriptionRemainingDays(),
+        SubscriptionAction.getSubscriptionTrialEligibility(),
+        SubscriptionAction.getSubscriptionCoupons(),
       ]);
 
       const profileResponse = await UserAction.getProfile();
@@ -79,6 +96,8 @@ export default function DashboardSubscriptionsPage() {
       const rows = pricingResponse.data?.subscriptionPricings || [];
       setPricingRows(rows);
       setRemainingInfo(remainingResponse.data || null);
+      setTrialEligibility(trialEligibilityResponse.data || null);
+      setAvailableCoupons(couponResponse.data?.subscriptionCoupons || []);
       setUserRole(profileResponse.data?.role || null);
     } catch (error: unknown) {
       const message =
@@ -130,6 +149,15 @@ export default function DashboardSubscriptionsPage() {
       }),
     [pricingRows, userRole],
   );
+
+  const trialPricings = useMemo(
+    () => visiblePricings.filter((row) => row.subscriptionPlanType === "FREE"),
+    [visiblePricings],
+  );
+
+  const isTrialEnabledByAdmin =
+    trialEligibility?.isTrialEnabledByAdmin ?? trialPricings.length > 0;
+  const isTrialUsedOnce = trialEligibility?.hasUsedTrial ?? false;
 
   const planGroups = useMemo<PlanGroup[]>(() => {
     const map = new Map<string, PlanGroup>();
@@ -185,14 +213,112 @@ export default function DashboardSubscriptionsPage() {
     return { label: "Active subscription", variant: "default" as const };
   }, [remainingInfo]);
 
+  const isReadOnlyMode = !remainingInfo || remainingInfo.expired;
+  const canStartTrial = Boolean(trialEligibility?.eligible);
+  const normalizedCouponCode = couponCode.trim().toUpperCase();
+  const matchedCoupon = useMemo(
+    () =>
+      availableCoupons.find(
+        (coupon) => coupon.code.toUpperCase() === normalizedCouponCode,
+      ) || null,
+    [availableCoupons, normalizedCouponCode],
+  );
+  const couponHelpText = useMemo(() => {
+    if (appliedCoupon) {
+      const discountType = appliedCoupon.discountType.toUpperCase();
+      const discountText =
+        discountType === "PERCENTAGE"
+          ? `${appliedCoupon.discountValue}% off`
+          : `${appliedCoupon.discountValue} fixed discount`;
+
+      return `Applied coupon ${appliedCoupon.code}: ${discountText}. Final payable amount will be calculated by backend.`;
+    }
+
+    return "Optional. Leave it blank to buy directly without a coupon.";
+  }, [appliedCoupon]);
+
+  useEffect(() => {
+    if (!appliedCoupon) return;
+
+    if (appliedCoupon.code.toUpperCase() !== normalizedCouponCode) {
+      setAppliedCoupon(null);
+    }
+  }, [appliedCoupon, normalizedCouponCode]);
+
+  const handleApplyCoupon = () => {
+    if (!normalizedCouponCode) {
+      toast.error("Enter a coupon code first.");
+      return;
+    }
+
+    if (!matchedCoupon || !matchedCoupon.isActive) {
+      toast.error("Coupon is invalid or inactive.");
+      setAppliedCoupon(null);
+      return;
+    }
+
+    setAppliedCoupon(matchedCoupon);
+    toast.success("Coupon applied successfully.");
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponCode("");
+  };
+
+  const trialStatus = useMemo(() => {
+    if (!isTrialEnabledByAdmin) {
+      return {
+        label: "Disabled by admin",
+        detail:
+          trialEligibility?.reason || "Trial cannot be claimed right now.",
+      };
+    }
+
+    if (isTrialUsedOnce) {
+      return {
+        label: "Already claimed (one-time)",
+        detail:
+          "Trial is one-time only. After trial expiry, buy a subscription for write access.",
+      };
+    }
+
+    if (canStartTrial) {
+      return {
+        label: "Available to claim",
+        detail: `You can claim trial once. It gives write access for ${trialEligibility?.trialDays || 7} days.`,
+      };
+    }
+
+    return {
+      label: "Not available now",
+      detail:
+        "Trial can be claimed only when you are in read-only mode and have not used it before.",
+    };
+  }, [
+    canStartTrial,
+    isTrialEnabledByAdmin,
+    isTrialUsedOnce,
+    trialEligibility?.reason,
+    trialEligibility?.trialDays,
+  ]);
+
   const handleBuy = async (pricingId: string, useTrial = false) => {
     try {
       setIsBuyingId(pricingId);
 
       if (useTrial) {
+        if (!canStartTrial) {
+          throw new Error(
+            trialEligibility?.reason ||
+              "Trial is not available right now. Please buy a subscription plan.",
+          );
+        }
+
         await SubscriptionAction.createSubscriptionTrial({
           subscriptionPricingId: pricingId,
         });
+
         toast.success("Trial activated successfully");
         await loadData();
         return;
@@ -200,7 +326,7 @@ export default function DashboardSubscriptionsPage() {
 
       const response = await SubscriptionAction.createSubscriptionCheckout({
         subscriptionPricingId: pricingId,
-        coupon: couponCode.trim() || undefined,
+        coupon: appliedCoupon?.code || undefined,
       });
 
       const checkoutUrl = response.data?.checkoutUrl;
@@ -214,6 +340,7 @@ export default function DashboardSubscriptionsPage() {
         error instanceof Error
           ? error.message
           : "Failed to start subscription checkout";
+
       toast.error(message);
     } finally {
       setIsBuyingId(null);
@@ -235,7 +362,7 @@ export default function DashboardSubscriptionsPage() {
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-slate-500">
@@ -270,7 +397,46 @@ export default function DashboardSubscriptionsPage() {
             {planGroups.length}
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-slate-500">
+              Trial eligibility
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm font-semibold text-slate-900">
+              {trialStatus.label}
+            </p>
+            <p className="mt-1 text-xs text-slate-600">{trialStatus.detail}</p>
+          </CardContent>
+        </Card>
       </div>
+
+      <Card className="border-amber-200 bg-amber-50/70">
+        <CardContent className="pt-6">
+          <p className="text-sm font-semibold text-amber-800">Access mode</p>
+          <p className="mt-1 text-sm text-amber-700">
+            {isReadOnlyMode
+              ? "You are currently in free read-only mode. You can view data, but create, edit, and delete actions are blocked until trial or paid subscription is active."
+              : "Your subscription is active, so create, edit, and delete actions are enabled."}
+          </p>
+          <p className="mt-2 text-xs text-amber-700">
+            Trial is limited and intended for first-time use only. It is not
+            auto-started, you must claim it manually from this page. Once used,
+            purchase a paid plan to continue write access.
+          </p>
+          <p className="mt-2 text-xs text-amber-700">
+            After trial ends (7 days), your account returns to read-only mode.
+            Trial cannot be claimed again.
+          </p>
+          {!isTrialEnabledByAdmin && (
+            <p className="mt-2 text-xs font-semibold text-red-700">
+              Trial claim is currently disabled by admin.
+            </p>
+          )}
+        </CardContent>
+      </Card>
 
       <div className="space-y-3">
         <h2 className="text-lg font-semibold">Plans</h2>
@@ -342,13 +508,32 @@ export default function DashboardSubscriptionsPage() {
             <label className="text-xs font-medium text-slate-500 uppercase">
               Coupon code (optional)
             </label>
-            <Input
-              value={couponCode}
-              onChange={(event) =>
-                setCouponCode(event.target.value.toUpperCase())
-              }
-              placeholder="Enter coupon code"
-            />
+            <div className="flex items-center gap-2">
+              <Input
+                value={couponCode}
+                onChange={(event) =>
+                  setCouponCode(event.target.value.toUpperCase())
+                }
+                placeholder="Enter coupon code"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleApplyCoupon}
+              >
+                Apply
+              </Button>
+              {appliedCoupon ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={handleRemoveCoupon}
+                >
+                  Remove
+                </Button>
+              ) : null}
+            </div>
+            <p className="text-xs text-slate-500">{couponHelpText}</p>
           </div>
         </CardHeader>
         <CardContent>
@@ -370,6 +555,15 @@ export default function DashboardSubscriptionsPage() {
                 {selectedPlanRows.map((row) => {
                   const isBuying = isBuyingId === row._id;
                   const isTrialPlan = row.subscriptionPlanType === "FREE";
+                  const isTrialDisabled = isTrialPlan && !canStartTrial;
+
+                  const trialButtonLabel = isTrialUsedOnce
+                    ? "Trial used"
+                    : !isTrialEnabledByAdmin
+                      ? "Trial disabled"
+                      : !isReadOnlyMode
+                        ? "Not available"
+                        : "Start trial";
 
                   return (
                     <TableRow key={row._id}>
@@ -383,7 +577,7 @@ export default function DashboardSubscriptionsPage() {
                       <TableCell className="text-right">
                         <Button
                           onClick={() => handleBuy(row._id, isTrialPlan)}
-                          disabled={isBuying}
+                          disabled={isBuying || isTrialDisabled}
                           size="sm"
                         >
                           {isBuying ? (
@@ -392,7 +586,7 @@ export default function DashboardSubscriptionsPage() {
                               Redirecting
                             </>
                           ) : isTrialPlan ? (
-                            "Start trial"
+                            trialButtonLabel
                           ) : (
                             "Buy now"
                           )}

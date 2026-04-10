@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/table";
 import { useState } from "react";
 import { TableProps } from "./table.types";
+import { useSubscriptionWriteAccess } from "@/hooks/useSubscriptionWriteAccess";
 
 // Define types for the action groups and buttons
 export type HeaderActionGroup = {
@@ -51,6 +52,8 @@ export type HeaderButton = {
   search?: boolean;
   filter?: boolean;
   options?: string[];
+  writeAction?: boolean;
+  disabled?: boolean;
 };
 
 export type TableSearch = {
@@ -78,6 +81,33 @@ export default function UniversalTable<T>({
   headerSearch,
   inlineSearch,
 }: UniversalTablePropsWithFilters<T>) {
+  const { canWrite, isChecking, reason } = useSubscriptionWriteAccess();
+
+  const isWriteButton = (
+    button: Pick<HeaderButton, "label" | "variant" | "writeAction">,
+  ) => {
+    if (button.writeAction === true) return true;
+
+    const label = (button.label || "").toLowerCase();
+    const variant = (button.variant || "").toLowerCase();
+
+    return (
+      ["edit", "delete", "destructive"].includes(variant) ||
+      /(add|create|new|edit|update|delete|remove|save|submit)/i.test(label)
+    );
+  };
+
+  const resolveDisabled = (
+    button: Pick<
+      HeaderButton,
+      "label" | "variant" | "writeAction" | "disabled"
+    >,
+  ) => {
+    const blockedBySubscription =
+      !isChecking && !canWrite && isWriteButton(button);
+    return Boolean(button.disabled || blockedBySubscription);
+  };
+
   // State for header and inline search/filter
   const [internalHeaderSearch, setInternalHeaderSearch] = useState("");
   const [internalInlineSearch, setInternalInlineSearch] = useState("");
@@ -174,6 +204,12 @@ export default function UniversalTable<T>({
 
   return (
     <div>
+      {!isChecking && !canWrite && (
+        <div className="mb-3 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          {reason}
+        </div>
+      )}
+
       {/* Header */}
       <div className="mx-auto p-3 sm:p-5">
         {headerActionGroups.map((group, idx) => (
@@ -182,7 +218,9 @@ export default function UniversalTable<T>({
             className="mb-4 flex flex-wrap items-center justify-between gap-3"
           >
             {group.title && (
-              <h2 className="text-xl font-semibold sm:text-2xl">{group.title}</h2>
+              <h2 className="text-xl font-semibold sm:text-2xl">
+                {group.title}
+              </h2>
             )}
 
             <div className="flex flex-wrap items-center gap-2">
@@ -244,6 +282,8 @@ export default function UniversalTable<T>({
                       key={idx}
                       variant={btn.variant || "default"}
                       className={btn.className || ""}
+                      disabled={resolveDisabled(btn)}
+                      title={resolveDisabled(btn) ? reason : undefined}
                       onClick={() => btn.onClick()}
                       size={btn.size || "default"}
                     >
@@ -308,6 +348,8 @@ export default function UniversalTable<T>({
                       key={idx}
                       variant={btn.variant || "default"}
                       className={btn.className}
+                      disabled={resolveDisabled(btn)}
+                      title={resolveDisabled(btn) ? reason : undefined}
                       onClick={() => btn.onClick()}
                       size={btn.size || "default"}
                     >
@@ -330,7 +372,9 @@ export default function UniversalTable<T>({
               className="mb-4 flex flex-wrap items-center justify-between gap-3"
             >
               {group.title && (
-                <h2 className="text-xl font-semibold sm:text-2xl">{group.title}</h2>
+                <h2 className="text-xl font-semibold sm:text-2xl">
+                  {group.title}
+                </h2>
               )}
 
               <div className="flex flex-wrap items-center gap-2">
@@ -399,6 +443,8 @@ export default function UniversalTable<T>({
                         key={idx}
                         variant={btn.variant || "default"}
                         className={btn.className || ""}
+                        disabled={resolveDisabled(btn)}
+                        title={resolveDisabled(btn) ? reason : undefined}
                         onClick={() => btn.onClick()}
                         size={btn.size || "default"}
                       >
@@ -465,6 +511,8 @@ export default function UniversalTable<T>({
                         key={idx}
                         variant={btn.variant || "default"}
                         className={btn.className}
+                        disabled={resolveDisabled(btn)}
+                        title={resolveDisabled(btn) ? reason : undefined}
                         onClick={() => btn.onClick()}
                         size={btn.size || "default"}
                       >
@@ -510,6 +558,8 @@ export default function UniversalTable<T>({
                             key={idx}
                             variant={action.variant || "default"}
                             size="sm"
+                            disabled={resolveDisabled(action)}
+                            title={resolveDisabled(action) ? reason : undefined}
                             onClick={() => action.onClick(row)}
                           >
                             {action.icon}
@@ -533,6 +583,8 @@ export default function UniversalTable<T>({
                             key={idx}
                             variant={action.variant || "default"}
                             size="sm"
+                            disabled={resolveDisabled(action)}
+                            title={resolveDisabled(action) ? reason : undefined}
                             onClick={() => action.onClick(row)}
                           >
                             {action.icon}

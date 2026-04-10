@@ -69,6 +69,15 @@ export type CreateSubscriptionTrialPayload = {
   subscriptionDurationId?: string;
 };
 
+export type SubscriptionTrialEligibility = {
+  eligible: boolean;
+  reason: string;
+  hasUsedTrial: boolean;
+  isTrialEnabledByAdmin: boolean;
+  hasActiveSubscription: boolean;
+  trialDays: number;
+};
+
 export type SubscriptionCouponPricing = {
   _id: string;
   price: number;
@@ -506,6 +515,26 @@ const createSubscriptionTrial = async (
   }
 };
 
+const getSubscriptionTrialEligibility = async (): Promise<
+  IApiResponse<SubscriptionTrialEligibility>
+> => {
+  try {
+    const response = await axios.get<
+      IApiResponse<SubscriptionTrialEligibility>
+    >(`${base_url}/subscription-trial/eligible`, {
+      headers: getAuthHeaders(),
+    });
+
+    return response.data;
+  } catch (error: unknown) {
+    if (axios.isAxiosError<IApiResponse>(error)) {
+      throw new Error(extractApiError(error.response?.data));
+    }
+
+    throw new Error("Something went wrong");
+  }
+};
+
 const getSubscriptionCoupons = async (params?: {
   searchKey?: string;
   showPerPage?: number;
@@ -614,6 +643,7 @@ export const SubscriptionAction = {
   getSubscriptionRemainingDays,
   createSubscriptionCheckout,
   createSubscriptionTrial,
+  getSubscriptionTrialEligibility,
   getSubscriptionCoupons,
   createSubscriptionCoupon,
   updateSubscriptionCoupon,

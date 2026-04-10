@@ -27,6 +27,10 @@ export type TableAction<T> = {
     | "download";
   /** Optional icon */
   icon?: React.ReactNode;
+  /** Explicitly mark this action as write/CUD action */
+  writeAction?: boolean;
+  /** Optional disabled flag from caller */
+  disabled?: boolean;
 };
 
 /** Props for the universal table component */

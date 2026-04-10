@@ -27,6 +27,7 @@ import {
   validateUpdateVehicle,
   validateUpdateVehicleIds,
 } from './vehicle.validation';
+import checkSubscriptionValidity from '../../middlewares/check-subscription-validity';
 
 // Initialize router
 const router = Router();
@@ -43,7 +44,7 @@ router.use(isAuthorized());
 router.post(
   '/create-vehicle',
   authorizedRoles([UserRole.TRANSPORT_MANAGER]),
-  // checkSubscriptionValidity,
+  checkSubscriptionValidity,
   validateCreateVehicleAsTransportManager,
   validateClientForManagerMiddleware,
   createVehicleAsTransportManager
@@ -60,7 +61,7 @@ router.post(
 router.post(
   '/create-stand-alone-vehicle',
   authorizedRoles([UserRole.STANDALONE_USER]),
-  // checkSubscriptionValidity,
+  checkSubscriptionValidity,
   validateCreateVehicleAsStandAlone,
   createVehicleAsStandAlone
 );
@@ -76,7 +77,7 @@ router.post(
 router.patch(
   '/update-vehicle/:vehicleId/:standAloneId',
   authorizedRoles([UserRole.TRANSPORT_MANAGER]),
-  // checkSubscriptionValidity,
+  checkSubscriptionValidity,
   validateClientForManagerMiddleware,
   validateUpdateVehicleIds,
   validateUpdateVehicle,
@@ -93,7 +94,7 @@ router.patch(
 router.patch(
   '/update-vehicle/:id',
   authorizedRoles([UserRole.STANDALONE_USER]),
-  // checkSubscriptionValidity,
+  checkSubscriptionValidity,
   validateId,
   validateUpdateVehicle,
   updateVehicle
@@ -110,7 +111,7 @@ router.patch(
 router.delete(
   '/delete-vehicle/:vehicleId/:standAloneId',
   authorizedRoles([UserRole.TRANSPORT_MANAGER]),
-  // checkSubscriptionValidity,
+  checkSubscriptionValidity,
   validateClientForManagerMiddleware,
   validateDeleteVehicle,
   deleteVehicle
@@ -119,7 +120,7 @@ router.delete(
 router.delete(
   '/delete-vehicle/:id',
   authorizedRoles([UserRole.STANDALONE_USER]),
-  // checkSubscriptionValidity,
+  checkSubscriptionValidity,
   validateId,
   deleteVehicle
 );
