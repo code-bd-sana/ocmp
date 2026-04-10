@@ -1,17 +1,143 @@
 // Import the model
 import mongoose from 'mongoose';
 
-import config from '../../config/config';
 import {
+  ApplicableAccountType,
   IUserSubscription,
   SubscriptionDuration,
   SubscriptionPlan,
   SubscriptionPlanType,
   SubscriptionPricing,
   SubscriptionStatus,
+  UserRole,
   User,
   UserSubscription,
 } from '../../models';
+import { getSubscriptionRemainingDays } from '../subscription-remain/subscription-remain.service';
+
+const TRIAL_DAYS = 7;
+
+type TrialEligibilityResult = {
+  eligible: boolean;
+  reason: string;
+  hasUsedTrial: boolean;
+  isTrialEnabledByAdmin: boolean;
+  hasActiveSubscription: boolean;
+  trialDays: number;
+};
+
+const getRoleScopedAccountTypes = (role?: UserRole): ApplicableAccountType[] => {
+  if (role === UserRole.STANDALONE_USER) {
+    return [ApplicableAccountType.STANDALONE, ApplicableAccountType.BOTH];
+  }
+
+  if (role === UserRole.TRANSPORT_MANAGER) {
+    return [ApplicableAccountType.TRANSPORT_MANAGER, ApplicableAccountType.BOTH];
+  }
+
+  return [ApplicableAccountType.BOTH];
+};
+
+const getSubscriptionTrialEligibility = async (
+  userId: string,
+  role?: UserRole
+): Promise<TrialEligibilityResult> => {
+  if (!mongoose.Types.ObjectId.isValid(userId)) {
+    throw new Error('Invalid user id');
+  }
+
+  const roleScopedTypes = getRoleScopedAccountTypes(role);
+
+  const [hasUsedTrial, remaining] = await Promise.all([
+    UserSubscription.exists({
+      userId: new mongoose.Types.ObjectId(userId),
+      isFree: true,
+    }),
+    getSubscriptionRemainingDays(userId),
+  ]);
+
+  const hasActiveSubscription = !remaining.expired || remaining.isLifetime;
+
+  const trialPricingCount = await SubscriptionPricing.aggregate([
+    {
+      $match: {
+        isActive: true,
+      },
+    },
+    {
+      $lookup: {
+        from: 'subscriptionplans',
+        localField: 'subscriptionPlanId',
+        foreignField: '_id',
+        as: 'plan',
+      },
+    },
+    { $unwind: '$plan' },
+    {
+      $lookup: {
+        from: 'subscriptiondurations',
+        localField: 'subscriptionDurationId',
+        foreignField: '_id',
+        as: 'duration',
+      },
+    },
+    { $unwind: '$duration' },
+    {
+      $match: {
+        'plan.planType': SubscriptionPlanType.FREE,
+        'plan.isActive': true,
+        'plan.applicableAccountType': { $in: roleScopedTypes },
+        'duration.isActive': true,
+      },
+    },
+    { $limit: 1 },
+    { $count: 'count' },
+  ]);
+
+  const isTrialEnabledByAdmin = Boolean(trialPricingCount[0]?.count);
+
+  if (!isTrialEnabledByAdmin) {
+    return {
+      eligible: false,
+      reason: 'Trial is currently disabled by admin.',
+      hasUsedTrial: Boolean(hasUsedTrial),
+      isTrialEnabledByAdmin,
+      hasActiveSubscription,
+      trialDays: TRIAL_DAYS,
+    };
+  }
+
+  if (hasUsedTrial) {
+    return {
+      eligible: false,
+      reason: 'Trial has already been used. It can only be claimed once.',
+      hasUsedTrial: true,
+      isTrialEnabledByAdmin,
+      hasActiveSubscription,
+      trialDays: TRIAL_DAYS,
+    };
+  }
+
+  if (hasActiveSubscription) {
+    return {
+      eligible: false,
+      reason: 'You already have an active subscription or trial.',
+      hasUsedTrial: false,
+      isTrialEnabledByAdmin,
+      hasActiveSubscription: true,
+      trialDays: TRIAL_DAYS,
+    };
+  }
+
+  return {
+    eligible: true,
+    reason: `Eligible for one-time ${TRIAL_DAYS}-day trial.`,
+    hasUsedTrial: false,
+    isTrialEnabledByAdmin,
+    hasActiveSubscription: false,
+    trialDays: TRIAL_DAYS,
+  };
+};
 
 /**
  * Service function to create a new subscription-trial.
@@ -29,6 +155,12 @@ const createSubscriptionTrial = async (
   const userExists = await User.exists({ _id: new mongoose.Types.ObjectId(data.userId) });
   if (!userExists) {
     throw new Error('User not found');
+  }
+
+  const user = await User.findById(data.userId).select('role').lean();
+  const eligibility = await getSubscriptionTrialEligibility(data.userId, user?.role as UserRole);
+  if (!eligibility.eligible) {
+    throw new Error(eligibility.reason);
   }
 
   if (!data.subscriptionPricingId && !data.subscriptionPlanId) {
@@ -83,22 +215,13 @@ const createSubscriptionTrial = async (
   // Set time for consistency
   const endDate = new Date(newDate);
   // Set time to end of the day
-  endDate.setDate(endDate.getDate() + config.SUBSCRIPTION_TRIAL_DAYS); // Add trial days from config
+  endDate.setDate(endDate.getDate() + TRIAL_DAYS);
   data = {
     ...data,
     startDate: newDate,
     endDate: endDate,
     status: SubscriptionStatus.TRIAL, // Set status to TRIAL
   };
-  // Check for existing active trial for the user and subscription
-  const existingSubscriptionTrial = await UserSubscription.findOne({
-    userId: new mongoose.Types.ObjectId(data.userId),
-    status: { $in: [SubscriptionStatus.TRIAL, SubscriptionStatus.ACTIVE] },
-  }).lean();
-  // Only allow one active trial per user. If an active trial already exists, throw an error
-  if (existingSubscriptionTrial) {
-    throw new Error('An active or trial subscription already exists for this user');
-  }
   // Proceed to create the subscription-trial
   const newSubscriptionTrial = new UserSubscription(data);
   // Save to database
@@ -108,4 +231,5 @@ const createSubscriptionTrial = async (
 
 export const subscriptionTrialServices = {
   createSubscriptionTrial,
+  getSubscriptionTrialEligibility,
 };

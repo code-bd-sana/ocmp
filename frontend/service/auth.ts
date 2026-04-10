@@ -1,8 +1,21 @@
 import { base_url } from "@/lib/utils";
 import axios from "axios";
 import Cookies from "js-cookie";
+import { normalizeApiErrorPayload } from "./shared/subscription-access";
 
 const ROLE_COOKIE_NAME = "role";
+let axiosErrorInterceptorRegistered = false;
+
+if (!axiosErrorInterceptorRegistered) {
+  axios.interceptors.response.use(
+    (response) => response,
+    (error) => {
+      normalizeApiErrorPayload(error?.response?.data);
+      return Promise.reject(error);
+    },
+  );
+  axiosErrorInterceptorRegistered = true;
+}
 
 export interface IRegister {
   fullName: string;

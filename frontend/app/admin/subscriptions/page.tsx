@@ -240,6 +240,21 @@ export default function AdminSubscriptionsPage() {
     [plans],
   );
 
+  const freePlans = useMemo(
+    () => plans.filter((plan) => plan.planType === "FREE"),
+    [plans],
+  );
+
+  const freePricingRows = useMemo(
+    () => pricingRows.filter((row) => row.subscriptionPlanType === "FREE"),
+    [pricingRows],
+  );
+
+  const isTrialEnabled = useMemo(
+    () => freePricingRows.some((row) => row.isActive),
+    [freePricingRows],
+  );
+
   const selectedDurationLabel = useMemo(() => {
     if (formState.durationMode === "new") {
       return `${formState.durationName.trim() || "NEW"} (${formState.durationDays || "0"} days)`;
@@ -589,6 +604,45 @@ export default function AdminSubscriptionsPage() {
     }
   };
 
+  const handleToggleTrialAvailability = async () => {
+    try {
+      if (!freePricingRows.length) {
+        toast.error(
+          "Trial toggle unavailable. Create at least one FREE pricing first.",
+        );
+        return;
+      }
+
+      const nextState = !isTrialEnabled;
+
+      setIsLoading(true);
+
+      await Promise.all(
+        freePricingRows.map((pricing) =>
+          SubscriptionAction.updateSubscriptionPricing(pricing._id, {
+            isActive: nextState,
+          }),
+        ),
+      );
+
+      toast.success(
+        nextState
+          ? "Trial has been enabled. Users can now claim trial manually."
+          : "Trial has been disabled. Users can no longer claim trial.",
+      );
+
+      await loadData();
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to update trial availability";
+      toast.error(message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleCreateCoupon = async () => {
     if (!couponForm.code.trim()) {
       toast.error("Coupon code is required");
@@ -677,6 +731,23 @@ export default function AdminSubscriptionsPage() {
           <Button onClick={loadData} variant="outline" disabled={isLoading}>
             <RefreshCcw className="mr-2 h-4 w-4" />
             Refresh
+          </Button>
+
+          <Button
+            onClick={handleToggleTrialAvailability}
+            variant={isTrialEnabled ? "destructive" : "default"}
+            disabled={isLoading || !freePricingRows.length}
+            className={
+              isTrialEnabled ? "" : "bg-[#0d4b9f] text-white hover:bg-[#0b3e84]"
+            }
+            title={
+              !freePricingRows.length
+                ? "Create FREE pricing to control trial availability"
+                : undefined
+            }
+          >
+            <Ban className="mr-2 h-4 w-4" />
+            {isTrialEnabled ? "Disable Trial" : "Enable Trial"}
           </Button>
 
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -1248,6 +1319,15 @@ export default function AdminSubscriptionsPage() {
           <p className="text-xs font-medium text-[#5F6E8A]">Pages</p>
           <p className="mt-2 text-2xl font-bold text-[#0d4b9f]">{totalPages}</p>
         </div>
+      </div>
+
+      <div className="rounded-lg border border-[#E8EFFC] bg-[#F8FAFF] p-4">
+        <p className="text-xs font-medium text-[#5F6E8A]">Trial Status</p>
+        <p className="mt-2 text-sm font-semibold text-[#0d4b9f]">
+          {isTrialEnabled
+            ? "Enabled - users can claim trial from dashboard subscriptions"
+            : "Disabled - users cannot claim trial"}
+        </p>
       </div>
 
       <div className="rounded-lg border border-[#EBEEF7] bg-white p-4 shadow-sm">

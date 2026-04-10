@@ -2,7 +2,10 @@
 import { Router } from 'express';
 
 // Import controller from corresponding module
-import { createSubscriptionTrial } from './subscription-trial.controller';
+import {
+  createSubscriptionTrial,
+  getSubscriptionTrialEligibility,
+} from './subscription-trial.controller';
 
 //Import validation from corresponding module
 import authorizedRoles from '../../middlewares/authorized-roles';
@@ -26,6 +29,13 @@ router.post(
   isAuthorized(),
   authorizedRoles([UserRole.SUPER_ADMIN, UserRole.TRANSPORT_MANAGER, UserRole.STANDALONE_USER]),
   createSubscriptionTrial
+);
+
+router.get(
+  '/eligible',
+  isAuthorized(),
+  authorizedRoles([UserRole.SUPER_ADMIN, UserRole.TRANSPORT_MANAGER, UserRole.STANDALONE_USER]),
+  getSubscriptionTrialEligibility
 );
 
 // Export the router
