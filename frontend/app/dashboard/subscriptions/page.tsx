@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   SubscriptionAction,
+  SubscriptionCoupon,
   SubscriptionPricing,
   RemainingSubscriptionInfo,
   SubscriptionTrialEligibility,
@@ -63,6 +64,12 @@ export default function DashboardSubscriptionsPage() {
   const [userRole, setUserRole] = useState<string | null>(null);
   const [trialEligibility, setTrialEligibility] =
     useState<SubscriptionTrialEligibility | null>(null);
+  const [availableCoupons, setAvailableCoupons] = useState<
+    SubscriptionCoupon[]
+  >([]);
+  const [appliedCoupon, setAppliedCoupon] = useState<SubscriptionCoupon | null>(
+    null,
+  );
   const [selectedPlanName, setSelectedPlanName] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
   const [isBuyingId, setIsBuyingId] = useState<string | null>(null);
@@ -72,12 +79,17 @@ export default function DashboardSubscriptionsPage() {
     try {
       setIsLoading(true);
 
-      const [pricingResponse, remainingResponse, trialEligibilityResponse] =
-        await Promise.all([
-          SubscriptionAction.getSubscriptionPricings(),
-          SubscriptionAction.getSubscriptionRemainingDays(),
-          SubscriptionAction.getSubscriptionTrialEligibility(),
-        ]);
+      const [
+        pricingResponse,
+        remainingResponse,
+        trialEligibilityResponse,
+        couponResponse,
+      ] = await Promise.all([
+        SubscriptionAction.getSubscriptionPricings(),
+        SubscriptionAction.getSubscriptionRemainingDays(),
+        SubscriptionAction.getSubscriptionTrialEligibility(),
+        SubscriptionAction.getSubscriptionCoupons(),
+      ]);
 
       const profileResponse = await UserAction.getProfile();
 
@@ -85,6 +97,7 @@ export default function DashboardSubscriptionsPage() {
       setPricingRows(rows);
       setRemainingInfo(remainingResponse.data || null);
       setTrialEligibility(trialEligibilityResponse.data || null);
+      setAvailableCoupons(couponResponse.data?.subscriptionCoupons || []);
       setUserRole(profileResponse.data?.role || null);
     } catch (error: unknown) {
       const message =
@@ -202,6 +215,56 @@ export default function DashboardSubscriptionsPage() {
 
   const isReadOnlyMode = !remainingInfo || remainingInfo.expired;
   const canStartTrial = Boolean(trialEligibility?.eligible);
+  const normalizedCouponCode = couponCode.trim().toUpperCase();
+  const matchedCoupon = useMemo(
+    () =>
+      availableCoupons.find(
+        (coupon) => coupon.code.toUpperCase() === normalizedCouponCode,
+      ) || null,
+    [availableCoupons, normalizedCouponCode],
+  );
+  const couponHelpText = useMemo(() => {
+    if (appliedCoupon) {
+      const discountType = appliedCoupon.discountType.toUpperCase();
+      const discountText =
+        discountType === "PERCENTAGE"
+          ? `${appliedCoupon.discountValue}% off`
+          : `${appliedCoupon.discountValue} fixed discount`;
+
+      return `Applied coupon ${appliedCoupon.code}: ${discountText}. Final payable amount will be calculated by backend.`;
+    }
+
+    return "Optional. Leave it blank to buy directly without a coupon.";
+  }, [appliedCoupon]);
+
+  useEffect(() => {
+    if (!appliedCoupon) return;
+
+    if (appliedCoupon.code.toUpperCase() !== normalizedCouponCode) {
+      setAppliedCoupon(null);
+    }
+  }, [appliedCoupon, normalizedCouponCode]);
+
+  const handleApplyCoupon = () => {
+    if (!normalizedCouponCode) {
+      toast.error("Enter a coupon code first.");
+      return;
+    }
+
+    if (!matchedCoupon || !matchedCoupon.isActive) {
+      toast.error("Coupon is invalid or inactive.");
+      setAppliedCoupon(null);
+      return;
+    }
+
+    setAppliedCoupon(matchedCoupon);
+    toast.success("Coupon applied successfully.");
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponCode("");
+  };
 
   const trialStatus = useMemo(() => {
     if (!isTrialEnabledByAdmin) {
@@ -263,7 +326,7 @@ export default function DashboardSubscriptionsPage() {
 
       const response = await SubscriptionAction.createSubscriptionCheckout({
         subscriptionPricingId: pricingId,
-        coupon: couponCode.trim() || undefined,
+        coupon: appliedCoupon?.code || undefined,
       });
 
       const checkoutUrl = response.data?.checkoutUrl;
@@ -445,13 +508,30 @@ export default function DashboardSubscriptionsPage() {
             <label className="text-xs font-medium text-slate-500 uppercase">
               Coupon code (optional)
             </label>
-            <Input
-              value={couponCode}
-              onChange={(event) =>
-                setCouponCode(event.target.value.toUpperCase())
-              }
-              placeholder="Enter coupon code"
-            />
+            <div className="flex items-center gap-2">
+              <Input
+                value={couponCode}
+                onChange={(event) =>
+                  setCouponCode(event.target.value.toUpperCase())
+                }
+                placeholder="Enter coupon code"
+              />
+              <Button type="button" variant="outline" onClick={handleApplyCoupon}>
+                Apply
+              </Button>
+              {appliedCoupon ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={handleRemoveCoupon}
+                >
+                  Remove
+                </Button>
+              ) : null}
+            </div>
+            <p className="text-xs text-slate-500">
+              {couponHelpText}
+            </p>
           </div>
         </CardHeader>
         <CardContent>
