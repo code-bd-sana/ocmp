@@ -245,8 +245,15 @@ export default function DashboardSubscriptionsPage() {
   }, [selectedPlanName, visiblePricings]);
 
   const currentStatus = useMemo(() => {
-    if (!remainingInfo || remainingInfo.expired) {
-      return { label: "No active subscription", variant: "secondary" as const };
+    if (!remainingInfo?.accessGranted) {
+      return { label: "Read-only mode", variant: "secondary" as const };
+    }
+
+    if (remainingInfo.accessSource === "ASSIGNED_MANAGER") {
+      return {
+        label: "Write access via manager",
+        variant: "default" as const,
+      };
     }
 
     return { label: "Active subscription", variant: "default" as const };
@@ -269,7 +276,15 @@ export default function DashboardSubscriptionsPage() {
 
   const activePlanSummary = useMemo(() => {
     const plan = remainingInfo?.activePlan;
-    if (!plan?.planName || remainingInfo?.expired) {
+    if (!plan) {
+      if (remainingInfo?.accessSource === "ASSIGNED_MANAGER") {
+        return "Write access granted by assigned transport manager";
+      }
+
+      return "No active paid or trial pack right now";
+    }
+
+    if (!remainingInfo?.accessGranted && remainingInfo?.expired) {
       return "No active paid or trial pack right now";
     }
 
@@ -280,7 +295,7 @@ export default function DashboardSubscriptionsPage() {
     return `${plan.planName} • ${duration}`;
   }, [remainingInfo]);
 
-  const isReadOnlyMode = !remainingInfo || remainingInfo.expired;
+  const isReadOnlyMode = !remainingInfo?.accessGranted;
   const canStartTrial = Boolean(trialEligibility?.eligible);
   const normalizedCouponCode = couponCode.trim().toUpperCase();
   const matchedCoupon = useMemo(
@@ -571,8 +586,10 @@ export default function DashboardSubscriptionsPage() {
           </p>
           <p className="mt-1 text-sm text-amber-700">
             {isReadOnlyMode
-              ? "You are currently in free read-only mode. You can view data, but create, edit, and delete actions are blocked until trial or paid subscription is active."
-              : "Your subscription is active, so create, edit, and delete actions are enabled."}
+              ? "You are currently in free read-only mode. You can view data, but create, edit, and delete actions are blocked until trial, paid subscription, or a transport-manager assignment is active."
+              : remainingInfo?.accessSource === "ASSIGNED_MANAGER"
+                ? "You can create, edit, and delete because you are assigned to a transport manager. No separate subscription is required."
+                : "Your subscription is active, so create, edit, and delete actions are enabled."}
           </p>
           <p className="mt-2 text-xs text-amber-700">
             Trial is limited and intended for first-time use only. It is not

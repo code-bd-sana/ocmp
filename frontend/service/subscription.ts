@@ -50,6 +50,8 @@ export type RemainingSubscriptionInfo = {
   startDate?: string;
   endDate?: string;
   subscriptionId?: string;
+  accessGranted?: boolean;
+  accessSource?: "SUBSCRIPTION" | "ASSIGNED_MANAGER" | "NONE";
   activePlan?: {
     subscriptionPlanId?: string;
     subscriptionDurationId?: string;

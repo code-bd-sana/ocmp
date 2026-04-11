@@ -1,5 +1,12 @@
 import mongoose from 'mongoose';
-import { SubscriptionStatus, UserSubscription } from '../../models';
+import {
+  ClientManagement,
+  ClientStatus,
+  SubscriptionStatus,
+  User,
+  UserRole,
+  UserSubscription,
+} from '../../models';
 
 type PopulatedSubscriptionRef = {
   _id?: mongoose.Types.ObjectId | string;
@@ -19,6 +26,8 @@ type PopulatedSubscription = {
   subscriptionDurationId?: mongoose.Types.ObjectId | string | PopulatedSubscriptionRef;
   subscriptionPricingId?: mongoose.Types.ObjectId | string | PopulatedSubscriptionRef;
 };
+
+type AccessSource = 'SUBSCRIPTION' | 'ASSIGNED_MANAGER' | 'NONE';
 
 const isPopulatedRef = (
   value: mongoose.Types.ObjectId | string | PopulatedSubscriptionRef | undefined
@@ -62,6 +71,20 @@ const getRefIdString = (
 export const getSubscriptionRemainingDays = async (userId: string) => {
   // Validate userId
   if (!mongoose.Types.ObjectId.isValid(userId)) throw new Error('Invalid user id');
+
+  const currentUser = await User.findById(userId).select('role').lean();
+  const hasApprovedManagerAssignment =
+    currentUser?.role === UserRole.STANDALONE_USER
+      ? Boolean(
+          await ClientManagement.findOne({
+            'clients.clientId': new mongoose.Types.ObjectId(userId),
+            'clients.status': ClientStatus.APPROVED,
+          })
+            .select('_id')
+            .lean()
+        )
+      : false;
+
   // Find active subscription for the user
   const subscription = await UserSubscription.findOne({
     userId: new mongoose.Types.ObjectId(userId),
@@ -104,6 +127,19 @@ export const getSubscriptionRemainingDays = async (userId: string) => {
         }
       : undefined;
 
+  const accessGranted =
+    hasApprovedManagerAssignment ||
+    Boolean(
+      populatedSubscription &&
+      (!populatedSubscription.endDate || populatedSubscription.endDate > new Date())
+    );
+
+  const accessSource: AccessSource = hasApprovedManagerAssignment
+    ? 'ASSIGNED_MANAGER'
+    : populatedSubscription
+      ? 'SUBSCRIPTION'
+      : 'NONE';
+
   // No active subscription at all
   if (!populatedSubscription) {
     return {
@@ -114,6 +150,8 @@ export const getSubscriptionRemainingDays = async (userId: string) => {
       endDate: undefined,
       subscriptionId: undefined,
       activePlan: undefined,
+      accessGranted,
+      accessSource,
     };
   }
   // Calculate remaining days
@@ -128,6 +166,8 @@ export const getSubscriptionRemainingDays = async (userId: string) => {
       endDate: undefined,
       subscriptionId: populatedSubscription._id.toString(),
       activePlan,
+      accessGranted,
+      accessSource,
     };
   }
   // Subscription with end date
@@ -142,5 +182,7 @@ export const getSubscriptionRemainingDays = async (userId: string) => {
     endDate: populatedSubscription.endDate,
     subscriptionId: populatedSubscription._id.toString(),
     activePlan,
+    accessGranted,
+    accessSource,
   };
 };
