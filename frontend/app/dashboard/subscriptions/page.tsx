@@ -21,7 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { CheckCircle2, CreditCard, Loader2 } from "lucide-react";
+import { CalendarDays, CheckCircle2, CreditCard, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 type PlanGroup = {
@@ -57,6 +57,44 @@ const formatDuration = (days: number) => {
   return `${days} days`;
 };
 
+const formatDate = (value?: string) => {
+  if (!value) return "-";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(date);
+};
+
+const calculateDiscountedPrice = (
+  price: number,
+  coupon: SubscriptionCoupon | null,
+  pricingId: string,
+) => {
+  if (!coupon) return price;
+
+  const applicablePricingIds = (coupon.subscriptionPricings || []).map(
+    (pricing) => pricing._id.toString(),
+  );
+  const hasPricingRestriction = applicablePricingIds.length > 0;
+  const isApplicable =
+    !hasPricingRestriction || applicablePricingIds.includes(pricingId);
+
+  if (!isApplicable) return price;
+
+  const normalizedDiscountType = coupon.discountType.toUpperCase();
+  if (normalizedDiscountType === "PERCENTAGE") {
+    const discountAmount = (price * coupon.discountValue) / 100;
+    return Math.max(0, price - discountAmount);
+  }
+
+  return Math.max(0, price - coupon.discountValue);
+};
+
 export default function DashboardSubscriptionsPage() {
   const [pricingRows, setPricingRows] = useState<SubscriptionPricing[]>([]);
   const [remainingInfo, setRemainingInfo] =
@@ -73,6 +111,7 @@ export default function DashboardSubscriptionsPage() {
   const [selectedPlanName, setSelectedPlanName] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
   const [isBuyingId, setIsBuyingId] = useState<string | null>(null);
+  const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
   const [couponCode, setCouponCode] = useState("");
 
   const loadData = useCallback(async () => {
@@ -213,16 +252,45 @@ export default function DashboardSubscriptionsPage() {
     return { label: "Active subscription", variant: "default" as const };
   }, [remainingInfo]);
 
+  const roleLabel = useMemo(() => {
+    if (!userRole) return "User";
+
+    const normalizedRole = userRole.toUpperCase();
+    if (normalizedRole === "TRANSPORT_MANAGER") return "Transport Manager";
+    if (
+      normalizedRole === "STANDALONE_USER" ||
+      normalizedRole === "STANDALONE"
+    ) {
+      return "Standalone User";
+    }
+
+    return userRole.replaceAll("_", " ");
+  }, [userRole]);
+
+  const activePlanSummary = useMemo(() => {
+    const plan = remainingInfo?.activePlan;
+    if (!plan?.planName || remainingInfo?.expired) {
+      return "No active paid or trial pack right now";
+    }
+
+    const duration = plan.durationInDays
+      ? formatDuration(plan.durationInDays)
+      : plan.durationName || "Custom duration";
+
+    return `${plan.planName} • ${duration}`;
+  }, [remainingInfo]);
+
   const isReadOnlyMode = !remainingInfo || remainingInfo.expired;
   const canStartTrial = Boolean(trialEligibility?.eligible);
   const normalizedCouponCode = couponCode.trim().toUpperCase();
   const matchedCoupon = useMemo(
     () =>
       availableCoupons.find(
-        (coupon) => coupon.code.toUpperCase() === normalizedCouponCode,
+        (coupon) => coupon.code.trim().toUpperCase() === normalizedCouponCode,
       ) || null,
     [availableCoupons, normalizedCouponCode],
   );
+  const activePricingId = remainingInfo?.activePlan?.subscriptionPricingId;
   const couponHelpText = useMemo(() => {
     if (appliedCoupon) {
       const discountType = appliedCoupon.discountType.toUpperCase();
@@ -231,7 +299,7 @@ export default function DashboardSubscriptionsPage() {
           ? `${appliedCoupon.discountValue}% off`
           : `${appliedCoupon.discountValue} fixed discount`;
 
-      return `Applied coupon ${appliedCoupon.code}: ${discountText}. Final payable amount will be calculated by backend.`;
+      return `Applied coupon ${appliedCoupon.code}: ${discountText}. Estimated payable amount is shown below in each row.`;
     }
 
     return "Optional. Leave it blank to buy directly without a coupon.";
@@ -245,20 +313,69 @@ export default function DashboardSubscriptionsPage() {
     }
   }, [appliedCoupon, normalizedCouponCode]);
 
-  const handleApplyCoupon = () => {
+  const handleApplyCoupon = async () => {
     if (!normalizedCouponCode) {
       toast.error("Enter a coupon code first.");
       return;
     }
 
-    if (!matchedCoupon || !matchedCoupon.isActive) {
-      toast.error("Coupon is invalid or inactive.");
-      setAppliedCoupon(null);
-      return;
-    }
+    setIsApplyingCoupon(true);
 
-    setAppliedCoupon(matchedCoupon);
-    toast.success("Coupon applied successfully.");
+    try {
+      let resolvedCoupon = matchedCoupon;
+
+      if (!resolvedCoupon) {
+        const lookupResponse = await SubscriptionAction.getSubscriptionCoupons({
+          searchKey: normalizedCouponCode,
+          showPerPage: 500,
+          pageNo: 1,
+        });
+
+        resolvedCoupon =
+          lookupResponse.data?.subscriptionCoupons?.find(
+            (coupon) =>
+              coupon.code.trim().toUpperCase() === normalizedCouponCode,
+          ) || null;
+      }
+
+      if (!resolvedCoupon || !resolvedCoupon.isActive) {
+        toast.error("Coupon is invalid or inactive.");
+        setAppliedCoupon(null);
+        return;
+      }
+
+      const applicablePricingIds = (
+        resolvedCoupon.subscriptionPricings || []
+      ).map((pricing) => pricing._id.toString());
+      const selectedPricingIds = selectedPlanRows.map((row) =>
+        row._id.toString(),
+      );
+      const hasPricingRestriction = applicablePricingIds.length > 0;
+      const isApplicableToSelectedPlan =
+        !hasPricingRestriction ||
+        selectedPricingIds.some((pricingId) =>
+          applicablePricingIds.includes(pricingId),
+        );
+
+      if (!isApplicableToSelectedPlan) {
+        toast.error("This coupon does not apply to the selected plan options.");
+        setAppliedCoupon(null);
+        return;
+      }
+
+      setCouponCode(resolvedCoupon.code.trim().toUpperCase());
+      setAppliedCoupon(resolvedCoupon);
+      toast.success("Coupon applied successfully.");
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to validate coupon code.";
+      toast.error(message);
+      setAppliedCoupon(null);
+    } finally {
+      setIsApplyingCoupon(false);
+    }
   };
 
   const handleRemoveCoupon = () => {
@@ -349,20 +466,28 @@ export default function DashboardSubscriptionsPage() {
 
   return (
     <div className="space-y-6 p-4 md:p-8">
-      <div className="rounded-2xl border bg-linear-to-r from-blue-50 via-sky-50 to-cyan-50 p-6">
+      <div className="rounded-2xl border border-sky-200 bg-linear-to-r from-slate-50 via-sky-50 to-cyan-100 p-6 shadow-sm">
         <p className="text-sm font-semibold tracking-wide text-slate-600 uppercase">
           Subscription management
         </p>
-        <h1 className="mt-2 text-2xl font-bold text-slate-900 md:text-3xl">
-          Choose the best plan for your transport operation
-        </h1>
-        <p className="mt-2 max-w-3xl text-sm text-slate-600 md:text-base">
-          Compare plans, pick your billing duration, and continue to secure
-          checkout.
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <h1 className="text-2xl font-bold text-slate-900 md:text-3xl">
+            Pick a plan that matches your workflow
+          </h1>
+          <Badge
+            variant="outline"
+            className="border-sky-300 bg-white/70 text-slate-700"
+          >
+            {roleLabel}
+          </Badge>
+        </div>
+        <p className="mt-2 max-w-3xl text-sm text-slate-700 md:text-base">
+          Your access level updates after trial activation or successful
+          payment. You can always check your current pack and expiry below.
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-slate-500">
@@ -411,11 +536,39 @@ export default function DashboardSubscriptionsPage() {
             <p className="mt-1 text-xs text-slate-600">{trialStatus.detail}</p>
           </CardContent>
         </Card>
+
+        <Card className="md:col-span-2 xl:col-span-2">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-slate-500">
+              Current pack
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-base font-semibold text-slate-900">
+              {activePlanSummary}
+            </p>
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-600">
+              <span className="inline-flex items-center gap-1">
+                <CalendarDays className="h-3.5 w-3.5" />
+                Started: {formatDate(remainingInfo?.startDate)}
+              </span>
+              <span className="hidden text-slate-400 sm:inline">|</span>
+              <span>
+                Expires:{" "}
+                {remainingInfo?.isLifetime
+                  ? "Never (Lifetime)"
+                  : formatDate(remainingInfo?.endDate)}
+              </span>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      <Card className="border-amber-200 bg-amber-50/70">
+      <Card className="border-amber-200 bg-amber-50/70 shadow-sm">
         <CardContent className="pt-6">
-          <p className="text-sm font-semibold text-amber-800">Access mode</p>
+          <p className="text-sm font-semibold text-amber-800">
+            Access mode and write permissions
+          </p>
           <p className="mt-1 text-sm text-amber-700">
             {isReadOnlyMode
               ? "You are currently in free read-only mode. You can view data, but create, edit, and delete actions are blocked until trial or paid subscription is active."
@@ -454,10 +607,10 @@ export default function DashboardSubscriptionsPage() {
                   key={group.planName}
                   type="button"
                   onClick={() => setSelectedPlanName(group.planName)}
-                  className={`rounded-2xl border p-5 text-left transition-all ${
+                  className={`rounded-2xl border p-5 text-left transition-all duration-200 ${
                     isSelected
                       ? "border-primary bg-primary/5 shadow-md"
-                      : "hover:border-primary/40 bg-white"
+                      : "hover:border-primary/40 bg-white hover:shadow-sm"
                   }`}
                 >
                   <div className="flex items-start justify-between gap-3">
@@ -486,6 +639,9 @@ export default function DashboardSubscriptionsPage() {
                     {group.pricings.length} billing option
                     {group.pricings.length > 1 ? "s" : ""} available
                   </p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    For: {group.accountType.replaceAll("_", " ")}
+                  </p>
                 </button>
               );
             })}
@@ -497,31 +653,37 @@ export default function DashboardSubscriptionsPage() {
         )}
       </div>
 
-      <Card>
+      <Card className="border-sky-100 shadow-sm">
         <CardHeader>
           <CardTitle>
             {selectedPlanName
               ? `${selectedPlanName} pricing options`
               : "Pricing options"}
           </CardTitle>
-          <div className="flex flex-col gap-2 pt-2 sm:max-w-sm">
-            <label className="text-xs font-medium text-slate-500 uppercase">
+          <p className="text-sm text-slate-600">
+            Select a duration and continue to secure checkout. Trial is
+            available only once per eligible account.
+          </p>
+          <div className="mt-2 rounded-xl border border-sky-100 bg-sky-50/40 p-4 sm:max-w-xl">
+            <label className="text-xs font-semibold tracking-wide text-slate-500 uppercase">
               Coupon code (optional)
             </label>
-            <div className="flex items-center gap-2">
+            <div className="mt-2 flex items-center gap-2">
               <Input
                 value={couponCode}
                 onChange={(event) =>
                   setCouponCode(event.target.value.toUpperCase())
                 }
                 placeholder="Enter coupon code"
+                className="bg-white"
               />
               <Button
                 type="button"
                 variant="outline"
                 onClick={handleApplyCoupon}
+                disabled={isApplyingCoupon}
               >
-                Apply
+                {isApplyingCoupon ? "Applying..." : "Apply"}
               </Button>
               {appliedCoupon ? (
                 <Button
@@ -533,7 +695,7 @@ export default function DashboardSubscriptionsPage() {
                 </Button>
               ) : null}
             </div>
-            <p className="text-xs text-slate-500">{couponHelpText}</p>
+            <p className="mt-2 text-xs text-slate-600">{couponHelpText}</p>
           </div>
         </CardHeader>
         <CardContent>
@@ -548,14 +710,26 @@ export default function DashboardSubscriptionsPage() {
                   <TableHead>Duration</TableHead>
                   <TableHead>Account type</TableHead>
                   <TableHead>Price</TableHead>
+                  <TableHead>Pay now (est.)</TableHead>
                   <TableHead className="text-right">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {selectedPlanRows.map((row) => {
+                  const estimatedPrice = calculateDiscountedPrice(
+                    row.price,
+                    appliedCoupon,
+                    row._id,
+                  );
+                  const isDiscounted = estimatedPrice < row.price;
                   const isBuying = isBuyingId === row._id;
                   const isTrialPlan = row.subscriptionPlanType === "FREE";
                   const isTrialDisabled = isTrialPlan && !canStartTrial;
+                  const isCurrentPaidPlan =
+                    !isTrialPlan &&
+                    !remainingInfo?.expired &&
+                    Boolean(activePricingId) &&
+                    activePricingId === row._id;
 
                   const trialButtonLabel = isTrialUsedOnce
                     ? "Trial used"
@@ -574,10 +748,30 @@ export default function DashboardSubscriptionsPage() {
                       <TableCell>
                         {formatCurrency(row.price, row.currency)}
                       </TableCell>
+                      <TableCell>
+                        <p className="font-semibold text-slate-900">
+                          {formatCurrency(estimatedPrice, row.currency)}
+                        </p>
+                        {isDiscounted ? (
+                          <p className="text-xs text-emerald-700">
+                            You save{" "}
+                            {formatCurrency(
+                              row.price - estimatedPrice,
+                              row.currency,
+                            )}
+                          </p>
+                        ) : (
+                          <p className="text-xs text-slate-500">
+                            No discount applied
+                          </p>
+                        )}
+                      </TableCell>
                       <TableCell className="text-right">
                         <Button
                           onClick={() => handleBuy(row._id, isTrialPlan)}
-                          disabled={isBuying || isTrialDisabled}
+                          disabled={
+                            isBuying || isTrialDisabled || isCurrentPaidPlan
+                          }
                           size="sm"
                         >
                           {isBuying ? (
@@ -587,6 +781,8 @@ export default function DashboardSubscriptionsPage() {
                             </>
                           ) : isTrialPlan ? (
                             trialButtonLabel
+                          ) : isCurrentPaidPlan ? (
+                            "Current plan"
                           ) : (
                             "Buy now"
                           )}
