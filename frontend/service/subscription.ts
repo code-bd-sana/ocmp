@@ -50,6 +50,20 @@ export type RemainingSubscriptionInfo = {
   startDate?: string;
   endDate?: string;
   subscriptionId?: string;
+  accessGranted?: boolean;
+  accessSource?: "SUBSCRIPTION" | "ASSIGNED_MANAGER" | "NONE";
+  activePlan?: {
+    subscriptionPlanId?: string;
+    subscriptionDurationId?: string;
+    subscriptionPricingId?: string;
+    planName?: string;
+    planType?: SubscriptionPlanType;
+    accountType?: ApplicableAccountType;
+    durationName?: string;
+    durationInDays?: number;
+    price?: number;
+    currency?: string;
+  };
 };
 
 export type CreatePaymentPayload = {

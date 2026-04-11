@@ -11,7 +11,7 @@ type UseSubscriptionWriteAccessResult = {
 };
 
 const READ_ONLY_REASON =
-  "You need to buy a subscription or claim your 7-day trial to create, update, or delete data.";
+  "You need an active subscription, trial, or an approved transport-manager assignment to create, update, or delete data.";
 
 export function useSubscriptionWriteAccess(): UseSubscriptionWriteAccessResult {
   const [canWrite, setCanWrite] = useState(false);
@@ -45,7 +45,8 @@ export function useSubscriptionWriteAccess(): UseSubscriptionWriteAccessResult {
         const subscription = response.data;
 
         const hasWriteAccess = Boolean(
-          subscription && (!subscription.expired || subscription.isLifetime),
+          subscription?.accessGranted ??
+          (!subscription?.expired || subscription?.isLifetime),
         );
 
         if (mounted) {

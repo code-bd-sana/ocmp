@@ -1,16 +1,14 @@
 import { NextFunction, Request, Response } from 'express';
-import mongoose from 'mongoose';
 import ServerResponse from '../helpers/responses/custom-response';
 import { getSubscriptionRemainingDays } from '../modules/subscription-remain/subscription-remain.service';
 import { AuthenticatedRequest } from './is-authorized';
 import { UserRole } from '../models/users-accounts/user.schema';
-import ClientManagement, { ClientStatus } from '../models/users-accounts/clientManagement.schema';
 
 /**
- * Middleware to check if the user (or their connected Transport Manager, if they are a STANDALONE_USER) has an active subscription or trial.
- * - If the user is a STANDALONE_USER, it first checks if they are connected to any Transport Manager with an approved connection. If so, it checks the subscription of that manager instead.
- * - If the user (or their manager) has a lifetime subscription, access is granted.
- * - If the subscription is expired, access is denied with a 403 response.
+ * Middleware to check if the user can perform write actions.
+ * - Transport Manager: must have an active subscription or trial.
+ * - Standalone User: can write if they have an approved manager assignment, or if they have an active subscription or trial.
+ * - If none of the above applies, access is denied with a 403 response.
  * - If there is any error during the process, a 500 response is returned.
  */
 const checkSubscriptionValidity = async (req: Request, res: Response, next: NextFunction) => {
@@ -22,23 +20,7 @@ const checkSubscriptionValidity = async (req: Request, res: Response, next: Next
   }
 
   try {
-    let subscriptionUserId = user._id; // Default: check own subscription
-
-    // If user is STANDALONE_USER, check if connected with any Transport Manager
-    if (user.role === UserRole.STANDALONE_USER) {
-      const clientConnection = await ClientManagement.findOne({
-        'clients.clientId': new mongoose.Types.ObjectId(user._id),
-        'clients.status': { $in: [ClientStatus.APPROVED] },
-      }).select('managerId');
-
-      // If connected → check manager subscription instead
-      if (clientConnection?.managerId) {
-        subscriptionUserId = clientConnection.managerId.toString();
-      }
-    }
-
-    // Get subscription info (either own or manager’s)
-    const userSubscription = await getSubscriptionRemainingDays(subscriptionUserId);
+    const userSubscription = await getSubscriptionRemainingDays(user._id);
 
     if (!userSubscription) {
       return ServerResponse(
@@ -49,10 +31,14 @@ const checkSubscriptionValidity = async (req: Request, res: Response, next: Next
       );
     }
 
+    if (user.role === UserRole.STANDALONE_USER && userSubscription.accessGranted) {
+      return next();
+    }
+
     const currentDate = new Date();
 
     // Lifetime subscription → allow
-    if (userSubscription.isLifetime) {
+    if (userSubscription.isLifetime || userSubscription.accessGranted) {
       return next();
     }
 
