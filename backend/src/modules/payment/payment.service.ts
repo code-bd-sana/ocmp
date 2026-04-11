@@ -22,7 +22,7 @@ import { getSubscriptionRemainingDays } from '../subscription-remain/subscriptio
 import { CreatePaymentInput } from './payment.validation';
 
 export const stripe = new Stripe(config.STRIPE_SECRET_KEY as string, {
-  apiVersion: '2026-01-28.clover',
+  apiVersion: '2026-2-25.clover',
 });
 
 /**
