@@ -379,7 +379,7 @@ const startServer = async () => {
       console.log(`
 ${GREEN}🚀 Server Running${RESET}
 ----------------------------------
-URL: ${config.BASE_URL}:${config.PORT}
+URL: ${config.BASE_URL}
 ENV: ${config.NODE_ENV}
 PORT: ${config.PORT}
 ----------------------------------
