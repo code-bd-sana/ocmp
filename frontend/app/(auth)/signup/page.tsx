@@ -33,7 +33,7 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { toast, Toaster } from "sonner";
+import { toast } from "sonner";
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -143,7 +143,6 @@ export default function SignUpPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-linear-to-br from-gray-50 to-gray-100 p-4 dark:from-gray-900 dark:to-gray-800">
-      <Toaster />
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="space-y-1">
           <CardTitle className="text-center text-2xl font-bold">

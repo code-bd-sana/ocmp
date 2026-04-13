@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 const DASHBOARD_PREFIX = "/dashboard";
 const ADMIN_PREFIX = "/admin";
-const AUTH_ROUTES = new Set(["/signin", "/signup"]);
+const AUTH_ROUTES = new Set(["/signin", "/signup", "/login"]);
 const SUPER_ADMIN_ROLE = "SUPER_ADMIN";
 
 export function middleware(request: NextRequest) {
@@ -17,6 +17,19 @@ export function middleware(request: NextRequest) {
   const isAdminRoute =
     pathname === ADMIN_PREFIX || pathname.startsWith(`${ADMIN_PREFIX}/`);
   const isAuthRoute = AUTH_ROUTES.has(pathname);
+
+  if (pathname === "/") {
+    if (!isAuthenticated) {
+      return NextResponse.redirect(new URL("/signin", request.url));
+    }
+
+    const target = role === SUPER_ADMIN_ROLE ? "/admin" : "/dashboard";
+    return NextResponse.redirect(new URL(target, request.url));
+  }
+
+  if (pathname === "/login") {
+    return NextResponse.redirect(new URL("/signin", request.url));
+  }
 
   if ((isDashboardRoute || isAdminRoute) && !isAuthenticated) {
     const loginUrl = new URL("/signin", request.url);
@@ -38,7 +51,7 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(adminUrl);
   }
 
-  if (isAuthRoute && isAuthenticated && role) {
+  if (isAuthRoute && isAuthenticated) {
     const target = role === SUPER_ADMIN_ROLE ? "/admin" : "/dashboard";
     return NextResponse.redirect(new URL(target, request.url));
   }
@@ -47,5 +60,12 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/admin/:path*", "/signin", "/signup"],
+  matcher: [
+    "/",
+    "/dashboard/:path*",
+    "/admin/:path*",
+    "/signin",
+    "/signup",
+    "/login",
+  ],
 };

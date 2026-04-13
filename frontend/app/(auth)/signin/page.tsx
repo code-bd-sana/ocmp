@@ -17,7 +17,7 @@ import { Eye, EyeOff, Loader2, Lock, Mail } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { toast, Toaster } from "sonner";
+import { toast } from "sonner";
 
 export default function SignInPage() {
   /**
@@ -108,7 +108,9 @@ export default function SignInPage() {
         }
 
         toast.success(resp.message || "Successfully signed in!");
-        router.replace(role === "SUPER_ADMIN" ? "/admin" : "/dashboard");
+        window.location.assign(
+          role === "SUPER_ADMIN" ? "/admin" : "/dashboard",
+        );
       } else {
         // Show error message from API
         toast.error(
@@ -139,7 +141,6 @@ export default function SignInPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-linear-to-br from-gray-50 to-gray-100 p-4 dark:from-gray-900 dark:to-gray-800">
-      <Toaster />
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="space-y-1">
           <CardTitle className="text-center text-2xl font-bold">

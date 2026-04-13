@@ -669,32 +669,32 @@ export default function PlannerDetailPage({ params }: PageProps) {
   return (
     <>
       <div className="min-h-screen font-sans">
-        <div className="px-6 py-8">
+        <div className="px-3 py-5 sm:px-6 sm:py-8">
           {/* Header */}
           <div className="mb-8">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-4xl font-bold tracking-tight text-slate-900">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="min-w-0">
+                <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl lg:text-4xl">
                   Vehicle Maintenance Planner
                 </h1>
-                <p className="mt-2 text-slate-600">
+                <p className="mt-2 text-sm text-slate-600 sm:text-base">
                   Schedule and manage inspections, services, MOTs, and brake
                   tests
                 </p>
               </div>
-              <div className="flex items-center gap-3">
-                <div className="relative">
+              <div className="flex w-full flex-col gap-3 sm:flex-row lg:w-auto">
+                <div className="relative w-full lg:w-80">
                   <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-slate-400" />
                   <input
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search events..."
-                    className="w-80 rounded-lg border border-slate-200 bg-white py-2.5 pr-4 pl-10 text-sm text-slate-600 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                    className="w-full rounded-lg border border-slate-200 bg-white py-2.5 pr-4 pl-10 text-sm text-slate-600 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
                   />
                 </div>
                 <button
                   onClick={loadPageData}
-                  className="rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-600 transition-all hover:bg-slate-50"
+                  className="rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-600 transition-all hover:bg-slate-50 sm:w-auto"
                 >
                   <RefreshCw size={16} />
                 </button>
@@ -703,7 +703,7 @@ export default function PlannerDetailPage({ params }: PageProps) {
           </div>
 
           {/* Stats Cards */}
-          <div className="mb-8 grid grid-cols-5 gap-4">
+          <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
             {[
               {
                 label: "Inspections",
@@ -757,13 +757,13 @@ export default function PlannerDetailPage({ params }: PageProps) {
                   <div className="flex items-center justify-center">
                     <div className="flex flex-col items-center justify-center text-center">
                       <p
-                        className="mt-2 text-[42px] font-bold text-white"
+                        className="mt-2 text-3xl font-bold text-white sm:text-[42px]"
                         style={{ color: stat.text }}
                       >
                         {stat.value}
                       </p>
                       <p
-                        className="text-lg font-medium"
+                        className="text-base font-medium sm:text-lg"
                         style={{ color: stat.subTitle }}
                       >
                         {stat.label}
@@ -776,7 +776,7 @@ export default function PlannerDetailPage({ params }: PageProps) {
           </div>
 
           {/* Main 3-Column Layout */}
-          <div className="grid grid-cols-[280px_1fr_320px] gap-6">
+          <div className="grid grid-cols-1 gap-6 xl:grid-cols-[280px_minmax(0,1fr)_320px]">
             {/* LEFT SIDEBAR - Vehicle Selection */}
             <div className="overflow-hidden bg-white shadow-xl">
               <div className="bg-primary px-5 py-4">
@@ -789,7 +789,7 @@ export default function PlannerDetailPage({ params }: PageProps) {
                 </div>
               </div>
 
-              <div className="max-h-150 overflow-y-auto">
+              <div className="max-h-96 overflow-y-auto xl:max-h-150">
                 {loading && vehicles.length === 0 ? (
                   <div className="px-5 py-4 text-sm text-slate-500">
                     Loading vehicles...
@@ -839,7 +839,7 @@ export default function PlannerDetailPage({ params }: PageProps) {
             <div className="overflow-hidden bg-white shadow-xl">
               {/* Calendar Header */}
               <div className="border-b border-slate-200 bg-slate-50 px-6 py-4">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() =>
@@ -894,102 +894,109 @@ export default function PlannerDetailPage({ params }: PageProps) {
                 </div>
               </div>
 
-              {/* Weekday Headers */}
-              <div className="grid grid-cols-7 border-b border-slate-200">
-                {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(
-                  (day) => (
-                    <div
-                      key={day}
-                      className="py-3 text-center text-xs font-semibold text-slate-500 uppercase"
-                    >
-                      {day}
-                    </div>
-                  ),
-                )}
-              </div>
-
-              {/* Calendar Days */}
-              <div className="grid grid-cols-7">
-                {calendarDays.map((day, idx) => {
-                  const events =
-                    day.type === "current" ? dayRowsMap.get(day.day) || [] : [];
-                  const hasEvents = events.length > 0;
-                  const isSelected =
-                    day.type === "current" && selectedDay === day.day;
-                  const isToday =
-                    day.type === "current" &&
-                    day.day === new Date().getDate() &&
-                    currentMonth.getMonth() === new Date().getMonth() &&
-                    currentMonth.getFullYear() === new Date().getFullYear();
-
-                  const primaryEventType = hasEvents
-                    ? events[0].plannerType
-                    : null;
-                  const dayColorClass =
-                    primaryEventType && PLANNER_TYPE_COLORS[primaryEventType]
-                      ? PLANNER_TYPE_COLORS[primaryEventType].dayBg
-                      : "";
-
-                  return (
-                    <button
-                      key={idx}
-                      onClick={() =>
-                        day.type === "current" && setSelectedDay(day.day)
-                      }
-                      className={`relative min-h-25 border-r border-b border-slate-100 p-2 transition-all hover:opacity-75 ${
-                        day.type !== "current"
-                          ? "bg-slate-50/50 text-slate-400"
-                          : dayColorClass
-                      } ${isSelected ? "ring-primary ring-2 ring-inset" : ""}`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span
-                          className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-sm font-medium ${
-                            isToday ? "bg-primary text-white" : ""
-                          }`}
+              <div className="overflow-x-auto">
+                <div className="min-w-170">
+                  {/* Weekday Headers */}
+                  <div className="grid grid-cols-7 border-b border-slate-200">
+                    {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(
+                      (day) => (
+                        <div
+                          key={day}
+                          className="py-3 text-center text-xs font-semibold text-slate-500 uppercase"
                         >
-                          {day.day}
-                        </span>
-                        {hasEvents && (
-                          <span className="rounded-full bg-blue-100 px-1.5 py-0.5 text-xs font-semibold text-blue-700">
-                            {events.length}
-                          </span>
-                        )}
-                      </div>
+                          {day}
+                        </div>
+                      ),
+                    )}
+                  </div>
 
-                      {hasEvents && (
-                        <div className="mt-1 space-y-1">
-                          {events.slice(0, 2).map((event) => {
-                            const eventType = plannerEventType(event);
-                            const Icon = EVENT_COLORS[eventType].icon;
-                            return (
-                              <div
-                                key={event._id}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  openEventModal(event, day.day);
-                                }}
-                                className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-xs ${EVENT_COLORS[eventType].light} ${EVENT_COLORS[eventType].text} cursor-pointer transition-all hover:scale-105`}
-                              >
-                                <Icon size={8} />
-                                <span className="truncate text-[10px]">
-                                  {labelForPlannerType(
-                                    event.plannerType,
-                                  ).substring(0, 8)}
-                                </span>
-                              </div>
-                            );
-                          })}
-                          {events.length > 2 && (
-                            <div className="text-center text-[10px] text-slate-400">
-                              +{events.length - 2}
+                  {/* Calendar Days */}
+                  <div className="grid grid-cols-7">
+                    {calendarDays.map((day, idx) => {
+                      const events =
+                        day.type === "current"
+                          ? dayRowsMap.get(day.day) || []
+                          : [];
+                      const hasEvents = events.length > 0;
+                      const isSelected =
+                        day.type === "current" && selectedDay === day.day;
+                      const isToday =
+                        day.type === "current" &&
+                        day.day === new Date().getDate() &&
+                        currentMonth.getMonth() === new Date().getMonth() &&
+                        currentMonth.getFullYear() === new Date().getFullYear();
+
+                      const primaryEventType = hasEvents
+                        ? events[0].plannerType
+                        : null;
+                      const dayColorClass =
+                        primaryEventType &&
+                        PLANNER_TYPE_COLORS[primaryEventType]
+                          ? PLANNER_TYPE_COLORS[primaryEventType].dayBg
+                          : "";
+
+                      return (
+                        <button
+                          key={idx}
+                          onClick={() =>
+                            day.type === "current" && setSelectedDay(day.day)
+                          }
+                          className={`relative min-h-25 border-r border-b border-slate-100 p-2 transition-all hover:opacity-75 ${
+                            day.type !== "current"
+                              ? "bg-slate-50/50 text-slate-400"
+                              : dayColorClass
+                          } ${isSelected ? "ring-primary ring-2 ring-inset" : ""}`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span
+                              className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-sm font-medium ${
+                                isToday ? "bg-primary text-white" : ""
+                              }`}
+                            >
+                              {day.day}
+                            </span>
+                            {hasEvents && (
+                              <span className="rounded-full bg-blue-100 px-1.5 py-0.5 text-xs font-semibold text-blue-700">
+                                {events.length}
+                              </span>
+                            )}
+                          </div>
+
+                          {hasEvents && (
+                            <div className="mt-1 space-y-1">
+                              {events.slice(0, 2).map((event) => {
+                                const eventType = plannerEventType(event);
+                                const Icon = EVENT_COLORS[eventType].icon;
+                                return (
+                                  <div
+                                    key={event._id}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      openEventModal(event, day.day);
+                                    }}
+                                    className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-xs ${EVENT_COLORS[eventType].light} ${EVENT_COLORS[eventType].text} cursor-pointer transition-all hover:scale-105`}
+                                  >
+                                    <Icon size={8} />
+                                    <span className="truncate text-[10px]">
+                                      {labelForPlannerType(
+                                        event.plannerType,
+                                      ).substring(0, 8)}
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                              {events.length > 2 && (
+                                <div className="text-center text-[10px] text-slate-400">
+                                  +{events.length - 2}
+                                </div>
+                              )}
                             </div>
                           )}
-                        </div>
-                      )}
-                    </button>
-                  );
-                })}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
 
               {/* Legend */}
@@ -1028,7 +1035,7 @@ export default function PlannerDetailPage({ params }: PageProps) {
                 </div>
               </div>
 
-              <div className="max-h-150 overflow-y-auto p-4">
+              <div className="max-h-96 overflow-y-auto p-4 xl:max-h-150">
                 {!selectedDay ? (
                   <div className="flex flex-col items-center justify-center py-12 text-center">
                     <Calendar size={48} className="text-slate-300" />
