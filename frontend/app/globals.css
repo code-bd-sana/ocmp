@@ -1,7 +1,7 @@
-@import url("https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Google+Sans:ital,opsz,wght@0,17..18,400..700;1,17..18,400..700&family=Sekuya&display=swap");
 
 * {
-  font-family: "Lato", sans-serif;
+  font-family: "Sekuya", system-ui;
 }
 @import "tailwindcss";
 @import "tw-animate-css";
@@ -234,6 +234,46 @@
   .bg-neutral {
     background-color: var(--neutral);
   }
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p,
+div,
+span,
+a,
+li,
+label,
+button,
+section,
+article,
+aside,
+header,
+footer,
+nav,
+main,
+input,
+textarea,
+select,
+option,
+table,
+th,
+td,
+strong,
+em,
+b,
+i,
+u,
+small,
+sub,
+sup,
+code,
+pre {
+  font-family: "Sekuya", system-ui !important;
 }
 
 /* Reference Colors */
