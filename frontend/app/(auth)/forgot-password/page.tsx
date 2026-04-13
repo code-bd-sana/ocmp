@@ -15,7 +15,7 @@ import { AuthAction } from "@/service/auth";
 import { ArrowLeft, Loader2, Mail } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
-import { toast, Toaster } from "sonner";
+import { toast } from "sonner";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -71,7 +71,8 @@ export default function ForgotPasswordPage() {
         setError(response.message || "Failed to send reset email");
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Something went wrong";
+      const errorMessage =
+        error instanceof Error ? error.message : "Something went wrong";
       toast.error(errorMessage);
       setError(errorMessage);
     } finally {
@@ -114,7 +115,8 @@ export default function ForgotPasswordPage() {
         toast.error(response.message || "Failed to resend reset email");
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Something went wrong";
+      const errorMessage =
+        error instanceof Error ? error.message : "Something went wrong";
       toast.error(errorMessage);
     } finally {
       setIsResending(false);
@@ -123,13 +125,9 @@ export default function ForgotPasswordPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-linear-to-br from-gray-50 to-gray-100 p-4 dark:from-gray-900 dark:to-gray-800">
-      <Toaster richColors position="top-center" />
-
       <Card className="w-full max-w-md shadow-xl">
-
-
         <CardHeader className="space-y-1">
-          <div className="flex justify-center mb-2">
+          <div className="mb-2 flex justify-center">
             <div className="rounded-full bg-blue-50 p-3 dark:bg-blue-900/20">
               <Mail className="h-6 w-6 text-blue-500 dark:text-blue-400" />
             </div>
@@ -147,15 +145,15 @@ export default function ForgotPasswordPage() {
         <CardContent>
           {isSubmitted ? (
             <div className="space-y-6">
-              <Alert className="bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800">
-                <AlertDescription className="text-green-800 dark:text-green-200 text-center">
+              <Alert className="border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950">
+                <AlertDescription className="text-center text-green-800 dark:text-green-200">
                   If an account exists for <strong>{email}</strong>, you will
                   receive a password reset link shortly.
                 </AlertDescription>
               </Alert>
 
               <div className="space-y-4">
-                <div className="text-center text-sm text-foreground">
+                <div className="text-foreground text-center text-sm">
                   <p className="mb-4 text-gray-500 dark:text-gray-400">
                     Didn&apos;t receive the email?
                   </p>
@@ -163,7 +161,7 @@ export default function ForgotPasswordPage() {
                     variant="outline"
                     onClick={handleResend}
                     disabled={isResending || resendCooldown > 0}
-                    className="w-full border-primary text-primary hover:bg-primary hover:text-white transition-all duration-300"
+                    className="border-primary text-primary hover:bg-primary w-full transition-all duration-300 hover:text-white"
                   >
                     {isResending ? (
                       <>
@@ -208,13 +206,13 @@ export default function ForgotPasswordPage() {
                     disabled={isLoading}
                     autoComplete="email"
                   />
-                  {error && <p className="text-sm text-destructive">{error}</p>}
+                  {error && <p className="text-destructive text-sm">{error}</p>}
                 </div>
               </div>
 
               <Button
                 type="submit"
-                className="w-full h-11 text-base bg-primary hover:bg-primary/90 cursor-pointer transition-all duration-300 hover:scale-105"
+                className="bg-primary hover:bg-primary/90 h-11 w-full cursor-pointer text-base transition-all duration-300 hover:scale-105"
                 disabled={isLoading}
               >
                 {isLoading ? (
@@ -241,7 +239,7 @@ export default function ForgotPasswordPage() {
           <div className="text-center text-sm">
             <Link
               href="/signin"
-              className="inline-flex items-center text-foreground hover:text-primary transition-colors"
+              className="text-foreground hover:text-primary inline-flex items-center transition-colors"
               tabIndex={isLoading ? -1 : 0}
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
@@ -250,8 +248,6 @@ export default function ForgotPasswordPage() {
           </div>
         </CardFooter>
       </Card>
-
-
     </div>
   );
 }

@@ -6,6 +6,20 @@ import { normalizeApiErrorPayload } from "./shared/subscription-access";
 const ROLE_COOKIE_NAME = "role";
 let axiosErrorInterceptorRegistered = false;
 
+const clearAuthCookies = (): void => {
+  const removeOptions = [
+    { path: "/", sameSite: "lax" as const },
+    { path: "/", sameSite: "lax" as const, secure: true },
+    { path: "/", secure: true },
+    { path: "/" },
+  ];
+
+  removeOptions.forEach((options) => {
+    Cookies.remove("token", options);
+    Cookies.remove(ROLE_COOKIE_NAME, options);
+  });
+};
+
 if (!axiosErrorInterceptorRegistered) {
   axios.interceptors.response.use(
     (response) => response,
@@ -219,8 +233,7 @@ const SetAuthToken = (token: string): void => {
   });
 };
 const RemoveAuthToken = (): void => {
-  Cookies.remove("token", { path: "/", sameSite: "lax" });
-  Cookies.remove(ROLE_COOKIE_NAME, { path: "/", sameSite: "lax" });
+  clearAuthCookies();
 };
 
 const GetUserRole = (): string | null => {
@@ -240,7 +253,7 @@ const SetUserRole = (role: string): void => {
 };
 
 const RemoveUserRole = (): void => {
-  Cookies.remove(ROLE_COOKIE_NAME, { path: "/", sameSite: "lax" });
+  clearAuthCookies();
 };
 const LogOut = async (): Promise<IApiResponse> => {
   const token = GetAuthToken();
@@ -260,9 +273,8 @@ const LogOut = async (): Promise<IApiResponse> => {
       },
     );
 
-    //  Remove token after successful logout
-    Cookies.remove("token", { path: "/" });
-    Cookies.remove(ROLE_COOKIE_NAME, { path: "/" });
+    // Clear cookies across secure/non-secure variants for production reliability.
+    clearAuthCookies();
 
     return response.data;
   } catch (error: unknown) {
