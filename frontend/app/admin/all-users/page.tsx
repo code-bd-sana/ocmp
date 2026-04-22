@@ -13,6 +13,7 @@ import { toast } from "sonner";
 type AllUsersRow = {
   _id: string;
   name: string;
+  email: string;
   role: string;
   lastLogin: string;
   registeredDate: string;
@@ -81,6 +82,13 @@ const columns: Column<AllUsersRow>[] = [
       <span className="block max-w-42.5 truncate text-sm font-medium sm:max-w-55 md:max-w-65 md:text-base">
         {row.name}
       </span>
+    ),
+  },
+  {
+    key: "email",
+    title: "EMAIL",
+    render: (row) => (
+      <span className="text-sm whitespace-nowrap md:text-base">{row.email}</span>
     ),
   },
   {
@@ -166,6 +174,7 @@ export default function AdminAllUsersPage() {
       const mappedRows: AllUsersRow[] = response.data.map((item) => ({
         _id: item._id,
         name: item.fullName,
+        email: item.email,
         role: formatRole(item.role),
         lastLogin: formatDateTime(item.lastLogin ?? null),
         registeredDate: formatDateTime(item.createdAt),
