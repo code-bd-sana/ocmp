@@ -81,15 +81,13 @@ export default function AddVehicleModal({
   >([]);
   const [driversLoading, setDriversLoading] = useState(false);
   const [selectedDriverIds, setSelectedDriverIds] = useState<string[]>([]);
-  const [driverError, setDriverError] = useState("");
   const [driverPopoverOpen, setDriverPopoverOpen] = useState(false);
 
   // Fetch drivers when modal opens; reset selection
   useEffect(() => {
     if (!open) return;
-    setSelectedDriverIds([]);
-    setDriverError("");
-    setDriversLoading(true);
+    // setSelectedDriverIds([]);
+    // setDriversLoading(true);
     DriverAction.getDrivers(standAloneId, { showPerPage: 100 })
       .then((res) => {
         if (res.status && res.data?.drivers) {
@@ -109,7 +107,6 @@ export default function AddVehicleModal({
     setSelectedDriverIds((prev) =>
       prev.includes(id) ? prev.filter((d) => d !== id) : [...prev, id],
     );
-    setDriverError("");
   };
 
   const fields: FieldConfig<AddVehicleForm>[] = [
@@ -254,10 +251,6 @@ export default function AddVehicleModal({
   ];
 
   const handleSubmit = async (data: AddVehicleForm) => {
-    if (selectedDriverIds.length === 0) {
-      setDriverError("Please select at least one driver");
-      return;
-    }
     const payload: CreateVehicleInput = {
       vehicleRegId: data.vehicleRegId,
       vehicleType: data.vehicleType,
@@ -304,15 +297,14 @@ export default function AddVehicleModal({
             <div className="bg-white px-6 pb-4 dark:bg-gray-800">
               <div className="flex flex-col">
               <label className="text-foreground mb-4 text-xl font-medium">
-                Assign Drivers <span className="text-red-500"> *</span>
+                Assign Drivers (Optional)
               </label>
               <Popover open={driverPopoverOpen} onOpenChange={setDriverPopoverOpen}>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
                     className={cn(
-                      "w-full justify-between rounded-none font-normal p-6","border-input-border border",
-                      driverError && "border-red-500 border-2",
+                      "w-full justify-between rounded-none border border-input-border p-6 font-normal",
                     )}
                   >
                     {selectedDriverIds.length > 0
@@ -359,9 +351,6 @@ export default function AddVehicleModal({
                     );
                   })}
                 </div>
-              )}
-              {driverError && (
-                <p className="mt-1 text-sm text-destructive">{driverError}</p>
               )}
               </div>
             </div>

@@ -123,7 +123,6 @@ const VehicleSchema: Schema<IVehicle> = new Schema(
     driverIds: [
       {
         type: Schema.Types.ObjectId,
-        required: true,
         ref: 'Driver', // Reference to the Driver model
       },
     ],

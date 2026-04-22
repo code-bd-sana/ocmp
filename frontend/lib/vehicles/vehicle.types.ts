@@ -81,7 +81,7 @@ export interface CreateVehicleInput {
   };
   driverPack: boolean;
   notes?: string;
-  driverIds: string[];
+  driverIds?: string[];
   standAloneId?: string; // Required for Transport Manager, omitted for Standalone User
 }
 

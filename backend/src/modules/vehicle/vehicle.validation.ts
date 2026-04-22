@@ -86,6 +86,7 @@ const baseVehicleFields = {
 const zodCreateVehicleAsTransportManagerSchema = z
   .object({
     ...baseVehicleFields,
+    driverIds: baseVehicleFields.driverIds.optional().default([]),
     standAloneId: z
       .string({ message: 'standAloneId must be a string' })
       .min(1, 'standAloneId is required for transport manager')
@@ -104,6 +105,7 @@ export type CreateVehicleAsTransportManagerInput = z.infer<
 const zodCreateVehicleAsStandAloneSchema = z
   .object({
     ...baseVehicleFields,
+    driverIds: baseVehicleFields.driverIds.optional().default([]),
   })
   .strict();
 
