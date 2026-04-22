@@ -55,7 +55,7 @@ const SUPER_ADMIN_NAV_ITEMS: SuperAdminNavItem[] = [
     href: "/admin/transport-manager",
     icon: UserCog,
   },
-  { label: "All Clients", href: "/admin/all-clients", icon: Building2 },
+  { label: "All Standalone Users", href: "/admin/all-standalone", icon: Building2 },
   { label: "Subscriptions", href: "/admin/subscriptions", icon: CreditCard },
 ];
 

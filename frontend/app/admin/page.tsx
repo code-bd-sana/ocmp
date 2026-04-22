@@ -20,6 +20,7 @@ import { toast } from "sonner";
 type UserOverviewRow = {
   _id: string;
   fullName: string;
+  email: string;
   role: string;
   lastLogin: string | null;
   createdAt: string;
@@ -148,7 +149,7 @@ export default function AdminPage() {
         bg: "bg-[#FFF4DE]",
       },
       {
-        title: "Total Clients",
+        title: "Total Standalone Users",
         value: dashboardData?.summary.totalClients ?? "--",
         icon: UserCog,
         bg: "bg-[#DCFCE7]",
@@ -168,6 +169,7 @@ export default function AdminPage() {
       (dashboardData?.userOverview ?? []).map((item: IUserOverviewItem) => ({
         _id: item._id,
         fullName: item.fullName,
+        email: item.email,
         role: item.role,
         lastLogin: item.lastLogin,
         createdAt: item.createdAt,
@@ -211,6 +213,15 @@ export default function AdminPage() {
       render: (row) => (
         <span className="block max-w-42.5 truncate text-sm font-medium sm:max-w-55 md:max-w-65 md:text-base">
           {row.fullName}
+        </span>
+      ),
+    },
+    {
+      key: "email",
+      title: "EMAIL",
+      render: (row) => (
+        <span className="block max-w-45 truncate text-sm sm:max-w-55 md:max-w-70 md:text-base">
+          {row.email}
         </span>
       ),
     },
@@ -372,7 +383,7 @@ export default function AdminPage() {
 
   const clientOverviewHeaderActionGroups: HeaderActionGroup[] = [
     {
-      title: "Client Overview",
+      title: "Standalone User Overview",
       startingActionGroup: [],
       endActionGroup: [
         {

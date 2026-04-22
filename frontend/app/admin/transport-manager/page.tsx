@@ -13,10 +13,10 @@ import { toast } from "sonner";
 type TransportManagerRow = {
   _id: string;
   name: string;
-  role: string;
-  lastLogin: string;
+  email: string;
   registeredDate: string;
   isActive: boolean;
+  assignedVehicles: number;
 };
 
 const PAGE_SIZE = 10;
@@ -44,18 +44,6 @@ const formatDateTime = (value?: string | null) => {
   return `${datePart}, ${timePart}`;
 };
 
-const formatRole = (role: string) => {
-  if (role === "TRANSPORT_MANAGER") return "Transport Manager";
-  if (role === "STANDALONE_USER") return "Client";
-  if (role === "SUPER_ADMIN") return "Super Admin";
-
-  return role
-    .toLowerCase()
-    .split("_")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
-};
-
 const StatusBadge = ({ isActive }: { isActive: boolean }) => (
   <span
     className={`inline-flex min-w-22.5 items-center justify-center rounded-xs border px-2 py-1 text-xs font-medium whitespace-nowrap sm:min-w-27.5 sm:px-3 sm:text-sm md:text-base ${
@@ -79,18 +67,18 @@ const columns: Column<TransportManagerRow>[] = [
     ),
   },
   {
-    key: "role",
-    title: "ROLE",
+    key: "email",
+    title: "EMAIL",
     render: (row) => (
-      <span className="text-sm whitespace-nowrap md:text-base">{row.role}</span>
+      <span className="text-sm whitespace-nowrap md:text-base">{row.email}</span>
     ),
   },
   {
-    key: "lastLogin",
-    title: "LAST LOGIN",
+    key: "assignedVehicles",
+    title: "ASSIGNED VEHICLES",
     render: (row) => (
       <span className="text-sm whitespace-nowrap md:text-base">
-        {row.lastLogin}
+        {row.assignedVehicles}
       </span>
     ),
   },
@@ -159,8 +147,8 @@ export default function AdminTransportManagerPage() {
       const mappedRows: TransportManagerRow[] = response.data.map((item) => ({
         _id: item._id,
         name: item.fullName,
-        role: formatRole(item.role),
-        lastLogin: formatDateTime(item.lastLogin ?? null),
+        email: item.email,
+        assignedVehicles: item.assignedVehicle || 0,
         registeredDate: formatDateTime(item.createdAt),
         isActive: Boolean(item.isActive),
       }));
