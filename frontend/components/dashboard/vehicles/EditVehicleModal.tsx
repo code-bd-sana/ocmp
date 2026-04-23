@@ -94,14 +94,11 @@ export default function EditVehicleModal({
   >([]);
   const [driversLoading, setDriversLoading] = useState(false);
   const [selectedDriverIds, setSelectedDriverIds] = useState<string[]>([]);
-  const [driverError, setDriverError] = useState("");
   const [driverPopoverOpen, setDriverPopoverOpen] = useState(false);
 
   // Fetch drivers when modal opens
   useEffect(() => {
     if (!open) return;
-    setDriverError("");
-    setDriversLoading(true);
     DriverAction.getDrivers(standAloneId, { showPerPage: 100 })
       .then((res) => {
         if (res.status && res.data?.drivers) {
@@ -117,18 +114,10 @@ export default function EditVehicleModal({
       .finally(() => setDriversLoading(false));
   }, [open, standAloneId]);
 
-  // Pre-fill selected drivers from existing vehicle
-  useEffect(() => {
-    if (open && vehicle?.driverIds) {
-      setSelectedDriverIds(vehicle.driverIds);
-    }
-  }, [open, vehicle]);
-
   const toggleDriver = (id: string) => {
     setSelectedDriverIds((prev) =>
       prev.includes(id) ? prev.filter((d) => d !== id) : [...prev, id],
     );
-    setDriverError("");
   };
 
   const fields: FieldConfig<EditVehicleForm>[] = [
@@ -273,10 +262,6 @@ export default function EditVehicleModal({
   ];
 
   const handleSubmit = async (data: EditVehicleForm) => {
-    if (selectedDriverIds.length === 0) {
-      setDriverError("Please select at least one driver");
-      return;
-    }
     const payload: UpdateVehicleInput = {
       vehicleRegId: data.vehicleRegId,
       vehicleType: data.vehicleType,
@@ -335,15 +320,14 @@ export default function EditVehicleModal({
             <div className="bg-white px-6 pb-4 dark:bg-gray-800">
               <div className="flex flex-col">
               <label className="text-foreground mb-4 text-xl font-medium">
-                Assign Drivers <span className="text-red-500"> *</span>
+                Assign Drivers (Optional)
               </label>
               <Popover open={driverPopoverOpen} onOpenChange={setDriverPopoverOpen}>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
                     className={cn(
-                      "w-full justify-between rounded-none font-normal","border-input-border border",
-                      driverError && "border-red-500 border-2",
+                      "w-full justify-between rounded-none border border-input-border font-normal",
                     )}
                   >
                     {selectedDriverIds.length > 0
@@ -390,9 +374,6 @@ export default function EditVehicleModal({
                     );
                   })}
                 </div>
-              )}
-              {driverError && (
-                <p className="mt-1 text-sm text-destructive">{driverError}</p>
               )}
               </div>
             </div>
