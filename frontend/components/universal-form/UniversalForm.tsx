@@ -7,24 +7,17 @@ import {
   FieldErrors,
   FieldValues,
   FormProvider,
+  Resolver,
   useForm,
 } from "react-hook-form";
-import { ZodType } from "zod";
-import { Calendar } from "../ui/calendar";
 import { Field } from "../ui/field";
 import { Input } from "../ui/input";
 import { UniversalFomrsProps } from "./form.types";
 
 import {
   InputGroup,
-  InputGroupAddon,
-  InputGroupButton,
   InputGroupInput,
 } from "../ui/input-group";
-
-import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
-
-import { CalendarIcon } from "lucide-react";
 import Image from "next/image";
 import { Button } from "../ui/button";
 import { useSubscriptionWriteAccess } from "@/hooks/useSubscriptionWriteAccess";
@@ -43,38 +36,19 @@ export default function UniversalForm<T extends FieldValues>({
   const isWriteBlocked = !isChecking && !canWrite;
 
   const methods = useForm<T>({
-    resolver: zodResolver(schema as ZodType<T, any, any>),
+    resolver: zodResolver(
+      schema as unknown as Parameters<typeof zodResolver>[0],
+    ) as Resolver<T>,
     defaultValues: defaultValues as DefaultValues<T>,
   });
 
   const { handleSubmit, control, formState } = methods;
-  const [datePickerOpen, setDatePickerOpen] = useState<Record<string, boolean>>(
-    {},
-  );
-  const [calendarMonth, setCalendarMonth] = useState<
-    Record<string, Date | undefined>
-  >({});
-
-  const openDatePicker = (name: string, open: boolean) =>
-    setDatePickerOpen((prev) => ({ ...prev, [name]: open }));
-
-  const setFieldCalendarMonth = (name: string, month: Date | undefined) =>
-    setCalendarMonth((prev) => ({ ...prev, [name]: month }));
 
   // State for selected files and drag state
   const [selectedFilesByField, setSelectedFilesByField] = useState<
     Record<string, { name: string; isImage: boolean; previewUrl?: string }[]>
   >({});
   const [isDragging, setIsDragging] = useState<Record<string, boolean>>({});
-
-  function formatDate(date: Date | undefined) {
-    if (!date) return "";
-    return date.toLocaleDateString("en-US", {
-      day: "2-digit",
-      month: "long",
-      year: "numeric",
-    });
-  }
 
   const handleFileChange = (
     fieldName: string,
@@ -364,69 +338,21 @@ export default function UniversalForm<T extends FieldValues>({
                   control={control}
                   name={field.name}
                   render={({ field: controllerField }) => {
-                    const selectedDate = controllerField.value
-                      ? new Date(controllerField.value)
-                      : undefined;
-
                     return (
                       <Field>
                         <InputGroup
                           className={`border-input-border rounded-none border px-3 py-6 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-white ${formState.errors[field.name] ? "border-2 border-red-500" : ""}`}
                         >
                           <InputGroupInput
-                            value={formatDate(selectedDate)}
+                            type="date"
+                            value={
+                              typeof controllerField.value === "string"
+                                ? controllerField.value
+                                : ""
+                            }
                             placeholder={field.placeholder || "Select date"}
-                            readOnly
-                            onKeyDown={(e) => {
-                              if (e.key === "ArrowDown") {
-                                e.preventDefault();
-                                openDatePicker(field.name, true);
-                              }
-                            }}
+                            onChange={(e) => controllerField.onChange(e.target.value)}
                           />
-
-                          <InputGroupAddon align="inline-end">
-                            <Popover
-                              open={!!datePickerOpen[field.name]}
-                              onOpenChange={(open) =>
-                                openDatePicker(field.name, open)
-                              }
-                            >
-                              <PopoverTrigger asChild>
-                                <InputGroupButton
-                                  variant="ghost"
-                                  size="icon-xs"
-                                >
-                                  <CalendarIcon className="text-primary bg-transparent hover:bg-transparent" />
-                                </InputGroupButton>
-                              </PopoverTrigger>
-
-                              <PopoverContent className="p-0" align="end">
-                                <Calendar
-                                  mode="single"
-                                  selected={selectedDate}
-                                  month={
-                                    calendarMonth[field.name] ?? selectedDate
-                                  }
-                                  onMonthChange={(month) =>
-                                    setFieldCalendarMonth(field.name, month)
-                                  }
-                                  onSelect={(date) => {
-                                    controllerField.onChange(
-                                      date
-                                        ? `${date.getFullYear()}-${String(
-                                            date.getMonth() + 1,
-                                          ).padStart(2, "0")}-${String(
-                                            date.getDate(),
-                                          ).padStart(2, "0")}`
-                                        : "",
-                                    );
-                                    openDatePicker(field.name, false);
-                                  }}
-                                />
-                              </PopoverContent>
-                            </Popover>
-                          </InputGroupAddon>
                         </InputGroup>
                       </Field>
                     );
