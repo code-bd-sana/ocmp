@@ -293,7 +293,11 @@ export default function EditVehicleModal({
   if (loading || !vehicle) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent
+          className="sm:max-w-2xl max-h-[90vh] overflow-y-auto"
+          onInteractOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}
+        >
           <DialogTitle className="sr-only">Edit Vehicle</DialogTitle>
           <div className="flex h-40 items-center justify-center">
             <Loader2 className="text-primary h-8 w-8 animate-spin" />
@@ -308,6 +312,8 @@ export default function EditVehicleModal({
       <DialogContent
         showCloseButton={false}
         className="sm:max-w-2xl max-h-[90vh] overflow-y-auto"
+        onInteractOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => e.preventDefault()}
       >
         <DialogTitle className="text-primary text-xl font-bold mb-4">Edit Vehicle</DialogTitle>
 
