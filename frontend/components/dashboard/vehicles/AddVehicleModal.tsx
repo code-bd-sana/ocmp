@@ -285,8 +285,6 @@ export default function AddVehicleModal({
       <DialogContent
         showCloseButton={false}
         className="sm:max-w-2xl max-h-[90vh] overflow-y-auto"
-        onInteractOutside={(e) => e.preventDefault()}
-        onEscapeKeyDown={(e) => e.preventDefault()}
       >
         <DialogTitle className="text-primary text-2xl font-bold mb-4">Add New Vehicle</DialogTitle>
 
