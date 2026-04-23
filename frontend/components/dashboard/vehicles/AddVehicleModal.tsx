@@ -43,7 +43,7 @@ const addVehicleSchema = z.object({
   adOwnerShipStatus: z.nativeEnum(OwnerShipStatus, {
     message: "Please select a valid ownership status",
   }),
-  adDiskNumber: z.string().min(1, "Disk number date is required"),
+  adDiskNumber: z.string().min(1, "Disk number is required"),
   adChassisNumber: z
     .string()
     .min(1, "Chassis number is required"),
@@ -174,8 +174,9 @@ export default function AddVehicleModal({
     },
     {
       name: "adDiskNumber",
-      label: "Disk Number (Date)",
-      type: "date",
+      label: "Disk Number",
+      type: "text",
+      placeholder: "Enter disk number",
       required: true,
     },
     {

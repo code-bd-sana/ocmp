@@ -25,7 +25,7 @@ export interface IVehicle extends Document {
     nextServiceDate?: Date;
     grossPlatedWeight: number;
     ownerShipStatus: OwnerShipStatus;
-    diskNumber: Date;
+    diskNumber: string;
     dateLeft?: Date;
     chassisNumber: string;
     keysAvailable: number;
@@ -81,7 +81,7 @@ const VehicleSchema: Schema<IVehicle> = new Schema(
         required: true,
       },
       diskNumber: {
-        type: Date,
+        type: String,
         required: true,
       },
       dateLeft: {

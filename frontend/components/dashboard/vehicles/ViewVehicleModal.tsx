@@ -162,7 +162,7 @@ export default function ViewVehicleModal({
             />
             <DetailItem
               label="Disk Number"
-              value={formatDate(vehicle.additionalDetails?.diskNumber)}
+              value={vehicle.additionalDetails?.diskNumber || "—"}
             />
             <DetailItem
               label="Last Service Date"

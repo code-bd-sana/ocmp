@@ -12,7 +12,9 @@ const additionalDetailsSchema = z
     ownerShipStatus: z.enum(OwnerShipStatus, {
       message: 'ownerShipStatus must be a valid ownership status',
     }),
-    diskNumber: z.coerce.date({ message: 'diskNumber must be a valid date' }),
+    diskNumber: z
+      .string({ message: 'diskNumber must be a string' })
+      .min(1, 'diskNumber is required'),
     dateLeft: z.coerce.date({ message: 'dateLeft must be a valid date' }).optional(),
     chassisNumber: z
       .string({ message: 'chassisNumber must be a string' })
