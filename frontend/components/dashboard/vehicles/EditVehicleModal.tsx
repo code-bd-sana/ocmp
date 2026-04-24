@@ -9,7 +9,6 @@ import { Check, ChevronsUpDown, Loader2 } from "lucide-react";
 import {
   VehicleRow,
   UpdateVehicleInput,
-  VehicleStatus,
   OwnerShipStatus,
 } from "@/lib/vehicles/vehicle.types";
 import { DriverAction } from "@/service/driver";
@@ -32,9 +31,6 @@ const editVehicleSchema = z.object({
     .string()
     .min(1, "License plate is required")
     .max(50, "License plate is too long"),
-  status: z.nativeEnum(VehicleStatus, {
-    message: "Please select a valid status",
-  }),
   driverPack: z.coerce.boolean(),
   notes: z.string().optional(),
   // additionalDetails (flattened)
@@ -140,17 +136,6 @@ export default function EditVehicleModal({
       label: "License Plate",
       type: "text",
       placeholder: "Enter license plate",
-      required: true,
-    },
-    {
-      name: "status",
-      label: "Status",
-      type: "select",
-      options: [
-        { label: "Pending", value: VehicleStatus.PENDING },
-        { label: "Active", value: VehicleStatus.ACTIVE },
-        { label: "Inactive", value: VehicleStatus.INACTIVE },
-      ],
       required: true,
     },
     {
@@ -267,7 +252,6 @@ export default function EditVehicleModal({
       vehicleRegId: data.vehicleRegId,
       vehicleType: data.vehicleType,
       licensePlate: data.licensePlate,
-      status: data.status,
       driverPack: data.driverPack,
       driverIds: selectedDriverIds,
       additionalDetails: {
@@ -389,7 +373,6 @@ export default function EditVehicleModal({
               vehicleRegId: vehicle.vehicleRegId,
               vehicleType: vehicle.vehicleType,
               licensePlate: vehicle.licensePlate,
-              status: vehicle.status,
               driverPack: vehicle.driverPack,
               notes: vehicle.notes || "",
               adGrossPlatedWeight: vehicle.additionalDetails?.grossPlatedWeight ?? 0,

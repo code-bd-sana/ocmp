@@ -12,30 +12,66 @@ export interface VehicleTableRow {
   vehicleRegId: string;
   vehicleType: string;
   licensePlate: string;
-  status: string;
-  driverPack: string;
-  ownerShipStatus: string;
-  notes: string;
+  diskNumber: string;
+  status: VehicleStatus;
+  lastServiceDate: string;
+  nextServiceDate: string;
+  dateLeft: string;
+  vedExpiry: string;
+  insuranceExpiry: string;
+  serviceDueDate: string;
+}
+
+function formatDate(value?: string | Date): string {
+  if (!value) return "—";
+  return new Date(value).toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function getDynamicStatus(nextServiceDate?: string | Date): VehicleStatus {
+  if (!nextServiceDate) return VehicleStatus.OVERDUE;
+
+  const targetDate = new Date(nextServiceDate);
+  if (Number.isNaN(targetDate.getTime())) return VehicleStatus.OVERDUE;
+
+  const dayInMs = 24 * 60 * 60 * 1000;
+  const diffInDays = (targetDate.getTime() - Date.now()) / dayInMs;
+
+  if (diffInDays > 30) return VehicleStatus.ACTIVE;
+  if (diffInDays > 0) return VehicleStatus.UPCOMING;
+  return VehicleStatus.OVERDUE;
 }
 
 /** Map API response → flat table rows */
 export function toVehicleTableRows(vehicles: VehicleRow[]): VehicleTableRow[] {
-  return vehicles.map((v) => ({
-    _id: v._id,
-    vehicleRegId: v.vehicleRegId,
-    vehicleType: v.vehicleType,
-    licensePlate: v.licensePlate,
-    status: v.status,
-    driverPack: v.driverPack ? "Yes" : "No",
-    ownerShipStatus: v.additionalDetails?.ownerShipStatus || "—",
-    notes: v.notes || "—",
-  }));
+  return vehicles.map((v) => {
+    const nextServiceDate = v.additionalDetails?.nextServiceDate;
+
+    return {
+      _id: v._id,
+      vehicleRegId: v.vehicleRegId,
+      vehicleType: v.vehicleType,
+      licensePlate: v.licensePlate,
+      diskNumber: v.additionalDetails?.diskNumber || "—",
+      status: getDynamicStatus(nextServiceDate),
+      lastServiceDate: formatDate(v.additionalDetails?.lastServiceDate),
+      nextServiceDate: formatDate(nextServiceDate),
+      dateLeft: formatDate(v.additionalDetails?.dateLeft),
+      vedExpiry: formatDate(v.additionalDetails?.vedExpiry),
+      insuranceExpiry: formatDate(v.additionalDetails?.insuranceExpiry),
+      serviceDueDate: formatDate(v.additionalDetails?.serviceDueDate),
+    };
+  });
 }
 
 const columns: Column<VehicleTableRow>[] = [
   { key: "vehicleRegId", title: "Reg ID" },
   { key: "vehicleType", title: "Vehicle Type" },
   { key: "licensePlate", title: "License Plate" },
+  { key: "diskNumber", title: "Disk Number" },
   {
     key: "status",
     title: "Status",
@@ -44,32 +80,23 @@ const columns: Column<VehicleTableRow>[] = [
         className={
           row.status === VehicleStatus.ACTIVE
             ? "font-medium text-green-600"
-            : row.status === VehicleStatus.INACTIVE
+            : row.status === VehicleStatus.OVERDUE
               ? "font-medium text-red-500"
-              : "font-medium text-yellow-600"
+              : row.status === VehicleStatus.UPCOMING
+                ? "font-medium text-yellow-600"
+                : "font-medium text-gray-600"
         }
       >
         {row.status}
       </span>
     ),
   },
-  {
-    key: "driverPack",
-    title: "Driver Pack",
-    render: (row) => (
-      <span
-        className={
-          row.driverPack === "Yes"
-            ? "font-medium text-green-600"
-            : "font-medium text-red-500"
-        }
-      >
-        {row.driverPack}
-      </span>
-    ),
-  },
-  { key: "ownerShipStatus", title: "Ownership" },
-  { key: "notes", title: "Notes" },
+  { key: "lastServiceDate", title: "Last Service" },
+  { key: "nextServiceDate", title: "Next Service" },
+  { key: "dateLeft", title: "Date Left" },
+  { key: "vedExpiry", title: "VED Expiry" },
+  { key: "insuranceExpiry", title: "Ins. Expiry" },
+  { key: "serviceDueDate", title: "Service Due" },
 ];
 
 interface VehiclesTableProps {

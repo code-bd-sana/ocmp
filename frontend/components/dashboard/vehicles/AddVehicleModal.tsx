@@ -8,7 +8,6 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Check, ChevronsUpDown, Loader2 } from "lucide-react";
 import {
   CreateVehicleInput,
-  VehicleStatus,
   OwnerShipStatus,
 } from "@/lib/vehicles/vehicle.types";
 import { DriverAction } from "@/service/driver";
@@ -31,9 +30,6 @@ const addVehicleSchema = z.object({
     .string()
     .min(1, "License plate is required")
     .max(50, "License plate is too long"),
-  status: z.nativeEnum(VehicleStatus, {
-    message: "Please select a valid status",
-  }),
   driverPack: z.coerce.boolean(),
   notes: z.string().optional(),
   // additionalDetails (flattened)
@@ -129,17 +125,6 @@ export default function AddVehicleModal({
       label: "License Plate",
       type: "text",
       placeholder: "Enter license plate",
-      required: true,
-    },
-    {
-      name: "status",
-      label: "Status",
-      type: "select",
-      options: [
-        { label: "Pending", value: VehicleStatus.PENDING },
-        { label: "Active", value: VehicleStatus.ACTIVE },
-        { label: "Inactive", value: VehicleStatus.INACTIVE },
-      ],
       required: true,
     },
     {
@@ -256,7 +241,6 @@ export default function AddVehicleModal({
       vehicleRegId: data.vehicleRegId,
       vehicleType: data.vehicleType,
       licensePlate: data.licensePlate,
-      status: data.status,
       driverPack: data.driverPack,
       driverIds: selectedDriverIds,
       standAloneId,
@@ -364,7 +348,6 @@ export default function AddVehicleModal({
               vehicleRegId: "",
               vehicleType: "",
               licensePlate: "",
-              status: VehicleStatus.PENDING,
               driverPack: false,
               notes: "",
               adGrossPlatedWeight: 0,

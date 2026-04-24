@@ -4,6 +4,7 @@ import { IdOrIdsInput } from '../../handlers/common-zod-validator';
 import VehicleModel, {
   IVehicle,
   OwnerShipStatus,
+  VehicleStatus,
 } from '../../models/vehicle-transport/vehicle.schema';
 import {
   CreateVehicleAsStandAloneInput,
@@ -13,6 +14,29 @@ import {
 } from './vehicle.validation';
 
 const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const DAY_IN_MS = 24 * 60 * 60 * 1000;
+
+const getDynamicVehicleStatus = (nextServiceDate?: Date | string | null): VehicleStatus => {
+  if (!nextServiceDate) return VehicleStatus.OVERDUE;
+
+  const targetDate = new Date(nextServiceDate);
+  if (Number.isNaN(targetDate.getTime())) return VehicleStatus.OVERDUE;
+
+  const diffInDays = (targetDate.getTime() - Date.now()) / DAY_IN_MS;
+
+  if (diffInDays > 30) return VehicleStatus.ACTIVE;
+  if (diffInDays > 0) return VehicleStatus.UPCOMING;
+  return VehicleStatus.OVERDUE;
+};
+
+const withComputedStatus = (vehicle: Partial<IVehicle>) => {
+  const nextServiceDate = vehicle.additionalDetails?.nextServiceDate;
+  return {
+    ...vehicle,
+    status: getDynamicVehicleStatus(nextServiceDate ?? null),
+  };
+};
 
 /**
  * Service function to create a new vehicle.
@@ -39,9 +63,14 @@ const createVehicle = async (
 
   // TODO: ATTACHMENTS Left
 
-  const newVehicle = new VehicleModel(data);
+  const payload = {
+    ...data,
+    status: getDynamicVehicleStatus(data.additionalDetails?.nextServiceDate),
+  };
+
+  const newVehicle = new VehicleModel(payload);
   const savedVehicle = await newVehicle.save();
-  return savedVehicle;
+  return withComputedStatus(savedVehicle.toObject());
 };
 
 /**
@@ -67,10 +96,6 @@ const updateVehicle = async (
   if (data.licensePlate)
     orConditions.push({
       licensePlate: { $regex: new RegExp(`^${escapeRegex(data.licensePlate)}$`, 'i') },
-    });
-  if (data.status)
-    orConditions.push({
-      status: data.status,
     });
 
   if (data.additionalDetails) {
@@ -207,16 +232,25 @@ const updateVehicle = async (
   }
 
   // Proceed to update the vehicle
+  const updatePayload = {
+    ...data,
+    ...(data.additionalDetails?.nextServiceDate
+      ? { status: getDynamicVehicleStatus(data.additionalDetails.nextServiceDate) }
+      : {}),
+  };
+
   const updatedVehicle = await VehicleModel.findOneAndUpdate(
     {
       _id: id,
       $or: accessFilters,
     },
-    data,
+    updatePayload,
     { returnDocument: 'after' }
   );
 
-  return updatedVehicle;
+  if (!updatedVehicle) return null;
+
+  return withComputedStatus(updatedVehicle.toObject());
 };
 
 /**
@@ -294,7 +328,9 @@ const getVehicleById = async (
     : { _id: id };
 
   const vehicle = await VehicleModel.findOne(filter);
-  return vehicle;
+  if (!vehicle) return null;
+
+  return withComputedStatus(vehicle.toObject());
 };
 
 /**
@@ -354,7 +390,12 @@ const getManyVehicle = async (
     .skip(skipItems)
     .limit(showPerPage)
     .select(''); // Keep/Exclude any field if needed
-  return { vehicles, totalData, totalPages };
+
+  const vehiclesWithComputedStatus = vehicles.map((vehicle) =>
+    withComputedStatus(vehicle.toObject())
+  );
+
+  return { vehicles: vehiclesWithComputedStatus, totalData, totalPages };
 };
 
 export const vehicleServices = {
