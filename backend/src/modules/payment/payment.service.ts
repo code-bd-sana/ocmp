@@ -22,7 +22,7 @@ import { getSubscriptionRemainingDays } from '../subscription-remain/subscriptio
 import { CreatePaymentInput } from './payment.validation';
 
 export const stripe = new Stripe(config.STRIPE_SECRET_KEY as string, {
-  apiVersion: '2026-02-25.clover',
+  apiVersion: '2026-01-28.clover',
 });
 
 /**
@@ -293,9 +293,28 @@ const stripePaymentWebHook = async (req: Request) => {
 
       await SendEmail({
         to: stripeSession.customer_email!,
-        subject: 'Subscription Purchase Confirmation',
+        subject: 'Subscription Purchase Confirmation | OCMP',
         text: `Thank you for your purchase! Your subscription to the ${planDetails.subscriptionPlanName} plan has been activated. Invoice Number: ${invoice.invoiceNumber}`,
-        html: `<p>Thank you for your purchase! Your subscription to the <strong>${planDetails.subscriptionPlanName}</strong> plan has been activated.</p><p>Invoice Number: <strong>${invoice.invoiceNumber}</strong></p>`,
+        html: `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <!-- Header with OCMP branding -->
+      <div style="background-color: #044192; padding: 15px 20px; text-align: center; border-radius: 8px 8px 0 0;">
+        <h2 style="color: #ffffff; margin: 0; font-size: 22px;">OCMP</h2>
+        <p style="color: #ffffff; margin: 5px 0 0; font-size: 12px; opacity: 0.9;">Operations Control Management Platform</p>
+      </div>
+      
+      <!-- Content -->
+      <div style="padding: 20px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 8px 8px; background-color: #ffffff;">
+        <p>Thank you for your purchase! Your subscription to the <strong>${planDetails.subscriptionPlanName}</strong> plan has been activated.</p>
+        <p>Invoice Number: <strong>${invoice.invoiceNumber}</strong></p>
+        
+        <!-- Kind regards section -->
+        <div style="margin-top: 30px; padding-top: 15px; border-top: 1px solid #e0e0e0;">
+          <p style="color: #555; margin: 0;">Kind regards,<br><strong style="color: #044192;">OCMP Team</strong></p>
+        </div>
+      </div>
+    </div>
+  `,
       });
     }
     if (event.type === 'payment_intent.succeeded') {

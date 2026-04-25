@@ -12,13 +12,57 @@ import { delUserData, getUserData, setUserData } from '../../utils/redis/user/us
 import { repositorySettingsServices } from '../repository-settings/repository-settings.service';
 import { IChangePassword, ILogin, ILoginResponse, IRegisterResponse } from './auth.interface';
 import {
-    ForgotPasswordInput,
-    RegisterInput,
-    ResendVerificationEmailInput,
-    ResetPasswordInput,
-    VerifyEmailInput,
+  ForgotPasswordInput,
+  RegisterInput,
+  ResendVerificationEmailInput,
+  ResetPasswordInput,
+  VerifyEmailInput,
 } from './auth.validation';
+// Keep your existing imports and code, just update the email sending parts
 
+/**
+ * Helper function to generate HTML email content with OCMP branding
+ */
+const generateOCMPEmailHTML = (
+  title: string,
+  greetingName: string,
+  message: string,
+  buttonText: string,
+  buttonLink: string,
+  expiryNote: string
+): string => {
+  return `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f4f4f4; padding: 20px;">
+      <div style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <div style="background-color: #044192; padding: 20px; text-align: center;">
+          <h1 style="color: #ffffff; margin: 0; font-size: 24px;">OCMP</h1>
+          <p style="color: #ffffff; margin: 5px 0 0; font-size: 14px;">Operations Control Management Platform</p>
+        </div>
+        
+        <div style="padding: 30px;">
+          <p style="font-size: 16px; color: #333; margin-bottom: 20px;">Hello ${greetingName},</p>
+          
+          <p style="font-size: 14px; color: #555; line-height: 1.6; margin-bottom: 20px;">${message}</p>
+          
+          <p style="font-size: 13px; color: #666; margin-bottom: 25px;">${expiryNote}</p>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${buttonLink}" style="background-color: #044192; color: #ffffff; text-decoration: none; padding: 12px 30px; border-radius: 5px; display: inline-block; font-weight: bold;">${buttonText}</a>
+          </div>
+          
+          <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0;">
+            <p style="font-size: 14px; color: #555;">Kind regards,<br><strong style="color: #044192;">OCMP Team</strong></p>
+          </div>
+        </div>
+        
+        <div style="background-color: #f8f9fa; padding: 15px; text-align: center; border-top: 1px solid #e0e0e0;">
+          <p style="font-size: 12px; color: #666; margin: 0;">© ${new Date().getFullYear()} OCMP. All rights reserved.</p>
+          <p style="font-size: 11px; color: #888; margin: 5px 0 0;">This is an automated message, please do not reply.</p>
+        </div>
+      </div>
+    </div>
+  `;
+};
 /**
  * Service function to login.
  *
@@ -160,9 +204,7 @@ const register = async (data: RegisterInput): Promise<IRegisterResponse> => {
   });
 
   // Create default repository settings (all flags false) — fire and forget
-  repositorySettingsServices
-    .createDefaultSettings(savedUser._id.toString())
-
+  repositorySettingsServices.createDefaultSettings(savedUser._id.toString());
 
   // Send verification email
   const verificationLink = `${config.EMAIL_VERIFICATION_REDIRECT_URI}?email=${encodeURIComponent(
@@ -171,15 +213,29 @@ const register = async (data: RegisterInput): Promise<IRegisterResponse> => {
 
   await SendEmail({
     to: data.email,
-    subject: 'Verify your email address',
-    text: `Click the link to verify your email: ${verificationLink}`,
-    html: `
-      <p>Hello ${data.fullName || 'there'},</p>
-      <p>Please verify your email by clicking the link below:</p>
-      <a href="${verificationLink}">Verify Email</a>
-      <p>This link expires in 12 hours.</p>
-    `,
+    subject: 'Verify Your Email Address | OCMP',
+    text: `Welcome to OCMP! Please verify your email by clicking this link: ${verificationLink}. This link expires in 12 hours.`, // Plain text fallback
+    html: generateOCMPEmailHTML(
+      'Email Verification',
+      data.fullName || 'there',
+      'Thank you for registering with <strong>OCMP</strong>! Please verify your email address to complete your registration and start using our platform.',
+      'Verify Email Address',
+      verificationLink,
+      'This verification link will expire in 12 hours.'
+    ),
   });
+
+  //  await SendEmail({
+  //    to: data.email,
+  //    subject: 'Verify your email address',
+  //    text: `Click the link to verify your email: ${verificationLink}`,
+  //    html: `
+  //     <p>Hello ${data.fullName || 'there'},</p>
+  //     <p>Please verify your email by clicking the link below:</p>
+  //     <a href="${verificationLink}">Verify Email</a>
+  //     <p>This link expires in 12 hours.</p>
+  //   `,
+  //  });
 
   // Return safe subset of user data
   return {
@@ -229,16 +285,29 @@ const resendVerificationEmail = async (data: ResendVerificationEmailInput): Prom
   )}&token=${emailVerificationToken}`;
 
   // Send verification email
+  // await SendEmail({
+  //   to: data.email,
+  //   subject: 'Verify your email address',
+  //   text: `Click the link to verify your email: ${verificationLink}`,
+  //   html: `
+  //     <p>Hello ${user.fullName || 'there'},</p
+  //     <p>Please verify your email by clicking the link below:</p>
+  //     <a href="${verificationLink}">Verify Email</a>
+  //     <p>This link expires in 12 hours.</p>
+  //   `,
+  // });
   await SendEmail({
     to: data.email,
-    subject: 'Verify your email address',
-    text: `Click the link to verify your email: ${verificationLink}`,
-    html: `
-      <p>Hello ${user.fullName || 'there'},</p
-      <p>Please verify your email by clicking the link below:</p>
-      <a href="${verificationLink}">Verify Email</a>
-      <p>This link expires in 12 hours.</p>
-    `,
+    subject: 'Resend: Verify Your Email Address | OCMP',
+    text: `Please verify your email by clicking this link: ${verificationLink}. This link expires in 12 hours.`,
+    html: generateOCMPEmailHTML(
+      'Email Verification',
+      user.fullName || 'there',
+      'We received a request to resend the email verification link for your <strong>OCMP</strong> account. Please verify your email address to continue.',
+      'Verify Email Address',
+      verificationLink,
+      'This verification link will expire in 12 hours.'
+    ),
   });
 
   return;
@@ -294,16 +363,29 @@ const forgetPassword = async (data: ForgotPasswordInput): Promise<void> => {
     data.email
   )}&token=${resetPasswordToken}`;
 
+  // await SendEmail({
+  //   to: data.email,
+  //   subject: 'Reset your password',
+  //   text: `Click the link to reset your password: ${resetLink}`,
+  //   html: `
+  //     <p>Hello ${user.fullName || 'there'},</p>
+  //     <p>You can reset your password by clicking the link below:</p>
+  //     <a href="${resetLink}">Reset Password</a>
+  //     <p>This link expires in 1 hour.</p>
+  //   `,
+  // });
   await SendEmail({
     to: data.email,
-    subject: 'Reset your password',
-    text: `Click the link to reset your password: ${resetLink}`,
-    html: `
-      <p>Hello ${user.fullName || 'there'},</p>
-      <p>You can reset your password by clicking the link below:</p>
-      <a href="${resetLink}">Reset Password</a>
-      <p>This link expires in 1 hour.</p>
-    `,
+    subject: 'Reset Your Password | OCMP',
+    text: `Reset your password by clicking this link: ${resetLink}. This link expires in 1 hour.`,
+    html: generateOCMPEmailHTML(
+      'Password Reset Request',
+      user.fullName || 'there',
+      'We received a request to reset the password for your <strong>OCMP</strong> account. Click the button below to create a new password.',
+      'Reset Password',
+      resetLink,
+      'This password reset link will expire in 1 hour.'
+    ),
   });
 
   return;
@@ -405,3 +487,5 @@ export const authServices = {
   resetPassword,
   changePassword,
 };
+
+export default generateOCMPEmailHTML;
