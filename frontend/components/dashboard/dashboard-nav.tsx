@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import {
   Calendar,
   CreditCard,
+  FileUser,
   FolderOpen,
   LayoutDashboard,
   Settings,
@@ -13,16 +14,38 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+import { RepositorySettingsAction } from "@/service/repository-settings";
+import { REPOSITORY_SETTINGS_UPDATED } from "@/lib/repository/repository.cookies";
+import { RepositorySettingsFlags } from "@/lib/repository/repository.types";
+
+type NavItem = {
+  name: string;
+  href: string;
+  icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
+  settingKey?: keyof RepositorySettingsFlags;
+};
 
 // সব navigation items
-const items = [
+const items: NavItem[] = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   {
     name: "Repository",
     href: "/dashboard/repository-settings",
     icon: FolderOpen,
   },
-  { name: "Vehicles", href: "/dashboard/vehicles", icon: Truck },
+  {
+    name: "Vehicles",
+    href: "/dashboard/vehicle-list",
+    icon: Truck,
+    settingKey: "vehicleList",
+  },
+  {
+    name: "Driver",
+    href: "/dashboard/driver-details",
+    icon: FileUser,
+    settingKey: "driverDetailsLicenceAndDoc",
+  },
   { name: "All Users", href: "/dashboard/users", icon: Users },
   {
     name: "All Transport Manager",
@@ -40,12 +63,52 @@ interface DashboardNavProps {
 
 export function DashboardNav({ userRole }: DashboardNavProps) {
   const pathname = usePathname();
+  const [settings, setSettings] = useState<RepositorySettingsFlags | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadSettings = async () => {
+      try {
+        const res = await RepositorySettingsAction.getSettings();
+        if (isMounted && res.status && res.data) {
+          setSettings(res.data);
+        }
+      } catch {
+        // Keep settings null if fetch fails. Feature-gated tabs remain hidden.
+      }
+    };
+
+    const handler = () => {
+      void loadSettings();
+    };
+
+    window.addEventListener(REPOSITORY_SETTINGS_UPDATED, handler);
+
+    const rafId = window.requestAnimationFrame(() => {
+      void loadSettings();
+    });
+
+    return () => {
+      isMounted = false;
+      window.cancelAnimationFrame(rafId);
+      window.removeEventListener(REPOSITORY_SETTINGS_UPDATED, handler);
+    };
+  }, []);
+
+  const itemsWithRepositoryFilter = items.filter((item) => {
+    if (!item.settingKey) return true;
+    return Boolean(settings?.[item.settingKey]);
+  });
+
   const filteredItems =
     userRole === "STANDALONE_USER"
-      ? items.filter((item) => item.name !== "All Users")
+      ? itemsWithRepositoryFilter.filter((item) => item.name !== "All Users")
       : userRole === "TRANSPORT_MANAGER"
-        ? items.filter((item) => item.name !== "All Transport Manager")
-        : items;
+        ? itemsWithRepositoryFilter.filter(
+            (item) => item.name !== "All Transport Manager",
+          )
+        : itemsWithRepositoryFilter;
   const navItems = filteredItems;
 
   return (
