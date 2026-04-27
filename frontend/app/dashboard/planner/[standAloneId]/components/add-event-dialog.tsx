@@ -47,7 +47,6 @@ export function AddEventDialog({
   onOpenChange,
   vehicles,
   selectedVehicleId,
-  onVehicleChange,
   standAloneId,
   onSuccess,
 }: AddEventDialogProps) {
