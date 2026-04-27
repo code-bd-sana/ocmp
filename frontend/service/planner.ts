@@ -258,4 +258,43 @@ export const PlannerAction = {
       throw new Error("Something went wrong");
     }
   },
+
+  async bulkCreatePlanner(data: {
+    vehicleId: string;
+    plannerType: string;
+    dates: string[];
+    standAloneId?: string;
+  }): Promise<IApiResponse<PlannerRow[]>> {
+    const token = AuthAction.GetAuthToken();
+    if (!token) throw new Error("No authentication token found");
+
+    try {
+      const userRole = await getCurrentUserRole();
+      requireScopedClientId(userRole, data.standAloneId);
+
+      const endpoint = isStandaloneRole(userRole)
+        ? `${base_url}/planner/bulk-create-planner-standalone`
+        : `${base_url}/planner/bulk-create-planner`;
+
+      const standaloneBody = { ...data };
+      delete (standaloneBody as { standAloneId?: string }).standAloneId;
+
+      const body = isStandaloneRole(userRole) ? standaloneBody : data;
+
+      const response = await axios.post<IApiResponse<PlannerRow[]>>(
+        endpoint,
+        body,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+
+      return response.data;
+    } catch (error: unknown) {
+      if (axios.isAxiosError<IApiResponse>(error)) {
+        throw new Error(extractApiError(error.response?.data));
+      }
+      throw new Error("Something went wrong");
+    }
+  },
 };

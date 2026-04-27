@@ -72,6 +72,56 @@ export type CreatePlannerAsStandAloneInput = z.infer<typeof zodCreatePlannerAsSt
 export type CreatePlannerInput = CreatePlannerAsStandAloneInput | CreatePlannerAsManagerInput;
 
 /**
+ * Zod schema for bulk creating multiple planners with multiple specific dates
+ */
+// base fields for bulk creation with multiple dates
+const baseBulkPlannerFields = {
+  vehicleId: z.string({ message: 'Vehicle ID is required' }).refine(isMongoId, {
+    message: 'Vehicle ID must be a valid MongoDB ObjectId',
+  }),
+  plannerType: z.enum(
+    ['INSPECTIONS', 'MOT', 'BRAKE_TEST', 'SERVICE', 'REPAIR', 'TACHO_RECALIBRATION', 'VED'],
+    {
+      message: 'Planner type must be one of the predefined values',
+    }
+  ),
+  dates: z
+    .array(
+      z.string().refine(
+        (date) => {
+          return !isNaN(Date.parse(date));
+        },
+        { message: 'Each date must be a valid date string' }
+      ),
+      { message: 'Dates array is required' }
+    )
+    .min(1, 'At least one date is required'),
+};
+
+// Transport Manager bulk create: standAloneId is REQUIRED
+const zodBulkCreatePlannerAsManagerSchema = z
+  .object({
+    ...baseBulkPlannerFields,
+    standAloneId: z
+      .string({ message: 'standAloneId is required for transport manager' })
+      .refine(isMongoId, { message: 'standAloneId must be a valid MongoDB ObjectId' }),
+  })
+  .strict();
+
+export type BulkCreatePlannerAsManagerInput = z.infer<typeof zodBulkCreatePlannerAsManagerSchema>;
+
+// Standalone bulk create: no standAloneId
+const zodBulkCreatePlannerAsStandAloneSchema = z.object({ ...baseBulkPlannerFields }).strict();
+
+export type BulkCreatePlannerAsStandAloneInput = z.infer<
+  typeof zodBulkCreatePlannerAsStandAloneSchema
+>;
+
+export type BulkCreatePlannerInput =
+  | BulkCreatePlannerAsStandAloneInput
+  | BulkCreatePlannerAsManagerInput;
+
+/**
  * Zod schema for validating data when **updating** an existing planner.
  */
 
@@ -107,32 +157,28 @@ export type CreatePlannerInput = CreatePlannerAsStandAloneInput | CreatePlannerA
 // for Transport Manager updating a planner (standAloneId required)
 const zodUpdatePlannerAsManagerSchema = z
   .object({
-    plannerDate: z
-      .string()
-      .refine(
-        (date) => {
-          return !isNaN(Date.parse(date));
-        },
-        { message: 'Planner date must be a valid date string' }
-      ),
+    plannerDate: z.string().refine(
+      (date) => {
+        return !isNaN(Date.parse(date));
+      },
+      { message: 'Planner date must be a valid date string' }
+    ),
   })
   .strict();
 
 export type UpdatePlannerAsManagerInput = z.infer<typeof zodUpdatePlannerAsManagerSchema>;
 
-const zodRequestChangePlannerDateSchema = z.object({
-  requestedDate: z
-    .string()
-    .refine(
+const zodRequestChangePlannerDateSchema = z
+  .object({
+    requestedDate: z.string().refine(
       (date) => {
         return !isNaN(Date.parse(date));
       },
       { message: 'Requested date must be a valid date string' }
     ),
-  requestedReason: z
-    .string()
-    .max(1000, 'Requested reason must be at most 1000 characters'),
-}).strict();
+    requestedReason: z.string().max(1000, 'Requested reason must be at most 1000 characters'),
+  })
+  .strict();
 
 export type RequestChangePlannerDateInput = z.infer<typeof zodRequestChangePlannerDateSchema>;
 
@@ -176,6 +222,10 @@ export type PlannerAndManagerIdParamInput = z.infer<typeof zodPlannerAndManagerI
  */
 export const validateCreatePlannerAsManager = validateBody(zodCreatePlannerAsManagerSchema);
 export const validateCreatePlannerAsStandAlone = validateBody(zodCreatePlannerAsStandAloneSchema);
+export const validateBulkCreatePlannerAsManager = validateBody(zodBulkCreatePlannerAsManagerSchema);
+export const validateBulkCreatePlannerAsStandAlone = validateBody(
+  zodBulkCreatePlannerAsStandAloneSchema
+);
 export const validateUpdatePlannerAsManager = validateBody(zodUpdatePlannerAsManagerSchema);
 export const validateUpdatePlannerAsStandAlone = validateBody(zodUpdatePlannerAsManagerSchema);
 // export const validateUpdatePlannerAsStandAlone = validateBody(zodUpdatePlannerAsStandAloneSchema);
@@ -183,4 +233,6 @@ export const validateSearchPlannerQueries = validateQuery(zodSearchPlannerSchema
 export const validateIdParam = validateParams(zodPlannerIdParamSchema);
 export const validateIdAndManagerParam = validateParams(zodPlannerAndManagerIdParamSchema);
 export const validationRequestChangePlannerDate = validateBody(zodRequestChangePlannerDateSchema);
-export const validateRequestChangePlannerPrams = validateParams(zodPlannerAndManagerIdParamSchema.pick({ standAloneId: true }));
+export const validateRequestChangePlannerPrams = validateParams(
+  zodPlannerAndManagerIdParamSchema.pick({ standAloneId: true })
+);

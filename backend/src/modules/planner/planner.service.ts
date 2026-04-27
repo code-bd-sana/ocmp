@@ -579,6 +579,110 @@ const rejectPlannerChangeRequest = async (
 };
 
 /**
+ * Service function to create multiple planners with specific dates as Transport Manager
+ *
+ * @param {CreatePlannerAsManagerInput & { dates }} data - The data to create multiple planners
+ * @returns {Promise<Partial<IPlanner>[]>} - The created planners
+ * @throws {Error} - Throws an error if the planner creation fails
+ */
+const bulkCreatePlannerAsManager = async (data: any): Promise<Partial<IPlanner>[]> => {
+  const { vehicleId, plannerType, dates, createdBy, standAloneId } = data;
+
+  if (!dates || dates.length === 0) {
+    throw new Error('At least one date is required');
+  }
+
+  const createdPlanners: Partial<IPlanner>[] = [];
+
+  for (const dateString of dates) {
+    const dateObj = new Date(dateString);
+    if (Number.isNaN(dateObj.getTime())) {
+      throw new Error(`Invalid date format: ${dateString}`);
+    }
+
+    const checkDuplicate = await Planner.findOne({
+      plannerType,
+      plannerDate: {
+        $gte: new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate()),
+        $lt: new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate() + 1),
+      },
+      $or: [
+        { standAloneId: new mongoose.Types.ObjectId(standAloneId) },
+        { createdBy: new mongoose.Types.ObjectId(createdBy) },
+      ],
+    }).lean();
+
+    if (!checkDuplicate) {
+      const newPlanner = new Planner({
+        vehicleId,
+        plannerType,
+        plannerDate: new Date(dateObj),
+        createdBy: new mongoose.Types.ObjectId(createdBy),
+        standAloneId: new mongoose.Types.ObjectId(standAloneId),
+      });
+      const savedPlanner = await newPlanner.save();
+      createdPlanners.push(savedPlanner);
+    }
+  }
+
+  if (createdPlanners.length === 0) {
+    throw new Error('No new planners were created. All dates may already have existing planners.');
+  }
+
+  return createdPlanners;
+};
+
+/**
+ * Service function to create multiple planners with specific dates as Standalone User
+ *
+ * @param {CreatePlannerAsStandAloneInput & { dates }} data - The data to create multiple planners
+ * @returns {Promise<Partial<IPlanner>[]>} - The created planners
+ * @throws {Error} - Throws an error if the planner creation fails
+ */
+const bulkCreatePlannerAsStandAlone = async (data: any): Promise<Partial<IPlanner>[]> => {
+  const { vehicleId, plannerType, dates, createdBy } = data;
+
+  if (!dates || dates.length === 0) {
+    throw new Error('At least one date is required');
+  }
+
+  const createdPlanners: Partial<IPlanner>[] = [];
+
+  for (const dateString of dates) {
+    const dateObj = new Date(dateString);
+    if (Number.isNaN(dateObj.getTime())) {
+      throw new Error(`Invalid date format: ${dateString}`);
+    }
+
+    const checkDuplicate = await Planner.findOne({
+      plannerType,
+      plannerDate: {
+        $gte: new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate()),
+        $lt: new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate() + 1),
+      },
+      createdBy: new mongoose.Types.ObjectId(createdBy),
+    }).lean();
+
+    if (!checkDuplicate) {
+      const newPlanner = new Planner({
+        vehicleId,
+        plannerType,
+        plannerDate: new Date(dateObj),
+        createdBy: new mongoose.Types.ObjectId(createdBy),
+      });
+      const savedPlanner = await newPlanner.save();
+      createdPlanners.push(savedPlanner);
+    }
+  }
+
+  if (createdPlanners.length === 0) {
+    throw new Error('No new planners were created. All dates may already have existing planners.');
+  }
+
+  return createdPlanners;
+};
+
+/**
  * Service function to update the status of planners to "DUE" if their plannerDate is less than the current date and their status is not already "DUE".
  *
  * This function is intended to be run as a scheduled job (e.g., using a cron job) to automatically update the status of planners that are past their due date.
@@ -600,6 +704,8 @@ const plannerStatusUpdateToDue = async (): Promise<number> => {
 export const plannerServices = {
   createPlannerAsManager,
   createPlannerAsStandAlone,
+  bulkCreatePlannerAsManager,
+  bulkCreatePlannerAsStandAlone,
   requestChangePlannerDate,
   updatePlanner,
   updatePlannerAsStandAlone,
@@ -611,4 +717,3 @@ export const plannerServices = {
   rejectPlannerChangeRequest,
   plannerStatusUpdateToDue,
 };
-

@@ -12,6 +12,7 @@ import {
   AlertCircle,
   CheckCircle,
   XCircle,
+  Plus,
   Edit,
   Trash2,
   Send,
@@ -209,7 +210,8 @@ export default function PlannerDetailPage({ params }: PageProps) {
   const [newPlannerType, setNewPlannerType] = useState<PlannerType>(
     PlannerType.INSPECTIONS,
   );
-  const [newPlannerDate, setNewPlannerDate] = useState(asInputDate(new Date()));
+  const [selectedDates, setSelectedDates] = useState<string[]>([]);
+  const [dateInput, setDateInput] = useState(asInputDate(new Date()));
 
   const [addOpen, setAddOpen] = useState(false);
   const [addSubmitting, setAddSubmitting] = useState(false);
@@ -328,10 +330,34 @@ export default function PlannerDetailPage({ params }: PageProps) {
     }
 
     if (date) {
-      setNewPlannerDate(asInputDate(date));
+      const inputDate = asInputDate(date);
+      setDateInput(inputDate);
+      setSelectedDates(inputDate ? [inputDate] : []);
+    } else {
+      setDateInput(asInputDate(new Date()));
+      setSelectedDates([]);
     }
 
     setAddOpen(true);
+  };
+
+  const handleAddDate = () => {
+    if (!dateInput) {
+      toast.error("Please select a date");
+      return;
+    }
+
+    if (selectedDates.includes(dateInput)) {
+      toast.error("This date is already added");
+      return;
+    }
+
+    setSelectedDates((prev) => [...prev, dateInput]);
+    setDateInput("");
+  };
+
+  const handleRemoveDate = (index: number) => {
+    setSelectedDates((prev) => prev.filter((_, i) => i !== index));
   };
 
   const vehicleMap = useMemo(() => {
@@ -504,31 +530,27 @@ export default function PlannerDetailPage({ params }: PageProps) {
       return;
     }
 
-    if (!newPlannerDate) {
-      toast.error("Planner date is required");
-      return;
-    }
-
-    const parsed = new Date(newPlannerDate);
-    if (Number.isNaN(parsed.getTime())) {
-      toast.error("Invalid date format");
+    if (selectedDates.length === 0) {
+      toast.error("Add at least one date");
       return;
     }
 
     try {
       setAddSubmitting(true);
-      await PlannerAction.createPlanner({
+      await PlannerAction.bulkCreatePlanner({
         vehicleId,
         plannerType: newPlannerType,
-        plannerDate: parsed.toISOString(),
+        dates: selectedDates.map((d) => new Date(d).toISOString()),
         standAloneId,
       });
-      toast.success("Planner event created successfully");
+      toast.success("Planner events created successfully");
       setAddOpen(false);
+      setSelectedDates([]);
+      setDateInput(asInputDate(new Date()));
       await loadPageData();
     } catch (err) {
       toast.error(
-        err instanceof Error ? err.message : "Failed to create planner event",
+        err instanceof Error ? err.message : "Failed to create planner events",
       );
     } finally {
       setAddSubmitting(false);
@@ -1024,14 +1046,33 @@ export default function PlannerDetailPage({ params }: PageProps) {
                         : "Select a Day"}
                     </h2>
                   </div>
-                  {selectedDay && (
-                    <button
-                      onClick={() => setSelectedDay(null)}
-                      className="rounded p-1 hover:bg-white/10"
-                    >
-                      <XCircle size={16} />
-                    </button>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {selectedDay && (
+                      <button
+                        onClick={() => {
+                          openAddEventModal(
+                            new Date(
+                              currentMonth.getFullYear(),
+                              currentMonth.getMonth(),
+                              selectedDay,
+                            ),
+                          );
+                        }}
+                        className="rounded p-1 transition-all hover:bg-white/10"
+                        title="Add new event for this day"
+                      >
+                        <Plus size={18} />
+                      </button>
+                    )}
+                    {selectedDay && (
+                      <button
+                        onClick={() => setSelectedDay(null)}
+                        className="rounded p-1 hover:bg-white/10"
+                      >
+                        <XCircle size={16} />
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -1176,7 +1217,8 @@ export default function PlannerDetailPage({ params }: PageProps) {
           <DialogHeader>
             <DialogTitle className="text-2xl">Create New Event</DialogTitle>
             <DialogDescription>
-              Add a planner event by selecting a vehicle, type, and date.
+              Add planner events by selecting a vehicle, type, and specific
+              dates.
             </DialogDescription>
           </DialogHeader>
 
@@ -1222,12 +1264,49 @@ export default function PlannerDetailPage({ params }: PageProps) {
               <label className="mb-2 block text-sm font-medium text-slate-700">
                 Date
               </label>
-              <input
-                type="date"
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
-                value={newPlannerDate}
-                onChange={(e) => setNewPlannerDate(e.target.value)}
-              />
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <input
+                    type="date"
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                    value={dateInput}
+                    onChange={(e) => setDateInput(e.target.value)}
+                  />
+                  <button
+                    onClick={handleAddDate}
+                    type="button"
+                    className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                  >
+                    Add
+                  </button>
+                </div>
+
+                {selectedDates.length > 0 && (
+                  <div className="rounded-lg bg-slate-50 p-3">
+                    <p className="mb-2 text-xs font-medium text-slate-600">
+                      Selected Dates ({selectedDates.length}):
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedDates.map((date, idx) => (
+                        <div
+                          key={`${date}-${idx}`}
+                          className="flex items-center gap-1 rounded-full bg-blue-100 px-3 py-1 text-xs text-blue-700"
+                        >
+                          {asDisplayDate(date)}
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveDate(idx)}
+                            className="ml-1 hover:text-blue-900"
+                            aria-label="Remove date"
+                          >
+                            x
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
