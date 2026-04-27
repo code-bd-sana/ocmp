@@ -50,6 +50,46 @@ export const createPlannerAsStandAlone = catchAsync(
 );
 
 /**
+ * Controller function to handle the creation of multiple planners with date range as Transport Manager
+ * @param {Request} req - The request object containing planner data in the body.
+ * @param {Response} res - The response object used to send the response.
+ * @returns {Promise<Partial<IPlanner>[]>} - The created planners.
+ * @throws {Error} - Throws an error if the planner creation fails.
+ */
+export const bulkCreatePlannerAsManager = catchAsync(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user!._id;
+    req.body.createdBy = new mongoose.Types.ObjectId(userId);
+    req.body.standAloneId = new mongoose.Types.ObjectId(req.body.standAloneId);
+    // Call the service method to create multiple planners as Transport Manager
+    const result = await plannerServices.bulkCreatePlannerAsManager(req.body);
+    if (!result) throw new Error('Failed to create planners');
+    // Send a success response with the created planners data
+    ServerResponse(res, true, 201, 'Planners created successfully', result);
+  }
+);
+
+/**
+ * Controller function to handle the creation of multiple planners with date range as Standalone User
+ *
+ * @param {Request} req - The request object containing planner data in the body.
+ * @param {Response} res - The response object used to send the response.
+ * @returns {Promise<Partial<IPlanner>[]>} - The created planners.
+ * @throws {Error} - Throws an error if the planner creation fails.
+ */
+export const bulkCreatePlannerAsStandAlone = catchAsync(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user!._id;
+    req.body.createdBy = new mongoose.Types.ObjectId(userId);
+    // Call the service method to create multiple planners as Standalone User
+    const result = await plannerServices.bulkCreatePlannerAsStandAlone(req.body);
+    if (!result) throw new Error('Failed to create planners');
+    // Send a success response with the created planners data
+    ServerResponse(res, true, 201, 'Planners created successfully', result);
+  }
+);
+
+/**
  * Controller function to handle the request for changing the planner date.
  *
  * @param {AuthenticatedRequest} req - The authenticated request object containing the planner ID in URL parameters and the new date in the body.
@@ -244,4 +284,3 @@ export const rejectPlannerChangeRequest = catchAsync(
     ServerResponse(res, true, 200, 'Planner change request rejected successfully', result);
   }
 );
-

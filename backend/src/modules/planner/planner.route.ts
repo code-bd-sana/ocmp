@@ -4,6 +4,8 @@ import { NextFunction, Response, Router } from 'express';
 // Import controller from corresponding module
 import {
   approvalForPlannerChangesRequest,
+  bulkCreatePlannerAsManager,
+  bulkCreatePlannerAsStandAlone,
   createPlannerAsManager,
   createPlannerAsStandAlone,
   deletePlanner,
@@ -24,6 +26,8 @@ import isAuthorized, { AuthenticatedRequest } from '../../middlewares/is-authori
 import { validateClientForManagerMiddleware } from '../../middlewares/validate-client-for-manager';
 import { UserRole } from '../../models';
 import {
+  validateBulkCreatePlannerAsManager,
+  validateBulkCreatePlannerAsStandAlone,
   validateCreatePlannerAsManager,
   validateCreatePlannerAsStandAlone,
   validateIdAndManagerParam,
@@ -73,6 +77,41 @@ router.post(
   // checkSubscriptionValidity,
   validateCreatePlannerAsStandAlone,
   createPlannerAsStandAlone
+);
+
+/**
+ * Bulk Create Planner (Multiple Dates) as Transport Manager
+ *
+ * @route POST /api/v1/planner/bulk-create-planner
+ * @description Create multiple planners with date range as Transport Manager
+ * @access Private
+ * @param {function} validation - ['validateBulkCreatePlannerAsManager']
+ * @param {function} controller - ['bulkCreatePlannerAsManager']
+ */
+router.post(
+  '/bulk-create-planner',
+  authorizedRoles([UserRole.TRANSPORT_MANAGER]),
+  // checkSubscriptionValidity,
+  validateBulkCreatePlannerAsManager,
+  validateClientForManagerMiddleware,
+  bulkCreatePlannerAsManager
+);
+
+/**
+ * Bulk Create Planner (Multiple Dates) as Standalone User
+ *
+ * @route POST /api/v1/planner/bulk-create-planner-standalone
+ * @description Create multiple planners with date range as Standalone User
+ * @access Private
+ * @param {function} validation - ['validateBulkCreatePlannerAsStandAlone']
+ * @param {function} controller - ['bulkCreatePlannerAsStandAlone']
+ */
+router.post(
+  '/bulk-create-planner-standalone',
+  authorizedRoles([UserRole.STANDALONE_USER]),
+  // checkSubscriptionValidity,
+  validateBulkCreatePlannerAsStandAlone,
+  bulkCreatePlannerAsStandAlone
 );
 
 /**
