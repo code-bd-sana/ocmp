@@ -1104,7 +1104,7 @@ export default function PlannerDetailPage({ params }: PageProps) {
                           ),
                         );
                       }}
-                      className="mt-3 rounded-lg bg-blue-600 px-3 py-1.5 text-xs text-white hover:bg-blue-700"
+                      className="mt-3 rounded-lg bg-[#044192] px-3 py-1.5 text-xs text-white hover:bg-blue-800"
                     >
                       + Add Event
                     </button>
@@ -1275,7 +1275,7 @@ export default function PlannerDetailPage({ params }: PageProps) {
                   <button
                     onClick={handleAddDate}
                     type="button"
-                    className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                    className="rounded-lg bg-[#044192] px-4 py-2 text-sm font-medium text-white hover:bg-blue-800"
                   >
                     Add
                   </button>

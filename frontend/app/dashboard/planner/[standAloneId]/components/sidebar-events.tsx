@@ -108,7 +108,7 @@ export function EventsSidebar({
             <p className="mt-3 text-sm text-slate-500">No events scheduled</p>
             <button
               onClick={onOpenAddEvent}
-              className="mt-3 rounded-lg bg-blue-600 px-3 py-1.5 text-xs text-white hover:bg-blue-700"
+              className="mt-3 rounded-lg bg-[#044192] px-3 py-1.5 text-xs text-white hover:bg-blue-800"
             >
               + Add Event
             </button>
