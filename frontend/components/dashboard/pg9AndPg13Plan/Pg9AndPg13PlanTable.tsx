@@ -75,6 +75,15 @@ export default function Pg9AndPg13PlanTable({
       startingActionGroup: [],
       endActionGroup: [
         {
+          label: "Export",
+          className: "btn btn-sm rounded-xs bg-green-600 text-white hover:bg-green-700",
+          onClick: () => {},
+          exportCsv: true,
+          csvFileName: "pg9-and-pg13-plan-list",
+          visibility: true,
+          positionIndex: 0,
+        },
+        {
           label: "Add Toolbox Session",
           className: "btn btn-sm btn-primary rounded-xs",
           onClick: onPlanClick,

@@ -40,6 +40,15 @@ export default function MeetingNoteTable({
       startingActionGroup: [],
       endActionGroup: [
         {
+          label: "Export",
+          className: "btn btn-sm rounded-xs bg-green-600 text-white hover:bg-green-700",
+          onClick: () => {},
+          exportCsv: true,
+          csvFileName: "meeting-notes-list",
+          visibility: true,
+          positionIndex: 0,
+        },
+        {
           label: "Add Meeting Note",
           className: "btn btn-sm btn-primary rounded-xs",
           onClick: onAddClick,

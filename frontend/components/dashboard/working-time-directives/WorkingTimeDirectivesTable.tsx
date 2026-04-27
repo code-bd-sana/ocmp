@@ -100,6 +100,15 @@ export default function WorkingTimeDirectivesTable({
       startingActionGroup: [],
       endActionGroup: [
         {
+          label: "Export",
+          className: "btn btn-sm rounded-xs bg-green-600 text-white hover:bg-green-700",
+          onClick: () => {},
+          exportCsv: true,
+          csvFileName: "working-time-directives",
+          visibility: true,
+          positionIndex: 0,
+        },
+        {
           label: "Add Directive",
           className: "btn btn-sm btn-primary rounded-xs",
           onClick: onAddDirective,

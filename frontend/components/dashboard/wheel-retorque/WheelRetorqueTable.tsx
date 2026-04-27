@@ -73,6 +73,15 @@ export default function WheelRetorqueTable({
       startingActionGroup: [],
       endActionGroup: [
         {
+          label: "Export",
+          className: "btn btn-sm rounded-xs bg-green-600 text-white hover:bg-green-700",
+          onClick: () => {},
+          exportCsv: true,
+          csvFileName: "wheel-retorque-list",
+          visibility: true,
+          positionIndex: 0,
+        },
+        {
           label: "Add Wheel Retorque Record",
           className: "btn btn-sm btn-primary rounded-xs",
           onClick: onWheelClick,

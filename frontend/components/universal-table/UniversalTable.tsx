@@ -52,6 +52,8 @@ export type HeaderButton = {
   search?: boolean;
   filter?: boolean;
   options?: string[];
+  exportCsv?: boolean;
+  csvFileName?: string;
   writeAction?: boolean;
   disabled?: boolean;
 };
@@ -202,6 +204,60 @@ export default function UniversalTable<T>({
     );
   });
 
+  const formatCsvCell = (value: unknown): string => {
+    if (value === null || value === undefined) return "";
+
+    const normalized =
+      typeof value === "string"
+        ? value
+        : typeof value === "number" || typeof value === "boolean"
+          ? String(value)
+          : JSON.stringify(value);
+
+    return `"${normalized.replace(/"/g, '""')}"`;
+  };
+
+  const exportRowsAsCsv = (fileName: string) => {
+    const headerRow = columns
+      .map((column) => formatCsvCell(column.title))
+      .join(",");
+
+    const dataRows = filteredData.map((row) =>
+      columns
+        .map((column) =>
+          formatCsvCell((row as Record<string, unknown>)[String(column.key)]),
+        )
+        .join(","),
+    );
+
+    const csvContent = [headerRow, ...dataRows].join("\n");
+    const csvWithBom = `\uFEFF${csvContent}`;
+    const blob = new Blob([csvWithBom], {
+      type: "text/csv;charset=utf-8;",
+    });
+
+    const downloadLink = document.createElement("a");
+    const objectUrl = URL.createObjectURL(blob);
+
+    downloadLink.href = objectUrl;
+    downloadLink.download = fileName.endsWith(".csv")
+      ? fileName
+      : `${fileName}.csv`;
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    document.body.removeChild(downloadLink);
+    URL.revokeObjectURL(objectUrl);
+  };
+
+  const handleHeaderButtonClick = (button: HeaderButton) => {
+    if (button.exportCsv) {
+      const fileName = button.csvFileName || "table-data";
+      exportRowsAsCsv(fileName);
+    }
+
+    button.onClick();
+  };
+
   return (
     <div>
       {!isChecking && !canWrite && (
@@ -284,7 +340,7 @@ export default function UniversalTable<T>({
                       className={btn.className || ""}
                       disabled={resolveDisabled(btn)}
                       title={resolveDisabled(btn) ? reason : undefined}
-                      onClick={() => btn.onClick()}
+                      onClick={() => handleHeaderButtonClick(btn)}
                       size={btn.size || "default"}
                     >
                       {btn.icon}
@@ -350,7 +406,7 @@ export default function UniversalTable<T>({
                       className={btn.className}
                       disabled={resolveDisabled(btn)}
                       title={resolveDisabled(btn) ? reason : undefined}
-                      onClick={() => btn.onClick()}
+                      onClick={() => handleHeaderButtonClick(btn)}
                       size={btn.size || "default"}
                     >
                       {btn.label}
@@ -445,7 +501,7 @@ export default function UniversalTable<T>({
                         className={btn.className || ""}
                         disabled={resolveDisabled(btn)}
                         title={resolveDisabled(btn) ? reason : undefined}
-                        onClick={() => btn.onClick()}
+                        onClick={() => handleHeaderButtonClick(btn)}
                         size={btn.size || "default"}
                       >
                         {btn.label}
@@ -513,7 +569,7 @@ export default function UniversalTable<T>({
                         className={btn.className}
                         disabled={resolveDisabled(btn)}
                         title={resolveDisabled(btn) ? reason : undefined}
-                        onClick={() => btn.onClick()}
+                        onClick={() => handleHeaderButtonClick(btn)}
                         size={btn.size || "default"}
                       >
                         {btn.label}
