@@ -3,9 +3,9 @@
  */
 
 export enum VehicleStatus {
-  PENDING = "PENDING",
   ACTIVE = "ACTIVE",
-  INACTIVE = "INACTIVE",
+  UPCOMING = "UPCOMING",
+  OVERDUE = "OVERDUE",
 }
 
 export enum OwnerShipStatus {
@@ -63,7 +63,6 @@ export interface CreateVehicleInput {
   vehicleRegId: string;
   vehicleType: string;
   licensePlate: string;
-  status: VehicleStatus;
   additionalDetails: {
     lastServiceDate?: string;
     nextServiceDate?: string;
@@ -90,7 +89,6 @@ export interface UpdateVehicleInput {
   vehicleRegId?: string;
   vehicleType?: string;
   licensePlate?: string;
-  status?: VehicleStatus;
   additionalDetails?: {
     lastServiceDate?: string;
     nextServiceDate?: string;

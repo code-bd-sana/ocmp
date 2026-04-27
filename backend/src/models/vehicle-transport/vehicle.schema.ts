@@ -4,6 +4,8 @@ export enum VehicleStatus {
   PENDING = 'PENDING',
   ACTIVE = 'ACTIVE',
   INACTIVE = 'INACTIVE',
+  UPCOMING = 'UPCOMING',
+  OVERDUE = 'OVERDUE',
 }
 
 export enum OwnerShipStatus {

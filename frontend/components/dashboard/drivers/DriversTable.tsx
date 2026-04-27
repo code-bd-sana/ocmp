@@ -17,6 +17,9 @@ export interface DriverTableRow {
   employed: string;
   checkStatus: string;
   nextCheckDueDate: string;
+  checkFrequencyDays: string | number;
+  cpcExpiry: string;
+  licenseExpiry: string;
 }
 
 /** Map API response → flat table rows */
@@ -37,15 +40,30 @@ export function toDriverTableRows(drivers: DriverRow[]): DriverTableRow[] {
           year: "numeric",
         })
       : "—",
+    checkFrequencyDays: d.checkFrequencyDays || "—",
+    cpcExpiry: d.cpcExpiry
+      ? new Date(d.cpcExpiry).toLocaleDateString("en-US", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+        })
+      : "—",
+    licenseExpiry: d.licenseExpiry
+      ? new Date(d.licenseExpiry).toLocaleDateString("en-US", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+        })
+      : "—",
   }));
 }
 
 const columns: Column<DriverTableRow>[] = [
-  { key: "fullName", title: "Full Name" },
+  // { key: "fullName", title: "Full Name" },
   { key: "licenseNumber", title: "License Number" },
   { key: "niNumber", title: "NI Number" },
-  { key: "postCode", title: "Post Code" },
-  { key: "points", title: "Points" },
+  // { key: "postCode", title: "Post Code" },
+  // { key: "points", title: "Points" },
   {
     key: "employed",
     title: "Employed",
@@ -79,6 +97,9 @@ const columns: Column<DriverTableRow>[] = [
     ),
   },
   { key: "nextCheckDueDate", title: "Next Check Due" },
+  { key: "cpcExpiry", title: "CPC Expiry" },
+  { key: "licenseExpiry", title: "License Expiry" },
+  { key: "checkFrequencyDays", title: "Check Frequency (Days)" },
 ];
 
 interface DriversTableProps {

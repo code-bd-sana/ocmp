@@ -41,9 +41,7 @@ const createClient = async (
   const activeClients =
     managerDoc?.clients.filter((c) => c.status !== ClientStatus.REVOKED).length ?? 0;
   if (activeClients >= clientLimit) {
-    throw new Error(
-      `Client limit reached. Maximum: ${clientLimit}. Current: ${activeClients}`
-    );
+    throw new Error(`Client limit reached. Maximum: ${clientLimit}. Current: ${activeClients}`);
   }
 
   // 2. Generate password + hash
@@ -81,25 +79,50 @@ const createClient = async (
   }
 
   // 5. Create default repository settings for the new client (all flags false) — fire and forget
-  repositorySettingsServices
-    .createDefaultSettings((newUser._id as mongoose.Types.ObjectId).toString());
+  repositorySettingsServices.createDefaultSettings(
+    (newUser._id as mongoose.Types.ObjectId).toString()
+  );
 
   // 6. Send email — fire and forget (don't block the response)
   await SendEmail({
     to: data.email,
-    subject: 'Your account has been created',
-    text: `Hello ${data.fullName}, your account has been created. Email: ${data.email} | Password: ${plainPassword}`,
+    subject: 'Welcome to OCMP | Your Account Has Been Created',
+    text: `Hello ${data.fullName}, your account has been created by your Transport Manager. Email: ${data.email} | Password: ${plainPassword}. Please change your password after your first login.`,
     html: `
-      <h3>Welcome, ${data.fullName}!</h3>
-      <p>Your account has been created by your Transport Manager.</p>
-      <p>You can log in using the following credentials:</p>
-      <table style="border-collapse: collapse; margin: 16px 0;">
-        <tr><td style="padding: 8px; font-weight: bold;">Email:</td><td style="padding: 8px;">${data.email}</td></tr>
-        <tr><td style="padding: 8px; font-weight: bold;">Password:</td><td style="padding: 8px; font-family: monospace; font-size: 16px;">${plainPassword}</td></tr>
-      </table>
-      <p>Please change your password after your first login.</p>
-    `,
-  })
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <!-- Header with OCMP branding -->
+      <div style="background-color: #044192; padding: 15px 20px; text-align: center; border-radius: 8px 8px 0 0;">
+        <h2 style="color: #ffffff; margin: 0; font-size: 22px;">OCMP</h2>
+        <p style="color: #ffffff; margin: 5px 0 0; font-size: 12px; opacity: 0.9;">Operations Control Management Platform</p>
+      </div>
+      
+      <!-- Content -->
+      <div style="padding: 20px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 8px 8px; background-color: #ffffff;">
+        <h3 style="color: #333; margin-top: 0;">Welcome, ${data.fullName}!</h3>
+        <p style="color: #555;">Your account has been created by your Transport Manager.</p>
+        <p style="color: #555;">You can log in using the following credentials:</p>
+        
+        <table style="border-collapse: collapse; margin: 16px 0; width: 100%;">
+          <tr style="border-bottom: 1px solid #e0e0e0;">
+            <td style="padding: 8px; font-weight: bold; color: #555;">Email:</td>
+            <td style="padding: 8px; color: #044192; font-weight: 500;">${data.email}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px; font-weight: bold; color: #555;">Password:</td>
+            <td style="padding: 8px; font-family: monospace; font-size: 16px; color: #d9534f; font-weight: bold;">${plainPassword}</td>
+          </tr>
+        </table>
+        
+        <p style="color: #555;">Please change your password after your first login.</p>
+        
+        <!-- Kind regards section -->
+        <div style="margin-top: 30px; padding-top: 15px; border-top: 1px solid #e0e0e0;">
+          <p style="color: #555; margin: 0;">Kind regards,<br><strong style="color: #044192;">OCMP Team</strong></p>
+        </div>
+      </div>
+    </div>
+  `,
+  });
 
   return updatedDoc;
 };
@@ -158,9 +181,7 @@ const requestJoinTeam = async (
   const activeClients =
     managerDoc?.clients.filter((c) => c.status !== ClientStatus.REVOKED).length ?? 0;
   if (activeClients >= clientLimit) {
-    throw new Error(
-      `This Transport Manager's team is full. Limit: ${clientLimit}`
-    );
+    throw new Error(`This Transport Manager's team is full. Limit: ${clientLimit}`);
   }
 
   // Check if a REVOKED entry already exists for this client under this manager — reuse it
@@ -324,9 +345,7 @@ const getManagerByClientId = async (clientId: string): Promise<any> => {
   if (!assignment) throw new Error('No Transport Manager assigned to this client');
 
   // Extract the specific client entry
-  const clientEntry = assignment.clients.find(
-    (c) => c.clientId.toString() === clientId
-  );
+  const clientEntry = assignment.clients.find((c) => c.clientId.toString() === clientId);
 
   return {
     manager: assignment.managerId,
@@ -343,9 +362,7 @@ const getManagerByClientId = async (clientId: string): Promise<any> => {
  * @param {string} clientId - The client's user ID.
  * @returns {Promise<{ modifiedCount: number }>} - Number of records updated.
  */
-const removeClientFromManager = async (
-  clientId: string
-): Promise<{ modifiedCount: number }> => {
+const removeClientFromManager = async (clientId: string): Promise<{ modifiedCount: number }> => {
   const clientObjId = new mongoose.Types.ObjectId(clientId);
 
   const result = await ClientManagement.updateOne(
@@ -518,17 +535,14 @@ const updateJoinRequest = async (
             'clients.$.approvedAt': new Date(),
           },
         })
-      : await ClientManagement.updateOne(
-          query,
-          {
-            $pull: {
-              clients: {
-                clientId: clientObjId,
-                status: ClientStatus.PENDING,
-              },
+      : await ClientManagement.updateOne(query, {
+          $pull: {
+            clients: {
+              clientId: clientObjId,
+              status: ClientStatus.PENDING,
             },
-          }
-        );
+          },
+        });
 
   if (result.modifiedCount === 0) {
     throw new Error('No pending request found for this client');
@@ -571,9 +585,7 @@ const getManagerList = async (
  * @param {string} clientId - The client's user ID (from req.user._id).
  * @returns {Promise<{ managerId: string; status: string }>} - Updated status info.
  */
-const requestLeave = async (
-  clientId: string
-): Promise<{ managerId: string; status: string }> => {
+const requestLeave = async (clientId: string): Promise<{ managerId: string; status: string }> => {
   const clientObjId = new mongoose.Types.ObjectId(clientId);
 
   const result = await ClientManagement.findOneAndUpdate(
@@ -737,9 +749,7 @@ const requestRemove = async (
   );
 
   if (result.modifiedCount === 0) {
-    throw new Error(
-      'No approved client found with this ID in your team'
-    );
+    throw new Error('No approved client found with this ID in your team');
   }
 
   return { clientId, status: ClientStatus.REMOVE_REQUESTED };
@@ -883,16 +893,15 @@ const getMyManager = async (clientId: string) => {
   })
     .populate({
       path: 'managerId',
-      select: '-password -resetToken -resetTokenExpiry -emailVerificationToken -emailVerificationTokenExpiry',
+      select:
+        '-password -resetToken -resetTokenExpiry -emailVerificationToken -emailVerificationTokenExpiry',
     })
     .lean();
 
   if (!assignment) return null;
 
   // Extract the specific client entry
-  const clientEntry = assignment.clients.find(
-    (c) => c.clientId.toString() === clientId
-  );
+  const clientEntry = assignment.clients.find((c) => c.clientId.toString() === clientId);
 
   return {
     manager: assignment.managerId,
@@ -901,8 +910,6 @@ const getMyManager = async (clientId: string) => {
     approvedAt: clientEntry?.approvedAt,
   };
 };
-
-
 
 // Export all service functions as a namespace
 export const clientManagementServices = {
@@ -922,5 +929,5 @@ export const clientManagementServices = {
   requestRemove,
   getRemoveRequest,
   handleRemoveRequest,
-  getMyManager
+  getMyManager,
 };

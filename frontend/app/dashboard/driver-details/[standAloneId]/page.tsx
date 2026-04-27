@@ -110,14 +110,13 @@ export default function DriverDetailsPage({ params }: PageProps) {
           searchKey: search || undefined,
         });
         if (res.status && res.data) {
+          console.log("driver", res.data.drivers);
           setRows(toDriverTableRows(res.data.drivers));
         } else {
           setError(res.message || "Failed to load drivers");
         }
       } catch (err) {
-        setError(
-          err instanceof Error ? err.message : "Failed to load drivers",
-        );
+        setError(err instanceof Error ? err.message : "Failed to load drivers");
       } finally {
         setLoading(false);
       }

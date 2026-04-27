@@ -2,7 +2,7 @@ import { isMongoId } from 'validator';
 import { z } from 'zod';
 import { validateBody, validateParams, validateQuery } from '../../handlers/zod-error-handler';
 import { zodSearchQuerySchema } from '../../handlers/common-zod-validator';
-import { OwnerShipStatus, VehicleStatus } from '../../models';
+import { OwnerShipStatus } from '../../models';
 
 const additionalDetailsSchema = z
   .object({
@@ -63,7 +63,6 @@ const baseVehicleFields = {
     .string({ message: 'licensePlate must be a string' })
     .min(1, 'License plate is required')
     .max(50, 'License plate must not exceed 50 characters'),
-  status: z.enum(VehicleStatus, { message: 'status must be a valid vehicle status' }),
   additionalDetails: additionalDetailsRequiredSchema,
   driverPack: z.boolean({ message: 'driverPack must be a boolean' }),
   notes: z.string({ message: 'notes must be a string' }).optional(),
@@ -118,7 +117,6 @@ const zodUpdateVehicleSchema = z
     vehicleRegId: baseVehicleFields.vehicleRegId.optional(),
     vehicleType: baseVehicleFields.vehicleType.optional(),
     licensePlate: baseVehicleFields.licensePlate.optional(),
-    status: baseVehicleFields.status.optional(),
     additionalDetails: additionalDetailsUpdateSchema.optional(),
     driverPack: baseVehicleFields.driverPack.optional(),
     notes: baseVehicleFields.notes.optional(),
