@@ -696,13 +696,13 @@ export default function PlannerDetailPage({ params }: PageProps) {
           <div className="mb-8">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="min-w-0">
-                <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl lg:text-4xl">
+                <h1 className="text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl lg:text-4xl">
                   Vehicle Maintenance Planner
                 </h1>
-                <p className="mt-2 text-sm text-slate-600 sm:text-base">
+                {/* <p className="mt-2 text-sm text-slate-600 sm:text-base">
                   Schedule and manage inspections, services, MOTs, and brake
                   tests
-                </p>
+                </p> */}
               </div>
               <div className="flex w-full flex-col gap-3 sm:flex-row lg:w-auto">
                 <div className="relative w-full lg:w-80">
