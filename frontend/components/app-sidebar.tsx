@@ -55,7 +55,11 @@ const SUPER_ADMIN_NAV_ITEMS: SuperAdminNavItem[] = [
     href: "/admin/transport-manager",
     icon: UserCog,
   },
-  { label: "All Standalone Users", href: "/admin/all-standalone", icon: Building2 },
+  {
+    label: "All Standalone Users",
+    href: "/admin/all-standalone",
+    icon: Building2,
+  },
   { label: "Subscriptions", href: "/admin/subscriptions", icon: CreditCard },
 ];
 
@@ -307,6 +311,9 @@ export function AppSidebar({
       </SidebarContent>
 
       <SidebarFooter className="bg-muted p-3">
+        <Link href="/contact" className="text-primary ml-2">
+          Contact Us
+        </Link>
         <SidebarMenuButton
           onClick={handleLogout}
           className="text-destructive hover:bg-destructive/10 hover:text-destructive w-full cursor-pointer justify-start"
