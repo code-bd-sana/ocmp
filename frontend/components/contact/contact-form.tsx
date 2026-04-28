@@ -62,15 +62,15 @@ export default function ContactForm() {
               alt="OCMP logo"
               width={30}
               height={30}
-              className="rounded-full"
+              className="mt-2 rounded-full"
               style={{ width: "auto", height: "auto" }}
               priority
             />
             <p className="text-base">Dashboard</p>
           </Link>
-          <span className="hidden text-xs font-medium tracking-[0.2em] text-slate-400 uppercase sm:inline">
+          <p className="hidden text-xs font-medium tracking-[0.2em] text-slate-400 uppercase sm:inline">
             Contact
-          </span>
+          </p>
         </div>
       </header>
 
