@@ -55,18 +55,18 @@ export default function ContactForm() {
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4 sm:px-6">
           <Link
             href="/dashboard"
-            className="inline-flex items-center justify-center gap-3 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-[#044192]/20 hover:text-[#044192]"
+            className="flex items-center justify-center gap-3 rounded-full bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-[#044192]/20 hover:text-[#044192]"
           >
             <Image
               src="/OCMP Blue.svg"
               alt="OCMP logo"
-              width={40}
-              height={40}
+              width={30}
+              height={30}
               className="rounded-full"
               style={{ width: "auto", height: "auto" }}
               priority
             />
-            <span>Dashboard</span>
+            <p className="text-base">Dashboard</p>
           </Link>
           <span className="hidden text-xs font-medium tracking-[0.2em] text-slate-400 uppercase sm:inline">
             Contact
