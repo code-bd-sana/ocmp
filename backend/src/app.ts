@@ -361,6 +361,9 @@ const loadRoutes = (basePath: string, baseRoute: string) => {
 const routesPath = path.join(__dirname, 'modules');
 loadRoutes(routesPath, '/api/v1');
 
+// Explicit fallback mount for the contact form route
+app.use('/api/v1/contact-form', require('./modules/contact-form/contact-form.route'));
+
 // Not found handler
 app.use(PathNotFound);
 

@@ -19,6 +19,8 @@ interface Config {
   EMAIL_USER: string;
   EMAIL_PASSWORD: string;
   EMAIL_FROM: string;
+  ADMIN_EMAIL: string;
+  SUPER_ADMIN_EMAIL: string;
   MAX_JSON_SIZE: string;
   MAX_FILE_SIZE: number;
   URL_ENCODED: boolean;
@@ -53,6 +55,9 @@ const config: Config = {
   EMAIL_USER: process.env.EMAIL_USER as string,
   EMAIL_PASSWORD: process.env.EMAIL_PASSWORD as string,
   EMAIL_FROM: process.env.EMAIL_FROM as string,
+  ADMIN_EMAIL:
+    process.env.ADMIN_EMAIL || process.env.SUPER_ADMIN_EMAIL || process.env.EMAIL_USER || '',
+  SUPER_ADMIN_EMAIL: process.env.SUPER_ADMIN_EMAIL || '',
   MAX_JSON_SIZE: process.env.MAX_JSON_SIZE as string,
   MAX_FILE_SIZE: parseInt(process.env.MAX_FILE_SIZE as string, 10),
   URL_ENCODED: process.env.URL_ENCODED === 'true' ? true : false,
