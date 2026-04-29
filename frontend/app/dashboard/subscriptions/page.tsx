@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/table";
 import { CalendarDays, CheckCircle2, CreditCard, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import Link from "next/link";
 
 type PlanGroup = {
   planName: string;
@@ -549,6 +550,21 @@ export default function DashboardSubscriptionsPage() {
               {trialStatus.label}
             </p>
             <p className="mt-1 text-xs text-slate-600">{trialStatus.detail}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-slate-500">
+              Cancel Subscription
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm font-semibold text-slate-900">
+              To cancel your subscription, please contact our support team{" "}
+              <span className="text-primary underline">
+                <Link href="/contact">Contact</Link>
+              </span>
+            </p>
           </CardContent>
         </Card>
 

@@ -10,6 +10,7 @@ import { LogIn } from "lucide-react";
 export interface TransportManagerTableRow {
   _id: string;
   fullName: string;
+  email?: string;
 }
 
 /** Map API response → flat rows */
@@ -19,6 +20,7 @@ export function toTableRows(
   return rows.map((r) => ({
     _id: r._id,
     fullName: r.fullName,
+    email: r.email,
   }));
 }
 
@@ -37,6 +39,13 @@ const columns: Column<TransportManagerTableRow>[] = [
       <span className="font-mono text-sm text-gray-500">
         {row._id.slice(-8)}
       </span>
+    ),
+  },
+  {
+    key: "email",
+    title: "Email",
+    render: (row) => (
+      <span className="text-sm text-gray-700">{row.email || "N/A"}</span>
     ),
   },
 ];

@@ -560,16 +560,70 @@ const updateJoinRequest = async (
  */
 const getManagerList = async (
   query: SearchQueryInput
-): Promise<{ _id: any; fullName: string }[]> => {
+): Promise<{ _id: any; fullName: string; email: string }[]> => {
   const searchKey = query.searchKey;
 
-  // Build match condition
-  const matchCondition: any = { role: UserRole.TRANSPORT_MANAGER, isActive: true };
+  const matchCondition: Record<string, unknown> = {
+    role: UserRole.TRANSPORT_MANAGER,
+    isActive: true,
+    showInStandaloneUsersList: { $ne: false },
+  };
+
   if (searchKey) {
     matchCondition.fullName = { $regex: searchKey, $options: 'i' };
   }
 
-  return User.find(matchCondition, { _id: 1, fullName: 1 }).lean();
+  const managers = await User.aggregate([
+    { $match: matchCondition },
+    {
+      $lookup: {
+        from: ClientManagement.collection.name,
+        let: { managerId: '$_id' },
+        pipeline: [
+          {
+            $match: {
+              $expr: { $eq: ['$managerId', '$$managerId'] },
+            },
+          },
+          {
+            $project: {
+              activeClientCount: {
+                $size: {
+                  $filter: {
+                    input: '$clients',
+                    as: 'client',
+                    cond: { $ne: ['$$client.status', ClientStatus.REVOKED] },
+                  },
+                },
+              },
+            },
+          },
+        ],
+        as: 'clientSummary',
+      },
+    },
+    {
+      $addFields: {
+        activeClientCount: {
+          $ifNull: [{ $arrayElemAt: ['$clientSummary.activeClientCount', 0] }, 0],
+        },
+      },
+    },
+    {
+      $match: {
+        activeClientCount: { $lt: 4 },
+      },
+    },
+    {
+      $project: {
+        _id: 1,
+        fullName: 1,
+        email: 1,
+      },
+    },
+  ]);
+
+  return managers;
 };
 
 // ═══════════════════════════════════════════════════════════════

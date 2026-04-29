@@ -23,6 +23,7 @@ export interface IUser extends Document {
   emailVerificationToken?: string;
   emailVerificationTokenExpiry?: Date;
   isActive: boolean;
+  showInStandaloneUsersList?: boolean;
 }
 
 // Define the User schema
@@ -78,6 +79,10 @@ const UserSchema: Schema<IUser> = new Schema(
       required: true,
       default: false,
     } /* Account enabled/disabled */,
+    showInStandaloneUsersList: {
+      type: Boolean,
+      default: true,
+    } /* Whether the transport manager appears in the standalone users list */,
   },
   { timestamps: true, versionKey: false }
 );
