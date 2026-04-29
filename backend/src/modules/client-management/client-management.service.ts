@@ -560,7 +560,7 @@ const updateJoinRequest = async (
  */
 const getManagerList = async (
   query: SearchQueryInput
-): Promise<{ _id: any; fullName: string }[]> => {
+): Promise<{ _id: any; fullName: string; email: string }[]> => {
   const searchKey = query.searchKey;
 
   const matchCondition: Record<string, unknown> = {
@@ -618,6 +618,7 @@ const getManagerList = async (
       $project: {
         _id: 1,
         fullName: 1,
+        email: 1,
       },
     },
   ]);

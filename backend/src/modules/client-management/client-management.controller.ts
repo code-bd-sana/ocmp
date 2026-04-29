@@ -160,6 +160,7 @@ export const getManagerList = catchAsync(async (req: AuthenticatedRequest, res: 
   const query = req.query as unknown as SearchQueryInput;
   const result = await clientManagementServices.getManagerList(query);
   ServerResponse(res, true, 200, 'Manager list retrieved successfully', result);
+  console.log('tm list', result);
 });
 
 // ═══════════════════════════════════════════════════════════════
