@@ -35,6 +35,6 @@ export interface CreateClientInput {
 }
 export interface TransportManagerType {
   _id: string;
-  fullName: string
-
+  fullName: string;
+  email: string;
 }
