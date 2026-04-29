@@ -25,13 +25,14 @@ const updateUser = async (
   // Update the user in the database
   const updatedUser = await User.findByIdAndUpdate(id, data, { new: true });
   // If the user was not found or update failed, return null
-  const updateUserData: Partial<IUserResponse> = {
+  const updateUserData: Partial<IUserResponse & { showInStandaloneUsersList?: boolean }> = {
     _id: updatedUser?._id.toString(),
     fullName: updatedUser?.fullName,
     email: updatedUser?.email,
     phone: updatedUser?.phone || '',
     role: updatedUser?.role,
     isEmailVerified: updatedUser?.isEmailVerified || false,
+    showInStandaloneUsersList: updatedUser?.showInStandaloneUsersList,
   };
   // Update the user data in Redis cache
   if (updateUserData._id) {
@@ -55,13 +56,14 @@ const getUserProfile = async (id: string): Promise<Partial<IUserResponse | null>
   // If not found in cache, fetch from the database
   const userProfile = await User.findById(id);
   // If the user was not found, return null
-  const userProfileData: Partial<IUserResponse> = {
+  const userProfileData: Partial<IUserResponse & { showInStandaloneUsersList?: boolean }> = {
     _id: userProfile?._id.toString(),
     fullName: userProfile?.fullName,
     email: userProfile?.email,
     phone: userProfile?.phone || '',
     role: userProfile?.role,
     isEmailVerified: userProfile?.isEmailVerified || false,
+    showInStandaloneUsersList: userProfile?.showInStandaloneUsersList,
   };
 
   // Store the user profile in Redis cache
