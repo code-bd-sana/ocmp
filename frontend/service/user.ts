@@ -8,6 +8,13 @@ export interface IUserProfile {
   fullName?: string;
   email?: string;
   role?: string;
+  showInStandaloneUsersList?: boolean;
+}
+
+export interface IUpdateUserProfileInput {
+  fullName?: string;
+  phone?: string;
+  showInStandaloneUsersList?: boolean;
 }
 
 export type UserListRoleFilter = "all" | "transport-manager" | "standalone";
@@ -47,7 +54,9 @@ function extractApiError(data: IApiResponse | undefined): string {
   if (data.errors) {
     if (Array.isArray(data.errors)) {
       const messages = (data.errors as { field?: string; message: string }[])
-        .map((item) => (item.field ? `${item.field}: ${item.message}` : item.message))
+        .map((item) =>
+          item.field ? `${item.field}: ${item.message}` : item.message,
+        )
         .join(", ");
 
       if (messages) return messages;
@@ -71,6 +80,31 @@ const getProfile = async (): Promise<IApiResponse<IUserProfile>> => {
     },
   );
   return response.data;
+};
+
+const updateProfile = async (
+  payload: IUpdateUserProfileInput,
+): Promise<IApiResponse<IUserProfile>> => {
+  const token = AuthAction.GetAuthToken();
+  if (!token) throw new Error("No authentication token found");
+
+  try {
+    const response = await axios.patch<IApiResponse<IUserProfile>>(
+      `${base_url}/user/me`,
+      payload,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      },
+    );
+
+    return response.data;
+  } catch (error: unknown) {
+    if (axios.isAxiosError<IApiResponse>(error)) {
+      throw new Error(extractApiError(error.response?.data));
+    }
+
+    throw new Error("Something went wrong");
+  }
 };
 
 const getAllUsers = async (
@@ -103,4 +137,4 @@ const getAllUsers = async (
   }
 };
 
-export const UserAction = { getProfile, getAllUsers };
+export const UserAction = { getProfile, updateProfile, getAllUsers };
