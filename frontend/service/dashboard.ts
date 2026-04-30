@@ -56,6 +56,7 @@ export interface IDashboardSummaryData {
   totalVehicles: number;
   totalEvents: number;
   transportManagerName?: string;
+  transportManagerEmail?: string;
 }
 
 export interface IDashboardSummaryResponse {
