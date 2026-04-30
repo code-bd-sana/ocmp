@@ -1,12 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  getFleetUtilizationData,
-  getSummaryData,
-  fetchTotalClientsCount,
-} from "./summary.utils";
+import { getFleetUtilizationData, getSummaryData } from "./summary.utils";
 import dynamic from "next/dynamic";
+import { DashboardAction, IDashboardSummaryData } from "@/service/dashboard";
+import { AuthAction } from "@/service/auth";
 
 const FleetUtilizationChart = dynamic(
   () => import("../charts/FleetUtilizationChart"),
@@ -21,20 +19,31 @@ const FleetUtilizationChart = dynamic(
 );
 
 export default function DashboardSummary() {
-  const [totalClients, setTotalClients] = useState<number | undefined>(
+  const [summary, setSummary] = useState<IDashboardSummaryData | undefined>(
     undefined,
   );
+  const role = AuthAction.GetUserRole();
+
   useEffect(() => {
     let mounted = true;
-    fetchTotalClientsCount().then((count) => {
-      if (mounted) setTotalClients(count);
-    });
+
+    DashboardAction.getDashboardSummary()
+      .then((res) => {
+        if (!mounted) return;
+        if (res.success && res.data) {
+          setSummary(res.data);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to load dashboard summary:", err);
+      });
+
     return () => {
       mounted = false;
     };
   }, []);
 
-  const summaryData = getSummaryData(totalClients);
+  const summaryData = getSummaryData(role, summary);
   const fleetData = getFleetUtilizationData();
 
   return (

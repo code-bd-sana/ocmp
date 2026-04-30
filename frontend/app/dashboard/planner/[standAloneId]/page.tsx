@@ -163,11 +163,13 @@ function labelForPlannerType(type: PlannerType | string): string {
 }
 
 function getISOWeek(date: Date): number {
-  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const d = new Date(
+    Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()),
+  );
   const dayNum = d.getUTCDay() || 7;
   d.setUTCDate(d.getUTCDate() + 4 - dayNum);
   const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-  return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+  return Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
 }
 
 function plannerEventType(row: PlannerRow): EventType {
@@ -928,7 +930,7 @@ export default function PlannerDetailPage({ params }: PageProps) {
                 <div className="min-w-170">
                   {/* Weekday Headers */}
                   <div className="grid grid-cols-[40px_repeat(7,minmax(0,1fr))] border-b border-slate-200">
-                    <div className="py-3 text-center text-xs font-semibold text-slate-500 uppercase border-r border-slate-200">
+                    <div className="border-r border-slate-200 py-3 text-center text-xs font-semibold text-slate-500 uppercase">
                       Wk
                     </div>
                     {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(
@@ -945,101 +947,112 @@ export default function PlannerDetailPage({ params }: PageProps) {
 
                   {/* Calendar Days */}
                   <div className="grid grid-cols-[40px_repeat(7,minmax(0,1fr))]">
-                    {Array.from({ length: calendarDays.length / 7 }).map((_, weekIdx) => {
-                      const weekDays = calendarDays.slice(weekIdx * 7, (weekIdx + 1) * 7);
-                      const weekNumber = getISOWeek(weekDays[0].date);
+                    {Array.from({ length: calendarDays.length / 7 }).map(
+                      (_, weekIdx) => {
+                        const weekDays = calendarDays.slice(
+                          weekIdx * 7,
+                          (weekIdx + 1) * 7,
+                        );
+                        const weekNumber = getISOWeek(weekDays[0].date);
 
-                      return (
-                        <div className="contents" key={weekIdx}>
-                          <div className="flex items-center justify-center border-r border-b border-slate-100 bg-slate-50/50 text-xs font-semibold text-slate-400">
-                            W{weekNumber}
-                          </div>
-                          {weekDays.map((day, idx) => {
-                            const events =
-                              day.type === "current"
-                                ? dayRowsMap.get(day.day) || []
-                                : [];
-                            const hasEvents = events.length > 0;
-                            const isSelected =
-                              day.type === "current" && selectedDay === day.day;
-                            const isToday =
-                              day.type === "current" &&
-                              day.day === new Date().getDate() &&
-                              currentMonth.getMonth() === new Date().getMonth() &&
-                              currentMonth.getFullYear() === new Date().getFullYear();
+                        return (
+                          <div className="contents" key={weekIdx}>
+                            <div className="flex items-center justify-center border-r border-b border-slate-100 bg-slate-50/50 text-xs font-semibold text-slate-400">
+                              W{weekNumber}
+                            </div>
+                            {weekDays.map((day, idx) => {
+                              const events =
+                                day.type === "current"
+                                  ? dayRowsMap.get(day.day) || []
+                                  : [];
+                              const hasEvents = events.length > 0;
+                              const isSelected =
+                                day.type === "current" &&
+                                selectedDay === day.day;
+                              const isToday =
+                                day.type === "current" &&
+                                day.day === new Date().getDate() &&
+                                currentMonth.getMonth() ===
+                                  new Date().getMonth() &&
+                                currentMonth.getFullYear() ===
+                                  new Date().getFullYear();
 
-                            const primaryEventType = hasEvents
-                              ? events[0].plannerType
-                              : null;
-                            const dayColorClass =
-                              primaryEventType &&
-                              PLANNER_TYPE_COLORS[primaryEventType]
-                                ? PLANNER_TYPE_COLORS[primaryEventType].dayBg
-                                : "";
+                              const primaryEventType = hasEvents
+                                ? events[0].plannerType
+                                : null;
+                              const dayColorClass =
+                                primaryEventType &&
+                                PLANNER_TYPE_COLORS[primaryEventType]
+                                  ? PLANNER_TYPE_COLORS[primaryEventType].dayBg
+                                  : "";
 
-                            return (
-                              <button
-                                key={idx}
-                                onClick={() =>
-                                  day.type === "current" && setSelectedDay(day.day)
-                                }
-                                className={`relative min-h-25 border-r border-b border-slate-100 p-2 transition-all hover:opacity-75 ${
-                                  day.type !== "current"
-                                    ? "bg-slate-50/50 text-slate-400"
-                                    : dayColorClass
-                                } ${isSelected ? "ring-primary ring-2 ring-inset" : ""}`}
-                              >
-                                <div className="flex items-center justify-between">
-                                  <span
-                                    className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-sm font-medium ${
-                                      isToday ? "bg-primary text-white" : ""
-                                    }`}
-                                  >
-                                    {day.day}
-                                  </span>
-                                  {hasEvents && (
-                                    <span className="rounded-full bg-blue-100 px-1.5 py-0.5 text-xs font-semibold text-blue-700">
-                                      {events.length}
+                              return (
+                                <button
+                                  key={idx}
+                                  onClick={() =>
+                                    day.type === "current" &&
+                                    setSelectedDay(day.day)
+                                  }
+                                  className={`relative min-h-25 border-r border-b border-slate-100 p-2 transition-all hover:opacity-75 ${
+                                    day.type !== "current"
+                                      ? "bg-slate-50/50 text-slate-400"
+                                      : dayColorClass
+                                  } ${isSelected ? "ring-primary ring-2 ring-inset" : ""}`}
+                                >
+                                  <div className="flex items-center justify-between">
+                                    <span
+                                      className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-sm font-medium ${
+                                        isToday ? "bg-primary text-white" : ""
+                                      }`}
+                                    >
+                                      {day.day}
                                     </span>
-                                  )}
-                                </div>
-
-                                {hasEvents && (
-                                  <div className="mt-1 space-y-1">
-                                    {events.slice(0, 2).map((event) => {
-                                      const eventType = plannerEventType(event);
-                                      const Icon = EVENT_COLORS[eventType].icon;
-                                      return (
-                                        <div
-                                          key={event._id}
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            openEventModal(event, day.day);
-                                          }}
-                                          className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-xs ${EVENT_COLORS[eventType].light} ${EVENT_COLORS[eventType].text} cursor-pointer transition-all hover:scale-105`}
-                                        >
-                                          <Icon size={8} />
-                                          <span className="truncate text-[10px]">
-                                            {labelForPlannerType(
-                                              event.plannerType,
-                                            ).substring(0, 8)}
-                                          </span>
-                                        </div>
-                                      );
-                                    })}
-                                    {events.length > 2 && (
-                                      <div className="text-center text-[10px] text-slate-400">
-                                        +{events.length - 2}
-                                      </div>
+                                    {hasEvents && (
+                                      <span className="rounded-full bg-blue-100 px-1.5 py-0.5 text-xs font-semibold text-blue-700">
+                                        {events.length}
+                                      </span>
                                     )}
                                   </div>
-                                )}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      );
-                    })}
+
+                                  {hasEvents && (
+                                    <div className="mt-1 space-y-1">
+                                      {events.slice(0, 2).map((event) => {
+                                        const eventType =
+                                          plannerEventType(event);
+                                        const Icon =
+                                          EVENT_COLORS[eventType].icon;
+                                        return (
+                                          <div
+                                            key={event._id}
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              openEventModal(event, day.day);
+                                            }}
+                                            className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-xs ${EVENT_COLORS[eventType].light} ${EVENT_COLORS[eventType].text} cursor-pointer transition-all hover:scale-105`}
+                                          >
+                                            <Icon size={8} />
+                                            <span className="truncate text-[10px]">
+                                              {labelForPlannerType(
+                                                event.plannerType,
+                                              ).substring(0, 8)}
+                                            </span>
+                                          </div>
+                                        );
+                                      })}
+                                      {events.length > 2 && (
+                                        <div className="text-center text-[10px] text-slate-400">
+                                          +{events.length - 2}
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        );
+                      },
+                    )}
                   </div>
                 </div>
               </div>

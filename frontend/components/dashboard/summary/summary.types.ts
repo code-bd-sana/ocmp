@@ -13,7 +13,7 @@ import { LucideIcon } from "lucide-react";
  */
 export interface SummaryCardData {
   title: string;
-  value: number;
+  value: number | string;
   icon: LucideIcon;
   color?: string;
 }
