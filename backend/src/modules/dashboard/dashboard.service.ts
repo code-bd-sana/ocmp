@@ -180,7 +180,7 @@ const getDashboardSummary = async (userId: string, role: UserRole) => {
         'clients.clientId': userId,
         'clients.status': ClientStatus.APPROVED,
       })
-        .populate('managerId', 'fullName')
+        .populate('managerId', 'fullName email')
         .lean(),
     ]);
 
@@ -190,6 +190,7 @@ const getDashboardSummary = async (userId: string, role: UserRole) => {
       totalVehicles,
       totalEvents,
       transportManagerName: (clientManagementDoc?.managerId as any)?.fullName || 'None',
+      transportManagerEmail: (clientManagementDoc?.managerId as any)?.email || 'None',
     };
   }
 

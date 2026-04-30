@@ -9,25 +9,29 @@ export const getSummaryData = (
     totalVehicles?: number;
     totalEvents?: number;
     transportManagerName?: string;
+    transportManagerEmail?: string;
   },
 ): SummaryCardData[] => {
   if (role === "TRANSPORT_MANAGER") {
     return [
       {
         title: "Total Clients",
-        value: typeof params?.totalClients === "number" ? params.totalClients : 0,
+        value:
+          typeof params?.totalClients === "number" ? params.totalClients : 0,
         icon: Briefcase,
         color: "var(--dashboard-vehicle-driver-bg)",
       },
       {
         title: "Total Vehicles",
-        value: typeof params?.totalVehicles === "number" ? params.totalVehicles : 0,
+        value:
+          typeof params?.totalVehicles === "number" ? params.totalVehicles : 0,
         icon: Truck,
         color: "var(--dashboard-job-alert-card-bg)",
       },
       {
         title: "Total Drivers",
-        value: typeof params?.totalDrivers === "number" ? params.totalDrivers : 0,
+        value:
+          typeof params?.totalDrivers === "number" ? params.totalDrivers : 0,
         icon: User,
         color: "var(--dashboard-vehicle-driver-bg)",
       },
@@ -43,20 +47,22 @@ export const getSummaryData = (
   if (role === "STANDALONE_USER") {
     return [
       {
-        title: "Transport Manager",
-        value: params?.transportManagerName || "None",
+        title: "Transport Manager Email",
+        value: params?.transportManagerEmail || "None",
         icon: UserCheck,
         color: "var(--dashboard-vehicle-driver-bg)",
       },
       {
         title: "Total Vehicles",
-        value: typeof params?.totalVehicles === "number" ? params.totalVehicles : 0,
+        value:
+          typeof params?.totalVehicles === "number" ? params.totalVehicles : 0,
         icon: Truck,
         color: "var(--dashboard-job-alert-card-bg)",
       },
       {
         title: "Total Drivers",
-        value: typeof params?.totalDrivers === "number" ? params.totalDrivers : 0,
+        value:
+          typeof params?.totalDrivers === "number" ? params.totalDrivers : 0,
         icon: User,
         color: "var(--dashboard-vehicle-driver-bg)",
       },
@@ -79,7 +85,8 @@ export const getSummaryData = (
     },
     {
       title: "Total Vehicles",
-      value: typeof params?.totalVehicles === "number" ? params.totalVehicles : 0,
+      value:
+        typeof params?.totalVehicles === "number" ? params.totalVehicles : 0,
       icon: Truck,
       color: "var(--dashboard-job-alert-card-bg)",
     },

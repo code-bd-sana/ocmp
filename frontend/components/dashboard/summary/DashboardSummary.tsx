@@ -69,9 +69,7 @@ export default function DashboardSummary() {
                 <p className="mb-2 text-start text-base font-semibold text-(--body-text) md:text-[20px]">
                   {item.title}
                 </p>
-                <p className="text-2xl font-bold text-blue-900 md:text-3xl">
-                  {item.value}
-                </p>
+                <p className="text-2xl font-bold text-blue-900">{item.value}</p>
               </div>
             );
           })}
