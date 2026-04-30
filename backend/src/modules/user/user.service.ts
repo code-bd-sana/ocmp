@@ -82,7 +82,7 @@ const getAllUsers = async (query: GetAllUsersQueryInput) => {
     throw new Error(`Invalid role param. Use 'all', 'transport-manager' or 'standalone'`);
   }
 
-  // 'all' এবং undefined — return all users without SUPER_ADMIN
+  // 'all' & undefined — return all users without SUPER_ADMIN
   const roleMap: Record<string, string> = {
     'transport-manager': UserRole.TRANSPORT_MANAGER,
     standalone: UserRole.STANDALONE_USER,
