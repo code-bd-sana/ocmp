@@ -1,42 +1,30 @@
 import { SummaryCardData, FleetUtilizationData } from "./summary.types";
-import {
-  Truck,
-  Briefcase,
-  User,
-  AlertTriangle,
-  ClipboardList,
-} from "lucide-react";
+import { Truck, Briefcase, User, AlertTriangle } from "lucide-react";
 
 export const getSummaryData = (): SummaryCardData[] => [
   {
-    title: "Total Vehicles",
+    title: "Total Clients",
     value: 128,
     icon: Truck, //as fallback
     color: "var(--dashboard-vehicle-driver-bg)",
   },
   {
-    title: "Active Job",
+    title: "Total Drivers",
     value: 38,
     icon: Briefcase,
     color: "var(--dashboard-job-alert-card-bg)",
   },
   {
-    title: "Driver Online",
+    title: "Total Vehicles",
     value: 12,
     icon: User,
     color: "var(--dashboard-vehicle-driver-bg)",
   },
   {
-    title: "Alerts",
+    title: "Total Events",
     value: 20,
     icon: AlertTriangle,
     color: "var(--dashboard-job-alert-card-bg)",
-  },
-  {
-    title: "Renewal Tracker",
-    value: 5,
-    icon: ClipboardList,
-    color: "var(--dashboard-vehicle-driver-bg)",
   },
 ];
 
