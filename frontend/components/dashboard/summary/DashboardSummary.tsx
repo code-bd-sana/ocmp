@@ -1,6 +1,11 @@
 "use client";
 
-import { getFleetUtilizationData, getSummaryData } from "./summary.utils";
+import { useEffect, useState } from "react";
+import {
+  getFleetUtilizationData,
+  getSummaryData,
+  fetchTotalClientsCount,
+} from "./summary.utils";
 import dynamic from "next/dynamic";
 
 const FleetUtilizationChart = dynamic(
@@ -16,7 +21,20 @@ const FleetUtilizationChart = dynamic(
 );
 
 export default function DashboardSummary() {
-  const summaryData = getSummaryData();
+  const [totalClients, setTotalClients] = useState<number | undefined>(
+    undefined,
+  );
+  useEffect(() => {
+    let mounted = true;
+    fetchTotalClientsCount().then((count) => {
+      if (mounted) setTotalClients(count);
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const summaryData = getSummaryData(totalClients);
   const fleetData = getFleetUtilizationData();
 
   return (
