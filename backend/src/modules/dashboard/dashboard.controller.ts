@@ -14,3 +14,13 @@ export const getSuperAdminDashboard = catchAsync(
     });
   }
 );
+
+export const getDashboardSummary = catchAsync(async (req: AuthenticatedRequest, res: Response) => {
+  const data = await dashboardServices.getDashboardSummary(req.user!._id, req.user!.role);
+
+  return res.status(200).json({
+    success: true,
+    message: 'Dashboard summary fetched successfully',
+    data,
+  });
+});

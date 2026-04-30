@@ -1,4 +1,13 @@
-import { User, Vehicle, UserRole, LoginActivity, IUser, ClientManagement } from '../../models';
+import {
+  User,
+  Vehicle,
+  UserRole,
+  LoginActivity,
+  Driver,
+  Planner,
+  ClientManagement,
+  ClientStatus,
+} from '../../models';
 import VehicleModel from '../../models/vehicle-transport/vehicle.schema';
 
 const getSuperAdminDashboard = async () => {
@@ -128,7 +137,97 @@ const getSuperAdminDashboard = async () => {
   };
 };
 
-export const dashboardServices = {
-  getSuperAdminDashboard,
+// For SUPER_ADMIN: global summary counts + recent users/clients/managers with last login and assigned vehicle count for TMs
+const getDashboardSummary = async (userId: string, role: UserRole) => {
+  const now = new Date();
+  const startOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+  const startOfNextMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
+  const monthFilter = {
+    plannerDate: {
+      $gte: startOfMonth,
+      $lt: startOfNextMonth,
+    },
+  };
+
+  // For SUPER_ADMIN, aggregate global counts.
+  if (role === UserRole.SUPER_ADMIN) {
+    const [totalClients, totalDrivers, totalVehicles, totalEvents] = await Promise.all([
+      User.countDocuments({ role: UserRole.STANDALONE_USER }),
+      Driver.countDocuments(),
+      Vehicle.countDocuments(),
+      Planner.countDocuments(monthFilter),
+    ]);
+
+    return {
+      totalClients,
+      totalDrivers,
+      totalVehicles,
+      totalEvents,
+    };
+  }
+
+  // For STANDALONE_USER, aggregate only their own data (vehicles/drivers they created or that are assigned to them). Events are those in the current month that they created or are assigned to.
+  if (role === UserRole.STANDALONE_USER) {
+    const ownFilter = {
+      $or: [{ standAloneId: userId }, { createdBy: userId }],
+    };
+
+    const [totalDrivers, totalVehicles, totalEvents, clientManagementDoc] = await Promise.all([
+      Driver.countDocuments(ownFilter),
+      Vehicle.countDocuments(ownFilter),
+      Planner.countDocuments({ ...monthFilter, ...ownFilter }),
+      ClientManagement.findOne({
+        'clients.clientId': userId,
+        'clients.status': ClientStatus.APPROVED,
+      })
+        .populate('managerId', 'fullName')
+        .lean(),
+    ]);
+
+    return {
+      totalClients: 0,
+      totalDrivers,
+      totalVehicles,
+      totalEvents,
+      transportManagerName: (clientManagementDoc?.managerId as any)?.fullName || 'None',
+    };
+  }
+
+  // Transport Manager: aggregate across all non-revoked clients in their team
+  const managerDoc = await ClientManagement.findOne({ managerId: userId }).select('clients').lean();
+
+  const clientIds = (managerDoc?.clients || [])
+    .filter((entry: any) => entry.status !== ClientStatus.REVOKED)
+    .map((entry: any) => entry.clientId);
+
+  if (!clientIds.length) {
+    return {
+      totalClients: 0,
+      totalDrivers: 0,
+      totalVehicles: 0,
+      totalEvents: 0,
+    };
+  }
+
+  const teamFilter = {
+    $or: [{ standAloneId: { $in: clientIds } }, { createdBy: { $in: clientIds } }],
+  };
+
+  const [totalDrivers, totalVehicles, totalEvents] = await Promise.all([
+    Driver.countDocuments(teamFilter),
+    Vehicle.countDocuments(teamFilter),
+    Planner.countDocuments({ ...monthFilter, ...teamFilter }),
+  ]);
+
+  return {
+    totalClients: clientIds.length,
+    totalDrivers,
+    totalVehicles,
+    totalEvents,
+  };
 };
 
+export const dashboardServices = {
+  getSuperAdminDashboard,
+  getDashboardSummary,
+};

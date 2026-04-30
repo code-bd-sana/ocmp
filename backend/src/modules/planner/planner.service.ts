@@ -7,6 +7,7 @@ import {
   CreatePlannerAsStandAloneInput,
   RequestChangePlannerDateInput,
   UpdatePlannerAsManagerInput,
+  SearchPlannerQueryInput,
 } from './planner.validation';
 import {
   ClientManagement,
@@ -15,6 +16,7 @@ import {
   RequestStatus,
   Planner,
   PlannerStatus,
+  Vehicle,
 } from '../../models';
 import Notification, { NotificationType } from '../../models/notification.schema';
 import { AuthenticatedRequest } from '../../middlewares/is-authorized';
@@ -370,9 +372,9 @@ const getPlannerById = async (id: IdOrIdsInput['id']): Promise<Partial<IPlanner 
  * @returns {Promise<Partial<IPlanner>[]>} - The retrieved planner
  */
 const getManyPlanner = async (
-  query: SearchQueryInput & { standAloneId?: string }
+  query: SearchPlannerQueryInput
 ): Promise<{ planners: Partial<IPlanner>[]; totalData: number; totalPages: number }> => {
-  const { searchKey = '', showPerPage = 10, pageNo = 1, standAloneId } = query;
+  const { searchKey = '', showPerPage = 10, pageNo = 1, standAloneId, hasDriver } = query;
   // Build the search filter based on the search key
   const searchFilter = searchKey
     ? {
@@ -402,14 +404,30 @@ const getManyPlanner = async (
     }
   }
 
+  // If hasDriver filter is requested, filter planners by vehicles that have at least one driver
+  if (hasDriver === 'true') {
+    // We need to find vehicleIds that have drivers for the relevant owner
+    const vehiclesWithDrivers = await Vehicle.find({
+      $or: [
+        { standAloneId: new mongoose.Types.ObjectId(standAloneId) },
+        { createdBy: new mongoose.Types.ObjectId(standAloneId) },
+      ],
+      'driverIds.0': { $exists: true },
+    })
+      .select('_id')
+      .lean();
+    const vehicleIds = vehiclesWithDrivers.map((v: { _id: mongoose.Types.ObjectId }) => v._id);
+    filter.vehicleId = { $in: vehicleIds };
+  }
+
   // Calculate the number of items to skip based on the page number
   const skipItems = (pageNo - 1) * showPerPage;
   // Find the total count of matching planner
-  const totalData = await Planner.countDocuments(searchFilter);
+  const totalData = await Planner.countDocuments(filter);
   // Calculate the total number of pages
   const totalPages = Math.ceil(totalData / showPerPage);
   // Find planners based on the search filter with pagination
-  const planners = await Planner.find(searchFilter).skip(skipItems).limit(showPerPage).select(''); // Keep/Exclude any field if needed
+  const planners = await Planner.find(filter).skip(skipItems).limit(showPerPage).select(''); // Keep/Exclude any field if needed
   return { planners, totalData, totalPages };
 };
 

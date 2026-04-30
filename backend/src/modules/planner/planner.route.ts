@@ -268,10 +268,7 @@ router.get(
     next();
   },
   (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-    if (req.user!.role === UserRole.TRANSPORT_MANAGER) {
-      return validateSearchPlannerQueries(req, res, next);
-    }
-    return validateSearchQueries(req, res, next);
+    return validateSearchPlannerQueries(req, res, next);
   },
   getManyPlanner
 );
