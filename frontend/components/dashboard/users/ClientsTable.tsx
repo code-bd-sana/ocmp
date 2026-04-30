@@ -72,9 +72,6 @@ export default function ClientsTable({
   onRequestRemove,
   removingClientId,
 }: ClientsTableProps) {
-  const totalClients = data.length;
-
-  console.log("Total clients:", totalClients);
   const tableColumns: Column<ClientTableRow>[] = [
     ...columns,
     {

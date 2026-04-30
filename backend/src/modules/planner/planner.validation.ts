@@ -188,6 +188,7 @@ const zodSearchPlannerSchema = zodSearchQuerySchema.extend({
     .string()
     .refine(isMongoId, { message: 'standAloneId must be a valid MongoDB ObjectId' })
     .optional(),
+  hasDriver: z.string().optional(),
 });
 
 export type SearchPlannerQueryInput = z.infer<typeof zodSearchPlannerSchema>;

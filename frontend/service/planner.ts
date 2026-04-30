@@ -19,6 +19,7 @@ interface SearchParams {
   searchKey?: string;
   showPerPage?: number;
   pageNo?: number;
+  hasDriver?: boolean;
 }
 
 function extractApiError(data: IApiResponse | undefined): string {
@@ -58,6 +59,7 @@ export const PlannerAction = {
         searchKey: params?.searchKey || undefined,
         showPerPage: params?.showPerPage || 200,
         pageNo: params?.pageNo || 1,
+        hasDriver: params?.hasDriver,
       });
 
       const response = await axios.get<IApiResponse<PlannerListResponse>>(

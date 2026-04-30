@@ -50,6 +50,20 @@ export interface ISuperAdminDashboardResponse {
   data: ISuperAdminDashboardData;
 }
 
+export interface IDashboardSummaryData {
+  totalClients: number;
+  totalDrivers: number;
+  totalVehicles: number;
+  totalEvents: number;
+  transportManagerName?: string;
+}
+
+export interface IDashboardSummaryResponse {
+  success: boolean;
+  message: string;
+  data: IDashboardSummaryData;
+}
+
 function extractApiError(data: IApiResponse | undefined): string {
   if (!data) return "Something went wrong";
 
@@ -58,7 +72,9 @@ function extractApiError(data: IApiResponse | undefined): string {
   if (data.errors) {
     if (Array.isArray(data.errors)) {
       const messages = (data.errors as { field?: string; message: string }[])
-        .map((item) => (item.field ? `${item.field}: ${item.message}` : item.message))
+        .map((item) =>
+          item.field ? `${item.field}: ${item.message}` : item.message,
+        )
         .join(", ");
 
       if (messages) return messages;
@@ -72,13 +88,36 @@ function extractApiError(data: IApiResponse | undefined): string {
   return "Something went wrong";
 }
 
-const getSuperAdminDashboard = async (): Promise<ISuperAdminDashboardResponse> => {
+const getSuperAdminDashboard =
+  async (): Promise<ISuperAdminDashboardResponse> => {
+    const token = AuthAction.GetAuthToken();
+    if (!token) throw new Error("No authentication token found");
+
+    try {
+      const response = await axios.get<ISuperAdminDashboardResponse>(
+        `${base_url}/dashboard`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+
+      return response.data;
+    } catch (error: unknown) {
+      if (axios.isAxiosError<IApiResponse>(error)) {
+        throw new Error(extractApiError(error.response?.data));
+      }
+
+      throw new Error("Something went wrong");
+    }
+  };
+
+const getDashboardSummary = async (): Promise<IDashboardSummaryResponse> => {
   const token = AuthAction.GetAuthToken();
   if (!token) throw new Error("No authentication token found");
 
   try {
-    const response = await axios.get<ISuperAdminDashboardResponse>(
-      `${base_url}/dashboard`,
+    const response = await axios.get<IDashboardSummaryResponse>(
+      `${base_url}/dashboard/summary`,
       {
         headers: { Authorization: `Bearer ${token}` },
       },
@@ -96,4 +135,5 @@ const getSuperAdminDashboard = async (): Promise<ISuperAdminDashboardResponse> =
 
 export const DashboardAction = {
   getSuperAdminDashboard,
+  getDashboardSummary,
 };
