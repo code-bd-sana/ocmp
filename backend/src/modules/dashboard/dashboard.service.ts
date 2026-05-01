@@ -1,3 +1,5 @@
+import mongoose from 'mongoose';
+
 import {
   User,
   Vehicle,
@@ -220,11 +222,75 @@ const getDashboardSummary = async (userId: string, role: UserRole) => {
     Planner.countDocuments({ ...monthFilter, ...teamFilter }),
   ]);
 
+  // --- Per-client breakdown (vehicles + drivers) for fleet utilization chart ---
+  const objectClientIds = clientIds.map((id: any) => new mongoose.Types.ObjectId(id));
+
+  const [vehicleCountsPerClient, driverCountsPerClient, clientUsers] = await Promise.all([
+    VehicleModel.aggregate([
+      {
+        $match: {
+          $or: [
+            { standAloneId: { $in: objectClientIds } },
+            { createdBy: { $in: objectClientIds } },
+          ],
+        },
+      },
+      {
+        $project: {
+          ownerId: { $ifNull: ['$standAloneId', '$createdBy'] },
+        },
+      },
+      { $match: { ownerId: { $in: objectClientIds } } },
+      { $group: { _id: '$ownerId', count: { $sum: 1 } } },
+    ]),
+    Driver.aggregate([
+      {
+        $match: {
+          $or: [
+            { standAloneId: { $in: objectClientIds } },
+            { createdBy: { $in: objectClientIds } },
+          ],
+        },
+      },
+      {
+        $project: {
+          ownerId: { $ifNull: ['$standAloneId', '$createdBy'] },
+        },
+      },
+      { $match: { ownerId: { $in: objectClientIds } } },
+      { $group: { _id: '$ownerId', count: { $sum: 1 } } },
+    ]),
+    // get client names
+    (async () => {
+      const users = await User.find({ _id: { $in: objectClientIds } })
+        .select('fullName')
+        .lean();
+      return users;
+    })(),
+  ]);
+
+  const vehicleMap = new Map<string, number>();
+  for (const v of vehicleCountsPerClient) vehicleMap.set(String(v._id), v.count || 0);
+
+  const driverMap = new Map<string, number>();
+  for (const d of driverCountsPerClient) driverMap.set(String(d._id), d.count || 0);
+
+  const clientNameMap = new Map<string, string>();
+  for (const u of clientUsers) clientNameMap.set(String(u._id), u.fullName || 'Unknown');
+
+  const fleetUtilization = clientIds.map((cid: any) => ({
+    clientId: String(cid),
+    name: clientNameMap.get(String(cid)) || String(cid),
+    drivers: driverMap.get(String(cid)) ?? 0,
+    vehicles: vehicleMap.get(String(cid)) ?? 0,
+  }));
+
   return {
     totalClients: clientIds.length,
     totalDrivers,
     totalVehicles,
     totalEvents,
+    fleetUtilization,
   };
 };
 
