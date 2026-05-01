@@ -1,148 +1,79 @@
 "use client";
 
 import React from "react";
-import { PieChart, Pie, Cell, PieLabelRenderProps } from "recharts";
-import { ChartData } from "./charts.types";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
 
-/**
- * Props for the FleetUtilizationChart component
- *
- * @interface FleetUtilizationChartProps
- * @property {ChartData[]} data - Array of chart data objects containing name, value, and color for each pie segment
- * @property {boolean} [isAnimationActive=true] - Optional boolean to control whether pie chart animations are active
- */
-interface FleetUtilizationChartProps {
-  data: ChartData[];
-  isAnimationActive?: boolean;
+interface FleetItem {
+  clientId: string;
+  name: string;
+  drivers: number;
+  vehicles: number;
 }
 
-/**
- * Constant representing the radian value (π/180) used for angle conversions in the pie chart label positioning
- *
- * This is necessary because the recharts library uses degrees for angles,
- * but JavaScript's Math.cos() and Math.sin() functions expect radians.
- */
-const RADIAN = Math.PI / 180;
-
-/**
- * Renders a customized percentage label inside each pie chart segment
- *
- * @param {PieLabelRenderProps} props - Object containing pie chart label positioning properties
- * @param {number | undefined} props.cx - X-coordinate of the pie chart center
- * @param {number | undefined} props.cy - Y-coordinate of the pie chart center
- * @param {number | undefined} props.midAngle - Mid angle of the current pie segment in degrees
- * @param {number | undefined} props.innerRadius - Inner radius of the pie chart (for donut charts)
- * @param {number | undefined} props.outerRadius - Outer radius of the pie chart
- * @param {number | undefined} props.percent - Percentage value of the current segment (0-1 range)
- * @returns {JSX.Element | null} A text element displaying the percentage or null if coordinates are undefined
- */
-const renderCustomizedLabel = ({
-  cx,
-  cy,
-  midAngle,
-  innerRadius,
-  outerRadius,
-  percent,
-}: PieLabelRenderProps) => {
-  if (cx == null || cy == null || innerRadius == null || outerRadius == null) {
-    return null;
-  }
-
-  /**
-   * Calculate the radius for label positioning - places the label halfway between inner and outer radius
-   * This ensures labels appear centered within the pie segment thickness
-   */
-  const radius =
-    (innerRadius as number) +
-    ((outerRadius as number) - (innerRadius as number)) * 0.5;
-
-  /**
-   * Convert center coordinates to numbers for mathematical operations
-   * Type assertion is safe here due to the null check above
-   */
-  const ncx = Number(cx);
-
-  /**
-   * Calculate the X-coordinate for the label using trigonometry:
-   * x = centerX + radius * cos(-angle)
-   * Negative angle is used because pie segments are drawn clockwise
-   */
-  const x = ncx + radius * Math.cos(-(midAngle ?? 0) * RADIAN);
-
-  /**
-   * Convert center Y coordinate to number
-   */
-  const ncy = Number(cy);
-
-  /**
-   * Calculate the Y-coordinate for the label using trigonometry:
-   * y = centerY + radius * sin(-angle)
-   */
-  const y = ncy + radius * Math.sin(-(midAngle ?? 0) * RADIAN);
-
-  return (
-    <text
-      x={x}
-      y={y}
-      fill='white'
-      textAnchor={x > ncx ? "start" : "end"}
-      dominantBaseline='central'
-      className='text-sm font-bold'>
-      {`${((percent ?? 0) * 100).toFixed(0)}%`}
-    </text>
-  );
-};
+interface FleetUtilizationChartProps {
+  data: FleetItem[];
+  isAnimationActive?: boolean;
+}
 
 export default function FleetUtilizationChart({
   data,
   isAnimationActive = true,
 }: FleetUtilizationChartProps) {
+  const chartData = data.map((d) => ({
+    name: d.name,
+    drivers: d.drivers,
+    vehicles: d.vehicles,
+  }));
+
+  if (!chartData.length) {
+    return (
+      <div className="flex h-56 w-full items-center justify-center rounded-md bg-white/50 text-sm text-gray-600">
+        No chart data available yet
+      </div>
+    );
+  }
+
   return (
     <div
-      className='flex h-full w-full flex-col items-center gap-6 md:gap-8'
-      suppressHydrationWarning>
-      <div className='flex w-full justify-center'>
-        <PieChart
-          width={220}
-          height={220}
-          className='sm:w-70 sm:h-70 md:w-70 md:h-70'>
-          <Pie
-            data={data}
-            cx='50%'
-            cy='50%'
-            labelLine={false}
-            label={renderCustomizedLabel}
-            outerRadius={90}
-            fill='#8884d8'
-            dataKey='value'
-            isAnimationActive={isAnimationActive}>
-            {data.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={entry.color} />
-            ))}
-          </Pie>
-        </PieChart>
-      </div>
-
-      {/* Compact one-line legend cards */}
-      <div className='flex flex-col items-start gap-2 px-1 pb-1'>
-        {data.map((item) => (
-          <div
-            key={item.name}
-            className='flex min-w-26.5 shrink-0 flex-col items-center justify-center rounded-md bg-white/60 px-3 py-1'>
-            <div className='flex items-center gap-1'>
-              <span
-                className='h-2.5 w-2.5 rounded-full'
-                style={{ backgroundColor: item.color }}
-              />
-              <span className='truncate text-base font-medium text-gray-700'>
-                {item.name}
-              </span>
-              <span className='text-sm font-bold leading-tight text-primary'>
-              {item.value}%
-            </span>
-            </div>
-          </div>
-        ))}
+      className="flex h-full w-full flex-col items-center gap-6 md:gap-8"
+      suppressHydrationWarning
+    >
+      <div className="h-82 w-full">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart
+            data={chartData}
+            margin={{ top: 20, right: 20, left: 10, bottom: 20 }}
+          >
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+            <YAxis allowDecimals={false} domain={[0, "auto"]} />
+            <Tooltip />
+            <Legend />
+            <Bar
+              dataKey="drivers"
+              name="Drivers"
+              fill="#3b82f6"
+              minPointSize={3}
+              isAnimationActive={isAnimationActive}
+            />
+            <Bar
+              dataKey="vehicles"
+              name="Vehicles"
+              fill="#10b981"
+              minPointSize={3}
+              isAnimationActive={isAnimationActive}
+            />
+          </BarChart>
+        </ResponsiveContainer>
       </div>
     </div>
   );
