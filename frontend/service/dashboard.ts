@@ -57,6 +57,12 @@ export interface IDashboardSummaryData {
   totalEvents: number;
   transportManagerName?: string;
   transportManagerEmail?: string;
+  fleetUtilization?: {
+    clientId: string;
+    name: string;
+    drivers: number;
+    vehicles: number;
+  }[];
 }
 
 export interface IDashboardSummaryResponse {

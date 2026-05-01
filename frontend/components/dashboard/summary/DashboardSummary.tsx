@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getFleetUtilizationData, getSummaryData } from "./summary.utils";
+import { getSummaryData } from "./summary.utils";
 import dynamic from "next/dynamic";
 import { DashboardAction, IDashboardSummaryData } from "@/service/dashboard";
 import { AuthAction } from "@/service/auth";
@@ -44,7 +44,27 @@ export default function DashboardSummary() {
   }, []);
 
   const summaryData = getSummaryData(role, summary);
-  const fleetData = getFleetUtilizationData();
+  const fleetData = summary?.fleetUtilization || [];
+  const transportManagerChartData =
+    fleetData.length > 0
+      ? fleetData
+      : [
+          {
+            clientId: "all-clients",
+            name: "All Clients",
+            drivers: summary?.totalDrivers ?? 0,
+            vehicles: summary?.totalVehicles ?? 0,
+          },
+        ];
+
+  const standaloneChartData = [
+    {
+      clientId: "self",
+      name: "You",
+      drivers: summary?.totalDrivers ?? 0,
+      vehicles: summary?.totalVehicles ?? 0,
+    },
+  ];
 
   return (
     <div className="flex flex-col gap-6 lg:flex-row">
@@ -69,23 +89,43 @@ export default function DashboardSummary() {
                 <p className="mb-2 text-start text-base font-semibold text-(--body-text) md:text-[20px]">
                   {item.title}
                 </p>
-                <p className="text-2xl font-bold text-blue-900">{item.value}</p>
+                <p className="text-xl font-bold text-blue-900">{item.value}</p>
               </div>
             );
           })}
         </div>
       </div>
 
-      {/* Fleet Utilization Section */}
-      <div
-        className="bg-muted flex-1 p-6 md:max-w-2/4"
-        suppressHydrationWarning
-      >
-        <h2 className="text-2xl font-semibold text-blue-900">
-          Fleet Utilization
-        </h2>
-        <FleetUtilizationChart data={fleetData} />
-      </div>
+      {/* Fleet Utilization Section (only for Transport Manager) */}
+      {role === "TRANSPORT_MANAGER" && (
+        <div
+          className="bg-muted flex-1 p-6 md:max-w-2/4"
+          suppressHydrationWarning
+        >
+          <h2 className="text-2xl font-semibold text-blue-900">
+            Fleet Utilization
+          </h2>
+          <FleetUtilizationChart data={transportManagerChartData} />
+        </div>
+      )}
+
+      {/* Standalone user: chart + transport manager info */}
+      {role === "STANDALONE_USER" && (
+        <div className="bg-muted flex-1 p-6 md:max-w-2/4">
+          <h2 className="text-2xl font-semibold text-blue-900">Your Summary</h2>
+          <div className="mt-4 space-y-3">
+            <div>
+              <h3 className="mb-2 text-lg font-semibold text-blue-900">
+                My Drivers vs Vehicles
+              </h3>
+              <FleetUtilizationChart
+                data={standaloneChartData}
+                isAnimationActive={false}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
