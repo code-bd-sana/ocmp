@@ -59,7 +59,7 @@ export function toDriverTableRows(drivers: DriverRow[]): DriverTableRow[] {
 }
 
 const columns: Column<DriverTableRow>[] = [
-  // { key: "fullName", title: "Full Name" },
+  { key: "fullName", title: "Full Name" },
   { key: "licenseNumber", title: "License Number" },
   { key: "niNumber", title: "NI Number" },
   // { key: "postCode", title: "Post Code" },
@@ -124,7 +124,8 @@ export default function DriversTable({
       endActionGroup: [
         {
           label: "Export",
-          className: "btn btn-sm rounded-xs bg-green-600 text-white hover:bg-green-700",
+          className:
+            "btn btn-sm rounded-xs bg-green-600 text-white hover:bg-green-700",
           onClick: () => {},
           exportCsv: true,
           csvFileName: "drivers-list",
